@@ -14,6 +14,7 @@ local Items = require(Data:WaitForChild("Items"))
 local Benefits = require(Data:WaitForChild("Benefits"))
 local Characters = require(Data:WaitForChild("Characters"))
 local Progression = require(Data:WaitForChild("Progression"))
+local Genetics = require(Data:WaitForChild("Genetics"))
 local CharacterFilter = require(ReplicatedStorage:WaitForChild("CharacterFilter"))
 local UI = require(ReplicatedStorage:WaitForChild("UI"))
 local T = UI.Theme
@@ -160,8 +161,13 @@ local function refreshCharacters()
 			local total = CharacterFilter.TotalStats(stats)
 			local curHp = Progression.CurrentHp(m)
 			local onTeam = table.find(profile.Team, uid) ~= nil
-			local _, face = UI.panel(charsList, {
-				Name = "Char_" .. uid, Color = "panelAlt", Size = UDim2.fromScale(0.98, 0), Aspect = 11.2, RowMax = 62, LayoutOrder = i, Corner = 0.22, Shadow = false,
+			local genAvg = math.floor(Genetics.Average(m.Genetics) + 0.5)
+			local trnAvg = math.floor(Genetics.Average(m.Training) + 0.5)
+			local btn, face = UI.button(charsList, {
+				Name = "Char_" .. uid, Color = "panelAlt", Size = UDim2.fromScale(0.98, 0), Aspect = 10.5, RowMax = 62, LayoutOrder = i, Corner = 0.22,
+				OnClick = function()
+					UI.open("CharacterDetail", uid)
+				end,
 			})
 			UI.chip(face, RARITY_TEXT[def.Rarity] or def.Rarity, RARITY_COLOR[def.Rarity] or "comum", {
 				Name = "Rarity", Size = UDim2.fromScale(0.15, 0.56), Position = UDim2.fromScale(0.015, 0.22), Role = "Small",
@@ -175,12 +181,15 @@ local function refreshCharacters()
 				table.insert(titleParts, "[TIME]")
 			end
 			UI.text(face, table.concat(titleParts, "  "), {
-				Name = "Title", Size = UDim2.fromScale(0.79, 0.42), Position = UDim2.fromScale(0.185, 0.08), Role = "Small", AlignX = Enum.TextXAlignment.Left,
+				Name = "Title", Size = UDim2.fromScale(0.64, 0.42), Position = UDim2.fromScale(0.185, 0.08), Role = "Small", AlignX = Enum.TextXAlignment.Left,
 			})
 			local hpColor = if curHp <= 0 then "hpLow" else "gold"
 			local statsText = string.format("GERAL %d  \u{b7}  HP %d/%d  \u{b7}  ATQ %d  \u{b7}  DEF %d  \u{b7}  VEL %d", total, curHp, stats.HP, stats.Attack, stats.Defense, stats.Speed)
 			UI.text(face, statsText, {
-				Name = "Stats", Size = UDim2.fromScale(0.79, 0.40), Position = UDim2.fromScale(0.185, 0.52), Role = "Small", Color = hpColor, AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45,
+				Name = "Stats", Size = UDim2.fromScale(0.64, 0.40), Position = UDim2.fromScale(0.185, 0.52), Role = "Small", Color = hpColor, AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45,
+			})
+			UI.text(face, string.format("GEN %d%% · TRN %d%%  >", genAvg, trnAvg), {
+				Name = "GenSummary", Size = UDim2.fromScale(0.16, 0.56), Position = UDim2.fromScale(0.985, 0.22), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Right, StrokeMult = 0.4,
 			})
 		end
 	end
@@ -342,10 +351,10 @@ refresh = function()
 					refresh()
 				end,
 			})
-			UI.icon(face, ITEM_ICON[id] or "bag", { Name = "Icon", Size = UDim2.fromScale(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.06), AnchorPoint = Vector2.new(0.5, 0) })
+			UI.icon(face, ITEM_ICON[id] or "bag", { Name = "Icon", Size = UDim2.fromScale(0.32, 0.32), Position = UDim2.fromScale(0.5, 0.14), AnchorPoint = Vector2.new(0.5, 0) })
 			UI.text(face, "x" .. n, { Name = "Count", Size = UDim2.fromScale(0.36, 0.24), Position = UDim2.fromScale(0.95, 0.06), AnchorPoint = Vector2.new(1, 0), Role = "Body", Color = "gold", AlignX = Enum.TextXAlignment.Right })
-			UI.text(face, item.Name, { Name = "ItemName", Size = UDim2.fromScale(0.9, 0.2), Position = UDim2.fromScale(0.05, 0.58), Role = "Small" })
-			UI.text(face, if item.OutsideBattle or item.TeamUse then (item.Short or item.Description or "") else "S\u{f3} em batalha", { Name = "Desc", Size = UDim2.fromScale(0.9, 0.16), Position = UDim2.fromScale(0.05, 0.8), Role = "Small", Color = "inkSoft", StrokeMult = 0.4 })
+			UI.text(face, item.Name, { Name = "ItemName", Size = UDim2.fromScale(0.9, 0.2), Position = UDim2.fromScale(0.05, 0.56), Role = "Small" })
+			UI.text(face, if item.OutsideBattle or item.TeamUse then (item.Short or item.Description or "") else "S\u{f3} em batalha", { Name = "Desc", Size = UDim2.fromScale(0.9, 0.16), Position = UDim2.fromScale(0.05, 0.79), Role = "Small", Color = "inkSoft", StrokeMult = 0.4 })
 		end
 	end
 	if not any then

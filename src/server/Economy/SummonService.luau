@@ -21,6 +21,7 @@ local Characters = require(Data.Characters)
 local Summon = require(Data.Summon)
 local Progression = require(Data.Progression)
 local Benefits = require(Data.Benefits)
+local Genetics = require(Data:WaitForChild("Genetics"))
 
 local DataFolder = ServerScriptService:WaitForChild("Data")
 local PlayerDataService = require(DataFolder:WaitForChild("PlayerDataService"))
@@ -36,11 +37,11 @@ local MAX_TEAM = 6
 local rng = Random.new()
 local busy = {} -- [Player] = true durante um pedido
 
--- Personagens do elenco por raridade
-local function byRarity()
+-- Personagens do elenco por raridade (opcionalmente filtrados por Anime)
+local function byRarity(animeFilter: string?)
 	local map = {}
 	for id, def in pairs(Characters.List) do
-		if not def.Prototype then -- prototipos de teste nunca saem na invocacao
+		if not def.Prototype and (not animeFilter or Characters.AnimeOf(id) == animeFilter) then -- prototipos de teste nunca saem na invocacao
 			map[def.Rarity] = map[def.Rarity] or {}
 			table.insert(map[def.Rarity], id)
 		end
@@ -51,16 +52,25 @@ local function byRarity()
 	return map
 end
 
-function SummonService.Legendaries(): { string }
-	return byRarity().Lendario or {}
+local function resolveBanner(bannerId: string?)
+	if bannerId ~= nil and (typeof(bannerId) ~= "string" or not Summon.Banners[bannerId]) then
+		return nil
+	end
+	return Summon.GetBanner(bannerId)
 end
 
-function SummonService.BannerOf(portalId: string): string?
-	return Summon.BannerOf(portalId, os.time(), SummonService.Legendaries())
+function SummonService.Legendaries(animeFilter: string?): { string }
+	return byRarity(animeFilter).Lendario or {}
 end
 
-local function pickCharacter(rarity: string, banner: string?, share: number?)
-	local map = byRarity()
+function SummonService.BannerOf(portalId: string, bannerId: string?): string?
+	local cfg = resolveBanner(bannerId)
+	local animeFilter = cfg and cfg.Anime or nil
+	return Summon.BannerOf(portalId, os.time(), SummonService.Legendaries(animeFilter))
+end
+
+local function pickCharacter(rarity: string, banner: string?, share: number?, animeFilter: string?)
+	local map = byRarity(animeFilter)
 	-- banner: o Lendario em destaque leva metade das vezes que sai Lendario; a outra metade e dos demais
 	if rarity == "Lendario" and banner and Characters.Get(banner) then
 		local others = {}
@@ -89,11 +99,16 @@ local function announce(text: string)
 end
 
 -- Faz as invocacoes. Retorna (true, resultados) ou (false, motivo).
-function SummonService.Summon(player: Player, portalId: string, count: number)
+function SummonService.Summon(player: Player, portalId: string, count: number, bannerId: string?)
 	local portal = Summon.Portals[portalId]
 	if not portal then
 		return false, "Portal inv\u{e1}lido."
 	end
+	local bannerCfg = resolveBanner(bannerId)
+	if not bannerCfg then
+		return false, "Estrela/Anime inv\u{e1}lido."
+	end
+	local animeFilter = bannerCfg.Anime
 	local data = PlayerDataService.Get(player)
 	if not data then
 		return false, "Dados ainda carregando."
@@ -131,26 +146,31 @@ function SummonService.Summon(player: Player, portalId: string, count: number)
 	local results = {}
 	local pity = data.SummonPity[portal.PityKey] or 0
 	local rates = Summon.RatesFor(portalId, data.Benefits)
-	local banner = SummonService.BannerOf(portalId)
+	local banner = SummonService.BannerOf(portalId, bannerCfg.Id)
 	for i = 1, count do
 		local rarity, forced, newPity, shiny = Summon.Roll(portalId, rng, pity, rates)
 		pity = newPity
-		local charId = pickCharacter(rarity, banner, portal.Banner and portal.Banner.Share)
+		local charId = pickCharacter(rarity, banner, portal.Banner and portal.Banner.Share, animeFilter)
 		local def = Characters.Get(charId)
 		local isNew = data.Album.Owned[charId] == nil
 		local variant = if shiny then "Brilhante" else nil
 		local toTeam = #data.Team < MAX_TEAM
 		local uid, albumLines = ProgressionService.AddCharacter(player, charId, Summon.SummonLevel, toTeam, variant)
+		local member = data.Collection[uid]
 		table.insert(results, {
 			Uid = uid,
 			CharacterId = charId,
 			Name = def.Name,
+			ModelName = def.ModelName or charId,
+			Anime = def.Anime or "Generico",
+			BannerId = bannerCfg.Id,
 			Type = def.Type,
 			Rarity = def.Rarity, -- raridade do personagem entregue
 			Rolled = rarity, -- raridade sorteada
 			Forced = forced, -- veio pela garantia
 			Banner = banner ~= nil and charId == banner,
 			Variant = variant,
+			Genetics = member and member.Genetics,
 			New = isNew,
 			Album = albumLines,
 		})
@@ -180,6 +200,14 @@ local function inTeam(data, uid: string): boolean
 	return table.find(data.Team, uid) ~= nil
 end
 
+local function inTraining(data, uid: string): boolean
+	return data.TrainingMachine and data.TrainingMachine.Job and data.TrainingMachine.Job.Uid == uid or false
+end
+
+local function protectedFromConsume(data, uid: string): boolean
+	return inTeam(data, uid) or inTraining(data, uid)
+end
+
 -- 3 iguais viram +1 estrela: fica a melhor copia, 2 copias fora do time sao consumidas
 function SummonService.Fuse(player: Player, characterId)
 	local data = PlayerDataService.Get(player)
@@ -194,7 +222,12 @@ function SummonService.Fuse(player: Player, characterId)
 		if (a.Stars or 0) ~= (b.Stars or 0) then
 			return (a.Stars or 0) > (b.Stars or 0)
 		end
-		return a.Level > b.Level
+		if a.Level ~= b.Level then
+			return a.Level > b.Level
+		end
+		local ga = Genetics.Total(a.Genetics) + Genetics.Total(a.Training)
+		local gb = Genetics.Total(b.Genetics) + Genetics.Total(b.Training)
+		return ga > gb
 	end)
 	local target = copies[1]
 	if (target.Stars or 0) >= Summon.Stars.Max then
@@ -203,12 +236,12 @@ function SummonService.Fuse(player: Player, characterId)
 	local fodder = {}
 	for i = #copies, 2, -1 do
 		local m = copies[i]
-		if not inTeam(data, m.Uid) and #fodder < Summon.Stars.CopiesPerStar - 1 then
+		if not protectedFromConsume(data, m.Uid) and #fodder < Summon.Stars.CopiesPerStar - 1 then
 			table.insert(fodder, m)
 		end
 	end
 	if #fodder < Summon.Stars.CopiesPerStar - 1 then
-		return false, "Tire do time as c\u{f3}pias extras para fundir."
+		return false, "Tire do time ou da c\u{e1}psula as c\u{f3}pias extras para fundir."
 	end
 	for _, m in ipairs(fodder) do
 		data.Collection[m.Uid] = nil
@@ -234,17 +267,22 @@ function SummonService.SellDuplicate(player: Player, characterId)
 		if (a.Stars or 0) ~= (b.Stars or 0) then
 			return (a.Stars or 0) < (b.Stars or 0)
 		end
-		return a.Level < b.Level
+		if a.Level ~= b.Level then
+			return a.Level < b.Level
+		end
+		local ga = Genetics.Total(a.Genetics) + Genetics.Total(a.Training)
+		local gb = Genetics.Total(b.Genetics) + Genetics.Total(b.Training)
+		return ga < gb
 	end)
 	local sold
 	for _, m in ipairs(copies) do
-		if not inTeam(data, m.Uid) then
+		if not protectedFromConsume(data, m.Uid) then
 			sold = m
 			break
 		end
 	end
 	if not sold then
-		return false, "Todas as c\u{f3}pias est\u{e3}o no time."
+		return false, "Todas as c\u{f3}pias est\u{e3}o no time ou em treino."
 	end
 	local def = Characters.Get(characterId)
 	local price = Summon.SellPrice[def.Rarity] or 0
@@ -272,17 +310,20 @@ local function guarded(fn)
 end
 
 function SummonService.Init()
-	Remotes.Summon.OnServerInvoke = guarded(function(player, portalId, count)
-		return SummonService.Summon(player, portalId, count)
+	Remotes.Summon.OnServerInvoke = guarded(function(player, portalId, count, bannerId)
+		return SummonService.Summon(player, portalId, count, bannerId)
 	end)
-	-- destaque da semana do Portal Premium (para a tela)
+	-- destaque da semana do Portal Premium (para a tela, considerando o painel/anime escolhido)
 	local bannerRF = Remotes:FindFirstChild("SummonBanner")
 	if bannerRF then
-		bannerRF.OnServerInvoke = function(_, portalId)
+		bannerRF.OnServerInvoke = function(_, portalId, bannerId)
 			if typeof(portalId) ~= "string" or not Summon.Portals[portalId] then
 				return nil
 			end
-			local id = SummonService.BannerOf(portalId)
+			if bannerId ~= nil and (typeof(bannerId) ~= "string" or not Summon.Banners[bannerId]) then
+				return nil
+			end
+			local id = SummonService.BannerOf(portalId, bannerId)
 			local def = id and Characters.Get(id)
 			return def and def.Name or nil
 		end

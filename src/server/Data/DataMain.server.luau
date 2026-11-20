@@ -12,6 +12,8 @@ require(ServerScriptService:WaitForChild("Economy"):WaitForChild("SummonService"
 require(ServerScriptService.Economy:WaitForChild("InventoryService")).Init()
 local BaseService = require(ServerScriptService.Economy:WaitForChild("BaseService"))
 BaseService.Init()
+local TrainingService = require(ServerScriptService.Economy:WaitForChild("TrainingService"))
+TrainingService.Init()
 local MonetizationService = require(ServerScriptService.Economy:WaitForChild("MonetizationService"))
 MonetizationService.OnBenefitsChanged(BaseService.RefreshLook)
 MonetizationService.Init()
@@ -91,7 +93,23 @@ if RunService:IsStudio() then
 			return data.Gold
 		elseif action == "clock" then
 			-- adianta o relogio (segundos) como se o jogador tivesse ficado fora
-			return BaseService.AdvanceClock(player, (...))
+			local res = BaseService.AdvanceClock(player, (...))
+			if player then
+				TrainingService.SyncCapsule(player)
+			end
+			return res
+		elseif action == "addores" then
+			-- adiciona minerios de atributo para teste ({ HP = n, Defense = n, Speed = n, Attack = n } ou valor unico)
+			local data = PlayerDataService.Get(player)
+			local arg = ...
+			local Training = require(game:GetService("ReplicatedStorage").Data.Training)
+			data.TrainingOres = Training.SanitizeOres(data.TrainingOres, Training.MaxOrePerType)
+			for _, st in ipairs(Training.OreOrder) do
+				local add = if typeof(arg) == "table" then (arg[st] or 0) elseif typeof(arg) == "number" then arg else 0
+				data.TrainingOres[st] = math.min(Training.MaxOrePerType, data.TrainingOres[st] + add)
+			end
+			PlayerDataService.MarkChanged(player)
+			return data.TrainingOres
 		elseif action == "base" then
 			-- chama uma acao da base direto: "SetState", "Collect", "UpgradeSlots", "SellOre"
 			local fn, a, b = ...

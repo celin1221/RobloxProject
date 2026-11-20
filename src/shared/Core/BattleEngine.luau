@@ -18,6 +18,7 @@ local Characters = require(Data.Characters)
 local Moves = require(Data.Moves)
 local Items = require(Data.Items)
 local TypeChart = require(Data.TypeChart)
+local Genetics = require(Data.Genetics)
 
 local DamageCalc = require(script.Parent.DamageCalc)
 local AIController = require(script.Parent.AIController)
@@ -52,15 +53,21 @@ end
 
 -- Cria um lutador a partir dos dados (Characters + Moves)
 -- moveIds = golpes ativos (salvos); sem eles, os 4 ultimos aprendidos ate o nivel
--- extra (opcional): StatMultiplier (chefes/andares), Hp, Status e Pp ({ [golpe] = pp }) herdados de outra batalha
+-- extra (opcional): StatMultiplier (chefes/andares/estrelas+variante), StatMultipliers (Genetica+Treino por atributo),
+-- Genetics, Training, Hp, Status e Pp ({ [golpe] = pp })
 local function newBattler(characterId: string, level: number, moveIds: { string }?, uid: string?, extra)
 	local def = assert(Characters.Get(characterId), "Personagem desconhecido: " .. tostring(characterId))
 	local stats = Characters.StatsAt(characterId, level)
 	extra = extra or {}
-	local mult = extra.StatMultiplier
-	if typeof(mult) == "number" and mult ~= 1 then
-		for k, v in pairs(stats) do
-			stats[k] = math.max(1, math.floor(v * mult + 0.5))
+	local scalarMult = if typeof(extra.StatMultiplier) == "number" then extra.StatMultiplier else 1
+	local perStat = if typeof(extra.StatMultipliers) == "table" then extra.StatMultipliers else nil
+	if not perStat and (extra.Genetics or extra.Training) then
+		perStat = Genetics.MultipliersFor(extra.Genetics, extra.Training)
+	end
+	for k, v in pairs(stats) do
+		local m = scalarMult * (if perStat and typeof(perStat[k]) == "number" then perStat[k] else 1)
+		if m ~= 1 then
+			stats[k] = math.max(1, math.floor(v * m + 0.5))
 		end
 	end
 	local moves = {}
@@ -83,6 +90,8 @@ local function newBattler(characterId: string, level: number, moveIds: { string 
 		Stages = freshStages(),
 		Moves = moves,
 		Uid = uid, -- id na colecao do jogador (XP no fim da batalha)
+		Genetics = if typeof(extra.Genetics) == "table" then Genetics.SanitizeTable(extra.Genetics) else nil,
+		Training = if typeof(extra.Training) == "table" then Genetics.SanitizeTable(extra.Training) else nil,
 		Participated = false, -- entrou em campo nesta batalha
 	}
 end
@@ -648,7 +657,7 @@ function BattleEngine:_DoItem(side: string, itemId: string, targetIndex: number?
 		if self.Rng:NextNumber() < chance then
 			self.Winner = "Player"
 			self.EndReason = "Captured"
-			self.Captured = { CharacterId = foe.Id, Level = foe.Level }
+			self.Captured = { CharacterId = foe.Id, Level = foe.Level, Genetics = foe.Genetics }
 			push({ Kind = "Capture", Side = "Enemy", Success = true, Chance = chance, Text = foe.Name .. " foi capturado!" })
 		else
 			push({ Kind = "Capture", Side = "Enemy", Success = false, Chance = chance, Text = "O selo se rompeu! " .. foe.Name .. " escapou." })

@@ -13,6 +13,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local Data = ReplicatedStorage:WaitForChild("Data")
 local Progression = require(Data.Progression)
+local Genetics = require(Data:WaitForChild("Genetics"))
 
 local BattleService = require(script.Parent.BattleService)
 local Config = require(script.Parent.BattleConfig)
@@ -65,6 +66,9 @@ function PvPService.TeamFor(player: Player)
 				Level = Config.PvPLevel,
 				Moves = table.clone(m.Active),
 				StatMultiplier = Progression.MemberMultiplier(m), -- estrelas e variante continuam
+				StatMultipliers = Genetics.MultipliersFor(m.Genetics, m.Training),
+				Genetics = m.Genetics,
+				Training = m.Training,
 			})
 		end
 	end

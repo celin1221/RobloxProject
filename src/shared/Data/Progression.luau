@@ -10,8 +10,10 @@
 
 local Characters = require(script.Parent:WaitForChild("Characters"))
 local Summon = require(script.Parent:WaitForChild("Summon"))
+local Genetics = require(script.Parent:WaitForChild("Genetics"))
 
 local Progression = {}
+Progression.Genetics = Genetics
 
 Progression.MaxLevel = 50
 Progression.StarterLevel = 5
@@ -33,22 +35,73 @@ function Progression.VictoryXp(enemyLevels: { number }, doubleXp: boolean?): num
 	return Progression.XpPerEnemyLevel * sum * (if doubleXp then 2 else 1)
 end
 
--- Multiplicador de atributos de um membro salvo: estrelas (+5% cada) e variante
+-- Multiplicador base de um membro salvo: estrelas (+5% cada) e variante
 function Progression.MemberMultiplier(m): number
 	local variantBonus = (m.Variant and Characters.VariantBonus and Characters.VariantBonus[m.Variant]) or 0
 	return Summon.StarMultiplier(m.Stars) * (1 + variantBonus)
 end
 
+-- Multiplicadores finais por atributo (estrelas, variante, Genetica e Treino)
+function Progression.MemberMultipliers(m)
+	local baseMult = Progression.MemberMultiplier(m)
+	local statMults = Genetics.MultipliersFor(m and m.Genetics, m and m.Training)
+	for _, stat in ipairs(Genetics.Stats) do
+		statMults[stat] *= baseMult
+	end
+	return statMults
+end
+
 -- Atributos finais de um membro salvo (mesma conta da batalha)
 function Progression.MemberStats(m)
 	local stats = Characters.StatsAt(m.CharacterId, m.Level)
-	local mult = Progression.MemberMultiplier(m)
-	if mult ~= 1 then
-		for k, v in pairs(stats) do
+	local mults = Progression.MemberMultipliers(m)
+	for k, v in pairs(stats) do
+		local mult = mults[k] or 1
+		if mult ~= 1 then
 			stats[k] = math.max(1, math.floor(v * mult + 0.5))
 		end
 	end
 	return stats
+end
+
+-- Detalhamento completo para HUD de inspecao e grafico de radar
+function Progression.StatBreakdown(m)
+	local baseStats = Characters.StatsAt(m.CharacterId, m.Level)
+	local gen = Genetics.SanitizeTable(m and m.Genetics)
+	local trn = Genetics.SanitizeTable(m and m.Training)
+	local baseMult = Progression.MemberMultiplier(m)
+	local mults = Progression.MemberMultipliers(m)
+	local stats = {}
+	local totalBase, totalFinal = 0, 0
+	for _, stat in ipairs(Genetics.Stats) do
+		local b = baseStats[stat] or 0
+		local mult = mults[stat] or baseMult
+		local final = if mult ~= 1 then math.max(1, math.floor(b * mult + 0.5)) else b
+		local g = gen[stat]
+		local t = trn[stat]
+		stats[stat] = {
+			Base = b,
+			Genetics = g,
+			Training = t,
+			GeneticsBonusPct = Genetics.GeneticsMaxBonus * (g / Genetics.Max) * 100,
+			TrainingBonusPct = Genetics.TrainingMaxBonus * (t / Genetics.Max) * 100,
+			Multiplier = mult,
+			Final = final,
+		}
+		totalBase += b
+		totalFinal += final
+	end
+	return {
+		Stats = stats,
+		Genetics = gen,
+		Training = trn,
+		GeneticsAvg = Genetics.Average(gen),
+		TrainingAvg = Genetics.Average(trn),
+		IsPerfectGenetics = Genetics.IsPerfect(gen),
+		BaseMultiplier = baseMult,
+		TotalBase = totalBase,
+		TotalFinal = totalFinal,
+	}
 end
 
 -- HP atual salvo (nil = cheio)

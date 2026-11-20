@@ -21,11 +21,37 @@ local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 rayParams.IgnoreWater = true
 
+local function makeClientIntangible(inst: Instance)
+	if inst:IsA("BasePart") then
+		inst.CanCollide = false
+		inst.CanQuery = false
+		inst.CanTouch = false
+		inst.Massless = true
+	elseif inst:IsA("Humanoid") then
+		inst.EvaluateStateMachine = false
+	end
+end
+
+local intangibleWatched = setmetatable({}, { __mode = "k" })
+local function keepModelIntangible(m: Instance)
+	if not m:IsA("Model") or intangibleWatched[m] then
+		return
+	end
+	intangibleWatched[m] = true
+	for _, d in ipairs(m:GetDescendants()) do
+		makeClientIntangible(d)
+	end
+	m.DescendantAdded:Connect(makeClientIntangible)
+end
+
 local watched = setmetatable({}, { __mode = "k" })
 
 local function watchNpc(m: Instance)
 	if not m:IsA("Model") then
 		return
+	end
+	if CollectionService:HasTag(m, "BaseCharacter") then
+		keepModelIntangible(m)
 	end
 	local function update()
 		if m:GetAttribute("Moving") == true and m:GetAttribute("WalkT0") ~= nil then
@@ -52,25 +78,11 @@ for _, tag in ipairs({ "BaseCharacter", "RefugeWild" }) do
 	end)
 end
 
-local function makeClientIntangible(inst: Instance)
-	if inst:IsA("BasePart") then
-		inst.CanCollide = false
-		inst.CanQuery = false
-		inst.CanTouch = false
-		inst.Massless = true
-	elseif inst:IsA("Humanoid") then
-		inst.EvaluateStateMachine = false
-	end
-end
-
 local function watchFollower(m: Instance)
 	if not m:IsA("Model") then
 		return
 	end
-	for _, d in ipairs(m:GetDescendants()) do
-		makeClientIntangible(d)
-	end
-	m.DescendantAdded:Connect(makeClientIntangible)
+	keepModelIntangible(m)
 	followers[m] = { initialized = false }
 end
 

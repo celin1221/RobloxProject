@@ -244,7 +244,7 @@ refreshDetail = function()
 		return
 	end
 	local def = Characters.Get(m.CharacterId)
-	local st = Characters.StatsAt(m.CharacterId, m.Level)
+	local st = Progression.MemberStats(m)
 	detailTitle.Text = def.Name .. "  Nv. " .. m.Level
 	detailType.Face.Label.Text = UI.upper(TypeChart.DisplayName[def.Type] or def.Type)
 	UI.paint(detailType, typeColor(def.Type))

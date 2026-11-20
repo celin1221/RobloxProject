@@ -41,11 +41,23 @@ for i = 1, MAX do
 	slots[i] = TeamCards.new(slotsRow, { Name = "Slot" .. i, ZIndex = 3 })
 end
 local removeBtn = UI.button(slotsRow, { Name = "RemoveSlot", Icon = "minus", Color = "red", Layout = "icon", Size = UDim2.fromOffset(44, 44), Corner = 0.5, ZIndex = 9, Visible = false })
+local inspectSlotBtn = UI.button(slotsRow, { Name = "InspectSlot", Icon = "star", Color = "teal", Layout = "icon", Size = UDim2.fromOffset(44, 44), Corner = 0.5, ZIndex = 9, Visible = false,
+	OnClick = function()
+		if not profile or not selectedSlot then
+			return
+		end
+		local uid = profile.Team[selectedSlot]
+		if uid then
+			UI.open("CharacterDetail", uid)
+		end
+	end,
+})
 
 -- filtros (busca por nome, anime, raridade, tipo e ordenacao por status)
 local filterRow = UI.frame(body, { Name = "Filters" })
 local filterState = CharacterFilter.CreateState()
-local searchBox, animeBtn, rarityBtn, typeBtn, sortBtn
+local searchBox, animeBtn, rarityBtn, typeBtn, sortBtn, inspectBtn
+local inspectMode = false
 local message = UI.text(filterRow, "", { Name = "Message", Size = UDim2.fromScale(0.38, 1), Position = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right })
 
 -- grade
@@ -98,13 +110,16 @@ local function layout()
 	filterRow.Size = UDim2.fromOffset(W, fh)
 	filterRow.Position = UDim2.fromOffset(0, fy)
 
-	if animeBtn and rarityBtn and typeBtn and sortBtn and searchBox then
+	if animeBtn and rarityBtn and typeBtn and sortBtn and searchBox and inspectBtn then
 		if twoRows then
-			local sw = math.floor(W * 0.54)
+			local sw = math.floor(W * 0.42)
+			local iw = math.max(92, math.floor(W * 0.18))
 			searchBox.Root.Size = UDim2.fromOffset(sw, bh)
 			searchBox.Root.Position = UDim2.fromOffset(0, 0)
+			inspectBtn.Size = UDim2.fromOffset(iw, bh)
+			inspectBtn.Position = UDim2.fromOffset(sw + g, 0)
 			message.AnchorPoint = Vector2.new(1, 0)
-			message.Size = UDim2.fromOffset(math.max(40, W - sw - g), bh)
+			message.Size = UDim2.fromOffset(math.max(40, W - sw - iw - g * 2), bh)
 			message.Position = UDim2.fromOffset(W, 0)
 
 			local bg = g
@@ -124,13 +139,14 @@ local function layout()
 			sortBtn.Position = UDim2.fromOffset(wA + wR + wT + bg * 3, y2)
 		else
 			local bg = g
-			local avail = W - bg * 5
-			local wSearch = math.floor(avail * 0.21)
-			local wA = math.floor(avail * 0.165)
-			local wR = math.floor(avail * 0.125)
-			local wT = math.floor(avail * 0.125)
-			local wS = math.floor(avail * 0.18)
-			local wMsg = avail - wSearch - wA - wR - wT - wS
+			local avail = W - bg * 6
+			local wSearch = math.floor(avail * 0.18)
+			local wA = math.floor(avail * 0.145)
+			local wR = math.floor(avail * 0.115)
+			local wT = math.floor(avail * 0.115)
+			local wS = math.floor(avail * 0.165)
+			local wI = math.max(96, math.floor(avail * 0.115))
+			local wMsg = avail - wSearch - wA - wR - wT - wS - wI
 			local x = 0
 			searchBox.Root.Size = UDim2.fromOffset(wSearch, bh)
 			searchBox.Root.Position = UDim2.fromOffset(x, 0)
@@ -146,6 +162,9 @@ local function layout()
 			x += wT + bg
 			sortBtn.Size = UDim2.fromOffset(wS, bh)
 			sortBtn.Position = UDim2.fromOffset(x, 0)
+			x += wS + bg
+			inspectBtn.Size = UDim2.fromOffset(wI, bh)
+			inspectBtn.Position = UDim2.fromOffset(x, 0)
 			message.AnchorPoint = Vector2.new(1, 0)
 			message.Size = UDim2.fromOffset(math.max(60, wMsg), bh)
 			message.Position = UDim2.fromOffset(W, 0)
@@ -264,10 +283,15 @@ local function refreshSlots()
 		slots[i].SetSelected(selectedSlot == i)
 	end
 	local sel = selectedSlot and slots[selectedSlot]
+	local rowW = body.AbsoluteSize.X
 	removeBtn.Visible = sel ~= nil and sel.Uid ~= nil and #profile.Team > 1
-	if removeBtn.Visible then
+	inspectSlotBtn.Visible = sel ~= nil and sel.Uid ~= nil
+	if sel and sel.Uid then
 		local r = sel.Root
-		removeBtn.Position = UDim2.fromOffset(r.Position.X.Offset + r.Size.X.Offset - 30, -4)
+		if removeBtn.Visible then
+			removeBtn.Position = UDim2.fromOffset(math.min(math.max(0, rowW - 44), r.Position.X.Offset + r.Size.X.Offset - 30), -4)
+		end
+		inspectSlotBtn.Position = UDim2.fromOffset(math.max(0, r.Position.X.Offset - 14), -4)
 	end
 end
 
@@ -322,6 +346,11 @@ onCardTap = function(uid)
 	if not profile then
 		return
 	end
+	if inspectMode then
+		UI.play("click")
+		UI.open("CharacterDetail", uid)
+		return
+	end
 	UI.play("click")
 	if selectedSlot then
 		local s = selectedSlot
@@ -338,6 +367,11 @@ end
 
 local function onSlotTap(i)
 	if not profile then
+		return
+	end
+	if inspectMode and profile.Team[i] then
+		UI.play("click")
+		UI.open("CharacterDetail", profile.Team[i])
 		return
 	end
 	UI.play("click")
@@ -594,6 +628,22 @@ sortBtn = UI.button(filterRow, { Name = "Sort", Text = "RARIDADE", Icon = "arrow
 		applyFilterChange()
 	end,
 })
+local function updateInspectBtn()
+	local c = if inspectMode then "teal" else "panelAlt"
+	UI.paint(inspectBtn, c)
+	inspectBtn:SetAttribute("BaseColor", c)
+	UI.setText(inspectBtn, if inspectMode then "INFO: ON" else "VER INFO")
+end
+inspectBtn = UI.button(filterRow, { Name = "InspectMode", Text = "VER INFO", Icon = "star", Layout = "row", Color = "panelAlt", Size = UDim2.fromOffset(96, T.TouchMin), Role = "Small",
+	OnClick = function()
+		inspectMode = not inspectMode
+		pickedUid = nil
+		selectSlot(nil)
+		updateInspectBtn()
+		setMessage(if inspectMode then "Toque para ver atributos." else "")
+		updateGrid(false)
+	end,
+})
 do
 	local icon = typeBtn.Face:FindFirstChild("Icon")
 	if icon then
@@ -616,6 +666,8 @@ UI.onOpen("Equipe", function(slot)
 		return
 	end
 	pickedUid = nil
+	inspectMode = false
+	updateInspectBtn()
 	selectedSlot = if typeof(slot) == "number" and slot >= 1 and slot <= MAX then slot else nil
 	setMessage(if selectedSlot then "Escolha um personagem da cole\u{e7}\u{e3}o." else "")
 	if not win.IsOpen() then

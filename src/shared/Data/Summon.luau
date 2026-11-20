@@ -55,6 +55,48 @@ Summon.Portals = {
 
 Summon.CurrencyName = { Gold = "gold", Gems = "gemas" }
 
+-- Paineis selecionaveis na estrela de invocacao (Anime filter + arte de painel)
+Summon.BannerOrder = { "Todos", "Naruto", "OnePiece" }
+Summon.Banners = {
+	Todos = {
+		Id = "Todos",
+		Anime = nil, -- todos os personagens invocaveis de todos os animes
+		Name = "Todos os Animes",
+		Short = "TODOS",
+		Subtitle = "Elenco Completo",
+		ImageId = 80124787437807,
+		Accent = Color3.fromRGB(168, 85, 247),
+		Icon = "star",
+	},
+	Naruto = {
+		Id = "Naruto",
+		Anime = "Naruto",
+		Name = "Naruto",
+		Short = "NARUTO",
+		Subtitle = "Sakura · Shikamaru · Kakashi · Sasuke · Naruto · Sarutobi",
+		ImageId = 90282977605958,
+		Accent = Color3.fromRGB(255, 138, 40),
+		Icon = "portal",
+	},
+	OnePiece = {
+		Id = "OnePiece",
+		Anime = "OnePiece",
+		Name = "One Piece",
+		Short = "ONE PIECE",
+		Subtitle = "Nami · Usopp · Zoro · Sanji · Luffy · Barba Branca",
+		ImageId = 88088550646321,
+		Accent = Color3.fromRGB(56, 178, 255),
+		Icon = "sword",
+	},
+}
+
+function Summon.GetBanner(bannerId: string?)
+	if typeof(bannerId) == "string" and Summon.Banners[bannerId] then
+		return Summon.Banners[bannerId]
+	end
+	return Summon.Banners.Todos
+end
+
 -- Semana para o banner: muda toda segunda 00:00 UTC (o dia 0 do Unix foi uma quinta)
 function Summon.Week(t: number): number
 	return (t - 4 * 86400) // 604800

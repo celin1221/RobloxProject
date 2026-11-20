@@ -16,9 +16,11 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local CollectionService = game:GetService("CollectionService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local PhysicsService = game:GetService("PhysicsService")
 
 local Data = ReplicatedStorage:WaitForChild("Data")
 local Base = require(Data.Base)
+local Training = require(Data:WaitForChild("Training"))
 local Characters = require(Data.Characters)
 
 local PlayerDataService = require(ServerScriptService:WaitForChild("Data"):WaitForChild("PlayerDataService"))
@@ -33,11 +35,43 @@ local BaseService = {}
 
 local TICK = 10 -- segundos entre calculos com o jogador online
 local WALK_SPEED = 6
+local BASE_NPC_GROUP = "BaseNPC"
 local clockOffset = 0 -- so testes no Studio
 local plotOf = {} -- [Player] = terreno
 local walkers = {} -- [Model] = { Plot, Next, Moving }
 local busy = {}
 local rng = Random.new()
+
+local function ensureNpcCollisionGroup()
+	pcall(function()
+		PhysicsService:RegisterCollisionGroup(BASE_NPC_GROUP)
+		for _, info in ipairs(PhysicsService:GetRegisteredCollisionGroups()) do
+			PhysicsService:CollisionGroupSetCollidable(BASE_NPC_GROUP, info.name, false)
+		end
+	end)
+end
+
+local function makeNpcPartIntangible(inst: Instance)
+	if inst:IsA("BasePart") then
+		inst.CanCollide = false
+		inst.CanQuery = false
+		inst.CanTouch = false
+		inst.Massless = true
+		inst.CollisionGroup = BASE_NPC_GROUP
+	elseif inst:IsA("Humanoid") then
+		inst.EvaluateStateMachine = false
+		inst.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+		inst.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	end
+end
+
+local function makeNpcIntangible(model: Model)
+	ensureNpcCollisionGroup()
+	for _, d in ipairs(model:GetDescendants()) do
+		makeNpcPartIntangible(d)
+	end
+	model.DescendantAdded:Connect(makeNpcPartIntangible)
+end
 
 local function now(): number
 	return os.time() + clockOffset
@@ -61,9 +95,21 @@ end
 --------------------------------------------------------------------
 -- Producao
 --------------------------------------------------------------------
--- Remove da base quem nao existe mais e respeita os limites
+local function trainingUidOf(data): string?
+	local job = data and data.TrainingMachine and data.TrainingMachine.Job
+	return job and job.Uid or nil
+end
+
+-- Remove da base quem nao existe mais (ou esta treinando na capsula) e respeita os limites
 local function sanitizeBase(data)
 	local b = data.Base
+	if typeof(b.Pending) ~= "table" then
+		b.Pending = { Gold = 0, Ore = 0, Ores = Training.ZeroOres() }
+	end
+	if typeof(b.Pending.Ores) ~= "table" then
+		b.Pending.Ores = Training.ZeroOres()
+	end
+	local busyUid = trainingUidOf(data)
 	local active, miners = 0, 0
 	local slots = Base.MiningSlots(data)
 	local uids = {}
@@ -73,7 +119,7 @@ local function sanitizeBase(data)
 	table.sort(uids)
 	for _, uid in ipairs(uids) do
 		local state = b.Active[uid]
-		if not data.Collection[uid] or (state ~= "Walk" and state ~= "Mine") or active >= Base.MaxActive then
+		if uid == busyUid or not data.Collection[uid] or (state ~= "Walk" and state ~= "Mine") or active >= Base.MaxActive then
 			b.Active[uid] = nil
 		else
 			active += 1
@@ -88,6 +134,28 @@ local function sanitizeBase(data)
 	end
 end
 
+-- Rola os minerios de atributo por ciclo de mineracao conforme o nivel da Mineracao
+local function rollMiningCycles(data, cycles: number)
+	if cycles <= 0 then
+		return
+	end
+	local level = Base.MiningLevelOf(data)
+	local dropRow = Base.MiningDropTable[level]
+	if not dropRow then
+		return
+	end
+	local pendingOres = data.Base.Pending.Ores
+	for _ = 1, cycles do
+		for _, stat in ipairs(Training.OreOrder) do
+			local cfg = dropRow[stat]
+			if cfg and cfg.Chance > 0 and rng:NextNumber() < cfg.Chance then
+				local qty = if cfg.Max > cfg.Min then rng:NextInteger(cfg.Min, cfg.Max) else cfg.Min
+				pendingOres[stat] = math.min(Training.MaxOrePerType, (pendingOres[stat] or 0) + qty)
+			end
+		end
+	end
+end
+
 -- Soma a producao desde o ultimo calculo. offline = jogador estava fora (limite de 8 horas).
 local function accrue(data, offline: boolean)
 	local b = data.Base
@@ -96,6 +164,9 @@ local function accrue(data, offline: boolean)
 	if (b.LastTick or 0) <= 0 or b.LastTick > t then
 		b.LastTick = t
 		return 0, 0, 0
+	end
+	if typeof(b.Pending.Ores) ~= "table" then
+		b.Pending.Ores = Training.ZeroOres()
 	end
 	local dt = math.max(0, t - b.LastTick)
 	if offline then
@@ -107,6 +178,17 @@ local function accrue(data, offline: boolean)
 	local ore = oreRate * dt / 3600
 	b.Pending.Gold += gold
 	b.Pending.Ore += ore
+
+	local minerPower = Base.MinerPower(data, rarityOf)
+	if minerPower > 0 and dt > 0 then
+		b.MiningProgress = (b.MiningProgress or 0) + (dt / Base.MiningCycleSeconds) * minerPower
+		local cycles = math.floor(b.MiningProgress)
+		if cycles >= 1 then
+			b.MiningProgress -= cycles
+			rollMiningCycles(data, math.min(Base.MaxOfflineMiningCycles, cycles))
+		end
+	end
+
 	b.LastTick = t
 	return gold, ore, dt
 end
@@ -149,7 +231,7 @@ local function randomWalkPoint(plot: Model): Vector3
 	local qGround = quarry and quarry:FindFirstChild("Ground")
 	for _ = 1, 10 do
 		local p = (floor.CFrame * CFrame.new(rng:NextNumber(-15, 15), 0, rng:NextNumber(-15, 15))).Position
-		if not qGround or ((p - qGround.Position) * Vector3.new(1, 0, 1)).Magnitude > 10 then
+		if not qGround or ((p - qGround.Position) * Vector3.new(1, 0, 1)).Magnitude > 7 then
 			return p
 		end
 	end
@@ -159,9 +241,9 @@ end
 -- Mede o raio externo da pedreira (rochas + vagoneta) na direcao horizontal u
 local function quarrySurfaceRadius(quarry: Model?, center: Vector3, u: Vector3): number
 	if not quarry then
-		return 8.0
+		return 4.5
 	end
-	local maxR = 7.6
+	local maxR = 4.0
 	for _, d in ipairs(quarry:GetDescendants()) do
 		if d:IsA("BasePart") and d.Name ~= "Ground" and d.Name ~= "MinePoint" and d.Transparency < 1 then
 			local rel = d.Position - center
@@ -189,7 +271,7 @@ local function minePoint(plot: Model, index: number, totalMiners: number, model:
 	local dir = (from - center) * Vector3.new(1, 0, 1)
 	dir = if dir.Magnitude > 0.1 then dir.Unit else Vector3.new(-1, 0, 0)
 	local count = math.max(1, totalMiners or 1)
-	local spanDeg = if count <= 1 then 0 else math.min(24, 108 / (count - 1))
+	local spanDeg = if count <= 1 then 0 else math.min(26, 112 / (count - 1))
 	local angle = math.rad((index - (count + 1) / 2) * spanDeg)
 	local rotated = CFrame.Angles(0, angle, 0) * dir
 	rotated = Vector3.new(rotated.X, 0, rotated.Z).Unit
@@ -197,7 +279,7 @@ local function minePoint(plot: Model, index: number, totalMiners: number, model:
 	local _, charSize = model:GetBoundingBox()
 	local charRadius = math.max(charSize.X, charSize.Z) * 0.45
 	local surface = quarrySurfaceRadius(quarry, center, rotated)
-	local dist = math.max(10.0, surface + charRadius + 1.6)
+	local dist = math.max(5.5, surface + charRadius + 1.0)
 	local pos = center + rotated * dist
 
 	if floor then
@@ -251,20 +333,14 @@ local function syncNPCs(player: Player)
 				model.Name = def.Name
 				local root = model:FindFirstChild("HumanoidRootPart")
 				root.Anchored = true
-				local hum = model:FindFirstChildOfClass("Humanoid")
-				if hum then
-					hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-				end
-				for _, d in model:GetDescendants() do
-					if d:IsA("BasePart") then
-						d.CanCollide = false
-					end
-				end
+				makeNpcIntangible(model)
 				model:SetAttribute("Uid", uid)
 				model:SetAttribute("OwnerUserId", player.UserId)
 				model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
 				CollectionService:AddTag(model, "BaseCharacter")
 				model.Parent = folder
+			else
+				makeNpcIntangible(model)
 			end
 			local changed = model:GetAttribute("BaseState") ~= state
 			model:SetAttribute("BaseState", state)
@@ -423,6 +499,17 @@ local function plotsSorted()
 	return list
 end
 
+local plotObserver = nil -- { OnAssigned(player, plot), OnReleased(plot) }
+
+function BaseService.SetPlotObserver(onAssigned, onReleased)
+	plotObserver = { OnAssigned = onAssigned, OnReleased = onReleased }
+	for player, plot in pairs(plotOf) do
+		if onAssigned then
+			task.spawn(onAssigned, player, plot)
+		end
+	end
+end
+
 local function assignPlot(player: Player)
 	if plotOf[player] then
 		return plotOf[player]
@@ -433,6 +520,9 @@ local function assignPlot(player: Player)
 			plotOf[player] = plot
 			setSign(plot, "Base de " .. player.DisplayName)
 			player:SetAttribute("PlotId", plot:GetAttribute("PlotId"))
+			if plotObserver and plotObserver.OnAssigned then
+				task.spawn(plotObserver.OnAssigned, player, plot)
+			end
 			return plot
 		end
 	end
@@ -450,6 +540,9 @@ local function releasePlot(player: Player)
 				walkers[m] = nil
 			end
 			folder:ClearAllChildren()
+		end
+		if plotObserver and plotObserver.OnReleased then
+			task.spawn(plotObserver.OnReleased, plot)
 		end
 		plot:SetAttribute("OwnerUserId", 0)
 		setSign(plot, nil)
@@ -482,6 +575,9 @@ function BaseService.SetState(player: Player, uid, state)
 	end
 	if state ~= "Walk" and state ~= "Mine" and state ~= "None" then
 		return false, "Estado inv\u{e1}lido."
+	end
+	if state ~= "None" and uid == trainingUidOf(data) then
+		return false, "Personagem est\u{e1} na M\u{e1}quina de Treinamento."
 	end
 	accrue(data, false) -- fecha a conta com as taxas antigas
 	sanitizeBase(data) -- tira da base quem foi vendido ou fundido (nao ocupa vaga)
@@ -521,7 +617,26 @@ function BaseService.Collect(player: Player)
 	local ore = math.floor(p.Ore)
 	local space = math.max(0, Base.OreMax - data.Ore)
 	local oreTaken = math.min(ore, space)
-	if gold <= 0 and oreTaken <= 0 then
+
+	data.TrainingOres = Training.SanitizeOres(data.TrainingOres, Training.MaxOrePerType)
+	local pOres = p.Ores or Training.ZeroOres()
+	local attrTaken = Training.ZeroOres()
+	local attrSummary = {}
+	local anyAttr = false
+	for _, stat in ipairs(Training.OreOrder) do
+		local avail = math.floor(pOres[stat] or 0)
+		local room = math.max(0, Training.MaxOrePerType - (data.TrainingOres[stat] or 0))
+		local take = math.min(avail, room)
+		if take > 0 then
+			anyAttr = true
+			attrTaken[stat] = take
+			data.TrainingOres[stat] += take
+			pOres[stat] -= take
+			table.insert(attrSummary, "+" .. fmt(take) .. " " .. Training.Ores[stat].Short)
+		end
+	end
+
+	if gold <= 0 and oreTaken <= 0 and not anyAttr then
 		if ore > 0 then
 			return false, "Dep\u{f3}sito de min\u{e9}rio cheio (" .. fmt(Base.OreMax) .. "). Venda min\u{e9}rio na loja."
 		end
@@ -533,9 +648,12 @@ function BaseService.Collect(player: Player)
 	p.Ore -= oreTaken
 	changed(player, true)
 	RetentionService.Track(player, "Collect", 1)
-	local text = "Coletou " .. fmt(gold) .. " gold e " .. fmt(oreTaken) .. " de min\u{e9}rio."
+	local text = "Coletou " .. fmt(gold) .. " gold e " .. fmt(oreTaken) .. " min."
+	if anyAttr then
+		text ..= " (" .. table.concat(attrSummary, ", ") .. ")"
+	end
 	if oreTaken < ore then
-		text ..= " Dep\u{f3}sito cheio (" .. fmt(Base.OreMax) .. "): " .. fmt(ore - oreTaken) .. " de min\u{e9}rio ficou na base."
+		text ..= " Dep\u{f3}sito cheio (" .. fmt(Base.OreMax) .. ")."
 	end
 	return true, text
 end
@@ -556,6 +674,32 @@ function BaseService.UpgradeSlots(player: Player)
 	data.Base.MiningSlots += 1
 	changed(player, true)
 	return true, "Nova vaga de minera\u{e7}\u{e3}o! Agora s\u{e3}o " .. Base.MiningSlots(data) .. "."
+end
+
+function BaseService.UpgradeMining(player: Player)
+	local data = PlayerDataService.Get(player)
+	if not data then
+		return false, "Dados ainda carregando."
+	end
+	local cost = Base.NextMiningLevelCost(data)
+	if not cost then
+		return false, "Minera\u{e7}\u{e3}o j\u{e1} est\u{e1} no n\u{ed}vel m\u{e1}ximo."
+	end
+	if data.Gold < cost then
+		return false, "Gold insuficiente (precisa de " .. fmt(cost) .. ")."
+	end
+	data.Gold -= cost
+	local newLv = Base.MiningLevelOf(data) + 1
+	data.Base.MiningLevel = newLv
+	changed(player, true)
+	local unlockedMsg = ""
+	for _, stat in ipairs(Training.OreOrder) do
+		local info = Training.Ores[stat]
+		if info.UnlockMiningLevel == newLv then
+			unlockedMsg = " Desbloqueou " .. info.Name .. "!"
+		end
+	end
+	return true, "Minera\u{e7}\u{e3}o n\u{ed}vel " .. newLv .. "!" .. unlockedMsg
 end
 
 -- Venda de minerio por gemas com teto diario
@@ -676,9 +820,15 @@ local function onLoaded(player: Player)
 end
 
 function BaseService.Init()
+	if not Remotes:FindFirstChild("BaseUpgradeMining") then
+		local rf = Instance.new("RemoteFunction")
+		rf.Name = "BaseUpgradeMining"
+		rf.Parent = Remotes
+	end
 	Remotes.BaseSetState.OnServerInvoke = guarded(BaseService.SetState)
 	Remotes.BaseCollect.OnServerInvoke = guarded(BaseService.Collect)
 	Remotes.BaseUpgrade.OnServerInvoke = guarded(BaseService.UpgradeSlots)
+	Remotes.BaseUpgradeMining.OnServerInvoke = guarded(BaseService.UpgradeMining)
 	Remotes.SellOre.OnServerInvoke = guarded(BaseService.SellOre)
 	Remotes.BaseTeleport.OnServerInvoke = guarded(function(player)
 		-- seguranca: sem teleporte no meio da batalha ou da torre

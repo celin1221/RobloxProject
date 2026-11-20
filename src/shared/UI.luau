@@ -36,14 +36,16 @@ UI.Icons = {
 	heart = 106988462112017, plus = 101956040454774, minus = 71760513326498, arrow = 75508355730640,
 	seal_basic = 100621042868382, seal_superior = 132984291965815,
 	doce_comum = 135488822674293, doce_raro = 132697637242766, doce_epico = 140556027915418, gear = 80957102713866,
+	ore_hp = 98190850262557, ore_def = 81379071551950, ore_vel = 131534143692832, ore_atq = 94276779585364,
 	music = 95544281526372, speaker = 136399284995956, sparkle = 84255360310628,
+	summon_sunburst = 139837721546408, banner_todos = 80124787437807, banner_onepiece = 88088550646321, banner_naruto = 90282977605958,
 	-- tipos (selo redondo, desenhados pela skill roblox-ui: C:\Blender\UI\icones\tipo_*.png)
 	tipo_fogo = 75267357253313, tipo_agua = 80328198116962, tipo_natureza = 114992050529106,
 	tipo_raio = 72227189979725, tipo_luz = 109203429684282, tipo_trevas = 109541332454865,
 }
 UI.TypeIcon = { Fogo = "tipo_fogo", Agua = "tipo_agua", Natureza = "tipo_natureza", Raio = "tipo_raio", Luz = "tipo_luz", Trevas = "tipo_trevas" }
 
--- Sons (Creator Store, gratis; medidos no Studio em 16/11/2026)
+-- Sons (Creator Store, gratis; medidos no Studio)
 UI.Sounds = {
 	click = { Id = 127036696152728, Volume = 0.5 }, -- 0,11 s
 	open = { Id = 78897892629188, Volume = 0.45 }, -- 0,20 s
@@ -52,6 +54,12 @@ UI.Sounds = {
 	reward = { Id = 96102213526905, Volume = 0.55 }, -- 1,41 s
 	coin = { Id = 607665037, Volume = 0.4 }, -- 0,52 s
 	error = { Id = 87519554692663, Volume = 0.45 }, -- 0,31 s
+	-- invocacao (gacha): carga rapida + brilho + revelacao estimulante por raridade
+	summon_charge = { Id = 12222200, Volume = 0.5, Pitch = 0.72 }, -- 0,20 s (Roblox swoosh)
+	summon_shimmer = { Id = 9116394545, Volume = 0.55, Pitch = 1.15 }, -- 1,43 s (ProSoundEffects Magic Glow Chime)
+	summon_reveal = { Id = 9126073001, Volume = 0.68, Pitch = 1.05 }, -- 1,16 s (ProSoundEffects Synth Sparkle Bell)
+	summon_epic = { Id = 1844692556, Volume = 0.66, Pitch = 1.0 }, -- 2,17 s (APMOfficial Game Show fanfare)
+	summon_legendary = { Id = 1845411858, Volume = 0.72, Pitch = 1.0 }, -- 4,81 s (APMOfficial Top Prize fanfare)
 	-- doces de XP: o mesmo brilho, cada vez mais grave e mais alto
 	candy_comum = { Id = 96102213526905, Volume = 0.4, Pitch = 1.35 },
 	candy_raro = { Id = 96102213526905, Volume = 0.6, Pitch = 1.1 },

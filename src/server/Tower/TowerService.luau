@@ -23,6 +23,7 @@ local Tower = require(Data.Tower)
 local Items = require(Data.Items)
 local Progression = require(Data.Progression)
 local Benefits = require(Data.Benefits)
+local Genetics = require(Data:WaitForChild("Genetics"))
 
 local BattleService = require(ServerScriptService:WaitForChild("Battle"):WaitForChild("BattleService"))
 local Config = require(ServerScriptService.Battle:WaitForChild("BattleConfig"))
@@ -175,12 +176,20 @@ local function npcTeam(size: number, levelFn, extra)
 	local pool = roster()
 	local bag = {}
 	local team = {}
+	local towerGen, towerTrain = Genetics.TowerEnemyPreset()
+	local towerMults = Genetics.MultipliersFor(towerGen, towerTrain)
 	for i = 1, size do
 		if #bag == 0 then
 			bag = table.clone(pool)
 		end
 		local id = table.remove(bag, rng:NextInteger(1, #bag))
-		local entry = { CharacterId = id, Level = levelFn(i) }
+		local entry = {
+			CharacterId = id,
+			Level = levelFn(i),
+			Genetics = table.clone(towerGen),
+			Training = table.clone(towerTrain),
+			StatMultipliers = table.clone(towerMults),
+		}
 		for k, v in pairs(extra or {}) do
 			entry[k] = v
 		end

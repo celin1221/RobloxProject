@@ -22,7 +22,7 @@ local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
 
 local MAX_ANIM_DIST = 260
-local TAGS = { "PartyFollower", "BaseCharacter", "RefugeWild", "BattleCharacter" }
+local TAGS = { "PartyFollower", "BaseCharacter", "RefugeWild", "BattleCharacter", "CapsuleCharacter" }
 local MOTOR_TO_JOINT = {
 	Root = "LowerTorso",
 	Waist = "UpperTorso",
@@ -377,6 +377,7 @@ local function setup(model: Instance, tag: string)
 		isIPose = false,
 		isBattle = (tag == "BattleCharacter"),
 		isFollower = (tag == "PartyFollower"),
+		isCapsule = (tag == "CapsuleCharacter"),
 		mineTrack = nil,
 		mineAlpha = 0,
 		minePhase = math.random(),
@@ -479,6 +480,33 @@ RunService.Stepped:Connect(function(now, dt)
 		if st.dirtyRig or st.jointCount < 15 or (not st.isIPose and model:FindFirstChild("LeftArm_Mesh") ~= nil) then
 			st.dirtyRig = false
 			refreshRig(st)
+		end
+
+		if st.isCapsule then
+			-- Flutuacao suave em gravidade zero dentro da Cupula de Vidro
+			local phase = now * 2.1 + st.seed
+			local floatY = 0.28 * math.sin(phase)
+			local armWave = math.sin(phase * 0.85)
+			local isReady = model:GetAttribute("CapsuleState") == "Ready"
+			local liftArms = if isReady then math.rad(12) else 0
+			local armOut = (if st.isIPose then math.rad(-14) else math.rad(36)) + math.rad(4 * armWave)
+			local joints = st.joints
+			setJoint(joints, "LowerTorso", CFrame.new(0, floatY, 0) * CFrame.Angles(math.rad(-3), math.rad(8 * math.sin(phase * 0.5)), 0))
+			setJoint(joints, "UpperTorso", CFrame.Angles(math.rad(3 + 2 * math.cos(phase)), math.rad(-4 * math.sin(phase * 0.5)), 0))
+			setJoint(joints, "Head", CFrame.Angles(math.rad(-6 + 3 * math.sin(phase)), math.rad(6 * math.cos(phase * 0.45)), 0))
+			setJoint(joints, "LeftUpperArm", CFrame.Angles(math.rad(-14 - 5 * armWave) - liftArms, 0, armOut))
+			setJoint(joints, "LeftLowerArm", CFrame.Angles(math.rad(22), 0, 0))
+			setJoint(joints, "LeftHand", CFrame.identity)
+			setJoint(joints, "RightUpperArm", CFrame.Angles(math.rad(-14 + 5 * armWave) - liftArms, 0, -armOut))
+			setJoint(joints, "RightLowerArm", CFrame.Angles(math.rad(22), 0, 0))
+			setJoint(joints, "RightHand", CFrame.identity)
+			setJoint(joints, "LeftUpperLeg", CFrame.Angles(math.rad(12 + 4 * math.sin(phase)), 0, math.rad(-4)))
+			setJoint(joints, "LeftLowerLeg", CFrame.Angles(math.rad(-16), 0, 0))
+			setJoint(joints, "LeftFoot", CFrame.Angles(math.rad(-8), 0, 0))
+			setJoint(joints, "RightUpperLeg", CFrame.Angles(math.rad(-6 - 4 * math.sin(phase)), 0, math.rad(4)))
+			setJoint(joints, "RightLowerLeg", CFrame.Angles(math.rad(-12), 0, 0))
+			setJoint(joints, "RightFoot", CFrame.Angles(math.rad(-8), 0, 0))
+			continue
 		end
 
 		local moving = (not isMining) and (model:GetAttribute("Moving") == true)

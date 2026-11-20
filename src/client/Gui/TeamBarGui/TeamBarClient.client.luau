@@ -77,7 +77,7 @@ catcher.ZIndex = 9
 catcher.Visible = false
 catcher.Parent = canvas
 
-local pop, popFace = UI.panel(canvas, { Name = "MemberCard", Size = UDim2.fromScale(0.46, 0.62), AnchorPoint = Vector2.new(0.5, 1), Color = "panel", Corner = 0.08, Aspect = 1.45, AspectAxis = Enum.DominantAxis.Height, ZIndex = 10, Visible = false, MaxSize = Vector2.new(470, 324) })
+local pop, popFace = UI.panel(canvas, { Name = "MemberCard", Size = UDim2.fromScale(0.48, 0.62), AnchorPoint = Vector2.new(0.5, 1), Color = "panel", Corner = 0.08, Aspect = 1.62, AspectAxis = Enum.DominantAxis.Height, ZIndex = 10, Visible = false, MaxSize = Vector2.new(520, 324) })
 local popName = UI.text(popFace, "", { Name = "Name", Size = UDim2.fromScale(0.62, 0.15), Position = UDim2.fromScale(0.04, 0.04), Role = "Heading", AlignX = Enum.TextXAlignment.Left, ZIndex = 11 })
 local popInfo = UI.text(popFace, "", { Name = "Info", Size = UDim2.fromScale(0.34, 0.12), Position = UDim2.fromScale(0.96, 0.055), AnchorPoint = Vector2.new(1, 0), Role = "Small", AlignX = Enum.TextXAlignment.Right, ZIndex = 11, Rich = true })
 local statsRow = UI.frame(popFace, { Name = "Stats", Size = UDim2.fromScale(0.92, 0.15), Position = UDim2.fromScale(0.04, 0.22), ZIndex = 11 })
@@ -111,21 +111,28 @@ local function sendTeam(list)
 	Remotes:WaitForChild("SetTeam"):FireServer(list)
 end
 
-UI.button(btnRow, { Name = "Swap", Text = "TROCAR", Color = "blue", Role = "Small", Size = UDim2.fromScale(0.32, 1), ZIndex = 12,
+UI.button(btnRow, { Name = "Details", Text = "STATUS", Color = "teal", Role = "Small", Size = UDim2.fromScale(0.235, 1), Position = UDim2.fromScale(0, 0), ZIndex = 12,
+	OnClick = function()
+		local uid = popUid
+		closePop()
+		UI.open("CharacterDetail", uid)
+	end,
+})
+UI.button(btnRow, { Name = "Swap", Text = "TROCAR", Color = "blue", Role = "Small", Size = UDim2.fromScale(0.235, 1), Position = UDim2.fromScale(0.255, 0), ZIndex = 12,
 	OnClick = function()
 		local s = popSlot
 		closePop()
 		UI.open("Equipe", s)
 	end,
 })
-UI.button(btnRow, { Name = "Moves", Text = "GOLPES", Color = "purple", Role = "Small", Size = UDim2.fromScale(0.32, 1), Position = UDim2.fromScale(0.34, 0), ZIndex = 12,
+UI.button(btnRow, { Name = "Moves", Text = "GOLPES", Color = "purple", Role = "Small", Size = UDim2.fromScale(0.235, 1), Position = UDim2.fromScale(0.51, 0), ZIndex = 12,
 	OnClick = function()
 		local uid = popUid
 		closePop()
 		UI.open("Team", uid)
 	end,
 })
-UI.button(btnRow, { Name = "Remove", Text = "REMOVER", Color = "red", Role = "Small", Size = UDim2.fromScale(0.32, 1), Position = UDim2.fromScale(0.68, 0), ZIndex = 12,
+UI.button(btnRow, { Name = "Remove", Text = "REMOVER", Color = "red", Role = "Small", Size = UDim2.fromScale(0.235, 1), Position = UDim2.fromScale(0.765, 0), ZIndex = 12,
 	OnClick = function()
 		if not profile or not popUid then
 			return

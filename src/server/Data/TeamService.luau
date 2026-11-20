@@ -75,11 +75,15 @@ function TeamService.Validate(data, list)
 	if #list ~= n then
 		return nil, "Pedido inv\u{e1}lido."
 	end
+	local busyUid = data.TrainingMachine and data.TrainingMachine.Job and data.TrainingMachine.Job.Uid
 	local clean, seen = {}, {}
 	for i = 1, n do
 		local uid = list[i]
 		if typeof(uid) ~= "string" or not data.Collection[uid] then
 			return nil, "Esse personagem n\u{e3}o \u{e9} seu."
+		end
+		if uid == busyUid then
+			return nil, "Personagem est\u{e1} na M\u{e1}quina de Treinamento."
 		end
 		if seen[uid] then
 			return nil, "O mesmo personagem n\u{e3}o pode ocupar dois espa\u{e7}os."

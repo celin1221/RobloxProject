@@ -26,6 +26,7 @@ local Benefits = require(Data.Benefits)
 local Base = require(Data.Base)
 local Tower = require(Data.Tower)
 local Encounters = require(Data.Encounters)
+local Genetics = require(Data:WaitForChild("Genetics"))
 
 local PlayerDataService = require(ServerScriptService:WaitForChild("Data"):WaitForChild("PlayerDataService"))
 local ProgressionService = require(ServerScriptService.Data:WaitForChild("ProgressionService"))
@@ -123,10 +124,12 @@ function RefugeService.Roll(level: number, r: Random?)
 			break
 		end
 	end
+	local actualDef = charId and Characters.Get(charId)
 	return {
 		CharacterId = charId,
 		Level = r:NextInteger(info.MinLevel, info.MaxLevel),
 		Rarity = rarity,
+		Genetics = Genetics.Roll(actualDef and actualDef.Rarity or rarity, r),
 	}
 end
 
@@ -153,7 +156,7 @@ local function accrue(data): number
 	for _ = 1, add do
 		local roll = RefugeService.Roll(r.Forja)
 		if roll.CharacterId then
-			table.insert(r.Pending, { Id = r.NextId, CharacterId = roll.CharacterId, Level = roll.Level, Rarity = roll.Rarity })
+			table.insert(r.Pending, { Id = r.NextId, CharacterId = roll.CharacterId, Level = roll.Level, Rarity = roll.Rarity, Genetics = roll.Genetics })
 			r.NextId += 1
 		end
 	end
@@ -622,9 +625,18 @@ startWild = function(player: Player, entryId)
 		model.Parent = nil -- some do campo durante a batalha
 	end
 	local def = Characters.Get(entry.CharacterId)
+	if not Genetics.HasAllKeys(entry.Genetics) then
+		entry.Genetics = Genetics.Roll(def and def.Rarity or entry.Rarity or "Comum", rng)
+	end
 	local outcome = nil
 	local ok = BattleService.StartBattle(player, {
-		EnemyTeam = { { CharacterId = entry.CharacterId, Level = entry.Level } },
+		EnemyTeam = { {
+			CharacterId = entry.CharacterId,
+			Level = entry.Level,
+			Genetics = entry.Genetics,
+			Training = Genetics.ZeroTable(),
+			StatMultipliers = Genetics.MultipliersFor(entry.Genetics, nil),
+		} },
 		EnemyAI = Encounters.AI,
 		Mode = "Wild",
 		CaptureBlocked = if Benefits.CollectionCount(data) >= Benefits.CollectionMax(data) then "Dep\u{f3}sito de personagens cheio (" .. Benefits.CollectionMax(data) .. "). Venda ou funda repetidos." else nil,
@@ -639,7 +651,7 @@ startWild = function(player: Player, entryId)
 			local rr = refugeData(profile)
 			if battle.Captured then
 				local toTeam = #profile.Team < MAX_TEAM
-				local _, albumLines = ProgressionService.AddCharacter(player, battle.Captured.CharacterId, battle.Captured.Level, toTeam)
+				local _, albumLines = ProgressionService.AddCharacter(player, battle.Captured.CharacterId, battle.Captured.Level, toTeam, nil, battle.Captured.Genetics)
 				table.insert(lines, def.Name .. " entrou para " .. (if toTeam then "o seu time." else "a sua cole\u{e7}\u{e3}o."))
 				for _, l in ipairs(albumLines or {}) do
 					table.insert(lines, l)

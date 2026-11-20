@@ -684,3 +684,91 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 
 
 
+
+
+## Genética, Treino, Regras PvE/Forja e HUD com Gráfico de Radar (19/11/2026)
+
+**Feito**
+- `src/shared/Data/Genetics.luau` (novo) & `src/shared/Data/Progression.luau`: implementado sistema de **Genética** (IVs) e **Treino** (EVs) em escala `0..100` (`%`) para `HP`, `Attack`, `Defense` e `Speed`:
+  - Bônus nos atributos finais por stat: até **+40%** de Genética e até **+30%** de Treino (`1 + 0,40×Gen/100 + 0,30×Trn/100`), aplicados individualmente por atributo junto ao multiplicador de estrelas/variante (`Progression.MemberMultipliers` e `Progression.StatBreakdown`).
+  - Distribuição probabilística de Genética via inversa da CDF de **Kumaraswamy** ajustada por raridade (`Comum ~36%`, `Raro ~53%`, `Epico ~65%`, `Lendario ~74%`, sempre aleatória e sem garantia) + evento raro de **Prodígio 100%** (`100/100/100/100` de `0,005%` no Comum até `0,050%` no Lendário).
+  - Treino sempre inicializado em `0` nos 4 atributos para personagens do jogador.
+- `src/shared/Core/BattleEngine.luau`: suporte a `StatMultipliers` por atributo (`Genetics` + `Training`), preservando `Genetics` no evento `Captured` e mantendo `0/0` em `1,00x` (teste do GDD preservado).
+- Camada Servidor:
+  - `PlayerDataService.luau`: migração/higienização automática preenchendo `Genetics` (sorteada por raridade) e `Training` zerado em personagens já salvos e selvagens pendentes no Refúgio.
+  - `ProgressionService.luau`, `PvPService.luau`, `SummonService.luau`: criação com Genética por raridade + Treino `0`, envio de `StatMultipliers` para batalha/PvP, e desempate em `Fuse`/`SellDuplicate` preservando a melhor Genética.
+  - `TowerService.luau`: inimigos PvE da Torre recebem **`Genética = 70` e `Treino = 100`** em todos os 4 atributos (`1,58x` + multiplicadores de andar/chefe); chefes capturados/obtidos continuam entrando na coleção com rolagem normal do jogador e Treino `0`.
+  - `RefugeService.luau` ("Forja pessoal") & `EncounterService.luau`: selvagens geram `Genetics` pela mesma função/probabilidades do Gacha (`Genetics.Roll`), lutam com esses atributos e mantêm exatamente a Genética sorteada ao serem capturados (com Treino `0`).
+- Interface & Gráfico de Radar:
+  - `src/shared/RadarChart.luau` (novo): componente gráfico de radar 4 eixos (`HP`, `ATQ`, `DEF`, `VEL`) com anéis (`25%..100%`), preenchimento geométrico por quadrante (`UIGradient` alinhado por `atan2` em pixel space), arestas, vértices luminosos e camadas alternáveis (`AMBOS`, `GENÉTICA`, `TREINO`).
+  - `src/client/Gui/CharacterDetailGui/CharacterDetailClient.client.luau` (novo): modal responsivo empilhado (`UI.open("CharacterDetail", uid)`) com retrato 3D, badge de rank (`S+..D`), médias de Genética/Treino, gráfico de radar e detalhamento `Base → Final` com barras de progresso por atributo.
+  - Pontos de acesso integrados na Barra do Time (`TeamBarClient`: botão `STATUS`), na tela de `Equipe` (`InspectSlot` + alternador `VER INFO`) e em `Mochila > Personagens` (`BagClient`: linha clicável com resumo `GEN % / TRN %`); `HudClient` (`GOLPES`) atualizado para exibir `Progression.MemberStats`.
+- Documentação atualizada em `Blender/GDD.md` (Seções 4, 6, 10 e 14) e `ARQUITETURA_PROJETO.md`.
+
+**Testado (Edit Mode + Play Mode + Captura Visual, 19/11/2026)**
+- Teste unitário em `Edit Mode`: médias reais de `500` rolagens por raridade (`Comum = 36,4%`, `Raro = 52,9%`, `Epico = 65,1%`, `Lendario = 74,1%`), multiplicadores `1.00x / 1.58x (Torre) / 1.70x (Máx)`, batalha de chefe Infinito (`BossAtk = 42`) e preservação de Genética em captura selvagem (`PASS`).
+- Teste em `Play Mode` (`Server` + `Client`): migração validada nos `14` personagens existentes, criação de novo personagem com `Treino = 0/0/0/0`, sorteio da Forja Pessoal, abertura via `Mochila > Personagens`, `Equipe` (`VER INFO`) e Barra do Time, auditoria completa via `_UITestKit` nas resoluções Desktop, `667x375`, `932x430` e `1024x768` sem erros reais (`OUT`/`SMALL`/`TINY` limpos), e captura visual (`screen_capture`) em Desktop e `667x375` confirmando alinhamento exato do polígono no Radar e console limpo.
+- `sync_studio.py status` (`79/79` scripts `100% in sync`) e `sync_studio.py test` (`PASS`).
+
+
+## Máquina de Treinamento (Cúpula de Vidro), 4 Minérios e Níveis de Mineração (19/11/2026)
+
+**Feito**
+- `src/shared/Data/Training.luau` (novo) & `src/shared/Data/Base.luau`:
+  - Criados os **4 minérios específicos por atributo** separados em raridades: **Minério Vital** (`HP`, Comum, Nv. 1), **Minério Férreo** (`Defesa`, Raro, Nv. 2), **Minério Veloz** (`Velocidade`, Épico, Nv. 4) e **Minério Rubro** (`Ataque`, Lendário / mais raro, Nv. 6).
+  - Atualizada a **Mineração da Base (Nv. 1 a 10)** em `Base.MiningDropTable` e `Base.Rates`: agora quem minera gera **Gold (`50%` da taxa de Passeio) + Minério bruto + rolagens independentes dos 4 minérios de treino** (permitindo vir múltiplos tipos e múltiplas quantidades num mesmo achado, equilibrando porcentagens e quantidades ao subir de nível em Gold).
+  - Regras de treino implementadas em `Training.luau`: incrementos exclusivamente de **20 em 20** até `100%`, suporte a múltiplos atributos simultâneos com taxa de crafting (`1,00× / 1,25× / 1,50× / 1,80×`), multiplicadores de custo e tempo por raridade (`Comum` `+20` em Nv. 1 = `60s`, até `Lendário` `99s`), e **10 níveis de eficiência** da máquina em Gold (`1,00×` até `4,00×`, reduzindo o `+20` básico para `15s`).
+- `src/server/Economy/TrainingService.luau` (novo), `BaseService.luau`, `PlayerDataService.luau`, `TeamService.luau`, `SummonService.luau`, `DataMain.server.luau`, `src/shared/Net.luau`:
+  - Construída fisicamente a **`TrainingCapsule`** (cúpula de vidro translúcida com base metálica, anéis neon, console frontal com `ProximityPrompt`, etiqueta flutuante e emissor de bolhas de energia) em todos os **10 terrenos (`Plots/Plot01..Plot10`)**.
+  - Modelo 3D do personagem em treino fica suspenso dentro da cúpula (`CapsuleCharacter`), protegido contra entrar no time, minerar/passear, fusão ou venda; resgatar conclui e aplica os atributos ao personagem; cancelar devolve `50%` dos minérios.
+- Interface & Animação (`BaseClient.client.luau`, `BaseUiClient.client.luau`, `TrainingGui/TrainingClient.client.luau`):
+  - `BaseClient`: adicionada pose animada a 60 FPS de flutuação em gravidade zero para modelos marcados com `CapsuleCharacter`.
+  - `BaseUiClient`: exibidos nível da mineração, botão de upgrade da mineração em Gold, faixa ao vivo dos 4 minérios (`%` de participação e pendentes), botão **`TREINO`** e selo **`CÁPSULA`**.
+  - `TrainingClient`: janela responsiva (`IdleView` com grade 2×2 de passos `-`/`+` de 20 em 20 + `ActiveView` com retrato 3D, barra de progresso em tempo real e botões `Resgatar` / `Cancelar`), com upgrade da eficiência em Gold no cabeçalho.
+- Documentação atualizada em `Blender/GDD.md` (Seção 8) e `ARQUITETURA_PROJETO.md`.
+
+**Testado (Edit Mode + Play Mode + Captura Visual, 19/11/2026)**
+- Testes unitários em `Edit Mode`: validação de múltiplos de 20 (rejeição de `15`), `60s` no `+20` Comum Nv. 1, `99s` Lendário, `15s` Comum Nv. 10, custos por raridade e multi-atributo, progressão de equilíbrio da tabela de drop (`Nv. 1 -> 10`) e geração combinada de Gold + Minério na mineração (`PASS`).
+- Testes em `Play Mode` (`Server` + `Client`): acúmulo e coleta de drops do Nv. 1 ao Nv. 6 (`HP=460, DEF=260, VEL=190, ATQ=47` + `Gold=67,5`), upgrade da Mineração (`1 -> 6`) e da Máquina (`1 -> 2`), bloqueio em `SetTeam` durante treino, reembolso de `50%` em `TrainingCancel`, `Barba Branca` levitando completo dentro da cúpula física em `Plot01` sem cortar o teto, resgate confirmando `HP=20% e DEF=20%`, auditoria `_UITestKit` limpa (`BaseGui` e `TrainingGui` Idle/Active em Desktop, `667x375`, `932x430`, `1024x768`), capturas visuais limpas (`capsule_edit_v1`, `training_idle_desktop_v1`, `training_active_desktop_v1`, `capsule_with_barba_branca_play`) e console sem erros.
+- `sync_studio.py status` (`82/82` scripts `100% in sync`) e `sync_studio.py test` (`PASS`).
+
+
+## Polimento Visual: Ícones de Minérios, Intangibilidade e Layout da Base (20/11/2026)
+
+**Feito**
+- **4 Ícones dos Minérios de Atributo:** gerados via `scripts/build_ore_icons.py` (`Blender/UI/icones/ore_hp.png`, `ore_def.png`, `ore_vel.png`, `ore_atq.png`, 256×256 RGBA no estilo contorno `#1A1233`) e enviados com permissões (`Universe 10777011549` e `User 5565234433`): `ore_hp` (`98190850262557`), `ore_def` (`81379071551950`), `ore_vel` (`131534143692832`) e `ore_atq` (`94276779585364`).
+- `src/shared/UI.luau`, `src/shared/Data/Training.luau`, `src/client/Gui/BaseGui/BaseUiClient.client.luau` e `src/client/Gui/TrainingGui/TrainingClient.client.luau`: adicionados `UI.Icons.ore_*` e `Icon` em `Training.Ores`, integrados nos cards/faixa superior de `TrainingGui` e na faixa de minérios de `BaseGui`; reduzidos os ícones internos de `TrainingGui` (`Header.Icon` e `StartTraining.Face.Icon`).
+- `src/client/Gui/BagGui/BagClient.client.luau`: reduzido o ícone dos cards na aba **Itens** (`Size = (0.32, 0.32)`, `Position = (0.5, 0.14)`, `ItemName` em `Y = 0.56` e `Desc` em `Y = 0.79`).
+- `src/server/Economy/BaseService.luau` & `src/client/PlayerScripts/NpcWalkClient.client.luau`: personagens em `BaseCharacters` totalmente intangíveis (`CollisionGroup = "BaseNPC"` sem colisão com outros grupos, `CanCollide/CanQuery/CanTouch = false`, `Massless = true`, `Humanoid.EvaluateStateMachine = false` + `DescendantAdded` no servidor e no cliente).
+- **Pedreira menor & Cápsula no canto (`Plots/Plot01..Plot10`):**
+  - Em todos os 10 terrenos em `Edit`: `Quarry` escalonada para `0,58×` ancorada em `(-17, floorTop, 17)` (`ScaleVersion = 2`; rocha `Rock_7A7F8C` de `15,1×8,9×14,1` para `8,8×5,2×8,2`), com distâncias ajustadas em `BaseService.luau` (`randomWalkPoint > 7`, `quarrySurfaceRadius` padrão `4,5`, `minePoint` mínimo `5,5 + charRadius + 1,0`).
+  - `src/server/Economy/TrainingService.luau` & 10 terrenos em `Edit`: `TrainingCapsule` compactada (`LowerRim` `7,0`) e movida para o canto frontal direito (`floor.CFrame * CFrame.new(14.5, floor.Size.Y * 0.5, -14.2)`), com o `Arbusto` frontal direito em `Decor` deslocado para `Z = -9,2` (`MovedForCapsule = true`).
+
+**Testado (Edit Mode + Play Mode + Capturas Visuais, 20/11/2026)**
+- `ContentProvider:PreloadAsync`: `4/4` `Enum.AssetFetchStatus.Success` em `Edit` e em `Client` Play Mode (`98190850262557`, `81379071551950`, `131534143692832`, `94276779585364`).
+- `Play Mode` (`Plot01`): os 3 mineradores (`Kaen`, `Barba Branca`, `Luffy`) confirmados em Servidor e Cliente com `EvaluateStateMachine = false`, `canCollideParts = 0` e `CollisionGroup = "BaseNPC"`, posicionados fora da rocha menor (`distRock` entre `7,97` e `8,84` studs); teste físico de caminhada atravessando o centro de `Barba Branca` (`minDistThroughCenter = 0,30` studs, destino alcançado a `0,73` studs).
+- Auditoria `_UITestKit.audit()` limpa (apenas `Scrim` fora da tela padrão) em `TrainingGui`, `BaseGui` e `BagGui` (Desktop, `667x375`, `932x430`, `1024x768`), capturas visuais em Play Mode (`ScreenCapture_PlayCourtyard`, `ScreenCapture_PlayCorner`, `ScreenCapture_TrainingGui` com `TopOre_*` 17×17 / `OreIcon` 20×20 / `StartTraining.Icon` 21×21, `ScreenCapture_BaseGui`, e `ScreenCapture_BagGui` com cards `234×187` e ícones `59×59`) e console sem erros de runtime.
+- `sync_studio.py status` (`82/82` `100% in sync`) e `sync_studio.py test` (`PASS`).
+
+
+## Painéis de Seleção de Anime na Estrela do Gacha, Elenco Naruto Provisório e Animação/Som de Destaque 3D (20/11/2026)
+
+**Feito**
+- **Artes dos Painéis de Seleção de Anime & Efeito Sunburst:** gerados em 800×360 (`Blender/UI/banners/`) e 512×512 (`summon_sunburst.png`), enviados para o Roblox com permissões (`Universe 10777011549` e `User 5565234433`):
+  - `Blender/UI/banners/banner_todos.png` (`80124787437807`), `banner_naruto.png` (`90282977605958`), `banner_onepiece.png` (`88088550646321`) e `summon_sunburst.png` (`139837721546408`).
+- **6 Personagens de Naruto (sem modelo próprio ainda / ataques padrão):**
+  - `src/shared/Data/Characters.luau`: adicionado `"Naruto"` em `AnimeOrder`/`Animes` e cadastrados `Sakura` (`Comum`, Natureza), `Shikamaru` (`Comum`, Trevas), `Kakashi` (`Raro`, Raio), `Sasuke` (`Raro`, Fogo), `Naruto` (`Epico`, Luz) e `Sarutobi` (`Lendario`, Fogo) com ataques padrão existentes, animações padrão compartilhadas e paletas provisórias (`PlaceholderColors`).
+  - `src/server/CharacterLibrary.luau` & `src/server/CharacterPreviews.server.luau`: implementado `CloneSource` com fallback automático para `ProtoRaro` (sem `Acc_Visor`, colorido por `PlaceholderColors`) quando `ServerStorage/Characters/<ModelName>` ainda não existe, além de fallback de animação em `Characters.Play` e geração automática das prévias em `ReplicatedStorage/CharacterPreviews` — trocável apenas adicionando os modelos finais depois.
+- **Painéis de Estrela no Servidor e Cliente:**
+  - `src/shared/Data/Summon.luau` & `src/shared/Net.luau`: definidos `Summon.BannerOrder` (`Todos`, `Naruto`, `OnePiece`), `Summon.Banners` e contrato `Summon`/`SummonBanner` com `bannerId`.
+  - `src/server/Economy/SummonService.luau`: seleção validada no servidor filtrando sorteios e destaques semanais (`BannerOf`) pelo anime escolhido (`Naruto`, `OnePiece`, ou `Todos`), preservando chances e garantia (*pity*) do portal.
+- **Animação 3D Girando na Frente da Tela + Sons Estimulantes + Cartas 3D (`SummonClient` + `UI.luau`):**
+  - `src/shared/UI.luau`: adicionados ícones de banners/sunburst e 5 efeitos sonoros verificados para gacha em `UI.Sounds` (`summon_charge` `12222200`, `summon_shimmer` `9116394545`, `summon_reveal` `9126073001`, `summon_epic` `1844692556`, `summon_legendary` `1845411858`).
+  - `src/client/Gui/SummonGui/SummonClient.client.luau`: faixa inferior `BannerStrip` com os 3 painéis ilustrados clicáveis (`TODOS`, `NARUTO`, `ONE PIECE`), palco em tela cheia `SummonShowcase` (carga rápida `0,40s` → explosão com raios radiais rotativos, partículas, personagem 3D completo girando na frente da tela `~1,45–1,85s`, botão `PULAR` e fanfarra por raridade) e grade `5x2` `RevealWindow` com prévias 3D frontais e atualização imediata de `ViewportFrame`.
+- Documentação atualizada em `Blender/GDD.md` (Seções 4 e 13).
+
+**Testado (Edit Mode + Play Mode + Capturas Visuais, 20/11/2026)**
+- `ContentProvider:PreloadAsync`: 4/4 imagens novas (`Enum.AssetFetchStatus.Success`) e 5/5 áudios novos (`IsLoaded = true`) conferidos em `Edit` e `Client` Play Mode.
+- `Server` Play Mode: todos os 6 modelos provisórios de Naruto em `ReplicatedStorage/CharacterPreviews` (`MissingPrev = vazio`), `CharacterLibrary.Spawn` verificado nos 6 personagens (`anims = 12`, sem visor), `SummonService.BannerOf("Premium", "Naruto") == "Sarutobi"`, `SummonService.BannerOf("Premium", "OnePiece") == "BarbaBranca"`, e turnos simulados em `BattleEngine` (`SarutobivSakura`, `NarutovSasuke`, `KakashivShikamaru` -> `dmgEvs = 2` cada).
+- `Client` Play Mode: abertura pelo `SummonPrompt` de `PortalComum` (tecla `E`), seleção visual das estrelas `Todos`, `Naruto` e `One Piece`, roleta `Summon1` em `One Piece` (`Usopp`) e `Summon10` em `Naruto` (`Sakura`, `Shikamaru`, `Kakashi` em grade `5x2` com todos os 10 `ViewportFrame`s visíveis de imediato e sem truncamento), auditoria `_UITestKit.audit()` limpa (apenas `Scrim`) em `SummonWindow` e `RevealWindow` nas resoluções Desktop, `667x375`, `932x430` e `1024x768`, perfil do jogador restaurado (`1.002.219` gold, `14` personagens) e console sem erros de execução do jogo.
+- `sync_studio.py status` (`82/82` `100% in sync`) e `sync_studio.py test` (`PASS`).

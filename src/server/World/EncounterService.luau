@@ -19,6 +19,7 @@ local Characters = require(Data.Characters)
 local Encounters = require(Data.Encounters)
 local Summon = require(Data.Summon)
 local Benefits = require(Data.Benefits)
+local Genetics = require(Data:WaitForChild("Genetics"))
 
 local BattleService = require(ServerScriptService:WaitForChild("Battle"):WaitForChild("BattleService"))
 local CharacterLibrary = require(ServerScriptService:WaitForChild("CharacterLibrary"))
@@ -137,7 +138,8 @@ local function spawnWild(zone)
 	prompt.MaxActivationDistance = 10
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = root
-	wild[model] = { Zone = zone, CharacterId = charId, Level = level, Rarity = def.Rarity, Busy = false, Folder = folder.Wild }
+	local genetics = Genetics.Roll(def.Rarity, rng)
+	wild[model] = { Zone = zone, CharacterId = charId, Level = level, Rarity = def.Rarity, Genetics = genetics, Busy = false, Folder = folder.Wild }
 	CollectionService:AddTag(model, "WildCharacter")
 	prompt.Triggered:Connect(function(player)
 		startEncounter(player, model)
@@ -192,7 +194,13 @@ startEncounter = function(player: Player, model: Model)
 	model.Parent = nil -- some da zona enquanto a batalha acontece
 	local def = Characters.Get(info.CharacterId)
 	local ok = BattleService.StartBattle(player, {
-		EnemyTeam = { { CharacterId = info.CharacterId, Level = info.Level } },
+		EnemyTeam = { {
+			CharacterId = info.CharacterId,
+			Level = info.Level,
+			Genetics = info.Genetics,
+			Training = Genetics.ZeroTable(),
+			StatMultipliers = Genetics.MultipliersFor(info.Genetics, nil),
+		} },
 		EnemyAI = Encounters.AI,
 		Mode = "Wild",
 		-- deposito de personagens cheio: selos recusados (secao 9, Deposito Ampliado)
@@ -207,7 +215,7 @@ startEncounter = function(player: Player, model: Model)
 			end
 			if battle.Captured then
 				local toTeam = #profile.Team < MAX_TEAM
-				local _, albumLines = ProgressionService.AddCharacter(player, battle.Captured.CharacterId, battle.Captured.Level, toTeam)
+				local _, albumLines = ProgressionService.AddCharacter(player, battle.Captured.CharacterId, battle.Captured.Level, toTeam, nil, battle.Captured.Genetics)
 				table.insert(lines, def.Name .. " entrou para " .. (if toTeam then "o seu time." else "a sua cole\u{e7}\u{e3}o (base)."))
 				for _, l in ipairs(albumLines or {}) do
 					table.insert(lines, l)

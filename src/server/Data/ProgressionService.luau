@@ -13,6 +13,7 @@ local Data = ReplicatedStorage:WaitForChild("Data")
 local Characters = require(Data.Characters)
 local Moves = require(Data.Moves)
 local Progression = require(Data.Progression)
+local Genetics = require(Data:WaitForChild("Genetics"))
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local AlbumService = require(script.Parent.AlbumService)
 local Summon = require(Data.Summon)
@@ -27,6 +28,7 @@ ProgressionService.Listeners = {} -- function(player, battle, result) no fim de 
 
 local MAX_TEAM = 6
 local lastCall = {} -- limite de pedidos por jogador
+local rng = Random.new()
 
 local function throttled(player: Player): boolean
 	local now = os.clock()
@@ -39,11 +41,12 @@ end
 
 -- Cria um personagem na colecao (usado pelo inicial; invocacao e captura usarao o mesmo)
 -- Retorna uid e mensagens do album (premios de tipo/raridade completos)
-function ProgressionService.AddCharacter(player: Player, characterId: string, level: number, toTeam: boolean?, variant: string?)
+function ProgressionService.AddCharacter(player: Player, characterId: string, level: number, toTeam: boolean?, variant: string?, geneticsOverride)
 	local data = assert(PlayerDataService.Get(player), "Perfil nao carregado")
-	assert(Characters.Get(characterId), "Personagem desconhecido: " .. tostring(characterId))
+	local def = assert(Characters.Get(characterId), "Personagem desconhecido: " .. tostring(characterId))
 	level = math.clamp(math.floor(level), 1, Progression.MaxLevel)
 	local uid = PlayerDataService.NewUid(player)
+	local genetics = if typeof(geneticsOverride) == "table" then Genetics.SanitizeTable(geneticsOverride) else Genetics.Roll(def.Rarity, rng)
 	data.Collection[uid] = {
 		Uid = uid,
 		CharacterId = characterId,
@@ -53,6 +56,8 @@ function ProgressionService.AddCharacter(player: Player, characterId: string, le
 		Active = Characters.DefaultActive(characterId, level),
 		Variant = variant,
 		Stars = 0,
+		Genetics = genetics,
+		Training = Genetics.ZeroTable(),
 		ObtainedAt = os.time(),
 	}
 	if toTeam and #data.Team < MAX_TEAM then
@@ -162,6 +167,9 @@ function ProgressionService.TeamFor(player: Player)
 				Moves = table.clone(m.Active),
 				Uid = uid,
 				StatMultiplier = Progression.MemberMultiplier(m),
+				StatMultipliers = Genetics.MultipliersFor(m.Genetics, m.Training),
+				Genetics = m.Genetics,
+				Training = m.Training,
 				Hp = m.Hp,
 				Status = m.Status,
 				StatusTurns = m.StatusTurns,

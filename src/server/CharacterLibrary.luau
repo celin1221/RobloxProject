@@ -39,8 +39,55 @@ local HOLD_LAST_FRAME = { Faint = true, Victory = true }
 
 local tracksByModel = setmetatable({}, { __mode = "k" })
 
+local function applyPlaceholderColors(model: Model, colors)
+	if typeof(colors) ~= "table" then
+		return
+	end
+	local torsoParts = { UpperTorso = true, LowerTorso = true }
+	local armParts = { LeftUpperArm = true, LeftLowerArm = true, RightUpperArm = true, RightLowerArm = true }
+	local legParts = { LeftUpperLeg = true, LeftLowerLeg = true, RightUpperLeg = true, RightLowerLeg = true, LeftFoot = true, RightFoot = true }
+	for _, ch in ipairs(model:GetChildren()) do
+		if ch:IsA("BasePart") then
+			if torsoParts[ch.Name] and colors.Torso then
+				ch.Color = colors.Torso
+			elseif armParts[ch.Name] and colors.Accent then
+				ch.Color = colors.Accent
+			elseif legParts[ch.Name] and colors.Legs then
+				ch.Color = colors.Legs
+			end
+		end
+	end
+end
+
+-- Cria um clone bruto do modelo (ou usa um rig provisorio colorido se o modelo ainda nao existe em ServerStorage/Characters)
+function Characters.CloneSource(name: string): Model
+	local source = FOLDER:FindFirstChild(name)
+	if source and source:IsA("Model") then
+		return source:Clone()
+	end
+	local fallback = FOLDER:FindFirstChild("ProtoRaro") or FOLDER:FindFirstChild("Kaen")
+	assert(fallback and fallback:IsA("Model"), "Personagem nao encontrado em ServerStorage/Characters: " .. tostring(name))
+	local model = fallback:Clone()
+	model.Name = name
+	model:SetAttribute("PlaceholderModel", true)
+	local visor = model:FindFirstChild("Acc_Visor")
+	if visor then
+		visor:Destroy()
+	end
+	local cdata = getCharactersData()
+	local def = cdata and cdata.Get(name)
+	if def and def.PlaceholderColors then
+		applyPlaceholderColors(model, def.PlaceholderColors)
+	end
+	return model
+end
+
 function Characters.Exists(name: string): boolean
-	return FOLDER:FindFirstChild(name) ~= nil
+	if FOLDER:FindFirstChild(name) ~= nil then
+		return true
+	end
+	local cdata = getCharactersData()
+	return cdata ~= nil and cdata.Get(name) ~= nil and (FOLDER:FindFirstChild("ProtoRaro") ~= nil or FOLDER:FindFirstChild("Kaen") ~= nil)
 end
 
 function Characters.List(): { string }
@@ -55,9 +102,7 @@ end
 
 -- Cria uma copia do personagem e coloca no mundo.
 function Characters.Spawn(name: string, cframe: CFrame?, parent: Instance?): Model
-	local source = FOLDER:FindFirstChild(name)
-	assert(source and source:IsA("Model"), "Personagem nao encontrado em ServerStorage/Characters: " .. tostring(name))
-	local model = source:Clone()
+	local model = Characters.CloneSource(name)
 	local cdata = getCharactersData()
 	if cdata then
 		local animeId = cdata.AnimeOf(name)
@@ -86,6 +131,12 @@ end
 function Characters.Play(model: Model, animName: string, fadeTime: number?): AnimationTrack?
 	local folder = model:FindFirstChild("Animations")
 	local anim = folder and folder:FindFirstChild(animName)
+	if not anim and folder then
+		anim = folder:FindFirstChild("Attack")
+		if anim then
+			animName = "Attack"
+		end
+	end
 	if not anim then
 		warn("Animacao '" .. animName .. "' nao encontrada em " .. model.Name)
 		return nil

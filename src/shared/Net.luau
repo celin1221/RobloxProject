@@ -18,6 +18,7 @@ export type RemoteEventName =
 	| "Announce"      -- Server -> All Clients: anuncio global (Lendario/Brilhante invocado)
 	| "Notify"        -- Server -> Client: toast / notificacao na tela
 	| "PvPInvite"     -- Server -> Client: convite de desafio PvP
+	| "TrainingOpen"  -- Server -> Client: abre tela da Maquina de Treinamento pela capsula 3D
 
 export type RemoteFunctionName =
 	"GetProfile"      -- Client -> Server: retorna snapshot do perfil salvo
@@ -25,8 +26,8 @@ export type RemoteFunctionName =
 	| "SetActiveMoves"-- Client -> Server: define os 4 golpes ativos de um personagem
 	| "TowerStart"    -- Client -> Server: inicia corrida na Torre (Facil/Medio/Dificil/Infinito)
 	| "TowerBoard"    -- Client -> Server: consulta placar da Torre
-	| "Summon"        -- Client -> Server: invoca 1 ou 10 no Portal Comum/Premium
-	| "SummonBanner"  -- Client -> Server: consulta banner e taxas atuais
+	| "Summon"        -- Client -> Server: invoca 1, 3 ou 10 no Portal Comum/Premium com painel (bannerId)
+	| "SummonBanner"  -- Client -> Server: consulta destaque e elenco do painel (portalId, bannerId)
 	| "SellDuplicate" -- Client -> Server: vende personagem repetido por gold
 	| "Fuse"          -- Client -> Server: funde 3 repetidos em +1 estrela
 	| "UseItem"       -- Client -> Server: usa item fora de batalha (Pocao, Reviver)
@@ -35,6 +36,11 @@ export type RemoteFunctionName =
 	| "BaseSetState"  -- Client -> Server: alterna personagem na base (Passeando / Minerando)
 	| "BaseCollect"   -- Client -> Server: coleta gold e minerio acumulados na base
 	| "BaseUpgrade"   -- Client -> Server: melhora vagas de mineracao da base com gold
+	| "BaseUpgradeMining" -- Client -> Server: sobe nivel da Mineracao (libera minerios de treino)
+	| "TrainingStart" -- Client -> Server: inicia sessao de treino na capsula
+	| "TrainingClaim" -- Client -> Server: conclui e aplica ganho de treino quando terminado
+	| "TrainingCancel"-- Client -> Server: cancela treino ativo na capsula com reembolso parcial
+	| "TrainingUpgrade" -- Client -> Server: melhora eficiencia da Maquina de Treinamento com gold
 	| "SellOre"       -- Client -> Server: converte minerio em gemas (respeitando teto diario de 50)
 	| "BaseTeleport"  -- Client -> Server: teleporta jogador para sua base ou praca
 	| "PvPChallenge"  -- Client -> Server: envia convite de PvP para outro jogador

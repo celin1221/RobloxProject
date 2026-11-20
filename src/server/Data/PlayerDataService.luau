@@ -32,7 +32,13 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Data = ReplicatedStorage:WaitForChild("Data")
+local Characters = require(Data:WaitForChild("Characters"))
+local Genetics = require(Data:WaitForChild("Genetics"))
+local Training = require(Data:WaitForChild("Training"))
+
 local PlayerDataService = {}
+local rng = Random.new()
 
 local STORE_NAME = "PlayerData_v1"
 local BACKUP_NAME = "PlayerDataBackup_v1"
@@ -67,7 +73,8 @@ local function defaultProfile()
 		Team = {}, -- ate 6 uids, na ordem
 		Bag = {}, -- [itemId] = quantidade
 		Gold = 0,
-		Ore = 0, -- minerio
+		Ore = 0, -- minerio bruto
+		TrainingOres = { HP = 0, Attack = 0, Defense = 0, Speed = 0 }, -- 4 minerios de atributo para treino
 		Gems = 0,
 		Benefits = {}, -- [beneficio] = "Pass" (Game Pass, conferido a cada entrada) ou "Gems" (comprado com gemas)
 		Receipts = {}, -- [PurchaseId] = os.time(): compras em Robux ja entregues (ProcessReceipt nao entrega 2 vezes)
@@ -83,8 +90,17 @@ local function defaultProfile()
 		Season = { Id = "", Best = 0 }, -- temporada do Infinito (mes UTC); Last = resultado da anterior
 		SummonPity = { Comum = 0, Premium = 0 }, -- garantia de invocacao
 		Album = { Owned = {}, Claimed = {} }, -- [personagem] = { Variants = { Brilhante = true } }; premios ja pagos
-		-- base (secao 8): Active[uid] = "Walk" | "Mine"; vagas compradas; producao pendente para coletar; ultimo calculo
-		Base = { Active = {}, MiningSlots = 2, Pending = { Gold = 0, Ore = 0 }, LastTick = 0 },
+		-- base (secao 8): Active[uid] = "Walk" | "Mine"; vagas compradas; nivel mineracao; producao pendente; ultimo calculo
+		Base = {
+			Active = {},
+			MiningSlots = 2,
+			MiningLevel = 1,
+			Pending = { Gold = 0, Ore = 0, Ores = { HP = 0, Attack = 0, Defense = 0, Speed = 0 } },
+			MiningProgress = 0,
+			LastTick = 0,
+		},
+		-- maquina de treinamento (secao 8): nivel (eficiencia) e trabalho ativo na cupula
+		TrainingMachine = { Level = 1, Job = nil },
 		-- configuracoes do jogador (volumes de 0 a 100)
 		Settings = { MusicOn = true, MusicVolume = 50, SfxOn = true, SfxVolume = 80, MapFx = true },
 		-- Refugio (secao 14): nivel da Forja, contadores, Bau ({ {Id, Qty} }), selvagens pendentes e ultimo surgimento
@@ -139,6 +155,34 @@ local function sanitize(data)
 	data.Gold = cleanNumber(data.Gold)
 	data.Gems = cleanNumber(data.Gems)
 	data.Ore = cleanNumber(data.Ore)
+	data.TrainingOres = Training.SanitizeOres(data.TrainingOres, Training.MaxOrePerType)
+	if typeof(data.Base) == "table" then
+		data.Base.MiningSlots = math.clamp(math.max(2, cleanNumber(data.Base.MiningSlots, 6)), 2, 6)
+		data.Base.MiningLevel = math.clamp(math.max(1, cleanNumber(data.Base.MiningLevel, 10)), 1, 10)
+		data.Base.MiningProgress = if typeof(data.Base.MiningProgress) == "number" and data.Base.MiningProgress == data.Base.MiningProgress then math.max(0, data.Base.MiningProgress) else 0
+		if typeof(data.Base.Pending) ~= "table" then
+			data.Base.Pending = { Gold = 0, Ore = 0, Ores = Training.ZeroOres() }
+		else
+			data.Base.Pending.Gold = math.max(0, tonumber(data.Base.Pending.Gold) or 0)
+			data.Base.Pending.Ore = math.max(0, tonumber(data.Base.Pending.Ore) or 0)
+			data.Base.Pending.Ores = Training.SanitizeOres(data.Base.Pending.Ores, Training.MaxOrePerType)
+		end
+	end
+	if typeof(data.TrainingMachine) ~= "table" then
+		data.TrainingMachine = { Level = 1, Job = nil }
+	else
+		data.TrainingMachine.Level = math.clamp(math.max(1, cleanNumber(data.TrainingMachine.Level, Training.MaxLevel)), 1, Training.MaxLevel)
+		local job = data.TrainingMachine.Job
+		if typeof(job) ~= "table" or typeof(job.Uid) ~= "string" or not data.Collection[job.Uid] then
+			data.TrainingMachine.Job = nil
+		else
+			job.Targets = Training.SanitizeOres(job.Targets, Training.Max)
+			job.Cost = Training.SanitizeOres(job.Cost, Training.MaxOrePerType)
+			job.StartedAt = cleanNumber(job.StartedAt, 1e10)
+			job.EndsAt = cleanNumber(job.EndsAt, 1e10)
+			job.Duration = math.max(1, cleanNumber(job.Duration, 86400))
+		end
+	end
 	for id, n in pairs(data.Bag) do
 		data.Bag[id] = cleanNumber(n, 99)
 		if data.Bag[id] == 0 then
@@ -148,6 +192,25 @@ local function sanitize(data)
 	for _, m in pairs(data.Collection) do
 		m.Level = math.clamp(cleanNumber(m.Level), 1, 50)
 		m.Xp = cleanNumber(m.Xp)
+		local def = Characters.Get(m.CharacterId)
+		if typeof(m.Genetics) ~= "table" then
+			m.Genetics = Genetics.Roll(def and def.Rarity or "Comum", rng)
+		else
+			if not Genetics.HasAllKeys(m.Genetics) then
+				local rolled = Genetics.Roll(def and def.Rarity or "Comum", rng)
+				for _, stat in ipairs(Genetics.Stats) do
+					if typeof(m.Genetics[stat]) ~= "number" then
+						m.Genetics[stat] = rolled[stat]
+					end
+				end
+			end
+			m.Genetics = Genetics.SanitizeTable(m.Genetics)
+		end
+		if typeof(m.Training) ~= "table" then
+			m.Training = Genetics.ZeroTable()
+		else
+			m.Training = Genetics.SanitizeTable(m.Training)
+		end
 	end
 	local r = data.Refuge
 	if typeof(r) == "table" then
@@ -156,6 +219,14 @@ local function sanitize(data)
 		r.Captures = cleanNumber(r.Captures)
 		r.LastSpawn = cleanNumber(r.LastSpawn, 1e10)
 		r.NextId = math.max(1, cleanNumber(r.NextId))
+		if typeof(r.Pending) == "table" then
+			for _, e in ipairs(r.Pending) do
+				if typeof(e) == "table" and not Genetics.HasAllKeys(e.Genetics) then
+					local eDef = Characters.Get(e.CharacterId)
+					e.Genetics = Genetics.Roll(eDef and eDef.Rarity or e.Rarity or "Comum", rng)
+				end
+			end
+		end
 	end
 	return data
 end

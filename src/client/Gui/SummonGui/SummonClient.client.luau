@@ -10,9 +10,11 @@
 	O sorteio e todo no servidor (SummonService).
 ]]
 
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local TextChatService = game:GetService("TextChatService")
 local StarterGui = game:GetService("StarterGui")
@@ -30,6 +32,7 @@ local player = Players.LocalPlayer
 
 local PORTAL = "Comum"
 local portal = Summon.Portals[PORTAL]
+local selectedBannerId = "Todos"
 local bannerName = nil -- destaque da semana (Premium)
 local profile = nil
 local busy = false
@@ -62,7 +65,7 @@ local selectTab = UI.tabs(body, {
 	{ Id = "Portal", Text = "PORTAL" },
 	{ Id = "Album", Text = "\u{c1}LBUM" },
 	{ Id = "Dupes", Text = "REPETIDOS" },
-}, { Size = UDim2.fromScale(0.6, 0.11), MaxWidth = 0.32 }, function(id)
+}, { Size = UDim2.fromScale(0.6, 0.095), MaxWidth = 0.32 }, function(id)
 	currentTab = id
 	for name, f in pairs(pages) do
 		f.Visible = name == id
@@ -74,46 +77,47 @@ local selectTab = UI.tabs(body, {
 		refreshDupes()
 	end
 end)
-local walletHolder, walletLabel = UI.pill(body, "coin", "gold", { Name = "Wallet", Size = UDim2.fromScale(0.3, 0.11), Position = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(1, 0), Aspect = 3.2, MaxSize = Vector2.new(math.huge, 50) })
-local msg = UI.text(body, "", { Name = "Message", Size = UDim2.fromScale(1, 0.07), Position = UDim2.fromScale(0, 0.94), Role = "Small", Color = "hpLow" })
+local walletHolder, walletLabel = UI.pill(body, "coin", "gold", { Name = "Wallet", Size = UDim2.fromScale(0.3, 0.095), Position = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(1, 0), Aspect = 3.2, MaxSize = Vector2.new(math.huge, 46) })
+local msg = UI.text(body, "", { Name = "Message", Size = UDim2.fromScale(1, 0.055), Position = UDim2.fromScale(0, 0.945), Role = "Small", Color = "hpLow" })
 
 local function page(name)
-	local f = UI.frame(body, { Name = name, Size = UDim2.fromScale(1, 0.73), Position = UDim2.fromScale(0, 0.205), Visible = name == "Portal" })
-	UI.fillBetween(f, body:FindFirstChild("Tabs"), msg, 6)
+	local f = UI.frame(body, { Name = name, Size = UDim2.fromScale(1, 0.78), Position = UDim2.fromScale(0, 0.16), Visible = name == "Portal" })
+	UI.fillBetween(f, body:FindFirstChild("Tabs"), msg, 5)
 	pages[name] = f
 	return f
 end
 
 --------------------------------------------------------------------
--- Aba Portal
+-- Aba Portal + Paineis de Selecao de Anime
 --------------------------------------------------------------------
 local portalPage = page("Portal")
-local rates, ratesFace = UI.panel(portalPage, { Name = "Rates", Size = UDim2.fromScale(0.47, 1), Color = "slot", Corner = 0.07, Shadow = false })
-UI.text(ratesFace, "CHANCES", { Name = "Title", Size = UDim2.fromScale(0.9, 0.12), Position = UDim2.fromScale(0.05, 0.03), Role = "Body", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left })
+local topArea = UI.frame(portalPage, { Name = "TopArea", Size = UDim2.fromScale(1, 0.57), Position = UDim2.fromScale(0, 0) })
+local rates, ratesFace = UI.panel(topArea, { Name = "Rates", Size = UDim2.fromScale(0.47, 1), Color = "slot", Corner = 0.07, Shadow = false })
+UI.text(ratesFace, "CHANCES", { Name = "Title", Size = UDim2.fromScale(0.9, 0.11), Position = UDim2.fromScale(0.05, 0.02), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.5 })
 local rateRows = {}
 for i, r in ipairs(Summon.RarityOrder) do
-	local row, rface = UI.panel(ratesFace, { Name = "Rate_" .. r, Size = UDim2.fromScale(0.9, 0.15), Position = UDim2.fromScale(0.05, 0.17 + (i - 1) * 0.18), Color = rarityColor(r), Corner = T.Corner.Pill })
-	local name = UI.text(rface, UI.upper(Summon.RarityName[r]), { Name = "Name", Size = UDim2.fromScale(0.6, 0.7), Position = UDim2.fromScale(0.05, 0.15), Role = "Body", AlignX = Enum.TextXAlignment.Left })
-	local val = UI.text(rface, "", { Name = "Value", Size = UDim2.fromScale(0.36, 0.7), Position = UDim2.fromScale(0.95, 0.15), AnchorPoint = Vector2.new(1, 0), Role = "Body", AlignX = Enum.TextXAlignment.Right })
+	local row, rface = UI.panel(ratesFace, { Name = "Rate_" .. r, Size = UDim2.fromScale(0.9, 0.16), Position = UDim2.fromScale(0.05, 0.15 + (i - 1) * 0.18), Color = rarityColor(r), Corner = T.Corner.Pill })
+	local name = UI.text(rface, UI.upper(Summon.RarityName[r]), { Name = "Name", Size = UDim2.fromScale(0.6, 0.74), Position = UDim2.fromScale(0.05, 0.13), Role = "Small", AlignX = Enum.TextXAlignment.Left })
+	local val = UI.text(rface, "", { Name = "Value", Size = UDim2.fromScale(0.36, 0.74), Position = UDim2.fromScale(0.95, 0.13), AnchorPoint = Vector2.new(1, 0), Role = "Small", AlignX = Enum.TextXAlignment.Right })
 	if r == "Lendario" then
 		UI.shine(row)
 	end
 	rateRows[r] = { Name = name, Value = val }
 end
-local shinyLabel = UI.text(ratesFace, "\u{2726} Brilhante: " .. pct(Summon.ShinyChance) .. " em toda invoca\u{e7}\u{e3}o", { Name = "Shiny", Size = UDim2.fromScale(0.9, 0.09), Position = UDim2.fromScale(0.05, 0.89), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.5 })
+local shinyLabel = UI.text(ratesFace, "\u{2726} Brilhante: " .. pct(Summon.ShinyChance) .. " em toda invoca\u{e7}\u{e3}o", { Name = "Shiny", Size = UDim2.fromScale(0.9, 0.095), Position = UDim2.fromScale(0.05, 0.885), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45 })
 
-local side = UI.frame(portalPage, { Name = "Actions", Size = UDim2.fromScale(0.5, 1), Position = UDim2.fromScale(0.5, 0) })
-local bannerLabel = UI.text(side, "", { Name = "Banner", Size = UDim2.fromScale(1, 0.1), Position = UDim2.fromScale(0, 0), Role = "Small", Color = "lendario", AlignX = Enum.TextXAlignment.Left })
-UI.text(side, "GARANTIA DE LEND\u{c1}RIO", { Name = "PityTitle", Size = UDim2.fromScale(0.75, 0.1), Position = UDim2.fromScale(0, 0.11), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left })
-local pityValue = UI.text(side, "", { Name = "PityValue", Size = UDim2.fromScale(0.25, 0.1), Position = UDim2.fromScale(1, 0.11), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "lendario", AlignX = Enum.TextXAlignment.Right })
-local pityBar = UI.bar(side, { Name = "Pity", Size = UDim2.fromScale(1, 0.08), Position = UDim2.fromScale(0, 0.23), FillColor = "lendario", Value = 0 })
-local freeHolder, freeFace = UI.panel(side, { Name = "Free", Size = UDim2.fromScale(1, 0.13), Position = UDim2.fromScale(0, 0.37), Color = "slot", Corner = T.Corner.Pill, Shadow = false })
-UI.icon(freeHolder, "ticket", { Size = UDim2.fromScale(0.16, 1.3), Position = UDim2.fromScale(0, 0.5), AnchorPoint = Vector2.new(0, 0.5), ZIndex = 3 })
-local freeLabel = UI.text(freeFace, "", { Name = "Text", Size = UDim2.fromScale(0.78, 0.7), Position = UDim2.fromScale(0.18, 0.15), Role = "Small", AlignX = Enum.TextXAlignment.Left })
+local side = UI.frame(topArea, { Name = "Actions", Size = UDim2.fromScale(0.5, 1), Position = UDim2.fromScale(0.5, 0) })
+local bannerLabel = UI.text(side, "", { Name = "Banner", Size = UDim2.fromScale(1, 0.12), Position = UDim2.fromScale(0, 0), Role = "Small", Color = "lendario", AlignX = Enum.TextXAlignment.Left })
+UI.text(side, "GARANTIA DE LEND\u{c1}RIO", { Name = "PityTitle", Size = UDim2.fromScale(0.75, 0.11), Position = UDim2.fromScale(0, 0.13), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45 })
+local pityValue = UI.text(side, "", { Name = "PityValue", Size = UDim2.fromScale(0.25, 0.11), Position = UDim2.fromScale(1, 0.13), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "lendario", AlignX = Enum.TextXAlignment.Right })
+local pityBar = UI.bar(side, { Name = "Pity", Size = UDim2.fromScale(1, 0.09), Position = UDim2.fromScale(0, 0.25), FillColor = "lendario", Value = 0 })
+local freeHolder, freeFace = UI.panel(side, { Name = "Free", Size = UDim2.fromScale(1, 0.14), Position = UDim2.fromScale(0, 0.37), Color = "slot", Corner = T.Corner.Pill, Shadow = false })
+UI.icon(freeHolder, "ticket", { Size = UDim2.fromScale(0.14, 1.25), Position = UDim2.fromScale(0.02, 0.5), AnchorPoint = Vector2.new(0, 0.5), ZIndex = 3 })
+local freeLabel = UI.text(freeFace, "", { Name = "Text", Size = UDim2.fromScale(0.78, 0.72), Position = UDim2.fromScale(0.18, 0.14), Role = "Small", AlignX = Enum.TextXAlignment.Left })
 
--- botoes de invocar (verdes, com o icone da moeda)
+-- botoes de invocar (altura generosa para toque >= 44 px ate em celulares pequenos)
 local function summonButton(name, x, w)
-	local b, face = UI.button(side, { Name = name, Color = "green", Size = UDim2.fromScale(w, 0.4), Position = UDim2.fromScale(x, 0.58), Corner = 0.22, Sound = false })
+	local b, face = UI.button(side, { Name = name, Color = "green", Size = UDim2.fromScale(w, 0.44), Position = UDim2.fromScale(x, 0.55), Corner = 0.22, Sound = false })
 	UI.text(face, "", { Name = "Title", Size = UDim2.fromScale(0.9, 0.38), Position = UDim2.fromScale(0.05, 0.08), Role = "Body" })
 	local price = UI.frame(face, { Name = "Price", Size = UDim2.fromScale(0.9, 0.36), Position = UDim2.fromScale(0.05, 0.54) })
 	local pl = Instance.new("UIListLayout")
@@ -133,6 +137,167 @@ local three = summonButton("Summon3", 0.52, 0.48)
 three.Visible = false
 local ten = summonButton("Summon10", 0.52, 0.48)
 
+-- Faixa inferior com paineis de selecao de anime (estilo banner ilustrado)
+local bannerStrip = UI.frame(portalPage, { Name = "BannerStrip", Size = UDim2.fromScale(1, 0.40), Position = UDim2.fromScale(0, 0.60) })
+UI.text(bannerStrip, "ESCOLHER ANIME / ESTRELA", {
+	Name = "Title",
+	Size = UDim2.fromScale(0.38, 0.19),
+	Position = UDim2.fromScale(0, 0),
+	Role = "Small",
+	Color = "inkSoft",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.45,
+})
+local bannerPoolLabel = UI.text(bannerStrip, "", {
+	Name = "PoolInfo",
+	Size = UDim2.fromScale(0.62, 0.19),
+	Position = UDim2.fromScale(1, 0),
+	AnchorPoint = Vector2.new(1, 0),
+	Role = "Small",
+	Color = "gold",
+	AlignX = Enum.TextXAlignment.Right,
+	StrokeMult = 0.45,
+})
+local bannersRow = UI.frame(bannerStrip, { Name = "BannersRow", Size = UDim2.fromScale(1, 0.78), Position = UDim2.fromScale(0, 0.22) })
+
+local bannerButtons = {}
+local bannerCount = #Summon.BannerOrder
+local bannerGap = 0.018
+local bannerW = (1 - bannerGap * math.max(0, bannerCount - 1)) / math.max(1, bannerCount)
+
+local function updateBannerSelection()
+	local activeCfg = Summon.GetBanner(selectedBannerId)
+	bannerPoolLabel.Text = activeCfg.Subtitle or activeCfg.Name
+	for id, entry in pairs(bannerButtons) do
+		local isSel = id == selectedBannerId
+		local accent = entry.Config.Accent or T.Palette.gold
+		entry.Stroke.Color = if isSel then accent:Lerp(Color3.new(1, 1, 1), 0.35) else Color3.fromRGB(48, 38, 86)
+		entry.Stroke.Thickness = if isSel then 3 else 1.5
+		entry.Scale.Scale = if isSel then 1.02 else 0.98
+		entry.ActiveTag.Visible = isSel
+		entry.ShadeGrad.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, if isSel then 0.25 else 0.45),
+			NumberSequenceKeypoint.new(0.55, if isSel then 0.38 else 0.56),
+			NumberSequenceKeypoint.new(1, 0.14),
+		})
+	end
+end
+
+local function fetchBannerFeatured()
+	if not portal.Banner then
+		bannerName = nil
+		refreshMain()
+		return
+	end
+	local curPortal = PORTAL
+	local curBanner = selectedBannerId
+	task.spawn(function()
+		local ok, name = pcall(function()
+			return Remotes:WaitForChild("SummonBanner"):InvokeServer(curPortal, curBanner)
+		end)
+		if ok and PORTAL == curPortal and selectedBannerId == curBanner then
+			bannerName = name
+			refreshMain()
+		end
+	end)
+end
+
+for idx, bannerId in ipairs(Summon.BannerOrder) do
+	local cfg = Summon.Banners[bannerId]
+	local x = (idx - 1) * (bannerW + bannerGap)
+	local btn = Instance.new("TextButton")
+	btn.Name = "BannerPanel_" .. bannerId
+	btn.Text = ""
+	btn.AutoButtonColor = false
+	btn.BackgroundColor3 = Color3.fromRGB(22, 16, 48)
+	btn.BorderSizePixel = 0
+	btn.Size = UDim2.fromScale(bannerW, 1)
+	btn.Position = UDim2.fromScale(x, 0)
+	btn.ClipsDescendants = true
+	btn.ZIndex = 2
+	btn.Parent = bannersRow
+
+	local minTouch = Instance.new("UISizeConstraint")
+	minTouch.MinSize = Vector2.new(44, 44)
+	minTouch.Parent = btn
+
+	local bCorner = Instance.new("UICorner")
+	bCorner.CornerRadius = UDim.new(0.14, 0)
+	bCorner.Parent = btn
+
+	local bScale = Instance.new("UIScale")
+	bScale.Parent = btn
+
+	local bStroke = Instance.new("UIStroke")
+	bStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	bStroke.Color = Color3.fromRGB(48, 38, 86)
+	bStroke.Thickness = 1.5
+	bStroke.Parent = btn
+
+	local art = Instance.new("ImageLabel")
+	art.Name = "Artwork"
+	art.BackgroundTransparency = 1
+	art.Image = "rbxassetid://" .. tostring(cfg.ImageId)
+	art.ScaleType = Enum.ScaleType.Crop
+	art.Size = UDim2.fromScale(1, 1)
+	art.ZIndex = 2
+	art.Parent = btn
+
+	local shade = Instance.new("Frame")
+	shade.Name = "Shade"
+	shade.Size = UDim2.fromScale(1, 1)
+	shade.BackgroundColor3 = Color3.fromRGB(12, 8, 28)
+	shade.BorderSizePixel = 0
+	shade.ZIndex = 3
+	shade.Parent = btn
+	local shadeGrad = Instance.new("UIGradient")
+	shadeGrad.Rotation = 90
+	shadeGrad.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.35),
+		NumberSequenceKeypoint.new(0.55, 0.45),
+		NumberSequenceKeypoint.new(1, 0.14),
+	})
+	shadeGrad.Parent = shade
+
+	local activePill, activeFace = UI.panel(btn, {
+		Name = "SelectedTag",
+		Size = UDim2.fromScale(0.38, 0.25),
+		Position = UDim2.fromScale(0.96, 0.08),
+		AnchorPoint = Vector2.new(1, 0),
+		Color = cfg.Accent or "gold",
+		Corner = T.Corner.Pill,
+		Shadow = false,
+		Visible = false,
+		ZIndex = 5,
+	})
+	UI.text(activeFace, "\u{2605} ATIVO", { Name = "Label", Size = UDim2.fromScale(0.92, 0.8), Position = UDim2.fromScale(0.04, 0.1), Role = "Small", StrokeMult = 0.45, ZIndex = 6 })
+
+	local titleBar = UI.frame(btn, { Name = "BottomRow", Size = UDim2.fromScale(0.92, 0.34), Position = UDim2.fromScale(0.04, 0.62), ZIndex = 5 })
+	UI.icon(titleBar, cfg.Icon or "star", { Name = "Icon", Size = UDim2.fromScale(0.18, 0.9), Position = UDim2.fromScale(0, 0.05), DominantAxis = Enum.DominantAxis.Height, ZIndex = 6 })
+	UI.text(titleBar, cfg.Short or cfg.Name, { Name = "Name", Size = UDim2.fromScale(0.80, 0.9), Position = UDim2.fromScale(0.19, 0.05), Role = "Body", AlignX = Enum.TextXAlignment.Left, ZIndex = 6 })
+
+	btn.Activated:Connect(function()
+		if busy or selectedBannerId == bannerId then
+			return
+		end
+		selectedBannerId = bannerId
+		UI.play("click")
+		updateBannerSelection()
+		refreshMain()
+		fetchBannerFeatured()
+	end)
+
+	bannerButtons[bannerId] = {
+		Button = btn,
+		Config = cfg,
+		Stroke = bStroke,
+		Scale = bScale,
+		ActiveTag = activePill,
+		ShadeGrad = shadeGrad,
+	}
+end
+updateBannerSelection()
+
 local function setSummonButton(b, title, cost, icon, free)
 	local face = b.Face
 	face.Title.Text = title
@@ -146,7 +311,8 @@ refreshMain = function()
 	end
 	local gems = portal.Currency == "Gems"
 	local icon = if gems then "gem" else "coin"
-	win.Title.Text = UI.upper(portal.Name)
+	local bCfg = Summon.GetBanner(selectedBannerId)
+	win.Title.Text = UI.upper(portal.Name) .. " \u{b7} " .. UI.upper(bCfg.Short or bCfg.Name)
 	UI.paint(win.Header, if gems then "lendario" else "header")
 	UI.setIcon(walletHolder.Icon, icon)
 	walletLabel.TextColor3 = if gems then T.Palette.gems else T.Palette.gold
@@ -161,9 +327,9 @@ refreshMain = function()
 		rateRows[r].Value.Text = text
 	end
 	if portal.Banner then
-		bannerLabel.Text = if bannerName then string.format("\u{2605} DESTAQUE: %s (%s)", bannerName, pct((ratesNow.Lendario or 0) * portal.Banner.Share)) else "\u{2605} Destaque da semana: nenhum Lend\u{e1}rio ainda"
+		bannerLabel.Text = if bannerName then string.format("\u{2605} DESTAQUE (%s): %s (%s)", bCfg.Name, bannerName, pct((ratesNow.Lendario or 0) * portal.Banner.Share)) else ("\u{2605} Estrela " .. bCfg.Name .. ": sem destaque Lend\u{e1}rio")
 	else
-		bannerLabel.Text = ""
+		bannerLabel.Text = "\u{2605} Estrela selecionada: " .. bCfg.Name
 	end
 	local pity = (profile.SummonPity and profile.SummonPity[portal.PityKey]) or 0
 	pityValue.Text = string.format("%d/%d", pity, portal.PityAt)
@@ -174,15 +340,15 @@ refreshMain = function()
 	local quick = Benefits.Has(profile, "InvocacaoRapida")
 	three.Visible = quick
 	if quick then
-		one.Size = UDim2.fromScale(0.31, 0.4)
-		three.Size = UDim2.fromScale(0.31, 0.4)
-		three.Position = UDim2.fromScale(0.345, 0.58)
-		ten.Size = UDim2.fromScale(0.31, 0.4)
-		ten.Position = UDim2.fromScale(0.69, 0.58)
+		one.Size = UDim2.fromScale(0.31, 0.44)
+		three.Size = UDim2.fromScale(0.31, 0.44)
+		three.Position = UDim2.fromScale(0.345, 0.55)
+		ten.Size = UDim2.fromScale(0.31, 0.44)
+		ten.Position = UDim2.fromScale(0.69, 0.55)
 	else
-		one.Size = UDim2.fromScale(0.48, 0.4)
-		ten.Size = UDim2.fromScale(0.48, 0.4)
-		ten.Position = UDim2.fromScale(0.52, 0.58)
+		one.Size = UDim2.fromScale(0.48, 0.44)
+		ten.Size = UDim2.fromScale(0.48, 0.44)
+		ten.Position = UDim2.fromScale(0.52, 0.55)
 	end
 	setSummonButton(one, "INVOCAR 1", portal.Cost, icon, free > 0)
 	setSummonButton(three, "INVOCAR " .. Benefits.QuickSummonCount, portal.Cost * Benefits.QuickSummonCount, icon, false)
@@ -190,80 +356,452 @@ refreshMain = function()
 end
 
 --------------------------------------------------------------------
--- Animacao do portal (so no cliente)
+-- Animacao de Destaque 3D na Frente da Tela + Efeitos Sonoros + Portal
 --------------------------------------------------------------------
 local function portalModel()
 	local folder = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Portals")
 	return folder and folder:FindFirstChild("Portal" .. PORTAL)
 end
 
-local function playPortal(rarity: string, shiny: boolean)
-	local model = portalModel()
-	local core = model and model:FindFirstChild("Core")
-	if not core then
-		task.wait(0.5)
+local function clonePreviewModel(modelName: string): Model?
+	local folder = ReplicatedStorage:FindFirstChild("CharacterPreviews")
+	local src = folder and (folder:FindFirstChild(modelName) or folder:FindFirstChild("Kaen"))
+	if not src then
+		return nil
+	end
+	return src:Clone()
+end
+
+local function frameFullBodyCamera(view: ViewportFrame, model: Model)
+	local cf, size = model:GetBoundingBox()
+	local root = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Head")
+	local front = if root then root.CFrame.LookVector else Vector3.new(0, 0, -1)
+	front = Vector3.new(front.X, 0, front.Z)
+	front = if front.Magnitude > 0.01 then front.Unit else Vector3.new(0, 0, -1)
+	local target = cf.Position + Vector3.new(0, size.Y * 0.03, 0)
+	local radius = math.max(size.Y * 0.56, math.max(size.X, size.Z) * 0.62)
+	local dist = radius / math.tan(math.rad(18))
+	local cam = view:FindFirstChildOfClass("Camera") or Instance.new("Camera")
+	cam.FieldOfView = 36
+	cam.Parent = view
+	view.CurrentCamera = cam
+	return { Cam = cam, Target = target, Front = front, Dist = dist, Height = size.Y }
+end
+
+local function frameChestCamera(view: ViewportFrame, model: Model)
+	local head = model:FindFirstChild("Head")
+	local root = model:FindFirstChild("HumanoidRootPart") or head
+	if not head or not root then
+		return frameFullBodyCamera(view, model)
+	end
+	local front = root.CFrame.LookVector
+	front = Vector3.new(front.X, 0, front.Z)
+	front = if front.Magnitude > 0.01 then front.Unit else Vector3.new(0, 0, -1)
+	local target = head.Position - Vector3.new(0, head.Size.Y * 0.35, 0)
+	local dist = head.Size.Y * 1.65 / math.tan(math.rad(17))
+	local cam = view:FindFirstChildOfClass("Camera") or Instance.new("Camera")
+	cam.FieldOfView = 34
+	cam.Parent = view
+	view.CurrentCamera = cam
+	return { Cam = cam, Target = target, Front = front, Dist = dist, Height = 0 }
+end
+
+-- Sons dedicados controlaveis para poder interromper suavemente se o jogador clicar PULAR
+local sfxPlayers = {}
+local function playControlledSfx(soundKey: string)
+	local def = UI.Sounds[soundKey]
+	if not def then
 		return
 	end
-	local color = rarityColor(rarity)
-	local baseColor = core.Color
-	local light = core:FindFirstChild("Glow")
-	-- 1. portal abre: nucleo pulsa e escurece
-	TweenService:Create(core, TweenInfo.new(0.5, Enum.EasingStyle.Sine), { Color = Color3.new(0.05, 0.05, 0.1) }):Play()
-	task.wait(0.5)
-	-- 2. raio sobe na cor da raridade
-	TweenService:Create(core, TweenInfo.new(0.25), { Color = color }):Play()
-	if light then
-		light.Color = color
-		TweenService:Create(light, TweenInfo.new(0.25), { Brightness = 3, Range = 22 }):Play()
-	end
-	local beam = Instance.new("Part")
-	beam.Name = "SummonBeam"
-	beam.Shape = Enum.PartType.Cylinder
-	beam.Anchored = true
-	beam.CanCollide = false
-	beam.CanQuery = false
-	beam.CanTouch = false
-	beam.CastShadow = false
-	beam.Material = Enum.Material.Neon
-	beam.Color = color
-	beam.Transparency = 0.15
-	local base = core.Position
-	beam.Size = Vector3.new(1, 3, 3)
-	beam.CFrame = CFrame.new(base) * CFrame.Angles(0, 0, math.rad(90))
-	beam.Parent = workspace
-	TweenService:Create(beam, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Size = Vector3.new(80, 3, 3),
-		CFrame = CFrame.new(base + Vector3.new(0, 40, 0)) * CFrame.Angles(0, 0, math.rad(90)),
-	}):Play()
-	local att = Instance.new("Attachment")
-	att.Parent = core
-	local burst = Instance.new("ParticleEmitter")
-	burst.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-	burst.Enabled = false
-	burst.Lifetime = NumberRange.new(0.6, 1.1)
-	burst.Speed = NumberRange.new(8, 16)
-	burst.SpreadAngle = Vector2.new(180, 180)
-	burst.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.8), NumberSequenceKeypoint.new(1, 0) })
-	burst.Color = ColorSequence.new(if shiny then Color3.fromRGB(255, 245, 170) else color)
-	burst.LightEmission = 1
-	burst.Parent = att
-	burst:Emit(if shiny then 80 else 50)
-	task.wait(1.1)
-	-- 3. dissipa e volta ao normal
-	TweenService:Create(beam, TweenInfo.new(0.4), { Transparency = 1, Size = Vector3.new(80, 0.2, 0.2) }):Play()
-	TweenService:Create(core, TweenInfo.new(0.6), { Color = baseColor }):Play()
-	if light then
-		TweenService:Create(light, TweenInfo.new(0.6), { Brightness = 1.5, Range = 16, Color = baseColor }):Play()
-	end
-	task.delay(1.2, function()
-		beam:Destroy()
-		att:Destroy()
+	pcall(function()
+		local s = sfxPlayers[soundKey]
+		if not s then
+			s = Instance.new("Sound")
+			s.Name = "GachaSfx_" .. soundKey
+			s.SoundId = "rbxassetid://" .. def.Id
+			s.Volume = def.Volume or 0.6
+			s.PlaybackSpeed = def.Pitch or 1
+			s.SoundGroup = SoundService:FindFirstChild("Efeitos")
+			s.Parent = SoundService
+			sfxPlayers[soundKey] = s
+		end
+		s.TimePosition = 0
+		s:Play()
 	end)
-	task.wait(0.3)
+end
+
+local function stopShowcaseSfx()
+	for _, s in pairs(sfxPlayers) do
+		pcall(function()
+			if s.IsPlaying then
+				s:Stop()
+			end
+		end)
+	end
+end
+
+-- Overlay de revelacao com personagem 3D girando na frente da tela
+local showcase = UI.frame(canvas, { Name = "SummonShowcase", Size = UDim2.fromScale(1, 1), Position = UDim2.fromScale(0, 0), Visible = false, ZIndex = 40 })
+local showScrim = Instance.new("Frame")
+showScrim.Name = "Scrim"
+showScrim.Size = UDim2.fromScale(3, 3)
+showScrim.Position = UDim2.fromScale(0.5, 0.5)
+showScrim.AnchorPoint = Vector2.new(0.5, 0.5)
+showScrim.BackgroundColor3 = Color3.fromRGB(10, 6, 26)
+showScrim.BackgroundTransparency = 1
+showScrim.BorderSizePixel = 0
+showScrim.ZIndex = 40
+showScrim.Parent = showcase
+
+local showBurstBg = Instance.new("ImageLabel")
+showBurstBg.Name = "Sunburst"
+showBurstBg.BackgroundTransparency = 1
+showBurstBg.Image = "rbxassetid://" .. tostring(UI.Icons.summon_sunburst)
+showBurstBg.ImageTransparency = 1
+showBurstBg.Size = UDim2.fromScale(0.85, 0.85)
+showBurstBg.Position = UDim2.fromScale(0.5, 0.47)
+showBurstBg.AnchorPoint = Vector2.new(0.5, 0.5)
+showBurstBg.ZIndex = 41
+showBurstBg.Parent = showcase
+do
+	local ar = Instance.new("UIAspectRatioConstraint")
+	ar.AspectRatio = 1
+	ar.Parent = showBurstBg
+end
+
+local showRing = Instance.new("Frame")
+showRing.Name = "PulseRing"
+showRing.Size = UDim2.fromScale(0.28, 0.28)
+showRing.Position = UDim2.fromScale(0.5, 0.47)
+showRing.AnchorPoint = Vector2.new(0.5, 0.5)
+showRing.BackgroundTransparency = 1
+showRing.Visible = false
+showRing.ZIndex = 42
+showRing.Parent = showcase
+do
+	local ar = Instance.new("UIAspectRatioConstraint")
+	ar.AspectRatio = 1
+	ar.Parent = showRing
+	local rc = Instance.new("UICorner")
+	rc.CornerRadius = UDim.new(0.5, 0)
+	rc.Parent = showRing
+end
+local showRingStroke = Instance.new("UIStroke")
+showRingStroke.Thickness = 5
+showRingStroke.Color = T.Palette.gold
+showRingStroke.Parent = showRing
+
+local orbCore = Instance.new("Frame")
+orbCore.Name = "ChargeOrb"
+orbCore.Size = UDim2.fromScale(0.18, 0.18)
+orbCore.Position = UDim2.fromScale(0.5, 0.47)
+orbCore.AnchorPoint = Vector2.new(0.5, 0.5)
+orbCore.BackgroundColor3 = Color3.new(1, 1, 1)
+orbCore.BorderSizePixel = 0
+orbCore.Visible = false
+orbCore.ZIndex = 43
+orbCore.Parent = showcase
+do
+	local ar = Instance.new("UIAspectRatioConstraint")
+	ar.AspectRatio = 1
+	ar.Parent = orbCore
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0.5, 0)
+	c.Parent = orbCore
+end
+local orbScale = Instance.new("UIScale")
+orbScale.Parent = orbCore
+
+local fxLayer = UI.frame(showcase, { Name = "Particles", Size = UDim2.fromScale(1, 1), ZIndex = 42 })
+
+local heroHolder = UI.frame(showcase, { Name = "HeroStage", Size = UDim2.fromScale(0.46, 0.58), Position = UDim2.fromScale(0.5, 0.46), AnchorPoint = Vector2.new(0.5, 0.5), Aspect = 0.9, ZIndex = 44 })
+local heroScale = Instance.new("UIScale")
+heroScale.Scale = 0.1
+heroScale.Parent = heroHolder
+
+local showView = Instance.new("ViewportFrame")
+showView.Name = "HeroViewport"
+showView.Size = UDim2.fromScale(1, 1)
+showView.BackgroundTransparency = 1
+showView.Ambient = Color3.fromRGB(205, 200, 224)
+showView.LightColor = Color3.fromRGB(255, 250, 238)
+showView.LightDirection = Vector3.new(-0.35, -0.9, -0.55)
+showView.ZIndex = 45
+showView.Parent = heroHolder
+
+local rarityBanner, rarityBannerFace = UI.panel(showcase, { Name = "RarityBanner", Size = UDim2.fromScale(0.38, 0.085), Position = UDim2.fromScale(0.5, 0.09), AnchorPoint = Vector2.new(0.5, 0.5), Color = "lendario", Corner = T.Corner.Pill, ZIndex = 46, Visible = false })
+local rarityBannerLabel = UI.text(rarityBannerFace, "", { Name = "Text", Size = UDim2.fromScale(0.92, 0.78), Position = UDim2.fromScale(0.04, 0.11), Role = "Heading", ZIndex = 47 })
+
+local nameBanner = UI.frame(showcase, { Name = "NameBanner", Size = UDim2.fromScale(0.68, 0.22), Position = UDim2.fromScale(0.5, 0.84), AnchorPoint = Vector2.new(0.5, 0.5), Visible = false, ZIndex = 46 })
+local heroNameLabel = UI.text(nameBanner, "", { Name = "HeroName", Size = UDim2.fromScale(1, 0.44), Position = UDim2.fromScale(0, 0), Role = "Title", Color = "onDark", ZIndex = 47 })
+local heroSubLabel = UI.text(nameBanner, "", { Name = "HeroMeta", Size = UDim2.fromScale(1, 0.28), Position = UDim2.fromScale(0, 0.46), Role = "Body", Color = "gold", ZIndex = 47 })
+local heroTagsLabel = UI.text(nameBanner, "", { Name = "HeroTags", Size = UDim2.fromScale(1, 0.22), Position = UDim2.fromScale(0, 0.76), Role = "Small", Color = "inkSoft", ZIndex = 47 })
+
+local showFlash = Instance.new("Frame")
+showFlash.Name = "Flash"
+showFlash.Size = UDim2.fromScale(1, 1)
+showFlash.Position = UDim2.fromScale(0, 0)
+showFlash.BackgroundColor3 = Color3.new(1, 1, 1)
+showFlash.BackgroundTransparency = 1
+showFlash.BorderSizePixel = 0
+showFlash.ZIndex = 48
+showFlash.Parent = showcase
+
+local skipFlag = false
+local skipBtn = UI.button(showcase, {
+	Name = "SkipShowcase",
+	Text = "PULAR",
+	Icon = "arrow",
+	Layout = "row",
+	Color = "slot",
+	Size = UDim2.fromScale(0.16, 0.085),
+	Position = UDim2.fromScale(0.97, 0.94),
+	AnchorPoint = Vector2.new(1, 1),
+	Role = "Small",
+	ZIndex = 50,
+	Visible = false,
+	OnClick = function()
+		skipFlag = true
+	end,
+})
+
+local function triggerWorldPortalBeam(rarity: string, shiny: boolean)
+	task.spawn(function()
+		local model = portalModel()
+		local core = model and model:FindFirstChild("Core")
+		if not core then
+			return
+		end
+		local color = rarityColor(rarity)
+		local baseColor = core.Color
+		local light = core:FindFirstChild("Glow")
+		TweenService:Create(core, TweenInfo.new(0.25), { Color = color }):Play()
+		if light then
+			light.Color = color
+			TweenService:Create(light, TweenInfo.new(0.25), { Brightness = 3, Range = 22 }):Play()
+		end
+		local beam = Instance.new("Part")
+		beam.Name = "SummonBeam"
+		beam.Shape = Enum.PartType.Cylinder
+		beam.Anchored = true
+		beam.CanCollide = false
+		beam.CanQuery = false
+		beam.CanTouch = false
+		beam.CastShadow = false
+		beam.Material = Enum.Material.Neon
+		beam.Color = color
+		beam.Transparency = 0.2
+		local base = core.Position
+		beam.Size = Vector3.new(1, 3, 3)
+		beam.CFrame = CFrame.new(base) * CFrame.Angles(0, 0, math.rad(90))
+		beam.Parent = workspace
+		TweenService:Create(beam, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = Vector3.new(80, 3, 3),
+			CFrame = CFrame.new(base + Vector3.new(0, 40, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		}):Play()
+		task.delay(1.1, function()
+			TweenService:Create(beam, TweenInfo.new(0.4), { Transparency = 1, Size = Vector3.new(80, 0.2, 0.2) }):Play()
+			TweenService:Create(core, TweenInfo.new(0.5), { Color = baseColor }):Play()
+			if light then
+				TweenService:Create(light, TweenInfo.new(0.5), { Brightness = 1.5, Range = 16, Color = baseColor }):Play()
+			end
+			task.delay(0.55, function()
+				beam:Destroy()
+			end)
+		end)
+	end)
+end
+
+local function pickShowcaseHero(results)
+	local best = results[1]
+	local bestRank = 0
+	for _, r in ipairs(results) do
+		local rank = (table.find(Summon.RarityOrder, r.Rarity) or 1) * 10
+		if r.Variant then
+			rank += 4
+		end
+		if r.New then
+			rank += 1
+		end
+		if rank > bestRank then
+			bestRank = rank
+			best = r
+		end
+	end
+	return best
+end
+
+local function spawnUiSparkles(color: Color3, count: number)
+	UI.clear(fxLayer)
+	for i = 1, count do
+		local angle = (i / count) * math.pi * 2 + math.rad((i * 19) % 25)
+		local star = Instance.new("ImageLabel")
+		star.BackgroundTransparency = 1
+		star.Image = "rbxassetid://" .. tostring(UI.Icons.sparkle)
+		star.ImageColor3 = if i % 3 == 0 then Color3.fromRGB(255, 248, 185) else color
+		star.Size = UDim2.fromScale(0.05, 0.05)
+		star.Position = UDim2.fromScale(0.5, 0.46)
+		star.AnchorPoint = Vector2.new(0.5, 0.5)
+		star.ZIndex = 43
+		star.Parent = fxLayer
+		local ar = Instance.new("UIAspectRatioConstraint")
+		ar.AspectRatio = 1
+		ar.Parent = star
+		local dist = 0.28 + (i % 4) * 0.06
+		local tx = 0.5 + math.cos(angle) * dist
+		local ty = 0.46 + math.sin(angle) * (dist * 1.1)
+		TweenService:Create(star, TweenInfo.new(0.85, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = UDim2.fromScale(tx, ty),
+			ImageTransparency = 1,
+			Size = UDim2.fromScale(0.015, 0.015),
+			Rotation = (i % 2 == 0 and 180 or -180),
+		}):Play()
+	end
+end
+
+local function playShowcase(results)
+	local hero = pickShowcaseHero(results)
+	if not hero then
+		return
+	end
+	local rCol = rarityColor(hero.Rarity)
+	local shiny = hero.Variant ~= nil
+	local tierIdx = table.find(Summon.RarityOrder, hero.Rarity) or 1
+
+	skipFlag = false
+	showcase.Visible = true
+	showScrim.BackgroundTransparency = 1
+	showFlash.BackgroundTransparency = 1
+	showBurstBg.ImageTransparency = 1
+	showBurstBg.Rotation = 0
+	showBurstBg.ImageColor3 = if shiny then Color3.fromRGB(255, 240, 140) else rCol
+	showRing.Visible = false
+	orbCore.Visible = true
+	orbCore.BackgroundColor3 = rCol
+	orbScale.Scale = 0.1
+	heroHolder.Visible = true
+	heroScale.Scale = 0.01
+	showView.ImageTransparency = 1
+	rarityBanner.Visible = false
+	nameBanner.Visible = false
+	skipBtn.Visible = false
+	UI.clear(showView)
+	UI.clear(fxLayer)
+
+	local def = Characters.Get(hero.CharacterId)
+	local modelName = hero.ModelName or (def and def.ModelName) or hero.CharacterId
+	local previewModel = clonePreviewModel(modelName)
+	local framing = nil
+	if previewModel then
+		previewModel.Parent = showView
+		framing = frameFullBodyCamera(showView, previewModel)
+		if framing then
+			local dir0 = framing.Front
+			framing.Cam.CFrame = CFrame.lookAt(framing.Target + dir0 * framing.Dist + Vector3.new(0, framing.Height * 0.08, 0), framing.Target)
+		end
+	end
+
+	-- Fase 1 (0 -> 0.40s): Carga rapida + antecipacao sonora (aquece ViewportFrame durante a carga)
+	TweenService:Create(showScrim, TweenInfo.new(0.25), { BackgroundTransparency = 0.16 }):Play()
+	TweenService:Create(orbScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1.25 }):Play()
+	playControlledSfx("summon_charge")
+	playControlledSfx("summon_shimmer")
+	triggerWorldPortalBeam(hero.Rarity, shiny)
+
+	local t0 = os.clock()
+	while os.clock() - t0 < 0.40 and not skipFlag do
+		if os.clock() - t0 > 0.22 then
+			skipBtn.Visible = true
+		end
+		task.wait()
+	end
+
+	if not skipFlag then
+		-- Fase 2 (0.40s -> 1.90s): Explosao na frente da tela + Personagem 3D rodando + SFX estimulante
+		orbCore.Visible = false
+		skipBtn.Visible = true
+		playControlledSfx("summon_reveal")
+		if tierIdx >= 4 or shiny then
+			playControlledSfx("summon_legendary")
+		elseif tierIdx == 3 then
+			playControlledSfx("summon_epic")
+		end
+
+		showFlash.BackgroundColor3 = if shiny then Color3.fromRGB(255, 250, 200) else rCol:Lerp(Color3.new(1, 1, 1), 0.45)
+		showFlash.BackgroundTransparency = 0.22
+		TweenService:Create(showFlash, TweenInfo.new(0.36, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
+
+		showRing.Visible = true
+		showRing.Size = UDim2.fromScale(0.2, 0.2)
+		showRingStroke.Color = rCol
+		showRingStroke.Transparency = 0
+		TweenService:Create(showRing, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.fromScale(0.9, 0.9) }):Play()
+		TweenService:Create(showRingStroke, TweenInfo.new(0.6), { Transparency = 1 }):Play()
+
+		showBurstBg.ImageTransparency = 0.18
+		showView.ImageTransparency = 0
+		showView.Size = UDim2.new(1, 1, 1, 1)
+		task.defer(function()
+			showView.Size = UDim2.fromScale(1, 1)
+		end)
+		heroScale.Scale = 0.14
+		TweenService:Create(heroScale, TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		spawnUiSparkles(rCol, if tierIdx >= 3 or shiny then 16 else 10)
+
+		UI.paint(rarityBanner, hero.Rarity:lower())
+		rarityBannerLabel.Text = (if shiny then "\u{2726} " else "\u{2605} ") .. UI.upper(Summon.RarityName[hero.Rarity] or hero.Rarity) .. (if shiny then " BRILHANTE \u{2726}" else " \u{2605}")
+		rarityBanner.Visible = true
+
+		local animeName = Characters.AnimeDisplay(hero.Anime or (def and def.Anime) or "Generico")
+		heroNameLabel.Text = UI.upper(hero.Name)
+		heroSubLabel.Text = animeName .. " \u{b7} " .. UI.upper(typeName(hero.Type))
+		local metaTags = {}
+		if #results > 1 then
+			table.insert(metaTags, "DESTAQUE DE " .. #results .. " INVOCA\u{c7}\u{d5}ES")
+		end
+		if hero.New then
+			table.insert(metaTags, "NOVO NA COLE\u{c7}\u{c3}O!")
+		end
+		if hero.Banner then
+			table.insert(metaTags, "DESTAQUE DA ESTRELA")
+		end
+		heroTagsLabel.Text = table.concat(metaTags, "  \u{b7}  ")
+		nameBanner.Visible = true
+
+		local duration = if tierIdx >= 4 or shiny then 1.85 elseif tierIdx == 3 then 1.65 else 1.45
+		local spinStart = os.clock()
+		local spinConn = RunService.RenderStepped:Connect(function()
+			local elapsed = os.clock() - spinStart
+			showBurstBg.Rotation = (elapsed * 55) % 360
+			if framing then
+				local p = math.clamp(elapsed / 0.72, 0, 1)
+				local fastEase = 1 - (1 - p) ^ 3
+				local angle = fastEase * math.pi * 4 + elapsed * 1.35
+				local dir = CFrame.fromAxisAngle(Vector3.yAxis, angle) * framing.Front
+				local pos = framing.Target + dir * framing.Dist + Vector3.new(0, framing.Height * 0.08, 0)
+				framing.Cam.CFrame = CFrame.lookAt(pos, framing.Target)
+			end
+		end)
+
+		while os.clock() - spinStart < duration and not skipFlag do
+			task.wait()
+		end
+		spinConn:Disconnect()
+	end
+
+	if skipFlag then
+		stopShowcaseSfx()
+	end
+	if previewModel then
+		previewModel:Destroy()
+	end
+	UI.clear(showView)
+	UI.clear(fxLayer)
+	showcase.Visible = false
 end
 
 --------------------------------------------------------------------
--- Cartas reveladas
+-- Cartas reveladas (com previa 3D dos personagens obtidos)
 --------------------------------------------------------------------
 local reveal = UI.window(canvas, { Name = "RevealWindow", Title = "RESULTADO", Icon = "star", HeaderColor = "lendario", Size = UDim2.fromScale(0.92, 0.86), Aspect = 1.95,
 	OnClose = function(silent)
@@ -275,28 +813,46 @@ local reveal = UI.window(canvas, { Name = "RevealWindow", Title = "RESULTADO", I
 		end
 	end,
 })
-local cardsBox = UI.frame(reveal.Body, { Name = "Cards", Size = UDim2.fromScale(1, 0.74), Position = UDim2.fromScale(0, 0) })
+local cardsBox = UI.frame(reveal.Body, { Name = "Cards", Size = UDim2.fromScale(1, 0.76), Position = UDim2.fromScale(0, 0) })
 local grid = Instance.new("UIGridLayout")
-grid.CellSize = UDim2.fromScale(0.18, 0.47)
+grid.CellSize = UDim2.fromScale(0.18, 0.45)
 grid.CellPadding = UDim2.fromScale(0.02, 0.04)
+grid.FillDirectionMaxCells = 5
 grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
 grid.VerticalAlignment = Enum.VerticalAlignment.Center
 grid.SortOrder = Enum.SortOrder.LayoutOrder
 grid.Parent = cardsBox
 local gridAspect = Instance.new("UIAspectRatioConstraint")
-gridAspect.AspectRatio = 0.78
+gridAspect.AspectRatio = 0.90
 gridAspect.Parent = grid
-local revealInfo = UI.text(reveal.Body, "", { Name = "Info", Size = UDim2.fromScale(0.72, 0.2), Position = UDim2.fromScale(0, 0.78), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.5 })
-UI.button(reveal.Body, { Name = "OK", Text = "OK", Icon = "tick", Layout = "row", Color = "green", Size = UDim2.fromScale(0.24, 0.17), Position = UDim2.fromScale(1, 0.8), AnchorPoint = Vector2.new(1, 0), Role = "Heading",
+local revealInfo = UI.text(reveal.Body, "", { Name = "Info", Size = UDim2.fromScale(0.72, 0.18), Position = UDim2.fromScale(0, 0.80), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.5 })
+UI.button(reveal.Body, { Name = "OK", Text = "OK", Icon = "tick", Layout = "row", Color = "green", Size = UDim2.fromScale(0.24, 0.17), Position = UDim2.fromScale(1, 0.81), AnchorPoint = Vector2.new(1, 0), Role = "Heading",
 	OnClick = function()
 		reveal.Close()
 	end,
 })
 
+local cardFramesToSpin = {}
+local cardSpinConn: RBXScriptConnection? = nil
+local function stopCardSpins()
+	if cardSpinConn then
+		cardSpinConn:Disconnect()
+		cardSpinConn = nil
+	end
+	table.clear(cardFramesToSpin)
+end
+
+reveal.Root:GetPropertyChangedSignal("Visible"):Connect(function()
+	if not reveal.Root.Visible then
+		stopCardSpins()
+	end
+end)
+
 local function showCards(results)
+	stopCardSpins()
 	UI.clear(cardsBox)
 	local info = {}
-	grid.CellSize = if #results <= 3 then UDim2.fromScale(0.26, 0.92) else UDim2.fromScale(0.18, 0.47)
+	grid.CellSize = if #results <= 3 then UDim2.fromScale(0.26, 0.92) else UDim2.fromScale(0.18, 0.45)
 	reveal.Open()
 	for i, r in ipairs(results) do
 		local rare = r.Rarity == "Epico" or r.Rarity == "Lendario" or r.Variant ~= nil
@@ -304,9 +860,30 @@ local function showCards(results)
 		if r.Variant then
 			UI.stroke(face, Color3.fromRGB(255, 245, 170), 1.4)
 		end
-		UI.text(face, r.Name, { Name = "Name", Size = UDim2.fromScale(0.9, 0.2), Position = UDim2.fromScale(0.05, 0.08), Role = "Heading" })
-		UI.chip(face, UI.upper(Summon.RarityName[r.Rarity]), "slot", { Name = "Rarity", Size = UDim2.fromScale(0.84, 0.14), Position = UDim2.fromScale(0.08, 0.34) })
-		UI.chip(face, UI.upper(typeName(r.Type)), T.Types[r.Type] or TypeChart.Color[r.Type] or T.Palette.grey, { Name = "Type", Size = UDim2.fromScale(0.6, 0.12), Position = UDim2.fromScale(0.2, 0.53) })
+
+		local _, vpFace = UI.panel(face, { Name = "PreviewBg", Size = UDim2.fromScale(0.86, 0.48), Position = UDim2.fromScale(0.07, 0.06), Color = "slot", Corner = 0.14, Shadow = false })
+		local vp = Instance.new("ViewportFrame")
+		vp.Name = "View"
+		vp.Size = UDim2.fromScale(1, 1)
+		vp.BackgroundTransparency = 1
+		vp.Ambient = Color3.fromRGB(190, 185, 215)
+		vp.LightColor = Color3.fromRGB(255, 248, 235)
+		vp.LightDirection = Vector3.new(-0.4, -1, -0.6)
+		vp.ZIndex = 4
+		vp.Parent = vpFace
+		local def = Characters.Get(r.CharacterId)
+		local pModel = clonePreviewModel(r.ModelName or (def and def.ModelName) or r.CharacterId)
+		if pModel then
+			pModel.Parent = vp
+			local f = frameChestCamera(vp, pModel)
+			if f then
+				table.insert(cardFramesToSpin, f)
+			end
+		end
+
+		UI.text(face, r.Name, { Name = "Name", Size = UDim2.fromScale(0.92, 0.14), Position = UDim2.fromScale(0.04, 0.55), Role = "Body" })
+		UI.chip(face, UI.upper(Summon.RarityName[r.Rarity]), "slot", { Name = "Rarity", Size = UDim2.fromScale(0.45, 0.12), Position = UDim2.fromScale(0.04, 0.71) })
+		UI.chip(face, UI.upper(typeName(r.Type)), T.Types[r.Type] or TypeChart.Color[r.Type] or T.Palette.grey, { Name = "Type", Size = UDim2.fromScale(0.47, 0.12), Position = UDim2.fromScale(0.50, 0.71) })
 		local tags = {}
 		if r.Variant then
 			table.insert(tags, "\u{2726} " .. r.Variant)
@@ -317,7 +894,7 @@ local function showCards(results)
 		if r.Banner then
 			table.insert(tags, "DESTAQUE")
 		end
-		UI.text(face, table.concat(tags, "  "), { Name = "Tags", Size = UDim2.fromScale(0.9, 0.16), Position = UDim2.fromScale(0.05, 0.74), Role = "Small", Color = "gold" })
+		UI.text(face, table.concat(tags, " "), { Name = "Tags", Size = UDim2.fromScale(0.9, 0.12), Position = UDim2.fromScale(0.05, 0.85), Role = "Small", Color = "gold", StrokeMult = 0.45 })
 		if rare then
 			UI.shine(card)
 		end
@@ -327,14 +904,31 @@ local function showCards(results)
 		for _, line in ipairs(r.Album or {}) do
 			table.insert(info, line)
 		end
-		-- carta aparece com pulo
-		task.delay(0.12 * i, function()
+		task.delay(0.09 * i, function()
 			card.Visible = true
+			-- Forca re-desenho imediato do ViewportFrame ao sair de Visible = false
+			vp.Size = UDim2.new(1, 1, 1, 1)
+			task.defer(function()
+				if vp.Parent then
+					vp.Size = UDim2.fromScale(1, 1)
+				end
+			end)
 			local sc = Instance.new("UIScale")
 			sc.Scale = 0.2
 			sc.Parent = card
-			TweenService:Create(sc, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+			TweenService:Create(sc, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 			UI.play(if rare then "reward" else "click")
+		end)
+	end
+	if #cardFramesToSpin > 0 then
+		local tStart = os.clock()
+		cardSpinConn = RunService.RenderStepped:Connect(function()
+			local t = os.clock() - tStart
+			for idx, f in ipairs(cardFramesToSpin) do
+				local a = math.sin(t * 1.5 + idx * 0.45) * 0.34
+				local dir = CFrame.fromAxisAngle(Vector3.yAxis, a) * f.Front
+				f.Cam.CFrame = CFrame.lookAt(f.Target + dir * f.Dist, f.Target)
+			end
 		end)
 	end
 	revealInfo.Text = table.concat(info, "\n")
@@ -346,7 +940,7 @@ local function doSummon(count)
 	end
 	busy = true
 	msg.Text = ""
-	local ok, res = Remotes.Summon:InvokeServer(PORTAL, count)
+	local ok, res = Remotes.Summon:InvokeServer(PORTAL, count, selectedBannerId)
 	if not ok then
 		msg.Text = res or "N\u{e3}o foi poss\u{ed}vel invocar."
 		UI.play("error")
@@ -355,14 +949,9 @@ local function doSummon(count)
 	end
 	UI.play("purchase")
 	win.Close(true)
-	local best, shiny = 1, false
-	for _, r in ipairs(res) do
-		best = math.max(best, table.find(Summon.RarityOrder, r.Rarity) or 1)
-		shiny = shiny or r.Variant ~= nil
-	end
 	-- Invocacao Rapida pula a animacao
 	if not Benefits.Has(profile, "InvocacaoRapida") then
-		playPortal(Summon.RarityOrder[best], shiny)
+		playShowcase(res)
 	end
 	showCards(res)
 	busy = false
@@ -608,21 +1197,14 @@ local function openPortal(id, tab)
 	PORTAL = id
 	portal = def
 	bannerName = nil
-	if def.Banner then
-		task.spawn(function()
-			local ok, name = pcall(function()
-				return Remotes:WaitForChild("SummonBanner"):InvokeServer(id)
-			end)
-			if ok and PORTAL == id then
-				bannerName = name
-				refreshMain()
-			end
-		end)
-	end
 	msg.Text = ""
 	reveal.Close(true)
+	showcase.Visible = false
+	skipFlag = true
+	updateBannerSelection()
 	win.Open()
 	selectTab(tab or "Portal")
+	fetchBannerFeatured()
 end
 
 ProximityPromptService.PromptTriggered:Connect(function(prompt)
@@ -642,6 +1224,10 @@ end)
 
 UI.onBattle(function(inBattle)
 	if inBattle then
+		skipFlag = true
+		stopShowcaseSfx()
+		stopCardSpins()
+		showcase.Visible = false
 		win.Close(true)
 		reveal.Close(true)
 	end

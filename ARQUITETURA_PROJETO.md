@@ -11,12 +11,12 @@ O projeto adota a arquitetura profissional **Disk-First + 4 Camadas (Data / Core
 ```mermaid
 flowchart TD
     subgraph Disk["Repositório Local (CVS / Git — Fonte da Verdade)"]
-        SRC_DATA["src/shared/Data/<br/>14 Módulos Estáticos"]
+        SRC_DATA["src/shared/Data/<br/>16 Módulos Estáticos"]
         SRC_CORE["src/shared/Core/<br/>BattleEngine, DamageCalc, AIController"]
         SRC_NET["src/shared/Net.luau<br/>Contrato Tipado de Remotes"]
-        SRC_UI["src/shared/UI*.luau<br/>Design System + VfxController"]
+        SRC_UI["src/shared/UI*.luau<br/>Design System + RadarChart + VfxController"]
         SRC_SRV["src/server/<br/>Battle, Economy, World, Data"]
-        SRC_CLI["src/client/<br/>Gui (13 Telas) + PlayerScripts (6 Controladores)"]
+        SRC_CLI["src/client/<br/>Gui (15 Telas) + PlayerScripts (6 Controladores)"]
     end
 
     subgraph Sync["Ponte de Sincronização e Verificação"]
@@ -39,7 +39,7 @@ flowchart TD
 
 ## 2. Mapa Completo da Árvore de Código (`src/` ↔ Roblox Studio)
 
-Todos os **74 scripts ativos** do projeto estão extraídos, modularizados e sincronizados na pasta `src/`:
+Todos os **82 scripts ativos** do projeto estão extraídos, modularizados e sincronizados na pasta `src/`:
 
 ### 2.1. `src/shared/` → `ReplicatedStorage`
 | Caminho em `src/shared/` | Instância no Studio | Papel Arquitetural |
@@ -47,9 +47,9 @@ Todos os **74 scripts ativos** do projeto estão extraídos, modularizados e sin
 | **`Core/BattleEngine.luau`** | `ReplicatedStorage.Core.BattleEngine` | **Máquina de estados pura do combate 1x1 / 6x6**. Resolve turnos, prioridade (Fuga > Troca/Item > Velocidade), PP, precisão, status e captura sem depender de `Players` ou `Workspace`. |
 | **`Core/DamageCalc.luau`** | `ReplicatedStorage.Core.DamageCalc` | **Fórmula matemática oficial do GDD (Seção 5)**, multiplicadores de estágios (`-6` a `+6`), regras de status e cálculo de dano esperado (`ExpectedDamage`). |
 | **`Core/AIController.luau`** | `ReplicatedStorage.Core.AIController` | **IA de Batalha** (`Facil`, `Medio` 70%/30%, `Dificil` com análise de matchup e uso de status). |
-| **`Net.luau`** | `ReplicatedStorage.Net` | **Contrato único de rede** com tipos exportados (`RemoteEventName` e `RemoteFunctionName`) documentando os 31 Remotes do jogo. |
-| **`Data/*.luau` (14 arquivos)** | `ReplicatedStorage.Data.*` | Tabelas de configuração puras: `Characters`, `Moves`, `TypeChart`, `Items`, `Progression`, `Tower`, `Summon`, `Encounters`, `Base`, `Refuge`, `ProductIds`, `Benefits`, `Retention`, `Audio`. |
-| **`UI.luau`, `UIKit.luau`, `UITheme.luau`, `TeamCards.luau`** | `ReplicatedStorage.*` | **Design System**: construção programática de telas em escala (`Scale`), paleta unificada, ícones, som de botões e cards de personagem. |
+| **`Net.luau`** | `ReplicatedStorage.Net` | **Contrato único de rede** com tipos exportados (`RemoteEventName` e `RemoteFunctionName`) documentando os Remotes do jogo. |
+| **`Data/*.luau` (16 arquivos)** | `ReplicatedStorage.Data.*` | Tabelas de configuração puras: `Characters`, `Moves`, `TypeChart`, `Items`, `Progression`, `Genetics`, `Training`, `Tower`, `Summon`, `Encounters`, `Base`, `Refuge`, `ProductIds`, `Benefits`, `Retention`, `Audio`. |
+| **`UI.luau`, `UIKit.luau`, `UITheme.luau`, `TeamCards.luau`, `RadarChart.luau`** | `ReplicatedStorage.*` | **Design System**: construção programática de telas em escala (`Scale`), paleta unificada, ícones, som de botões, cards de personagem e gráfico de radar de atributos. |
 | **`VfxController.luau`, `VariantController.luau`** | `ReplicatedStorage.*` | Execução de efeitos visuais em 3 fases (`Charge`, `Release`, `Impact`) e aplicação visual de variantes (`Brilhante`, `Ouro`, `Rubi`, etc.). |
 
 ### 2.2. `src/server/` → `ServerScriptService`
@@ -61,15 +61,15 @@ Todos os **74 scripts ativos** do projeto estão extraídos, modularizados e sin
 | **`Battle/PvPService.luau`** | `ServerScriptService.Battle.PvPService` | Convites de desafio por proximidade na praça, nivelamento em nível 50 e início de partida PvP. |
 | **`Tower/TowerService.luau`** | `ServerScriptService.Tower.TowerService` | Progressão nos modos `Facil`, `Medio`, `Dificil` e `Infinito`, chefes a cada 5 andares e placares. |
 | **`Economy/SummonService.luau`** | `ServerScriptService.Economy.SummonService` | Portais Comum (gold) e Premium (gemas), sistema de garantia (*pity* 200 e 60), bloqueio regional via `PolicyService` (`ArePaidRandomItemsRestricted`), fusão de estrelas e venda de repetidos. |
-| **`Economy/BaseService.luau`** | `ServerScriptService.Economy.BaseService` | Alocação dos terrenos (`Plots`), personagens passeando (gold/h) ou minerando (minério/h), acúmulo offline de até 8h e conversão de minério em gemas com teto diário de 50 gemas. |
+| **`Economy/BaseService.luau` & `TrainingService.luau`** | `ServerScriptService.Economy.*` | Terrenos (`Plots`), passeio (gold), mineração (gold + minério bruto + 4 minérios de atributo com nível 1..10) e Cúpula de Vidro (Treino de +20 em +20, cronômetro, upgrade e bloqueios). |
 | **`Economy/InventoryService.luau`** | `ServerScriptService.Economy.InventoryService` | Compra e uso de itens (Poções, Cura-Status, Éter, Reviver, Selos) dentro e fora de batalha. |
 | **`Economy/MonetizationService.luau`** | `ServerScriptService.Economy.MonetizationService` | `MarketplaceService.ProcessReceipt`, compra de Game Passes / Benefícios por Robux ou Gemas. |
 | **`World/RefugeService.luau` & `EncounterService.luau`** | `ServerScriptService.World.*` | Refúgio privado da base (caverna, spawn de selvagens por nível da Forja 1..10, baú de drops) e encontros selvagens. |
 | **`Data/*.luau` (8 arquivos)** | `ServerScriptService.Data.*` | `PlayerDataService` (DataStore com trava de sessão), `ProgressionService` (XP, nível, aprendizado de golpes), `TeamService`, `AlbumService`, `RetentionService` (login diário, baús de tempo, missões), `SettingsService`, `Clock`. |
 
 ### 2.3. `src/client/` → `StarterGui` & `StarterPlayerScripts`
-* **`src/client/Gui/<NomeGui>/<NomeClient>.client.luau` (13 telas):**
-  * `BattleClient`, `HudClient`, `SummonClient`, `EquipeClient`, `TeamBarClient`, `RefugeClient`, `RewardsClient`, `ShopClient`, `PvPClient`, `BaseUiClient`, `BagClient`, `TowerClient`, `SettingsClient`.
+* **`src/client/Gui/<NomeGui>/<NomeClient>.client.luau` (15 telas):**
+  * `BattleClient`, `HudClient`, `SummonClient`, `EquipeClient`, `TeamBarClient`, `RefugeClient`, `RewardsClient`, `ShopClient`, `PvPClient`, `BaseUiClient`, `BagClient`, `TowerClient`, `SettingsClient`, `CharacterDetailClient`, `TrainingClient`.
 * **`src/client/PlayerScripts/*.client.luau` (6 controladores):**
   * `MapFxClient`, `AudioClient`, `VipTagClient`, `BaseClient`, `NpcWalkClient`, `WildClient`.
 
