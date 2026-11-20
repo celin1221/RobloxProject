@@ -1,0 +1,542 @@
+{
+ "name": "MapaV2",
+ "profile": "default",
+ "ground_is_parts": "vila compacta e plana por decisao do GDD (retangulo compacto); o relevo fica nas montanhas, fora da area jogavel",
+ "volume": {
+  "bounds": [
+   [
+    -190,
+    -10,
+    -150
+   ],
+   [
+    190,
+    186,
+    150
+   ]
+  ],
+  "killPlane": -60,
+  "ringOutOffset": 10,
+  "lift": 8
+ },
+ "parts": [
+  {
+   "id": "Ground",
+   "size": [
+    380,
+    4,
+    300
+   ],
+   "pos": [
+    0,
+    -2,
+    0
+   ],
+   "roles": [
+    "ground",
+    "arena_floor"
+   ]
+  },
+  {
+   "id": "WallN",
+   "size": [
+    388,
+    190,
+    4
+   ],
+   "pos": [
+    0,
+    95,
+    -152
+   ],
+   "roles": [
+    "boundary"
+   ],
+   "barrier": true,
+   "visible": false
+  },
+  {
+   "id": "WallS",
+   "size": [
+    388,
+    190,
+    4
+   ],
+   "pos": [
+    0,
+    95,
+    152
+   ],
+   "roles": [
+    "boundary"
+   ],
+   "barrier": true,
+   "visible": false
+  },
+  {
+   "id": "WallW",
+   "size": [
+    4,
+    190,
+    300
+   ],
+   "pos": [
+    -192,
+    95,
+    0
+   ],
+   "roles": [
+    "boundary"
+   ],
+   "barrier": true,
+   "visible": false
+  },
+  {
+   "id": "WallE",
+   "size": [
+    4,
+    190,
+    300
+   ],
+   "pos": [
+    192,
+    95,
+    0
+   ],
+   "roles": [
+    "boundary"
+   ],
+   "barrier": true,
+   "visible": false
+  },
+  {
+   "id": "BeltN",
+   "size": [
+    272,
+    0.6,
+    12
+   ],
+   "pos": [
+    0,
+    0.3,
+    -96
+   ],
+   "roles": [
+    "main_route"
+   ]
+  },
+  {
+   "id": "BeltS",
+   "size": [
+    272,
+    0.6,
+    12
+   ],
+   "pos": [
+    0,
+    0.3,
+    96
+   ],
+   "roles": [
+    "main_route"
+   ]
+  },
+  {
+   "id": "BeltW",
+   "size": [
+    12,
+    0.6,
+    180
+   ],
+   "pos": [
+    -136,
+    0.3,
+    0
+   ],
+   "roles": [
+    "main_route"
+   ]
+  },
+  {
+   "id": "BeltE",
+   "size": [
+    12,
+    0.6,
+    180
+   ],
+   "pos": [
+    136,
+    0.3,
+    0
+   ],
+   "roles": [
+    "main_route"
+   ]
+  },
+  {
+   "id": "BeltCorner_WN",
+   "size": [
+    12,
+    0.6,
+    12
+   ],
+   "pos": [
+    -136,
+    0.3,
+    -96
+   ],
+   "roles": [
+    "main_route"
+   ]
+  },
+  {
+   "id": "BeltCorner_EN",
+   "size": [
+    12,
+    0.6,
+    12
+   ],
+   "pos": [
+    136,
+    0.3,
+    -96
+   ],
+   "roles": [
+    "main_route"
+   ]
+  },
+  {
+   "id": "BeltCorner_WS",
+   "size": [
+    12,
+    0.6,
+    12
+   ],
+   "pos": [
+    -136,
+    0.3,
+    96
+   ],
+   "roles": [
+    "main_route"
+   ]
+  },
+  {
+   "id": "BeltCorner_ES",
+   "size": [
+    12,
+    0.6,
+    12
+   ],
+   "pos": [
+    136,
+    0.3,
+    96
+   ],
+   "roles": [
+    "main_route"
+   ]
+  },
+  {
+   "id": "Plot01",
+   "size": [
+    40,
+    0.4,
+    40
+   ],
+   "pos": [
+    -110,
+    0.2,
+    -126
+   ],
+   "roles": [
+    "yard"
+   ]
+  },
+  {
+   "id": "Plot02",
+   "size": [
+    40,
+    0.4,
+    40
+   ],
+   "pos": [
+    0,
+    0.2,
+    -126
+   ],
+   "roles": [
+    "yard"
+   ]
+  },
+  {
+   "id": "Plot03",
+   "size": [
+    40,
+    0.4,
+    40
+   ],
+   "pos": [
+    110,
+    0.2,
+    -126
+   ],
+   "roles": [
+    "yard"
+   ]
+  },
+  {
+   "id": "Plot04",
+   "size": [
+    40,
+    0.4,
+    40
+   ],
+   "pos": [
+    -110,
+    0.2,
+    126
+   ],
+   "roles": [
+    "yard"
+   ]
+  },
+  {
+   "id": "Plot05",
+   "size": [
+    40,
+    0.4,
+    40
+   ],
+   "pos": [
+    0,
+    0.2,
+    126
+   ],
+   "roles": [
+    "yard"
+   ]
+  },
+  {
+   "id": "Plot06",
+   "size": [
+    40,
+    0.4,
+    40
+   ],
+   "pos": [
+    110,
+    0.2,
+    126
+   ],
+   "roles": [
+    "yard"
+   ]
+  },
+  {
+   "id": "Plot07",
+   "size": [
+    40,
+    0.4,
+    40
+   ],
+   "pos": [
+    -166,
+    0.2,
+    -45
+   ],
+   "roles": [
+    "yard"
+   ]
+  },
+  {
+   "id": "Plot08",
+   "size": [
+    40,
+    0.4,
+    40
+   ],
+   "pos": [
+    -166,
+    0.2,
+    45
+   ],
+   "roles": [
+    "yard"
+   ]
+  },
+  {
+   "id": "Plot09",
+   "size": [
+    40,
+    0.4,
+    40
+   ],
+   "pos": [
+    166,
+    0.2,
+    -45
+   ],
+   "roles": [
+    "yard"
+   ]
+  },
+  {
+   "id": "Plot10",
+   "size": [
+    40,
+    0.4,
+    40
+   ],
+   "pos": [
+    166,
+    0.2,
+    45
+   ],
+   "roles": [
+    "yard"
+   ]
+  },
+  {
+   "id": "Tower",
+   "size": [
+    60,
+    150,
+    60
+   ],
+   "pos": [
+    0,
+    75,
+    0
+   ],
+   "roles": [
+    "landmark"
+   ]
+  },
+  {
+   "id": "Shop",
+   "size": [
+    30,
+    16,
+    20
+   ],
+   "pos": [
+    90,
+    8,
+    0
+   ],
+   "roles": [
+    "landmark"
+   ]
+  },
+  {
+   "id": "Heal",
+   "size": [
+    20,
+    14,
+    20
+   ],
+   "pos": [
+    -90,
+    7,
+    0
+   ],
+   "roles": [
+    "landmark"
+   ]
+  },
+  {
+   "id": "StarPadComum",
+   "size": [
+    14,
+    1.6,
+    14
+   ],
+   "pos": [
+    -50,
+    0.8,
+    48
+   ],
+   "roles": [
+    "prop"
+   ]
+  },
+  {
+   "id": "StarPadPremium",
+   "size": [
+    14,
+    1.6,
+    14
+   ],
+   "pos": [
+    50,
+    0.8,
+    48
+   ],
+   "roles": [
+    "prop"
+   ]
+  },
+  {
+   "id": "BoardGold",
+   "size": [
+    26,
+    18,
+    3
+   ],
+   "pos": [
+    -98,
+    9,
+    60
+   ],
+   "roles": [
+    "prop"
+   ],
+   "decor": true
+  },
+  {
+   "id": "BoardTower",
+   "size": [
+    26,
+    18,
+    3
+   ],
+   "pos": [
+    98,
+    9,
+    60
+   ],
+   "roles": [
+    "prop"
+   ],
+   "decor": true
+  }
+ ],
+ "spawns": [
+  [
+   0,
+   3,
+   62
+  ]
+ ],
+ "intent": {
+  "reachable": [
+   "Ground",
+   "Belt*",
+   "Plot*",
+   "StarPad*"
+  ],
+  "transit": [],
+  "reachableOnlyBy": {},
+  "ringOut": {
+   "counterplay": "none",
+   "minWindow": 0.0,
+   "from": []
+  }
+ },
+ "sightlines": {
+  "minClearFraction": 0.0,
+  "maxClearFraction": 1.0
+ },
+ "notes": "teto invisivel em y=188 fica fora do provador (ele nao modela teto); paredes 190 de altura"
+}

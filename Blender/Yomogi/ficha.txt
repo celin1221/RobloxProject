@@ -1,0 +1,30 @@
+FICHA - Yomogi
+Nome: Yomogi | Tipo: Natureza | Raridade: Comum | Arquetipo: meio-fera da floresta
+Conceito: garoto meio-fera da floresta, instintivo e protetor do bosque.
+Cores: verde-musgo e verde-limao (com marrom de casca).
+Acessorio unico: chifres de galho com folhas na ponta.
+Visual: cabelo desgrenhado verde-musgo com pontas verde-limao (para tras, tipo juba), faixa de casca na diagonal do peito,
+ombreiras de casca, cipos nos antebracos, manto curto de folhas nas costas, olhos verde-limao, marcas de folha nas bochechas, presa.
+Atributos (nivel 10): HP 64, Ataque 21, Defesa 23, Velocidade 19.
+
+GOLPES
+1 Gaiola de Espinhos (assinatura) - Natureza, poder 50, precisao 100, PP 20. Anim GaiolaDeEspinhos, Vfx GaiolaDeEspinhos.
+2 Arranhao - Neutro, poder 40, precisao 100, PP 30. Anim Arranhao, Vfx Arranhao.
+3 Semente Toxica - Natureza, poder 35, precisao 100, PP 15, 30% de envenenar. Anim SementeToxica, Vfx SementeToxica.
+4 Casca de Carvalho - suporte, +1 Defesa em si mesmo, PP 15. Anim CascaDeCarvalho, Vfx CascaDeCarvalho.
+
+ROTEIRO DA TECNICA ASSINATURA (Gaiola de Espinhos, 1,5 s)
+Preparacao (Charge 0,15 s): ergue a mao direita; uma semente verde-limao cresce e gira na palma, energia converge.
+Lancamento (Release 0,72 s): agacha e crava a semente no chao; anel verde no solo e uma onda de brotos corre ate o alvo.
+Impacto (Impact 1,05 s): 8 espinhos de casca com ponta verde sobem em espiral em volta do alvo e se fecham sobre ele; folhas e polen explodem.
+Dissipacao: os espinhos afundam no chao e somem; folhas caem devagar.
+
+VARIANTES
+Brilhante: paleta de outono (verdes viram laranja e ambar). Textura texturas\Yomogi_Tex_Brilhante.png. Cores-guia: primaria (214,120,40), secundaria (240,190,70). Brilhos piscando.
+Prata, Ouro (metal), Esmeralda, Rubi, Diamante (vidro), Arco-iris (cor em ciclo no cliente), Gigante (escala 1,5 fora da arena).
+Rosto e maos mantem a textura nas variantes de material.
+
+ASSETS ROBLOX
+Modelo FBX: 139234737191880 | Textura Brilhante: 96908911979468 | Particula folha: 134973377891827
+Animacoes: Idle 95978454415689, Walk 81539047602340, Hit 72898431375427, Faint 108505801464543, Victory 118621507192389, Mine 102522462046052,
+GaiolaDeEspinhos 138342022639761, Arranhao 124943270558908, SementeToxica 105789525703577, CascaDeCarvalho 80204195163280

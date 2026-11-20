@@ -1,0 +1,408 @@
+--[[
+	PlayerDataService (GDD secao 10: DataStore com trava de sessao)
+
+	Dados salvos (secao 10): colecao, time, mochila, gold, minerio, gemas, beneficios, torre,
+	gemas vendidas no dia, missoes, login diario, garantia de invocacao.
+
+	Registro no DataStore (chave "u_<UserId>"):
+	  { Data = <perfil>, Lock = { Server = id, Time = os.time() } | nil, SavedAt = os.time(), Version = n }
+
+	Protecao contra perda de dados:
+	  - Trava de sessao: so o servidor dono da trava salva. Outro servidor espera a trava ser liberada;
+	    trava sem renovacao ha LOCK_STALE segundos e considerada de um servidor morto e e assumida.
+	    Depois de esperar LOCK_WAIT_TRIES vezes, a trava e tomada; o servidor antigo perde o direito
+	    de salvar (confere a trava em todo salvamento) e expulsa o jogador sem sobrescrever.
+	  - Se o carregamento falhar (DataStore fora do ar), o jogador e expulso com aviso:
+	    nunca joga com perfil vazio, que apagaria o progresso ao salvar.
+	  - Salvamento com UpdateAsync, novas tentativas com espera crescente, validacao dos numeros.
+	  - Copia de seguranca (PlayerDataBackup) a cada saida; usada se o registro principal vier corrompido.
+	  - Salvamento automatico a cada AUTOSAVE segundos, ao sair e no fechamento do servidor (BindToClose).
+
+	Uso (servidor):
+	  PlayerDataService.Get(player) -> perfil (tabela viva) ou nil se ainda nao carregou
+	  PlayerDataService.WaitFor(player, timeout?) -> perfil ou nil
+	  PlayerDataService.MarkChanged(player)  -- envia o perfil ao cliente
+	  PlayerDataService.SaveNow(player)      -- salva ja (eventos importantes)
+	  PlayerDataService.Loaded:Connect(function(player) end) -- use Get(player); o evento copia tabelas
+]]
+
+local Players = game:GetService("Players")
+local DataStoreService = game:GetService("DataStoreService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local PlayerDataService = {}
+
+local STORE_NAME = "PlayerData_v1"
+local BACKUP_NAME = "PlayerDataBackup_v1"
+local VERSION = 1
+local AUTOSAVE = 60 -- segundos
+local LOCK_STALE = 600 -- trava sem renovacao ha 10 min = servidor morto
+local LOCK_WAIT_TRIES = 5 -- tentativas esperando a trava antes de tomar
+local LOCK_WAIT = 4 -- segundos entre tentativas
+local IO_TRIES = 4 -- tentativas por chamada ao DataStore
+
+local SERVER_ID = HttpService:GenerateGUID(false) -- JobId e vazio no Studio
+
+local store = DataStoreService:GetDataStore(STORE_NAME)
+local backup = DataStoreService:GetDataStore(BACKUP_NAME)
+
+local profiles = {} -- [Player] = { Data, Key, Released, LostLock, Saving }
+local loadedEvent = Instance.new("BindableEvent")
+PlayerDataService.Loaded = loadedEvent.Event
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local ProfileUpdatedRE = Remotes:WaitForChild("ProfileUpdated")
+
+--------------------------------------------------------------------
+-- Perfil padrao (todos os campos da secao 10)
+--------------------------------------------------------------------
+local function defaultProfile()
+	return {
+		Version = VERSION,
+		StarterChosen = false,
+		Collection = {}, -- [uid] = { Uid, CharacterId, Level, Xp, Learned = {}, Active = {}, Variant, Stars, ObtainedAt }
+		NextUid = 1,
+		Team = {}, -- ate 6 uids, na ordem
+		Bag = {}, -- [itemId] = quantidade
+		Gold = 0,
+		Ore = 0, -- minerio
+		Gems = 0,
+		Benefits = {}, -- [beneficio] = "Pass" (Game Pass, conferido a cada entrada) ou "Gems" (comprado com gemas)
+		Receipts = {}, -- [PurchaseId] = os.time(): compras em Robux ja entregues (ProcessReceipt nao entrega 2 vezes)
+		Tower = { Unlocked = "Facil", BestInfiniteFloor = 0, LastHardRewardDay = 0 },
+		GemsSold = { Day = 0, Amount = 0 }, -- gemas vendidas no dia
+		-- retorno (secao 13): Daily = { {Id, Progress, Done} }, Weekly[id] = {Progress, Done}
+		Missions = { Day = 0, Daily = {}, AllDone = false, Week = 0, Weekly = {}, WeeklyDone = false },
+		DailyLogin = { LastDay = 0, Streak = 0 },
+		Session = { Day = 0, Seconds = 0, Claimed = {} }, -- tempo online no dia e baus abertos
+		Tickets = { Comum = 0, Premium = 0 }, -- invocacoes gratis (login, missoes, codigos)
+		Codes = {}, -- [codigo] = quando resgatou
+		Cosmetics = {}, -- InfinitoTop = { Season, Rank }
+		Season = { Id = "", Best = 0 }, -- temporada do Infinito (mes UTC); Last = resultado da anterior
+		SummonPity = { Comum = 0, Premium = 0 }, -- garantia de invocacao
+		Album = { Owned = {}, Claimed = {} }, -- [personagem] = { Variants = { Brilhante = true } }; premios ja pagos
+		-- base (secao 8): Active[uid] = "Walk" | "Mine"; vagas compradas; producao pendente para coletar; ultimo calculo
+		Base = { Active = {}, MiningSlots = 2, Pending = { Gold = 0, Ore = 0 }, LastTick = 0 },
+		-- configuracoes do jogador (volumes de 0 a 100)
+		Settings = { MusicOn = true, MusicVolume = 50, SfxOn = true, SfxVolume = 80, MapFx = true },
+		-- Refugio (secao 14): nivel da Forja, contadores, Bau ({ {Id, Qty} }), selvagens pendentes e ultimo surgimento
+		Refuge = { Forja = 1, WildDefeated = 0, Captures = 0, Bau = {}, Pending = {}, LastSpawn = 0, NextId = 1 },
+		CreatedAt = os.time(),
+	}
+end
+
+-- Preenche campos que faltam (perfis antigos ganham campos novos sem perder nada)
+local function reconcile(data, template)
+	for k, v in pairs(template) do
+		if data[k] == nil then
+			data[k] = if typeof(v) == "table" then table.clone(v) else v
+		elseif typeof(v) == "table" and typeof(data[k]) == "table" and next(v) ~= nil then
+			reconcile(data[k], v)
+		end
+	end
+	return data
+end
+
+local function migrate(data)
+	-- Substitui o prototipo ProtoLendario (Satoru) pelo personagem oficial Setero
+	if typeof(data.Collection) == "table" then
+		for _, m in pairs(data.Collection) do
+			if m.CharacterId == "ProtoLendario" then
+				m.CharacterId = "Setero"
+				if m.Name == "Satoru" or not m.Name then
+					m.Name = "Setero"
+				end
+				m.Learned = { "Atracao", "SocoDireto", "TudoRoxo", "PosturaDeCombate" }
+				m.Active = { "TudoRoxo", "Atracao", "SocoDireto", "PosturaDeCombate" }
+			end
+		end
+	end
+	if typeof(data.Album) == "table" and typeof(data.Album.Owned) == "table" and data.Album.Owned.ProtoLendario then
+		data.Album.Owned.Setero = data.Album.Owned.Setero or data.Album.Owned.ProtoLendario
+		data.Album.Owned.ProtoLendario = nil
+	end
+	data.Version = VERSION
+	return data
+end
+
+-- Numeros validos e nao negativos; evita salvar NaN ou infinito
+local function cleanNumber(v, max)
+	if typeof(v) ~= "number" or v ~= v or v == math.huge or v == -math.huge then
+		return 0
+	end
+	return math.clamp(math.floor(v), 0, max or 1e12)
+end
+
+local function sanitize(data)
+	data.Gold = cleanNumber(data.Gold)
+	data.Gems = cleanNumber(data.Gems)
+	data.Ore = cleanNumber(data.Ore)
+	for id, n in pairs(data.Bag) do
+		data.Bag[id] = cleanNumber(n, 99)
+		if data.Bag[id] == 0 then
+			data.Bag[id] = nil
+		end
+	end
+	for _, m in pairs(data.Collection) do
+		m.Level = math.clamp(cleanNumber(m.Level), 1, 50)
+		m.Xp = cleanNumber(m.Xp)
+	end
+	local r = data.Refuge
+	if typeof(r) == "table" then
+		r.Forja = math.clamp(cleanNumber(r.Forja), 1, 10)
+		r.WildDefeated = cleanNumber(r.WildDefeated)
+		r.Captures = cleanNumber(r.Captures)
+		r.LastSpawn = cleanNumber(r.LastSpawn, 1e10)
+		r.NextId = math.max(1, cleanNumber(r.NextId))
+	end
+	return data
+end
+
+local function isValidProfile(data)
+	return typeof(data) == "table" and typeof(data.Collection) == "table" and typeof(data.Team) == "table"
+end
+
+--------------------------------------------------------------------
+-- DataStore com novas tentativas
+--------------------------------------------------------------------
+local function withRetry(fn)
+	local lastErr
+	for attempt = 1, IO_TRIES do
+		local ok, a, b = pcall(fn)
+		if ok then
+			return true, a, b
+		end
+		lastErr = a
+		warn("[PlayerData] Tentativa " .. attempt .. " falhou: " .. tostring(a))
+		task.wait(2 ^ (attempt - 1)) -- 1, 2, 4, 8 s
+	end
+	return false, lastErr
+end
+
+local function keyFor(player: Player): string
+	return "u_" .. player.UserId
+end
+
+-- Carrega e trava. Retorna o perfil ou nil + motivo.
+local function loadProfile(player: Player)
+	local key = keyFor(player)
+	for tryLock = 1, LOCK_WAIT_TRIES + 1 do
+		local force = tryLock > LOCK_WAIT_TRIES
+		local lockedByOther = false
+		local ok, record = withRetry(function()
+			return store:UpdateAsync(key, function(old)
+				old = if typeof(old) == "table" then old else {}
+				local lock = old.Lock
+				if lock and lock.Server ~= SERVER_ID and not force and os.time() - (lock.Time or 0) < LOCK_STALE then
+					lockedByOther = true
+					return nil -- cancela: outro servidor ainda tem a trava
+				end
+				old.Lock = { Server = SERVER_ID, Time = os.time() }
+				return old
+			end)
+		end)
+		if not ok then
+			return nil, "DataStore indispon\u{ed}vel"
+		end
+		if not player.Parent then
+			return nil, "saiu"
+		end
+		if record then
+			local data = record.Data
+			if data ~= nil and not isValidProfile(data) then
+				warn("[PlayerData] Registro corrompido de " .. player.Name .. "; usando a copia de seguranca")
+				local okB, saved = withRetry(function()
+					return backup:GetAsync(key)
+				end)
+				data = if okB and typeof(saved) == "table" and isValidProfile(saved.Data) then saved.Data else nil
+				if data == nil then
+					return nil, "dados corrompidos"
+				end
+			end
+			data = migrate(reconcile(data or defaultProfile(), defaultProfile()))
+			return data
+		end
+		if lockedByOther then
+			warn("[PlayerData] Perfil de " .. player.Name .. " travado por outro servidor; esperando (" .. tryLock .. ")")
+			task.wait(LOCK_WAIT)
+		end
+	end
+	return nil, "trava"
+end
+
+-- Salva. release = libera a trava (saida). Retorna true se salvou.
+local function saveProfile(player: Player, release: boolean)
+	local p = profiles[player]
+	if not p or p.LostLock or p.Released then
+		return false
+	end
+	while p.Saving do
+		task.wait(0.1)
+	end
+	if p.Released then
+		return false
+	end
+	p.Saving = true
+	local data = sanitize(p.Data)
+	local lost = false
+	local ok, err = withRetry(function()
+		return store:UpdateAsync(p.Key, function(old)
+			old = if typeof(old) == "table" then old else {}
+			if old.Lock and old.Lock.Server ~= SERVER_ID then
+				lost = true
+				return nil -- outro servidor tomou a trava: nao sobrescreve
+			end
+			old.Data = data
+			old.Version = VERSION
+			old.SavedAt = os.time()
+			old.Lock = if release then nil else { Server = SERVER_ID, Time = os.time() }
+			return old
+		end)
+	end)
+	p.Saving = false
+	if lost then
+		p.LostLock = true
+		warn("[PlayerData] " .. player.Name .. " abriu outra sessao; este servidor parou de salvar")
+		if player.Parent then
+			player:Kick("Sua conta foi aberta em outro servidor.")
+		end
+		return false
+	end
+	if not ok then
+		warn("[PlayerData] Falha ao salvar " .. player.Name .. ": " .. tostring(err))
+		return false
+	end
+	if release then
+		p.Released = true
+		-- copia de seguranca do ultimo estado bom
+		pcall(function()
+			backup:SetAsync(p.Key, { Data = data, SavedAt = os.time() })
+		end)
+	end
+	return true
+end
+
+--------------------------------------------------------------------
+-- API
+--------------------------------------------------------------------
+function PlayerDataService.Get(player: Player)
+	local p = profiles[player]
+	return p and not p.Released and p.Data or nil
+end
+
+function PlayerDataService.WaitFor(player: Player, timeout: number?)
+	local t0 = os.clock()
+	while player.Parent and os.clock() - t0 < (timeout or 30) do
+		local data = PlayerDataService.Get(player)
+		if data then
+			return data
+		end
+		task.wait(0.1)
+	end
+	return nil
+end
+
+-- Copia do perfil para o cliente (sem nada interno)
+function PlayerDataService.PublicView(player: Player)
+	local data = PlayerDataService.Get(player)
+	if not data then
+		return nil
+	end
+	return data
+end
+
+local changedListeners = {} -- { function(player) }
+
+function PlayerDataService.OnChanged(fn: (Player) -> ())
+	table.insert(changedListeners, fn)
+end
+
+function PlayerDataService.MarkChanged(player: Player)
+	local view = PlayerDataService.PublicView(player)
+	if view then
+		ProfileUpdatedRE:FireClient(player, view)
+		for _, fn in ipairs(changedListeners) do
+			task.spawn(fn, player)
+		end
+	end
+end
+
+function PlayerDataService.SaveNow(player: Player): boolean
+	return saveProfile(player, false)
+end
+
+function PlayerDataService.NewUid(player: Player): string
+	local data = assert(PlayerDataService.Get(player), "Perfil nao carregado")
+	local uid = "c" .. data.NextUid
+	data.NextUid += 1
+	return uid
+end
+
+local function onPlayerAdded(player: Player)
+	local data, reason = loadProfile(player)
+	if not player.Parent then
+		-- saiu durante o carregamento: libera a trava que acabamos de pegar
+		if data then
+			profiles[player] = { Data = data, Key = keyFor(player) }
+			saveProfile(player, true)
+			profiles[player] = nil
+		end
+		return
+	end
+	if not data then
+		warn("[PlayerData] Nao carregou " .. player.Name .. ": " .. tostring(reason))
+		player:Kick("N\u{e3}o foi poss\u{ed}vel carregar seus dados (" .. tostring(reason) .. "). Seu progresso est\u{e1} seguro; entre de novo em instantes.")
+		return
+	end
+	profiles[player] = { Data = data, Key = keyFor(player) }
+	loadedEvent:Fire(player, data)
+	PlayerDataService.MarkChanged(player)
+end
+
+local function onPlayerRemoving(player: Player)
+	if profiles[player] then
+		saveProfile(player, true)
+		profiles[player] = nil
+	end
+end
+
+function PlayerDataService.Init()
+	Players.PlayerAdded:Connect(onPlayerAdded)
+	for _, p in ipairs(Players:GetPlayers()) do
+		task.spawn(onPlayerAdded, p)
+	end
+	Players.PlayerRemoving:Connect(onPlayerRemoving)
+
+	-- Salvamento automatico (escalonado para nao estourar o limite do DataStore)
+	task.spawn(function()
+		while true do
+			task.wait(AUTOSAVE)
+			for player in pairs(profiles) do
+				if player.Parent then
+					task.spawn(saveProfile, player, false)
+					task.wait(0.5)
+				end
+			end
+		end
+	end)
+
+	-- Fechamento do servidor: salva e libera todos
+	game:BindToClose(function()
+		local pending = 0
+		for player in pairs(profiles) do
+			pending += 1
+			task.spawn(function()
+				saveProfile(player, true)
+				pending -= 1
+			end)
+		end
+		local t0 = os.clock()
+		while pending > 0 and os.clock() - t0 < 25 do
+			task.wait(0.1)
+		end
+	end)
+end
+
+return PlayerDataService

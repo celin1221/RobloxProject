@@ -1,0 +1,104 @@
+{
+  "name": "RobloxProjetoX",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "$ignoreUnknownInstances": true,
+      "$path": "src/shared"
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "$ignoreUnknownInstances": true,
+      "$path": "src/server"
+    },
+    "ServerStorage": {
+      "$className": "ServerStorage",
+      "$ignoreUnknownInstances": true,
+      "Codes": {
+        "$path": "src/server_storage/Codes.luau"
+      },
+      "_ConstrutorMapaV2": {
+        "$path": "src/server_storage/_ConstrutorMapaV2.luau"
+      }
+    },
+    "StarterGui": {
+      "$className": "StarterGui",
+      "$ignoreUnknownInstances": true,
+      "BattleGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/BattleGui"
+      },
+      "HudGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/HudGui"
+      },
+      "TowerGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/TowerGui"
+      },
+      "SummonGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/SummonGui"
+      },
+      "ShopGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/ShopGui"
+      },
+      "BagGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/BagGui"
+      },
+      "BaseGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/BaseGui"
+      },
+      "PvPGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/PvPGui"
+      },
+      "RewardsGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/RewardsGui"
+      },
+      "SettingsGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/SettingsGui"
+      },
+      "RefugeGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/RefugeGui"
+      },
+      "TeamBarGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/TeamBarGui"
+      },
+      "EquipeGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/EquipeGui"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "$ignoreUnknownInstances": true,
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/PlayerScripts"
+      }
+    }
+  }
+}

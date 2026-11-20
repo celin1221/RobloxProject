@@ -1,0 +1,61 @@
+{
+  "_comment": "Tema do jogo (formato da skill roblox-ui, com campos extras para o Luau). Fonte unica de cores, fontes, tamanhos e cantos; ReplicatedStorage/UITheme e gerado a partir deste arquivo.",
+  "font": "FredokaOne",
+  "stroke": 3,
+  "textStroke": 2,
+  "corner": 0.22,
+  "shadowOffset": 4,
+  "outline": "#1A1233",
+  "backdrop": ["#8FD3F4", "#79B94C"],
+  "palette": {
+    "panel": ["#4F3FA3", "#2C2266"],
+    "panelAlt": ["#6250C2", "#3D3088"],
+    "slot": ["#2A2060", "#1E1748"],
+    "header": ["#FF8BD0", "#C2409A"],
+    "gold": "#FFD447",
+    "gems": "#FF4FA3",
+    "ore": "#E07B2C",
+    "comum": "#9AA3B5",
+    "raro": "#3D8BFF",
+    "epico": "#A855F7",
+    "lendario": "#FFB020",
+    "green": "#38CC63",
+    "red": "#FF4D5E",
+    "blue": "#3D8BFF",
+    "orange": "#FF8A2B",
+    "purple": "#A855F7",
+    "teal": "#22C4B8",
+    "grey": "#7D82A0",
+    "hpHigh": "#4BE07A",
+    "hpMid": "#FFC93C",
+    "hpLow": "#FF4D5E",
+    "track": "#160F33",
+    "ink": "#1A1233",
+    "inkSoft": "#B8B2E0",
+    "onDark": "#FFFFFF"
+  },
+  "types": {
+    "Fogo": "#FF6A3D", "Agua": "#3DA5FF", "Natureza": "#4CCB5A", "Raio": "#FFD23D",
+    "Luz": "#FFF2A8", "Trevas": "#7B4FC9", "Neutro": "#B9B4C9"
+  },
+  "text": {
+    "_comment": "Altura do texto como fracao da altura da tela (TextScaled + UITextSizeConstraint com estes limites em px).",
+    "title":   { "scale": 0.075, "min": 20, "max": 46 },
+    "heading": { "scale": 0.055, "min": 16, "max": 34 },
+    "body":    { "scale": 0.043, "min": 13, "max": 26 },
+    "small":   { "scale": 0.034, "min": 11, "max": 20 }
+  },
+  "corners": { "panel": 0.08, "button": 0.22, "pill": 0.5, "card": 0.14 },
+  "strokeByHeight": { "_comment": "UIStroke so aceita pixel: espessura pela altura da tela.", "360": 3, "500": 4, "800": 5 },
+  "touchMin": 44,
+  "safe": { "top": 0.16, "thumbstick": [0.0, 0.62, 0.30, 1.0], "jump": [0.76, 0.68, 1.0, 1.0] },
+  "motion": {
+    "hover": { "scale": 1.05, "rotate": 0, "time": 0.12, "style": "Quad" },
+    "press": { "scale": 0.88, "time": 0.06 },
+    "release": { "time": 0.32, "style": "Back" },
+    "open": { "style": "pop", "from": 0.6, "time": 0.32, "slide": 0.08 },
+    "count": { "time": 0.6 },
+    "shine": { "period": 2.2 }
+  },
+  "highlight": false
+}
