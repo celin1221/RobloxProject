@@ -263,7 +263,11 @@ function UI.screen(gui: ScreenGui)
 	canvas.BackgroundTransparency = 1
 	canvas.BorderSizePixel = 0
 	canvas.Parent = gui
-	canvases[canvas] = { Strokes = {}, Texts = {}, Shadows = {} }
+	canvases[canvas] = {
+		Strokes = setmetatable({}, { __mode = "k" }),
+		Texts = setmetatable({}, { __mode = "k" }),
+		Shadows = setmetatable({}, { __mode = "k" }),
+	}
 	applyDevice(canvas)
 	canvas:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 		applyMetrics(canvas)
@@ -280,7 +284,28 @@ end
 --------------------------------------------------------------------
 -- Pecas basicas
 --------------------------------------------------------------------
-local function setCommon(obj, p)
+local function ancestorScale(obj: Instance?): number
+	local scale = 1
+	local cur = obj
+	while cur and not cur:IsA("ScreenGui") do
+		local sc = cur:FindFirstChildOfClass("UIScale")
+		if sc then
+			scale *= sc.Scale
+		end
+		cur = cur.Parent
+	end
+	return scale
+end
+
+function UI.unscaledSize(obj: GuiObject): (number, number)
+	local sc = ancestorScale(obj)
+	if sc < 0.05 then
+		return 0, 0
+	end
+	return obj.AbsoluteSize.X / sc, obj.AbsoluteSize.Y / sc
+end
+
+local function setCommon(obj, p, parent)
 	obj.Name = p.Name or obj.Name
 	obj.Size = p.Size or UDim2.fromScale(1, 1)
 	obj.Position = p.Position or UDim2.fromScale(0, 0)
@@ -305,15 +330,41 @@ local function setCommon(obj, p)
 		-- linha de lista: largura em escala, altura = largura / Aspect (calculada, nao some com altura 0)
 		local aspect = p.Aspect
 		local rowMax = p.RowMax or math.huge -- teto da altura da linha (tablet)
+		obj:SetAttribute("_RowAspect", aspect)
+		if p.RowMax then
+			obj:SetAttribute("_RowMax", p.RowMax)
+		end
 		local function fit()
-			local w = obj.AbsoluteSize.X
-			if w > 0 then
+			local sc = ancestorScale(obj)
+			if sc < 0.05 then
+				return
+			end
+			local w = obj.AbsoluteSize.X / sc
+			if w <= 1 then
+				local pObj = obj.Parent or parent
+				if pObj and pObj:IsA("GuiObject") then
+					local psc = ancestorScale(pObj)
+					if psc >= 0.05 then
+						local pw = pObj.AbsoluteSize.X / psc
+						local pad = pObj:FindFirstChildOfClass("UIPadding")
+						if pad then
+							pw -= pad.PaddingLeft.Offset + pad.PaddingRight.Offset + pw * (pad.PaddingLeft.Scale + pad.PaddingRight.Scale)
+						end
+						if pObj:IsA("ScrollingFrame") then
+							pw -= pObj.ScrollBarThickness
+						end
+						w = math.max(0, pw * obj.Size.X.Scale + obj.Size.X.Offset)
+					end
+				end
+			end
+			if w > 1 then
 				local h = math.min(rowMax, math.floor(w / aspect + 0.5))
 				if obj.Size.Y.Offset ~= h then
 					obj.Size = UDim2.new(obj.Size.X.Scale, obj.Size.X.Offset, 0, h)
 				end
 			end
 		end
+		fit()
 		obj:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 		task.defer(fit)
 	elseif p.Aspect then
@@ -330,7 +381,7 @@ function UI.frame(parent, p)
 	local f = Instance.new("Frame")
 	f.BorderSizePixel = 0
 	f.BackgroundTransparency = 1
-	setCommon(f, p)
+	setCommon(f, p, parent)
 	if p.Color then
 		f.BackgroundTransparency = p.Transparency or 0
 		local top, bottom = pair(p.Color)
@@ -359,7 +410,7 @@ function UI.text(parent, text, p)
 	l.TextColor3 = colorOf(p.Color or "onDark")
 	l.TextXAlignment = p.AlignX or Enum.TextXAlignment.Center
 	l.TextYAlignment = p.AlignY or Enum.TextYAlignment.Center
-	setCommon(l, p)
+	setCommon(l, p, parent)
 	local lim = Instance.new("UITextSizeConstraint")
 	lim.Parent = l
 	register(l, "Texts", lim, p.Role or "Body")
@@ -384,7 +435,7 @@ function UI.icon(parent, name, p)
 	if p.Aspect == nil then
 		p.Aspect = 1
 	end
-	setCommon(i, p)
+	setCommon(i, p, parent)
 	if p.Tint then
 		i.ImageColor3 = p.Tint
 	end
@@ -408,7 +459,7 @@ function UI.panel(parent, p)
 			holder.Text = ""
 		end
 	end
-	setCommon(holder, p)
+	setCommon(holder, p, parent)
 	local r = p.Corner or T.Corner.Panel
 	local top, bottom = pair(p.Color or "panel")
 	if p.Shadow ~= false then
@@ -725,54 +776,121 @@ function UI.scroll(parent, p)
 	s.BorderSizePixel = 0
 	s.ScrollBarThickness = 6
 	s.ScrollBarImageColor3 = Color3.fromRGB(200, 190, 255)
-	-- altura da lista calculada do conteudo (AutomaticCanvasSize cortava o ultimo item com padding em escala)
+	-- altura da lista calculada em pixels (nunca usar Scale vertical em UIPadding/UIListLayout dentro de
+	-- ScrollingFrame: no Roblox Scale vertical multiplica CanvasSize.Y e cria loop exponencial com muitos itens)
 	s.AutomaticCanvasSize = Enum.AutomaticSize.None
 	s.CanvasSize = UDim2.new()
 	s.ScrollingDirection = Enum.ScrollingDirection.Y
-	setCommon(s, p)
+	setCommon(s, p, parent)
+
+	local topPx, botPx, leftPx, rightPx = 4, 8, 4, 10
 	local pad = Instance.new("UIPadding")
-	pad.PaddingTop = UDim.new(0.015, 0)
-	pad.PaddingBottom = UDim.new(0.03, 0)
-	pad.PaddingLeft = UDim.new(0.012, 0)
-	pad.PaddingRight = UDim.new(0.03, 0)
+	pad.PaddingTop = UDim.new(0, topPx)
+	pad.PaddingBottom = UDim.new(0, botPx)
+	pad.PaddingLeft = UDim.new(0, leftPx)
+	pad.PaddingRight = UDim.new(0, rightPx)
 	pad.Parent = s
-	if p.Columns then
+
+	local cols, aspect = p.Columns, p.CellAspect or 1
+	local gap = if p.Gap ~= nil then p.Gap else 0.02
+	local layout: UIGridStyleLayout
+	if cols then
 		local g = Instance.new("UIGridLayout")
-		local gap = p.Gap or 0.02
 		g.SortOrder = Enum.SortOrder.LayoutOrder
-		g.FillDirectionMaxCells = p.Columns
+		g.FillDirectionMaxCells = cols
 		g.Parent = s
-		-- celula calculada pela largura da lista (altura = largura / CellAspect)
-		local cols, aspect = p.Columns, p.CellAspect or 1
-		local function fitGrid()
-			local inner = s.AbsoluteSize.X * (1 - 0.042) - s.ScrollBarThickness
-			if inner <= 0 then
-				return
-			end
-			local gapPx = math.floor(inner * gap)
-			local w = math.floor((inner - gapPx * (cols - 1)) / cols)
-			g.CellPadding = UDim2.fromOffset(gapPx, gapPx)
-			g.CellSize = UDim2.fromOffset(w, math.floor(w / aspect))
-		end
-		s:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitGrid)
-		task.defer(fitGrid)
+		layout = g
 	else
 		local l = Instance.new("UIListLayout")
-		l.Padding = UDim.new(p.Gap or 0.02, 0)
+		l.Padding = UDim.new(0, if gap <= 0 then 0 else 6)
 		l.SortOrder = Enum.SortOrder.LayoutOrder
 		l.HorizontalAlignment = Enum.HorizontalAlignment.Center
 		l.Parent = s
+		layout = l
 	end
-	-- canvas = conteudo + margens + sombra do ultimo item (o ultimo sempre aparece inteiro)
-	local layout = s:FindFirstChildWhichIsA("UIGridStyleLayout")
+
+	-- canvas = conteudo + margens em pixels + sombra do ultimo item (o ultimo sempre aparece inteiro)
 	local function fitCanvas()
-		local h = layout.AbsoluteContentSize.Y + s.AbsoluteSize.Y * (0.015 + 0.03) + (T.ShadowOffset or 4) + 16
-		s.CanvasSize = UDim2.fromOffset(0, math.ceil(h))
+		local sc = ancestorScale(s)
+		if sc < 0.05 then
+			return
+		end
+		local contentY = layout.AbsoluteContentSize.Y / sc
+		local shadowPx = math.max(2, math.floor(UI.height(s) * 0.011 + 0.5))
+		local h = math.ceil(contentY + topPx + botPx + shadowPx + 8)
+		if s.CanvasSize.Y.Scale ~= 0 or s.CanvasSize.Y.Offset ~= h then
+			s.CanvasSize = UDim2.fromOffset(0, h)
+		end
 	end
+
+	local function fitMetrics()
+		local sc = ancestorScale(s)
+		if sc < 0.05 then
+			return
+		end
+		local w = s.AbsoluteSize.X / sc
+		local h = s.AbsoluteSize.Y / sc
+		if w <= 1 or h <= 1 then
+			return
+		end
+		topPx = math.clamp(math.floor(h * 0.015 + 0.5), 3, 10)
+		botPx = math.clamp(math.floor(h * 0.03 + 0.5), 6, 16)
+		leftPx = math.clamp(math.floor(w * 0.012 + 0.5), 3, 12)
+		rightPx = math.clamp(math.floor(w * 0.03 + 0.5), 8, 20)
+		pad.PaddingTop = UDim.new(0, topPx)
+		pad.PaddingBottom = UDim.new(0, botPx)
+		pad.PaddingLeft = UDim.new(0, leftPx)
+		pad.PaddingRight = UDim.new(0, rightPx)
+
+		if cols then
+			local g = layout :: UIGridLayout
+			local inner = w - leftPx - rightPx - s.ScrollBarThickness
+			if inner > 0 then
+				local gapPx = math.floor(inner * gap)
+				local cw = math.max(1, math.floor((inner - gapPx * (cols - 1)) / cols))
+				local ch = math.max(1, math.floor(cw / aspect))
+				if g.CellPadding.X.Offset ~= gapPx or g.CellPadding.Y.Offset ~= gapPx then
+					g.CellPadding = UDim2.fromOffset(gapPx, gapPx)
+				end
+				if g.CellSize.X.Offset ~= cw or g.CellSize.Y.Offset ~= ch then
+					g.CellSize = UDim2.fromOffset(cw, ch)
+				end
+			end
+		else
+			local l = layout :: UIListLayout
+			local gapPx = if gap <= 0
+				then 0
+				else math.clamp(math.floor(math.max(h * gap, UI.height(s) * (gap * 0.55)) + 0.5), 4, 14)
+			if l.Padding.Scale ~= 0 or l.Padding.Offset ~= gapPx then
+				l.Padding = UDim.new(0, gapPx)
+			end
+			-- Atualiza altura de todas as linhas (inclusive fora da area visivel, onde AbsoluteSize pode ser adiado)
+			local innerW = w - leftPx - rightPx - s.ScrollBarThickness
+			if innerW > 1 then
+				for _, ch in ipairs(s:GetChildren()) do
+					if ch:IsA("GuiObject") then
+						local a = ch:GetAttribute("_RowAspect")
+						if typeof(a) == "number" and a > 0 then
+							local rmax = ch:GetAttribute("_RowMax")
+							local cw = math.max(0, innerW * ch.Size.X.Scale + ch.Size.X.Offset)
+							if cw > 1 then
+								local rh = math.min(if typeof(rmax) == "number" then rmax else math.huge, math.floor(cw / a + 0.5))
+								if ch.Size.Y.Offset ~= rh then
+									ch.Size = UDim2.new(ch.Size.X.Scale, ch.Size.X.Offset, 0, rh)
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+		fitCanvas()
+	end
+
 	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(fitCanvas)
-	s:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitCanvas)
-	task.defer(fitCanvas)
+	s:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitMetrics)
 	s.Parent = parent
+	task.defer(fitMetrics)
 	return s
 end
 
@@ -1037,6 +1155,19 @@ function UI.onOpen(id: string, fn)
 	end)
 end
 
+-- Seletor visual unificado de personagem (reutiliza a tela Equipe com filtros e cartoes 3D;
+-- chamada direta em Luau para preservar callbacks como OnPick, GetBadge e IsEligible)
+local characterPickerHandler = nil
+function UI.onPickCharacter(fn)
+	characterPickerHandler = fn
+end
+
+function UI.pickCharacter(opts)
+	if characterPickerHandler then
+		characterPickerHandler(opts)
+	end
+end
+
 function UI.toast(text: string, kind: string?)
 	UI.open("Toast", text, kind)
 end
@@ -1123,8 +1254,16 @@ end
 function UI.keepScroll(sf, rebuild)
 	local pos = sf.CanvasPosition
 	rebuild()
+	local function restore()
+		if not sf.Parent then
+			return
+		end
+		local maxY = math.max(0, sf.AbsoluteCanvasSize.Y - sf.AbsoluteWindowSize.Y)
+		sf.CanvasPosition = Vector2.new(pos.X, math.clamp(pos.Y, 0, maxY))
+	end
 	task.defer(function()
-		sf.CanvasPosition = pos
+		restore()
+		task.defer(restore)
 	end)
 end
 

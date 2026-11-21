@@ -11,12 +11,12 @@ O projeto adota a arquitetura profissional **Disk-First + 4 Camadas (Data / Core
 ```mermaid
 flowchart TD
     subgraph Disk["Repositório Local (CVS / Git — Fonte da Verdade)"]
-        SRC_DATA["src/shared/Data/<br/>16 Módulos Estáticos"]
+        SRC_DATA["src/shared/Data/<br/>17 Módulos Estáticos"]
         SRC_CORE["src/shared/Core/<br/>BattleEngine, DamageCalc, AIController"]
         SRC_NET["src/shared/Net.luau<br/>Contrato Tipado de Remotes"]
-        SRC_UI["src/shared/UI*.luau<br/>Design System + RadarChart + VfxController"]
+        SRC_UI["src/shared/UI*.luau<br/>Design System + RadarChart + SummonBannerStage + VfxController"]
         SRC_SRV["src/server/<br/>Battle, Economy, World, Data"]
-        SRC_CLI["src/client/<br/>Gui (15 Telas) + PlayerScripts (6 Controladores)"]
+        SRC_CLI["src/client/<br/>Gui (15 Telas) + PlayerScripts (7 Controladores)"]
     end
 
     subgraph Sync["Ponte de Sincronização e Verificação"]
@@ -39,7 +39,7 @@ flowchart TD
 
 ## 2. Mapa Completo da Árvore de Código (`src/` ↔ Roblox Studio)
 
-Todos os **82 scripts ativos** do projeto estão extraídos, modularizados e sincronizados na pasta `src/`:
+Todos os **86 scripts ativos** do projeto estão extraídos, modularizados e sincronizados na pasta `src/`:
 
 ### 2.1. `src/shared/` → `ReplicatedStorage`
 | Caminho em `src/shared/` | Instância no Studio | Papel Arquitetural |
@@ -48,8 +48,8 @@ Todos os **82 scripts ativos** do projeto estão extraídos, modularizados e sin
 | **`Core/DamageCalc.luau`** | `ReplicatedStorage.Core.DamageCalc` | **Fórmula matemática oficial do GDD (Seção 5)**, multiplicadores de estágios (`-6` a `+6`), regras de status e cálculo de dano esperado (`ExpectedDamage`). |
 | **`Core/AIController.luau`** | `ReplicatedStorage.Core.AIController` | **IA de Batalha** (`Facil`, `Medio` 70%/30%, `Dificil` com análise de matchup e uso de status). |
 | **`Net.luau`** | `ReplicatedStorage.Net` | **Contrato único de rede** com tipos exportados (`RemoteEventName` e `RemoteFunctionName`) documentando os Remotes do jogo. |
-| **`Data/*.luau` (16 arquivos)** | `ReplicatedStorage.Data.*` | Tabelas de configuração puras: `Characters`, `Moves`, `TypeChart`, `Items`, `Progression`, `Genetics`, `Training`, `Tower`, `Summon`, `Encounters`, `Base`, `Refuge`, `ProductIds`, `Benefits`, `Retention`, `Audio`. |
-| **`UI.luau`, `UIKit.luau`, `UITheme.luau`, `TeamCards.luau`, `RadarChart.luau`** | `ReplicatedStorage.*` | **Design System**: construção programática de telas em escala (`Scale`), paleta unificada, ícones, som de botões, cards de personagem e gráfico de radar de atributos. |
+| **`Data/*.luau` (17 arquivos)** | `ReplicatedStorage.Data.*` | Tabelas de configuração puras: `Characters`, `Moves`, `TypeChart`, `Items`, `Progression`, `Genetics`, `Training`, `Tower`, `Summon`, `SummonStageThemes`, `Encounters`, `Base`, `Refuge`, `ProductIds`, `Benefits`, `Retention`, `Audio`. |
+| **`UI.luau`, `UIKit.luau`, `UITheme.luau`, `TeamCards.luau`, `RadarChart.luau`, `SummonBannerStage.luau`** | `ReplicatedStorage.*` | **Design System & Palco 3D**: construção programática de telas em escala (`Scale`), paleta unificada, ícones, som de botões, cards de personagem, gráfico de radar de atributos e palco 3D ao vivo de invocação. |
 | **`VfxController.luau`, `VariantController.luau`** | `ReplicatedStorage.*` | Execução de efeitos visuais em 3 fases (`Charge`, `Release`, `Impact`) e aplicação visual de variantes (`Brilhante`, `Ouro`, `Rubi`, etc.). |
 
 ### 2.2. `src/server/` → `ServerScriptService`
@@ -70,8 +70,8 @@ Todos os **82 scripts ativos** do projeto estão extraídos, modularizados e sin
 ### 2.3. `src/client/` → `StarterGui` & `StarterPlayerScripts`
 * **`src/client/Gui/<NomeGui>/<NomeClient>.client.luau` (15 telas):**
   * `BattleClient`, `HudClient`, `SummonClient`, `EquipeClient`, `TeamBarClient`, `RefugeClient`, `RewardsClient`, `ShopClient`, `PvPClient`, `BaseUiClient`, `BagClient`, `TowerClient`, `SettingsClient`, `CharacterDetailClient`, `TrainingClient`.
-* **`src/client/PlayerScripts/*.client.luau` (6 controladores):**
-  * `MapFxClient`, `AudioClient`, `VipTagClient`, `BaseClient`, `NpcWalkClient`, `WildClient`.
+* **`src/client/PlayerScripts/*.client.luau` (7 controladores):**
+  * `MapFxClient`, `AudioClient`, `VipTagClient`, `BaseClient`, `NpcWalkClient`, `WildClient`, `CharacterAuraClient`.
 
 ---
 

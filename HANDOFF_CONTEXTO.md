@@ -11,7 +11,7 @@
 * **Open Cloud Creator UserId (conta logada no MCP):** `12009032821` *(usar `userId: "12009032821"` ao fazer upload via `open_cloud_invoke` e inserir via `insert_asset`)*.
 * **Blender:** `D:\Blender\blender.exe` (versão **5.3.0**, usado em modo `--background --python ...`).
 * **Sincronizador Disk-First (`src/` <-> Studio):**
-  * `python scripts/sync_studio.py status` — valida se os 82 scripts em `src/` estão 100% em sync.
+  * `python scripts/sync_studio.py status` — valida se os 86 scripts em `src/` estão 100% em sync.
   * `python scripts/sync_studio.py push` — envia alterações de `src/` para o Studio.
   * `python scripts/sync_studio.py test` — roda validação do GDD (`DamageCalc` e `BattleEngine`).
 
@@ -67,15 +67,18 @@ Configurados em [`src/server_storage/Codes.luau`](./src/server_storage/Codes.lua
 
 ---
 
-## 5. Atualizações Recentes (19–20/11/2026 · Place v228)
+## 5. Atualizações Recentes (19–20/11/2026 · Place v248)
 Consulte o detalhamento completo em [`Blender/PROGRESSO.md`](./Blender/PROGRESSO.md).
 
 * **Genética (IVs), Treino (EVs) & Gráfico de Radar:** `src/shared/Data/Genetics.luau`, `src/shared/RadarChart.luau` e `CharacterDetailGui` (aberta via Barra do Time `STATUS`, `Equipe` ou `Mochila`). Inimigos PvE da Torre usam `Genética = 70` e `Treino = 100`; Refúgio segue a mesma distribuição do Gacha.
 * **Máquina de Treino (Cúpula de Vidro) & 4 Minérios:** `src/shared/Data/Training.luau`, `TrainingService.luau`, `TrainingClient.client.luau` + 4 minérios (`HP`, `Defesa`, `Velocidade`, `Ataque`) com ícones próprios (`ore_hp` `98190850262557`, `ore_def` `81379071551950`, `ore_vel` `131534143692832`, `ore_atq` `94276779585364`).
 * **Polimento da Base (`Plot01..Plot10`):** Pedreira escalonada para `0,58×`, Cápsula de Treino no canto frontal direito (`floor * (14.5, 0.3, -14.2)`), personagens em `BaseCharacters` totalmente intangíveis (`CollisionGroup = "BaseNPC"` + `EvaluateStateMachine = false`), ícones reduzidos em `BagGui > Itens` e `TrainingGui`.
-* **Estrela do Gacha — Painéis de Anime, Elenco Naruto Provisório & Destaque 3D:**
+* **Estrela do Gacha — Palco 3D ao Vivo, Painéis de Anime & Elenco Naruto Provisório:**
   * 6 personagens de `Naruto` cadastrados em `Characters.luau` sem modelo próprio ainda (fallback colorido via `CharacterLibrary.CloneSource` + `ProtoRaro`) e ataques padrão: `Sakura`, `Shikamaru` (Comum), `Kakashi`, `Sasuke` (Raro), `Naruto` (Épico), `Sarutobi` (Lendário).
-  * Painéis selecionáveis na estrela (`Todos`, `Naruto`, `OnePiece` em `Summon.Banners`), palco `SummonShowcase` com personagem 3D completo girando na frente da tela + sons em `UI.Sounds` (`summon_charge`, `summon_shimmer`, `summon_reveal`, `summon_epic`, `summon_legendary`) e cartas 3D em grade `5x2` (`RevealWindow`).
+  * Palco 3D ao vivo estilo Anime Vanguards (`src/shared/SummonBannerStage.luau` + `src/shared/Data/SummonStageThemes.luau` + `SummonClient.client.luau` + `ReplicatedStorage/SummonShowcaseModels` gerado por `CharacterPreviews.server.luau`), com cenários temáticos por anime (`Todos`, `Naruto`, `OnePiece`), 3 personagens em poses heroicas, selos giratórios (`PortalSeal` em `MapFxClient.client.luau`), som em `UI.Sounds` e cartas 3D em grade `5x2` (`RevealWindow`).
+* **Auras dos Personagens & Arenas Santuário Malevolente:**
+  * `src/client/PlayerScripts/CharacterAuraClient.client.luau` anima auras com tag `CharacterAura` (anéis, fitas, orbes, halos, tintagem por variante e culling por distância), controlado pela configuração `CharacterAuras` em `SettingsClient`, `SettingsService`, `PlayerDataService`, `ClientSettings` e `Data/Audio`.
+  * `src/server_storage/_ConstrutorArenasSukuna.luau` (v5) sincronizado com as 10 arenas em grade 2×5.
 
 ---
 

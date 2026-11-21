@@ -58,7 +58,8 @@ end
 local refresh
 
 local function layoutViews()
-	local W, H = body.AbsoluteSize.X, body.AbsoluteSize.Y
+	local rawW, rawH = UI.unscaledSize(body)
+	local W, H = math.floor(rawW + 0.5), math.floor(rawH + 0.5)
 	if W < 10 or H < 10 then
 		return
 	end
@@ -138,8 +139,8 @@ end
 body:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutViews)
 
 local function refreshCharacters()
-	UI.clear(charsList)
 	if not profile then
+		UI.clear(charsList)
 		charCount.Text = ""
 		return
 	end
@@ -149,50 +150,53 @@ local function refreshCharacters()
 		totalCount += 1
 	end
 	charCount.Text = string.format("%d/%d", #list, totalCount)
-	if #list == 0 then
-		UI.text(charsList, "Nenhum personagem encontrado.", { Name = "Empty", Size = UDim2.fromScale(0.96, 0.35), Role = "Small", Color = "inkSoft" })
-		return
-	end
-	for i, uid in ipairs(list) do
-		local m = profile.Collection[uid]
-		local def = m and Characters.Get(m.CharacterId)
-		if def then
-			local stats = statsByUid[uid]
-			local total = CharacterFilter.TotalStats(stats)
-			local curHp = Progression.CurrentHp(m)
-			local onTeam = table.find(profile.Team, uid) ~= nil
-			local genAvg = math.floor(Genetics.Average(m.Genetics) + 0.5)
-			local trnAvg = math.floor(Genetics.Average(m.Training) + 0.5)
-			local btn, face = UI.button(charsList, {
-				Name = "Char_" .. uid, Color = "panelAlt", Size = UDim2.fromScale(0.98, 0), Aspect = 10.5, RowMax = 62, LayoutOrder = i, Corner = 0.22,
-				OnClick = function()
-					UI.open("CharacterDetail", uid)
-				end,
-			})
-			UI.chip(face, RARITY_TEXT[def.Rarity] or def.Rarity, RARITY_COLOR[def.Rarity] or "comum", {
-				Name = "Rarity", Size = UDim2.fromScale(0.15, 0.56), Position = UDim2.fromScale(0.015, 0.22), Role = "Small",
-			})
-			local titleParts = { def.Name }
-			if m.Variant and m.Variant ~= "" then
-				table.insert(titleParts, "(" .. m.Variant .. ")")
-			end
-			table.insert(titleParts, "Nv." .. tostring(m.Level))
-			if onTeam then
-				table.insert(titleParts, "[TIME]")
-			end
-			UI.text(face, table.concat(titleParts, "  "), {
-				Name = "Title", Size = UDim2.fromScale(0.64, 0.42), Position = UDim2.fromScale(0.185, 0.08), Role = "Small", AlignX = Enum.TextXAlignment.Left,
-			})
-			local hpColor = if curHp <= 0 then "hpLow" else "gold"
-			local statsText = string.format("GERAL %d  \u{b7}  HP %d/%d  \u{b7}  ATQ %d  \u{b7}  DEF %d  \u{b7}  VEL %d", total, curHp, stats.HP, stats.Attack, stats.Defense, stats.Speed)
-			UI.text(face, statsText, {
-				Name = "Stats", Size = UDim2.fromScale(0.64, 0.40), Position = UDim2.fromScale(0.185, 0.52), Role = "Small", Color = hpColor, AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45,
-			})
-			UI.text(face, string.format("GEN %d%% · TRN %d%%  >", genAvg, trnAvg), {
-				Name = "GenSummary", Size = UDim2.fromScale(0.16, 0.56), Position = UDim2.fromScale(0.985, 0.22), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Right, StrokeMult = 0.4,
-			})
+	UI.keepScroll(charsList, function()
+		UI.clear(charsList)
+		if #list == 0 then
+			UI.text(charsList, "Nenhum personagem encontrado.", { Name = "Empty", Size = UDim2.fromScale(0.96, 0), Aspect = 10, Role = "Small", Color = "inkSoft" })
+			return
 		end
-	end
+		for i, uid in ipairs(list) do
+			local m = profile.Collection[uid]
+			local def = m and Characters.Get(m.CharacterId)
+			if def then
+				local stats = statsByUid[uid]
+				local total = CharacterFilter.TotalStats(stats)
+				local curHp = Progression.CurrentHp(m)
+				local onTeam = table.find(profile.Team, uid) ~= nil
+				local genAvg = math.floor(Genetics.Average(m.Genetics) + 0.5)
+				local trnAvg = math.floor(Genetics.Average(m.Training) + 0.5)
+				local btn, face = UI.button(charsList, {
+					Name = "Char_" .. uid, Color = "panelAlt", Size = UDim2.fromScale(0.98, 0), Aspect = 10.5, RowMax = 62, LayoutOrder = i, Corner = 0.22,
+					OnClick = function()
+						UI.open("CharacterDetail", uid)
+					end,
+				})
+				UI.chip(face, RARITY_TEXT[def.Rarity] or def.Rarity, RARITY_COLOR[def.Rarity] or "comum", {
+					Name = "Rarity", Size = UDim2.fromScale(0.15, 0.56), Position = UDim2.fromScale(0.015, 0.22), Role = "Small",
+				})
+				local titleParts = { def.Name }
+				if m.Variant and m.Variant ~= "" then
+					table.insert(titleParts, "(" .. m.Variant .. ")")
+				end
+				table.insert(titleParts, "Nv." .. tostring(m.Level))
+				if onTeam then
+					table.insert(titleParts, "[TIME]")
+				end
+				UI.text(face, table.concat(titleParts, "  "), {
+					Name = "Title", Size = UDim2.fromScale(0.64, 0.42), Position = UDim2.fromScale(0.185, 0.08), Role = "Small", AlignX = Enum.TextXAlignment.Left,
+				})
+				local hpColor = if curHp <= 0 then "hpLow" else "gold"
+				local statsText = string.format("GERAL %d  \u{b7}  HP %d/%d  \u{b7}  ATQ %d  \u{b7}  DEF %d  \u{b7}  VEL %d", total, curHp, stats.HP, stats.Attack, stats.Defense, stats.Speed)
+				UI.text(face, statsText, {
+					Name = "Stats", Size = UDim2.fromScale(0.64, 0.40), Position = UDim2.fromScale(0.185, 0.52), Role = "Small", Color = hpColor, AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45,
+				})
+				UI.text(face, string.format("GEN %d%% · TRN %d%%  >", genAvg, trnAvg), {
+					Name = "GenSummary", Size = UDim2.fromScale(0.16, 0.56), Position = UDim2.fromScale(0.985, 0.22), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Right, StrokeMult = 0.4,
+				})
+			end
+		end
+	end)
 end
 
 local function filterText()
@@ -272,67 +276,164 @@ local selectTab = UI.tabs(body, {
 	end
 end)
 
+local function openBagItemPicker(itemId: string)
+	local item = Items.Get(itemId)
+	if not item or not profile then
+		return
+	end
+	local isCandy = item.Kind == "XpCandy"
+	local isRevive = item.Kind == "Revive"
+	UI.pickCharacter({
+		Title = "USAR " .. UI.upper(item.Name),
+		HeaderColor = if isCandy then "purple" else "green",
+		Icon = ITEM_ICON[itemId] or "bag",
+		ActionLabel = "USAR " .. UI.upper(item.Name),
+		ActionColor = if isCandy then "purple" else "green",
+		ReturnTo = "Bag",
+		KeepOpen = true,
+		Sound = false,
+		SubtitleFn = function(prof)
+			local qty = (prof.Bag and prof.Bag[itemId]) or 0
+			return string.format("Restam x%d · %s", qty, item.Short or item.Description or "")
+		end,
+		FormatSelected = function(_uid, m, def)
+			if isCandy then
+				local need = Progression.XpToNext(m.Level or 1)
+				local xpTxt = if need > 0 then string.format("XP %d/%d", m.Xp or 0, need) else "N\u{ed}vel m\u{e1}ximo"
+				return string.format("<b>%s</b> Nv.%d · %s", def.Name, m.Level or 1, xpTxt)
+			end
+			local hp, max = Progression.CurrentHp(m)
+			local hpTxt = if hp <= 0 then "Desmaiado" else string.format("HP %d/%d", hp, max)
+			return string.format("<b>%s</b> Nv.%d · %s", def.Name, m.Level or 1, hpTxt)
+		end,
+		GetBadge = function(_uid, m)
+			if isCandy then
+				if (m.Level or 1) >= Progression.MaxLevel then
+					return "NV. M\u{c1}X", "gold"
+				end
+				return "NV. " .. tostring(m.Level or 1), "purple"
+			end
+			local hp, max = Progression.CurrentHp(m)
+			if isRevive then
+				if hp <= 0 then
+					return "DESMAIADO", "green"
+				end
+				return "VIVO", "slot"
+			end
+			if hp <= 0 then
+				return "DESMAIADO", "red"
+			elseif hp < max then
+				return string.format("%d/%d", hp, max), "green"
+			end
+			return "CHEIO", "slot"
+		end,
+		IsEligible = function(_uid, m, _def, prof)
+			local qty = (prof.Bag and prof.Bag[itemId]) or 0
+			if qty <= 0 then
+				return false, "Sem " .. item.Name .. " na mochila."
+			end
+			if isCandy then
+				if (m.Level or 1) >= Progression.MaxLevel then
+					return false, "J\u{e1} est\u{e1} no n\u{ed}vel m\u{e1}ximo."
+				end
+				return true, nil
+			end
+			local hp, max = Progression.CurrentHp(m)
+			if isRevive then
+				if hp > 0 then
+					return false, "N\u{e3}o est\u{e1} desmaiado."
+				end
+				return true, nil
+			end
+			if hp <= 0 then
+				return false, "Desmaiado. Use um Reviver."
+			elseif hp >= max then
+				return false, "HP j\u{e1} est\u{e1} cheio."
+			end
+			return true, nil
+		end,
+		OnPick = function(uid)
+			local beforeQty = (profile and profile.Bag and profile.Bag[itemId]) or 0
+			local ok, text2 = Remotes.UseItem:InvokeServer(itemId, uid)
+			if not ok then
+				return false, text2
+			end
+			UI.play("reward")
+			local shouldClose = beforeQty <= 1
+			return true, text2, shouldClose
+		end,
+	})
+end
+
 local function refreshTargets()
-	UI.clear(targets)
 	local item = selected and Items.Get(selected)
 	if not item or not profile then
+		UI.clear(targets)
 		targetTitle.Text = "Escolha um item"
 		return
 	end
-	if item.TeamUse then
-		targetTitle.Text = item.Name .. ": use no menu Time, escolhendo o personagem"
-		return
-	end
-	if not item.OutsideBattle then
+	local canUseOutside = item.OutsideBattle == true or item.Kind == "XpCandy"
+	if not canUseOutside then
+		UI.clear(targets)
 		targetTitle.Text = item.Name .. ": s\u{f3} em batalha"
 		return
 	end
 	targetTitle.Text = "Usar " .. item.Name .. " em:"
-	-- time primeiro, depois a base
-	local order = {}
-	for _, uid in ipairs(profile.Team) do
-		table.insert(order, uid)
-	end
-	local rest = {}
-	for uid in pairs(profile.Collection) do
-		if not table.find(order, uid) then
-			table.insert(rest, uid)
-		end
-	end
-	table.sort(rest)
-	for _, uid in ipairs(rest) do
-		table.insert(order, uid)
-	end
-	for i, uid in ipairs(order) do
-		local m = profile.Collection[uid]
-		local def = m and Characters.Get(m.CharacterId)
-		if def then
-			local hp, max = Progression.CurrentHp(m)
-			local ok
-			if item.Kind == "Revive" then
-				ok = hp <= 0
-			else
-				ok = hp > 0 and hp < max
+	UI.keepScroll(targets, function()
+		UI.clear(targets)
+		-- Botao principal: abre o HUD visual da Equipe com filtros e cartoes 3D para escolher qualquer personagem da colecao
+		UI.button(targets, {
+			Name = "OpenCollectionPicker",
+			Text = "ESCOLHER NA COLE\u{c7}\u{c3}O",
+			Icon = "team",
+			Layout = "row",
+			Color = "blue",
+			Size = UDim2.new(0.98, 0, 0, T.TouchMin + 4),
+			LayoutOrder = 0,
+			Corner = 0.24,
+			Role = "Small",
+			OnClick = function()
+				openBagItemPicker(selected)
+			end,
+		})
+		-- Atalho rapido para o time ativo (ate 6 personagens)
+		for i, uid in ipairs(profile.Team) do
+			local m = profile.Collection[uid]
+			local def = m and Characters.Get(m.CharacterId)
+			if def then
+				local hp, max = Progression.CurrentHp(m)
+				local ok
+				if item.Kind == "XpCandy" then
+					ok = (m.Level or 1) < Progression.MaxLevel
+				elseif item.Kind == "Revive" then
+					ok = hp <= 0
+				else
+					ok = hp > 0 and hp < max
+				end
+				local b, face = UI.button(targets, {
+					Name = "Target_" .. uid, Color = if ok then "green" else "grey", Size = UDim2.fromScale(0.98, 0), Aspect = 4.6, RowMax = 72, LayoutOrder = i, Corner = 0.24,
+					Sound = false,
+					OnClick = function()
+						local success, text2 = Remotes.UseItem:InvokeServer(selected, uid)
+						show(success, text2)
+					end,
+				})
+				UI.text(face, def.Name .. "  Nv." .. m.Level .. "  (time)", { Name = "Name", Size = UDim2.fromScale(0.62, 0.44), Position = UDim2.fromScale(0.05, 0.08), Role = "Small", AlignX = Enum.TextXAlignment.Left })
+				local bar = UI.bar(face, { Name = "Hp", Size = UDim2.fromScale(0.6, 0.2), Position = UDim2.fromScale(0.05, 0.62) })
+				local ratio = if max > 0 then hp / max else 0
+				UI.setBar(bar, ratio, if ratio > 0.5 then "hpHigh" elseif ratio > 0.2 then "hpMid" else "hpLow", true)
+				UI.text(face, if hp <= 0 then "Desmaiado" else (hp .. "/" .. max), { Name = "Hp", Size = UDim2.fromScale(0.28, 0.5), Position = UDim2.fromScale(0.95, 0.25), AnchorPoint = Vector2.new(1, 0), Role = "Small", AlignX = Enum.TextXAlignment.Right })
 			end
-			local b, face = UI.button(targets, {
-				Name = "Target_" .. uid, Color = if ok then "green" else "grey", Size = UDim2.fromScale(0.98, 0), Aspect = 4.6, LayoutOrder = i, Corner = 0.24,
-				Sound = false,
-				OnClick = function()
-					local success, text2 = Remotes.UseItem:InvokeServer(selected, uid)
-					show(success, text2)
-				end,
-			})
-			UI.text(face, def.Name .. "  Nv." .. m.Level .. (if table.find(profile.Team, uid) then "  (time)" else ""), { Name = "Name", Size = UDim2.fromScale(0.62, 0.44), Position = UDim2.fromScale(0.05, 0.08), Role = "Small", AlignX = Enum.TextXAlignment.Left })
-			local bar = UI.bar(face, { Name = "Hp", Size = UDim2.fromScale(0.6, 0.2), Position = UDim2.fromScale(0.05, 0.62) })
-			local ratio = if max > 0 then hp / max else 0
-			UI.setBar(bar, ratio, if ratio > 0.5 then "hpHigh" elseif ratio > 0.2 then "hpMid" else "hpLow", true)
-			UI.text(face, if hp <= 0 then "Desmaiado" else (hp .. "/" .. max), { Name = "Hp", Size = UDim2.fromScale(0.28, 0.5), Position = UDim2.fromScale(0.95, 0.25), AnchorPoint = Vector2.new(1, 0), Role = "Small", AlignX = Enum.TextXAlignment.Right })
 		end
-	end
+	end)
 end
 
 refresh = function()
 	if not profile then
+		return
+	end
+	if activeTab == "Personagens" then
+		refreshCharacters()
 		return
 	end
 	slotsLabel.Text = string.format("%d/%d espa\u{e7}os \u{b7} pilhas de %d", Items.SlotsUsed(profile.Bag), Benefits.BagSlots(profile, Items.BagSlots), Items.StackLimit)
@@ -346,6 +447,9 @@ refresh = function()
 			local b, face = UI.button(itemsList, {
 				Name = "Item_" .. id, Color = if selected == id then "blue" else "panelAlt", LayoutOrder = item.Order or 99, Corner = 0.18,
 				OnClick = function()
+					if selected ~= id then
+						targets.CanvasPosition = Vector2.zero
+					end
 					selected = id
 					msg.Text = ""
 					refresh()
@@ -364,9 +468,6 @@ refresh = function()
 		selected = nil
 	end
 	refreshTargets()
-	if activeTab == "Personagens" then
-		refreshCharacters()
-	end
 end
 
 Remotes:WaitForChild("ProfileUpdated").OnClientEvent:Connect(function(p)
@@ -390,7 +491,8 @@ UI.onOpen("Bag", function()
 		return
 	end
 	msg.Text = ""
-	selectTab(activeTab)
 	win.Open()
+	layoutViews()
+	selectTab(activeTab)
 	task.defer(layoutViews)
 end)

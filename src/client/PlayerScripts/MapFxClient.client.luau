@@ -78,6 +78,10 @@ local lanterns = tracked("Lanterna", function(part)
 	return { Light = l, Base = l and l.Brightness or 1, Seed = math.random() * 100 }
 end)
 
+local portalSeals = tracked("PortalSeal", function(part)
+	return { Base = part.CFrame, Speed = 0.35 }
+end)
+
 local koi = tracked("Carpa", function(part)
 	return { Center = part.Position, R = part:GetAttribute("Raio") or 5, V = part:GetAttribute("Vel") or 0.4, A = math.random() * 6 }
 end)
@@ -164,6 +168,12 @@ RunService.RenderStepped:Connect(function(dt)
 					p.CFrame = c * rel
 				end
 			end
+		end
+	end
+	-- selos dos portais de invocacao: giro celestial continuo
+	for part, ps in pairs(portalSeals) do
+		if typeof(ps) == "table" and part.Parent then
+			part.CFrame = ps.Base * CFrame.Angles(0, t * ps.Speed, 0)
 		end
 	end
 	-- esteira: textura acompanha o movimento

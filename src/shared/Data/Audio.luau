@@ -29,6 +29,6 @@ Audio.Alternatives = {
 Audio.Fade = 1.5 -- segundos da transicao mapa <-> batalha
 
 -- Configuracoes padrao (iguais ao perfil novo; volumes de 0 a 100)
-Audio.DefaultSettings = { MusicOn = true, MusicVolume = 50, SfxOn = true, SfxVolume = 80, MapFx = true }
+Audio.DefaultSettings = { MusicOn = true, MusicVolume = 50, SfxOn = true, SfxVolume = 80, MapFx = true, CharacterAuras = true }
 
 return Audio

@@ -8,8 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes")
 
 export type RemoteEventName =
-	"StartBattle"     -- Server -> Client: inicia batalha na arena (Camera, Models, State)
-	| "SubmitAction"  -- Client -> Server: envia acao do turno (Move, Switch, Item, Flee, Replace)
+	"StartBattle"     -- Server -> Client: inicia batalha na arena (Camera, Models, SlotModels, State)
+	| "SubmitAction"  -- Client -> Server: envia acao do turno (Move, Switch, Item, Flee, Replace, Double)
 	| "BattleUpdate"  -- Server -> Client: envia evento do turno (Event, Await, Error)
 	| "BattleEnd"     -- Server -> Client: fim da batalha (Result, Reason)
 	| "ProfileUpdated"-- Server -> Client: perfil do jogador atualizado
@@ -17,7 +17,7 @@ export type RemoteEventName =
 	| "TowerClose"    -- Client -> Server: fecha UI da Torre
 	| "Announce"      -- Server -> All Clients: anuncio global (Lendario/Brilhante invocado)
 	| "Notify"        -- Server -> Client: toast / notificacao na tela
-	| "PvPInvite"     -- Server -> Client: convite de desafio PvP
+	| "PvPInvite"     -- Server -> Client: convite de desafio PvP (inclui Format: "1x1" | "2x2")
 	| "TrainingOpen"  -- Server -> Client: abre tela da Maquina de Treinamento pela capsula 3D
 
 export type RemoteFunctionName =
@@ -43,7 +43,7 @@ export type RemoteFunctionName =
 	| "TrainingUpgrade" -- Client -> Server: melhora eficiencia da Maquina de Treinamento com gold
 	| "SellOre"       -- Client -> Server: converte minerio em gemas (respeitando teto diario de 50)
 	| "BaseTeleport"  -- Client -> Server: teleporta jogador para sua base ou praca
-	| "PvPChallenge"  -- Client -> Server: envia convite de PvP para outro jogador
+	| "PvPChallenge"  -- Client -> Server: envia convite de PvP para outro jogador (targetUserId, format: "1x1" | "2x2")
 	| "PvPRespond"    -- Client -> Server: aceita ou recusa convite de PvP
 	| "PvPCancel"     -- Client -> Server: cancela convite de PvP
 	| "Rewards"       -- Client -> Server: coleta login diario, bau de tempo, missoes ou codigos

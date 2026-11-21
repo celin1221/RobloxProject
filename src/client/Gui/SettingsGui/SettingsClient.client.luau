@@ -16,11 +16,11 @@ CS.start()
 
 local canvas = UI.screen(gui)
 gui.DisplayOrder = 10
-local win = UI.window(canvas, { Name = "SettingsWindow", Title = "CONFIGURA\u{c7}\u{d5}ES", Icon = "gear", HeaderColor = "grey", Size = UDim2.fromScale(0.8, 0.84), Aspect = 1.7, MaxSize = Vector2.new(900, 530) })
+local win = UI.window(canvas, { Name = "SettingsWindow", Title = "CONFIGURA\u{c7}\u{d5}ES", Icon = "gear", HeaderColor = "grey", Size = UDim2.fromScale(0.8, 0.84), Aspect = 1.7, MaxSize = Vector2.new(900, 600) })
 local body = win.Body
 local list = UI.frame(body, { Name = "Rows", Size = UDim2.fromScale(1, 1) })
 local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0.04, 0)
+layout.Padding = UDim.new(0.03, 0)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Parent = list
 
@@ -33,7 +33,7 @@ local function toggleButton(face, key)
 			CS.set(key, not CS.Current[key])
 		end,
 	})
-	UI.clampHeight(b, T.TouchMin, 56)
+	UI.clampHeight(b, T.TouchMin, 50)
 	table.insert(refreshers, function()
 		local on = CS.Current[key]
 		UI.setText(b, if on then "LIGADO" else "DESLIGADO")
@@ -43,7 +43,7 @@ local function toggleButton(face, key)
 end
 
 local function row(order, icon, title, desc, color)
-	local holder, face = UI.panel(list, { Name = "Row" .. order, Size = UDim2.fromScale(1, 0.29), Color = "panelAlt", Corner = 0.22, LayoutOrder = order })
+	local holder, face = UI.panel(list, { Name = "Row" .. order, Size = UDim2.fromScale(1, 0.225), Color = "panelAlt", Corner = 0.22, LayoutOrder = order })
 	UI.icon(face, icon, { Name = "Icon", Size = UDim2.fromScale(0.12, 0.8), Position = UDim2.fromScale(0.015, 0.1), AspectAxis = Enum.DominantAxis.Height })
 	UI.text(face, title, { Name = "Title", Size = UDim2.fromScale(0.3, 0.4), Position = UDim2.fromScale(0.14, 0.1), Role = "Body", AlignX = Enum.TextXAlignment.Left })
 	UI.text(face, desc, { Name = "Desc", Size = UDim2.fromScale(0.3, 0.34), Position = UDim2.fromScale(0.14, 0.56), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4, Wrap = true })
@@ -71,8 +71,12 @@ end
 volumeRow(1, "music", "M\u{fa}sica", "Mapa e batalha", "MusicOn", "MusicVolume", "gems")
 volumeRow(2, "speaker", "Efeitos sonoros", "Golpes e bot\u{f5}es", "SfxOn", "SfxVolume", "blue")
 local fxFace = row(3, "sparkle", "Efeitos do mapa", "Part\u{ed}culas, luzes e anima\u{e7}\u{f5}es do cen\u{e1}rio. Desligue em PC fraco ou celular.", "purple")
-fxFace.Desc.Size = UDim2.fromScale(0.6, 0.38)
+fxFace.Desc.Size = UDim2.fromScale(0.6, 0.42)
 toggleButton(fxFace, "MapFx")
+
+local auraFace = row(4, "star", "Auras dos personagens", "Auras, raios e efeitos ao redor dos personagens. Desative para mais FPS ou visual limpo.", "gold")
+auraFace.Desc.Size = UDim2.fromScale(0.6, 0.42)
+toggleButton(auraFace, "CharacterAuras")
 
 local function refresh()
 	for _, fn in ipairs(refreshers) do

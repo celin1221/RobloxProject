@@ -169,10 +169,30 @@ return "OK"
 
 def cmd_test(c: studio_mcp.Client, sid: str) -> int:
     code = """
-local Core = game.ReplicatedStorage:WaitForChild("Core")
-local BattleEngine = require(Core:WaitForChild("BattleEngine"))
-local DamageCalc = require(Core:WaitForChild("DamageCalc"))
-local Moves = require(game.ReplicatedStorage.Data.Moves)
+local rs = game:GetService("ReplicatedStorage")
+local oldSandbox = rs:FindFirstChild("_TestSandbox")
+if oldSandbox then oldSandbox:Destroy() end
+
+local sandbox = Instance.new("Folder")
+sandbox.Name = "_TestSandbox"
+sandbox.Parent = rs
+
+local ok, res = pcall(function()
+    local dataClone = rs:WaitForChild("Data"):Clone()
+    dataClone.Parent = sandbox
+    local coreClone = rs:WaitForChild("Core"):Clone()
+    coreClone.Parent = sandbox
+    for _, child in ipairs(coreClone:GetChildren()) do
+        if child:IsA("ModuleScript") then
+            child.Source = child.Source
+                :gsub('ReplicatedStorage:WaitForChild%("Data"%)', 'script.Parent.Parent:WaitForChild("Data")')
+                :gsub('game:GetService%("ReplicatedStorage"%):WaitForChild%("Data"%)', 'script.Parent.Parent:WaitForChild("Data")')
+        end
+    end
+
+    local BattleEngine = require(coreClone:WaitForChild("BattleEngine"))
+    local DamageCalc = require(coreClone:WaitForChild("DamageCalc"))
+    local Moves = require(dataClone:WaitForChild("Moves"))
 
 -- Test 1: GDD Section 5 Damage Conference (Kaen Corte Flamejante on Raiko at Lv 10 = 12 to 14 non-crit)
 local b = BattleEngine.New({
@@ -191,14 +211,148 @@ for s = 1, 50 do
     end
 end
 
--- Test 2: Full battle simulation finishes in 5 to 8 turns
+-- Test 2: Full 1x1 battle simulation finishes
 local turns = 0
 while b.State ~= "Ended" and turns < 20 do
     turns += 1
     b:ResolveTurn({ Kind = "Move", Index = 1 })
 end
-assert(b.State == "Ended", "Battle did not end")
-return string.format("PASS: GDD Damage [12..14] verified & Kaen vs Raiko completed in %d turns (Winner: %s)", b.Turn, tostring(b.Winner))
+assert(b.State == "Ended", "1x1 battle did not end")
+
+-- Test 3: 2x2 Spread multiplier (0.75x with 2 targets, 1.0x with 1 target)
+local b2 = BattleEngine.New({
+    Player = { Team = { { CharacterId = "Kaen", Level = 20 }, { CharacterId = "Yomogi", Level = 20 }, { CharacterId = "Raiko", Level = 20 }, { CharacterId = "San", Level = 20 } } },
+    Enemy = { Team = { { CharacterId = "Raiko", Level = 20 }, { CharacterId = "Yomogi", Level = 20 }, { CharacterId = "Kaen", Level = 20 } }, AI = "Medio" },
+    Format = "2x2",
+    Mode = "PvP",
+    EnemyHuman = true,
+    Seed = 2026,
+})
+assert(b2:IsDouble() and b2.Format == "2x2" and b2.SlotsPerSide == 2, "Expected 2x2 format")
+-- Verify duplicate switch rejected
+local okDup = b2:ValidateAction("Player", { Kind = "Double", Actions = {
+    { FieldSlot = 1, Kind = "Switch", Index = 3 },
+    { FieldSlot = 2, Kind = "Switch", Index = 3 },
+} })
+assert(not okDup, "Duplicate switch into same bench member should be rejected")
+
+-- Spread move (BrasaViva = move 2 of Kaen Learnset, Target = AllEnemies) hits BOTH enemies with Spread = 0.75
+local evSpread = b2:ResolveTurn(
+    { Kind = "Double", Actions = {
+        { FieldSlot = 1, Kind = "Move", Index = 2 },
+        { FieldSlot = 2, Kind = "Move", Index = 3 },
+    } },
+    { Kind = "Double", Actions = {
+        { FieldSlot = 1, Kind = "Move", Index = 1, TargetSide = "Enemy", TargetSlot = 2 },
+        { FieldSlot = 2, Kind = "Move", Index = 3 },
+    } }
+)
+local spreadHits = 0
+for _, ev in ipairs(evSpread) do
+    if ev.Kind == "Damage" and ev.Side == "Enemy" and ev.Spread == 0.75 then
+        spreadHits += 1
+    end
+end
+assert(spreadHits == 2, "Expected BrasaViva spread move to hit 2 enemies at 0.75x, got " .. tostring(spreadHits))
+
+-- Test 4: 2x2 Mid-turn Redirection when chosen Enemy Slot 1 faints before Slot 2 acts
+local bRedir = BattleEngine.New({
+    Player = { Team = { { CharacterId = "San", Level = 50 }, { CharacterId = "Kaen", Level = 40 } } },
+    Enemy = { Team = { { CharacterId = "Raiko", Level = 5 }, { CharacterId = "Yomogi", Level = 50 } }, AI = "Facil" },
+    Format = "2x2",
+    Mode = "PvP",
+    EnemyHuman = true,
+    Seed = 77,
+})
+local evRedir = bRedir:ResolveTurn(
+    { Kind = "Double", Actions = {
+        { FieldSlot = 1, Kind = "Move", Index = 1, TargetSide = "Enemy", TargetSlot = 1 },
+        { FieldSlot = 2, Kind = "Move", Index = 4, TargetSide = "Enemy", TargetSlot = 1 }, -- CorteFlamejante (Lv40)
+    } },
+    { Kind = "Double", Actions = {
+        { FieldSlot = 1, Kind = "Move", Index = 1, TargetSide = "Enemy", TargetSlot = 1 },
+        { FieldSlot = 2, Kind = "Move", Index = 3 }, -- CascaDeCarvalho
+    } }
+)
+local hitSlot1, hitSlot2, clearedSlot1 = false, false, false
+for _, ev in ipairs(evRedir) do
+    if ev.Kind == "Damage" and ev.Side == "Enemy" and ev.FieldSlot == 1 then hitSlot1 = true end
+    if ev.Kind == "Damage" and ev.Side == "Enemy" and ev.FieldSlot == 2 then hitSlot2 = true end
+    if ev.Kind == "ClearSlot" and ev.Side == "Enemy" and ev.FieldSlot == 1 then clearedSlot1 = true end
+end
+assert(hitSlot1 and hitSlot2, "Expected Slot 2 attack to redirect to Enemy Slot 2 after Enemy Slot 1 fainted")
+assert(clearedSlot1, "Expected ClearSlot for Enemy Slot 1 when bench is empty (2v1 continuation)")
+-- Verify Snapshot has dense ActiveSlots (0 for cleared slot, no sparse-array hole!)
+local snapRedir = bRedir:Snapshot("Player")
+assert(snapRedir.Enemy.ActiveSlots[1] == 0 and snapRedir.Enemy.ActiveSlots[2] == 2, "Expected dense ActiveSlots {0, 2}")
+-- Now Enemy has only 1 active left: spread move must apply Spread = 1.0 (not 0.75!)
+local evSingleSpread = bRedir:ResolveTurn(
+    { Kind = "Double", Actions = {
+        { FieldSlot = 1, Kind = "Move", Index = 2 }, -- GenkiDama (AllEnemies)
+        { FieldSlot = 2, Kind = "Move", Index = 3 }, -- PosturaDeCombate
+    } },
+    { Kind = "Double", Actions = {
+        { FieldSlot = 2, Kind = "Move", Index = 3 }, -- CascaDeCarvalho
+    } }
+)
+local singleSpreadOk = false
+for _, ev in ipairs(evSingleSpread) do
+    if ev.Kind == "Damage" and ev.Side == "Enemy" and ev.FieldSlot == 2 then
+        assert(ev.Spread == 1, "Spread move against 1 remaining target must use 1.0x, got " .. tostring(ev.Spread))
+        singleSpreadOk = true
+    end
+end
+assert(singleSpreadOk or bRedir.State == "Ended", "Expected single-target spread check")
+
+-- Test 5: 2x2 Double Faint + Double Replacement + Full PvP Auto-Simulation
+local bDoubleRep = BattleEngine.New({
+    Player = { Team = { { CharacterId = "Kaen", Level = 5 }, { CharacterId = "Raiko", Level = 5 }, { CharacterId = "San", Level = 50 }, { CharacterId = "Setero", Level = 50 } } },
+    Enemy = { Team = { { CharacterId = "Raiko", Level = 50 }, { CharacterId = "San", Level = 50 }, { CharacterId = "Yomogi", Level = 50 } } },
+    Format = "2x2",
+    Mode = "PvP",
+    EnemyHuman = true,
+    Seed = 999,
+})
+bDoubleRep:ResolveTurn(
+    { Kind = "Double", Actions = {
+        { FieldSlot = 1, Kind = "Move", Index = 3 }, -- PosturaDeCombate (Lv5 Kaen has 3 moves)
+        { FieldSlot = 2, Kind = "Move", Index = 1, TargetSide = "Enemy", TargetSlot = 1 },
+    } },
+    { Kind = "Double", Actions = {
+        { FieldSlot = 1, Kind = "Move", Index = 4 }, -- Descarga (100% Acc, AllEnemies Lv50 vs Lv5 -> deterministic double KO!)
+        { FieldSlot = 2, Kind = "Move", Index = 4 }, -- CargaDeKi
+    } }
+)
+assert(bDoubleRep.State == "WaitingForReplacement", "Expected WaitingForReplacement after double KO, got " .. tostring(bDoubleRep.State))
+assert(bDoubleRep.PendingReplace.Player and #bDoubleRep.PendingReplace.Player == 2, "Expected 2 pending replace slots")
+local snapRep = bDoubleRep:Snapshot("Player")
+assert(#snapRep.PendingReplaceSlots == 2, "Expected 2 PendingReplaceSlots in Snapshot")
+local okBadRep = bDoubleRep:ValidateAction("Player", { Kind = "Replace", Replacements = { { FieldSlot = 1, Index = 3 }, { FieldSlot = 2, Index = 3 } } })
+assert(not okBadRep, "Duplicate replacement index should be rejected")
+bDoubleRep:ResolveReplacement("Player", { { FieldSlot = 1, Index = 3 }, { FieldSlot = 2, Index = 4 } })
+assert(bDoubleRep.State == "WaitingForInput", "Expected WaitingForInput after double replacement")
+
+-- Complete full 2x2 PvP battle using AutoAction / AutoReplacement
+local simTurns = 0
+while bDoubleRep.State ~= "Ended" and simTurns < 30 do
+    simTurns += 1
+    if bDoubleRep.State == "WaitingForReplacement" then
+        for _, side in ipairs({ "Player", "Enemy" }) do
+            if bDoubleRep.PendingReplace[side] then
+                bDoubleRep:ResolveReplacement(side, bDoubleRep:AutoReplacement(side))
+            end
+        end
+    else
+        bDoubleRep:ResolveTurn(bDoubleRep:AutoAction("Player"), bDoubleRep:AutoAction("Enemy"))
+    end
+end
+assert(bDoubleRep.State == "Ended", "Full 2x2 PvP simulation did not finish")
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns) & 2x2 Doubles (spread 0.75/1.0, redirect, 2v1 ClearSlot, double replace, PvP sim %d turns, Winner=%s)", b.Turn, simTurns, tostring(bDoubleRep.Winner))
+end)
+sandbox:Destroy()
+assert(ok, res)
+return res
 """
     ok, res = c.tool("execute_luau", {"code": code, "datamodel_type": "Edit", "studio_id": sid})
     print(res)

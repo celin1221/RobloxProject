@@ -2,12 +2,12 @@
 	BattleClient (GDD secoes 5 e 10)
 	So mostra a batalha e envia a escolha do jogador. Nenhum calculo acontece aqui.
 
-	Layout no estilo Pokemon (camera da arena em Arenas/Arena01/CameraPoint, FOV 50):
-	  - seu personagem grande, de costas, embaixo a esquerda; o adversario de frente, no meio a direita
-	  - cartao do adversario no canto de cima a direita; o seu no canto de baixo a esquerda
-	  - mensagem do turno no topo a esquerda; comandos (Lutar, Mochila, Time, Fugir) em 2x2 embaixo a direita
-	  - golpes no mesmo canto; Time e Mochila abrem um painel no centro (como a tela de time)
-	  - analogico e pulo do celular escondidos durante a batalha
+	Suporta batalhas 1x1 (classico) e 2x2 (Em Dupla, estilo Pokemon):
+	  - 1x1: 1 cartao por lado, menu Lutar / Mochila / Time / Fugir, golpes 2x2.
+	  - 2x2: 2 cartoes de inimigo em cima a direita (escalonados) e 2 cartoes do jogador embaixo a esquerda
+	         (destaque dourado no lutador que esta escolhendo), selecao sequencial Slot 1 -> Slot 2 com
+	         botao VOLTAR, seletor de alvo com indicador de efetividade de tipo (2x / 0.5x) e opcao de aliado,
+	         badge AREA em golpes que atingem ambos os adversarios, e substituicao dupla.
 	Visual: ReplicatedStorage/UI (escala relativa, toque minimo 44 px, animacoes e sons).
 ]]
 
@@ -61,15 +61,24 @@ local canvas = UI.screen(gui)
 gui.DisplayOrder = 10
 local root = UI.frame(canvas, { Name = "Root", Visible = false })
 
--- Cartao de vida (adversario em cima a direita, jogador embaixo a esquerda)
+-- Cartao de vida (suporta 1 ou 2 cartoes por lado)
 local function makeCard(name, anchor, position)
 	local holder, face = UI.panel(root, {
 		Name = name, Size = UDim2.fromScale(0.29, 0.2), Position = position, AnchorPoint = anchor,
 		Color = "panel", Corner = T.Corner.Card, Aspect = 2.7, MaxSize = Vector2.new(380, 141),
 	})
-	local title = UI.text(face, "", { Name = "Title", Size = UDim2.fromScale(0.5, 0.3), Position = UDim2.fromScale(0.05, 0.07), Role = "Heading", AlignX = Enum.TextXAlignment.Left })
-	local level = UI.text(face, "", { Name = "Level", Size = UDim2.fromScale(0.2, 0.26), Position = UDim2.fromScale(0.55, 0.09), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Left })
-	local typeChip = UI.chip(face, "", "grey", { Name = "Type", Size = UDim2.fromScale(0.22, 0.24), Position = UDim2.fromScale(0.74, 0.09) })
+	local scale = Instance.new("UIScale")
+	scale.Parent = holder
+	local borderStroke = face:FindFirstChildOfClass("UIStroke")
+	local defaultStrokeColor = if borderStroke then borderStroke.Color else T.Outline
+	local defaultStrokeThick = if borderStroke then borderStroke.Thickness else 2
+
+	local title = UI.text(face, "", { Name = "Title", Size = UDim2.fromScale(0.45, 0.3), Position = UDim2.fromScale(0.04, 0.07), Role = "Heading", AlignX = Enum.TextXAlignment.Left })
+	title.TextWrapped = false
+	local level = UI.text(face, "", { Name = "Level", Size = UDim2.fromScale(0.19, 0.24), Position = UDim2.fromScale(0.50, 0.09), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Center })
+	level.TextWrapped = false
+	local typeChip = UI.chip(face, "", "grey", { Name = "Type", Size = UDim2.fromScale(0.26, 0.26), Position = UDim2.fromScale(0.70, 0.08) })
+	typeChip.Face.Label.TextWrapped = false
 	local status = UI.chip(face, "", "grey", { Name = "Status", Size = UDim2.fromScale(0.16, 0.22), Position = UDim2.fromScale(0.8, 0.7), Visible = false })
 	local bar = UI.bar(face, { Name = "Hp", Size = UDim2.fromScale(0.9, 0.17), Position = UDim2.fromScale(0.05, 0.45), FillColor = "hpHigh" })
 	local pips = UI.frame(face, { Name = "Pips", Size = UDim2.fromScale(0.42, 0.16), Position = UDim2.fromScale(0.05, 0.74) })
@@ -80,11 +89,24 @@ local function makeCard(name, anchor, position)
 	pl.SortOrder = Enum.SortOrder.LayoutOrder
 	pl.Parent = pips
 	local hpText = UI.text(face, "", { Name = "HpText", Size = UDim2.fromScale(0.34, 0.24), Position = UDim2.fromScale(0.44, 0.7), Role = "Small", AlignX = Enum.TextXAlignment.Right })
-	return { Frame = holder, Title = title, Level = level, Type = typeChip, Status = status, Bar = bar, HpText = hpText, Pips = pips }
+	return {
+		Frame = holder, Face = face, Scale = scale,
+		BorderStroke = borderStroke, DefaultStrokeColor = defaultStrokeColor, DefaultStrokeThick = defaultStrokeThick,
+		Title = title, Level = level, Type = typeChip, Status = status, Bar = bar, HpText = hpText, Pips = pips,
+	}
 end
 
-local enemyCard = makeCard("EnemyCard", Vector2.new(1, 0), UDim2.fromScale(0.985, 0.015))
-local playerCard = makeCard("PlayerCard", Vector2.new(0, 1), UDim2.fromScale(0.015, 0.975))
+local enemyCards = {
+	makeCard("EnemyCard1", Vector2.new(1, 0), UDim2.fromScale(0.985, 0.015)),
+	makeCard("EnemyCard2", Vector2.new(1, 0), UDim2.fromScale(0.945, 0.015)),
+}
+enemyCards[2].Frame.Visible = false
+
+local playerCards = {
+	makeCard("PlayerCard1", Vector2.new(0, 1), UDim2.fromScale(0.015, 0.975)),
+	makeCard("PlayerCard2", Vector2.new(0, 1), UDim2.fromScale(0.28, 0.975)),
+}
+playerCards[2].Frame.Visible = false
 
 -- Mensagem do turno (topo a esquerda, no ceu)
 local logHolder, logFace = UI.panel(root, { Name = "Log", Size = UDim2.fromScale(0.55, 0.15), Position = UDim2.fromScale(0.015, 0.015), Color = "slot", Corner = 0.3, Transparency = 0.1, Shadow = false, MaxSize = Vector2.new(720, 90) })
@@ -100,6 +122,9 @@ local function page(name)
 end
 
 local mainPage = page("Main")
+local mainActorChip = UI.chip(mainPage, "", "orange", { Name = "ActorChip", Size = UDim2.fromScale(0.68, 0.22), Position = UDim2.fromScale(0, -0.06), AnchorPoint = Vector2.new(0, 1), Visible = false })
+local mainStepBack = UI.button(mainPage, { Name = "StepBack", Text = "VOLTAR", Color = "grey", Size = UDim2.fromScale(0.3, 0.22), Position = UDim2.fromScale(1, -0.06), AnchorPoint = Vector2.new(1, 1), Corner = 0.3, Role = "Small", Visible = false })
+
 local function cmd(name, text, icon, color, i)
 	local col, row = (i - 1) % 2, (i - 1) // 2
 	return UI.button(mainPage, {
@@ -112,18 +137,46 @@ local bagButton = cmd("Bag", "MOCHILA", "bag", "green", 2)
 local teamButton = cmd("Team", "TIME", "swap", "blue", 3)
 local fleeButton = cmd("Flee", "FUGIR", "run", "grey", 4)
 
--- Golpes: grade 2x2 mais larga, no mesmo canto, com Voltar acima
+-- Golpes: grade 2x2 mais larga, no mesmo canto, com Voltar e chip do lutador acima
 local movesPage = UI.frame(root, { Name = "Moves", Size = UDim2.fromScale(0.4, 0.44), Position = UDim2.fromScale(0.985, 0.93), AnchorPoint = Vector2.new(1, 1), Aspect = 2.3, Visible = false, MaxSize = Vector2.new(640, 280) })
+local movesActorChip = UI.chip(movesPage, "", "orange", { Name = "ActorChip", Size = UDim2.fromScale(0.68, 0.22), Position = UDim2.fromScale(0, -0.06), AnchorPoint = Vector2.new(0, 1), Visible = false })
 local moveButtons = {}
 for i = 1, 4 do
 	local col, row = (i - 1) % 2, (i - 1) // 2
 	local b, face = UI.button(movesPage, { Name = "Move" .. i, Color = "grey", Size = UDim2.fromScale(0.485, 0.46), Position = UDim2.fromScale(col * 0.515, row * 0.54), Corner = 0.22 })
-	UI.text(face, "", { Name = "MoveName", Size = UDim2.fromScale(0.9, 0.42), Position = UDim2.fromScale(0.05, 0.06), Role = "Body", AlignX = Enum.TextXAlignment.Left })
+	UI.text(face, "", { Name = "MoveName", Size = UDim2.fromScale(0.74, 0.42), Position = UDim2.fromScale(0.05, 0.06), Role = "Body", AlignX = Enum.TextXAlignment.Left })
+	UI.chip(face, "\u{c1}REA", "gold", { Name = "ScopeChip", Size = UDim2.fromScale(0.24, 0.28), Position = UDim2.fromScale(0.95, 0.11), AnchorPoint = Vector2.new(1, 0), Visible = false })
 	UI.chip(face, "", "slot", { Name = "TypeChip", Size = UDim2.fromScale(0.42, 0.32), Position = UDim2.fromScale(0.05, 0.58) })
 	UI.text(face, "", { Name = "Pp", Size = UDim2.fromScale(0.46, 0.3), Position = UDim2.fromScale(0.5, 0.59), Role = "Small", AlignX = Enum.TextXAlignment.Right })
 	moveButtons[i] = b
 end
 local movesBack = UI.button(movesPage, { Name = "Back", Text = "VOLTAR", Color = "grey", Size = UDim2.fromScale(0.26, 0.22), Position = UDim2.fromScale(1, -0.06), AnchorPoint = Vector2.new(1, 1), Corner = 0.3, Role = "Body" })
+
+-- Seletor de Alvo (2x2): escolhe inimigo da esquerda (Slot 2), direita (Slot 1) ou aliado
+local targetPage = UI.frame(root, { Name = "Targets", Size = UDim2.fromScale(0.4, 0.44), Position = UDim2.fromScale(0.985, 0.93), AnchorPoint = Vector2.new(1, 1), Aspect = 2.3, Visible = false, MaxSize = Vector2.new(640, 280) })
+local targetHeaderChip = UI.chip(targetPage, "ESCOLHA O ALVO", "orange", { Name = "HeaderChip", Size = UDim2.fromScale(0.7, 0.22), Position = UDim2.fromScale(0, -0.06), AnchorPoint = Vector2.new(0, 1) })
+local targetBack = UI.button(targetPage, { Name = "Back", Text = "VOLTAR", Color = "grey", Size = UDim2.fromScale(0.26, 0.22), Position = UDim2.fromScale(1, -0.06), AnchorPoint = Vector2.new(1, 1), Corner = 0.3, Role = "Body" })
+
+local function makeTargetEnemyBtn(name: string, xScale: number)
+	local b, face = UI.button(targetPage, { Name = name, Color = "panelAlt", Size = UDim2.fromScale(0.485, 0.62), Position = UDim2.fromScale(xScale, 0), Corner = 0.18 })
+	UI.text(face, "", { Name = "TargetName", Size = UDim2.fromScale(0.55, 0.32), Position = UDim2.fromScale(0.05, 0.07), Role = "Body", AlignX = Enum.TextXAlignment.Left })
+	local tc = UI.chip(face, "", "grey", { Name = "TypeChip", Size = UDim2.fromScale(0.34, 0.26), Position = UDim2.fromScale(0.95, 0.09), AnchorPoint = Vector2.new(1, 0) })
+	tc.Face.Label.TextWrapped = false
+	UI.bar(face, { Name = "Hp", Size = UDim2.fromScale(0.88, 0.16), Position = UDim2.fromScale(0.06, 0.46), FillColor = "hpHigh" })
+	UI.chip(face, "", "slot", { Name = "EffChip", Size = UDim2.fromScale(0.56, 0.24), Position = UDim2.fromScale(0.06, 0.7) })
+	UI.text(face, "", { Name = "HpText", Size = UDim2.fromScale(0.32, 0.24), Position = UDim2.fromScale(0.94, 0.7), AnchorPoint = Vector2.new(1, 0), Role = "Small", AlignX = Enum.TextXAlignment.Right })
+	return b
+end
+
+-- Ordem visual esquerda -> direita na arena: Enemy Slot 2 a esquerda, Enemy Slot 1 a direita
+local targetEnemyBtns = {
+	[2] = makeTargetEnemyBtn("TargetEnemyLeft", 0),
+	[1] = makeTargetEnemyBtn("TargetEnemyRight", 0.515),
+}
+local targetAllyBtn, targetAllyFace = UI.button(targetPage, {
+	Name = "TargetAlly", Color = "slot", Size = UDim2.fromScale(1, 0.3), Position = UDim2.fromScale(0, 0.7), Corner = 0.26, Visible = false,
+})
+local targetAllyLabel = UI.text(targetAllyFace, "", { Name = "Label", Size = UDim2.fromScale(0.92, 0.76), Position = UDim2.fromScale(0.04, 0.12), Role = "Small", Color = "inkSoft" })
 
 -- Painel central (Time e Mochila), como a tela de time do Pokemon
 local sheet, sheetFace = UI.panel(root, { Name = "Sheet", Size = UDim2.fromScale(0.74, 0.8), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), Color = "panel", Corner = 0.06, Visible = false, ZIndex = 5, Aspect = 1.75, MaxSize = Vector2.new(980, 560) })
@@ -159,12 +212,180 @@ resultScale.Parent = resultLabel
 --------------------------------------------------------------------
 -- Estado do cliente
 --------------------------------------------------------------------
-local current = nil -- { Id, State, Models, Awaiting }
+local current = nil -- { Id, State, Models, SlotModels, Awaiting, Deadline }
 local logLines = {}
 local fleeConfirmUntil = 0
 local teamMode = "Switch" -- "Switch" | "Replace" | "ItemTarget"
 local pendingItemId = nil
 local pendingItemKind = nil
+
+-- Plano do turno em 2x2 (Slot 1 -> Slot 2) e selecao de alvo/substituicao
+local turnPlan = nil -- { SlotOrder = { ... }, Step = 1, Actions = { [fieldSlot] = action } }
+local pendingMoveIndex: number? = nil
+local pendingTargetAllySlot: number? = nil
+local replacePlan = nil -- { PendingSlots = { ... }, Step = 1, Replacements = { { FieldSlot, Index }, ... } }
+
+local function isDouble(): boolean
+	return current ~= nil and current.State ~= nil and (current.State.Format == "2x2" or (current.State.SlotsPerSide or 1) > 1)
+end
+
+local function slotsPerSide(): number
+	return if isDouble() then 2 else 1
+end
+
+local function activeIndexAt(sideState, fieldSlot: number?): number?
+	local fs = fieldSlot or 1
+	if sideState.ActiveSlots then
+		local idx = sideState.ActiveSlots[fs]
+		if typeof(idx) == "number" and idx > 0 then
+			return idx
+		end
+		return nil
+	end
+	return if fs == 1 then sideState.Active else nil
+end
+
+local function memberAt(sideState, fieldSlot: number?)
+	local idx = activeIndexAt(sideState, fieldSlot)
+	return if idx then sideState.Team[idx] else nil
+end
+
+local function isOnField(sideState, teamIndex: number): boolean
+	for fs = 1, slotsPerSide() do
+		if activeIndexAt(sideState, fs) == teamIndex then
+			return true
+		end
+	end
+	return false
+end
+
+local function aliveFieldSlots(sideState): { number }
+	local out = {}
+	for fs = 1, slotsPerSide() do
+		local m = memberAt(sideState, fs)
+		if m and m.Hp > 0 then
+			table.insert(out, fs)
+		end
+	end
+	return out
+end
+
+local function currentChoosingSlot(): number
+	if turnPlan and turnPlan.SlotOrder[turnPlan.Step] then
+		return turnPlan.SlotOrder[turnPlan.Step]
+	end
+	if current and current.State then
+		local alive = aliveFieldSlots(current.State.Player)
+		return alive[1] or 1
+	end
+	return 1
+end
+
+local function activeOf(sideState, fieldSlot: number?)
+	if fieldSlot ~= nil then
+		return memberAt(sideState, fieldSlot)
+	end
+	local fs = currentChoosingSlot()
+	return memberAt(sideState, fs) or sideState.Team[sideState.Active]
+end
+
+local function slotModelFor(side: string?, fieldSlot: number?): Model?
+	if not current or not side then
+		return nil
+	end
+	local fs = fieldSlot or 1
+	local sm = current.SlotModels and current.SlotModels[side]
+	if sm and sm[fs] then
+		return sm[fs]
+	end
+	if fs == 1 then
+		return current.Models and current.Models[side]
+	end
+	return nil
+end
+
+local function setSlotModel(side: string, fieldSlot: number, model: Model?)
+	if not current then
+		return
+	end
+	current.SlotModels = current.SlotModels or { Player = {}, Enemy = {} }
+	current.SlotModels[side] = current.SlotModels[side] or {}
+	current.SlotModels[side][fieldSlot] = model
+	if fieldSlot == 1 then
+		current.Models[side] = model
+	end
+end
+
+local function cardFor(side: string, fieldSlot: number?)
+	local fs = fieldSlot or 1
+	if side == "Player" then
+		return playerCards[fs] or playerCards[1]
+	end
+	return enemyCards[fs] or enemyCards[1]
+end
+
+local function updateCardHighlights()
+	local choosing = if current and current.Awaiting and isDouble() and turnPlan then currentChoosingSlot() else nil
+	for fs = 1, 2 do
+		local card = playerCards[fs]
+		local active = choosing == fs
+		if card.BorderStroke then
+			card.BorderStroke.Color = if active then T.Palette.gold else card.DefaultStrokeColor
+			card.BorderStroke.Thickness = if active then math.max(4, card.DefaultStrokeThick * 1.8) else card.DefaultStrokeThick
+		end
+		local targetScale = if active then 1.04 else 1
+		if math.abs(card.Scale.Scale - targetScale) > 0.005 then
+			TweenService:Create(card.Scale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = targetScale }):Play()
+		end
+	end
+end
+
+-- Ajusta tamanho/posicao dos cartoes e log para 1x1 vs 2x2 (sem sobreposicao em nenhuma tela)
+local function applyFormatLayout(double: boolean)
+	local logMax = logHolder:FindFirstChildOfClass("UISizeConstraint")
+	if double then
+		-- Log mais compacto para nao encostar no Timer (0.44..0.56)
+		logHolder.Size = UDim2.fromScale(0.415, 0.15)
+		if logMax then
+			logMax.MaxSize = Vector2.new(540, 90)
+		end
+		-- Inimigos escalonados no topo a direita: Slot 2 (esquerda 3D) em cima, Slot 1 (direita 3D) abaixo
+		enemyCards[2].Frame.Size = UDim2.fromScale(0.26, 0.15)
+		enemyCards[2].Frame.Position = UDim2.fromScale(0.945, 0.015)
+		enemyCards[1].Frame.Size = UDim2.fromScale(0.26, 0.15)
+		enemyCards[1].Frame.Position = UDim2.fromScale(0.985, 0.178)
+		-- Jogador lado a lado embaixo a esquerda: Slot 1 (esquerda 3D), Slot 2 (direita 3D)
+		playerCards[1].Frame.Size = UDim2.fromScale(0.255, 0.16)
+		playerCards[1].Frame.Position = UDim2.fromScale(0.015, 0.975)
+		playerCards[2].Frame.Size = UDim2.fromScale(0.255, 0.16)
+		playerCards[2].Frame.Position = UDim2.fromScale(0.28, 0.975)
+		for _, list in ipairs({ enemyCards, playerCards }) do
+			for _, card in ipairs(list) do
+				local sc = card.Frame:FindFirstChildOfClass("UISizeConstraint")
+				if sc then
+					sc.MaxSize = Vector2.new(320, 118)
+				end
+			end
+		end
+	else
+		logHolder.Size = UDim2.fromScale(0.55, 0.15)
+		if logMax then
+			logMax.MaxSize = Vector2.new(720, 90)
+		end
+		enemyCards[1].Frame.Size = UDim2.fromScale(0.29, 0.2)
+		enemyCards[1].Frame.Position = UDim2.fromScale(0.985, 0.015)
+		enemyCards[2].Frame.Visible = false
+		playerCards[1].Frame.Size = UDim2.fromScale(0.29, 0.2)
+		playerCards[1].Frame.Position = UDim2.fromScale(0.015, 0.975)
+		playerCards[2].Frame.Visible = false
+		for _, card in ipairs({ enemyCards[1], playerCards[1] }) do
+			local sc = card.Frame:FindFirstChildOfClass("UISizeConstraint")
+			if sc then
+				sc.MaxSize = Vector2.new(380, 141)
+			end
+		end
+	end
+end
 
 -- O item pode ser usado neste membro? (mensagem quando nao)
 local function itemTargetOk(m)
@@ -201,13 +422,15 @@ end
 local function showPage(name: string?)
 	mainPage.Visible = name == "Main"
 	movesPage.Visible = name == "Moves"
-	menuArea.Visible = name ~= "Moves"
+	targetPage.Visible = name == "Targets"
+	menuArea.Visible = name ~= "Moves" and name ~= "Targets"
 	if name == "Team" or name == "Bag" then
 		openSheet(name)
 	else
 		sheet.Visible = false
 	end
 	waitingHolder.Visible = name == nil
+	updateCardHighlights()
 end
 
 local function log(text: string)
@@ -222,16 +445,8 @@ local function hpColor(ratio: number)
 	return if ratio > 0.5 then "hpHigh" elseif ratio > 0.2 then "hpMid" else "hpLow"
 end
 
-local function activeOf(sideState)
-	return sideState.Team[sideState.Active]
-end
-
-local function cardFor(side: string)
-	return if side == "Player" then playerCard else enemyCard
-end
-
 local function setHp(card, hp: number, maxHp: number, instant: boolean?)
-	local ratio = math.clamp(hp / maxHp, 0, 1)
+	local ratio = math.clamp(hp / math.max(1, maxHp), 0, 1)
 	UI.setBar(card.Bar, ratio, hpColor(ratio), instant)
 	card.HpText.Text = string.format("%d/%d", hp, maxHp)
 end
@@ -256,15 +471,29 @@ end
 
 local function refreshSide(side: string, instant: boolean?)
 	local sideState = current.State[side]
-	local card = cardFor(side)
-	local m = activeOf(sideState)
-	card.Title.Text = m.Name
-	card.Level.Text = "Nv. " .. m.Level
-	card.Type.Face.Label.Text = UI.upper(TypeChart.DisplayName[m.Type] or m.Type or "")
-	UI.paint(card.Type, typeColor(m.Type))
-	setHp(card, m.Hp, m.MaxHp, instant)
-	setStatus(card, m.Status)
-	setPips(card, sideState)
+	local count = slotsPerSide()
+	local pipsShown = false
+	for fs = 1, 2 do
+		local card = cardFor(side, fs)
+		local m = if fs <= count then memberAt(sideState, fs) else nil
+		card.Frame.Visible = m ~= nil
+		if m then
+			card.Title.Text = m.Name
+			card.Level.Text = "Nv. " .. m.Level
+			card.Type.Face.Label.Text = UI.upper(TypeChart.DisplayName[m.Type] or m.Type or "")
+			UI.paint(card.Type, typeColor(m.Type))
+			setHp(card, m.Hp, m.MaxHp, instant)
+			setStatus(card, m.Status)
+			if not pipsShown then
+				card.Pips.Visible = true
+				setPips(card, sideState)
+				pipsShown = true
+			else
+				card.Pips.Visible = false
+				UI.clear(card.Pips)
+			end
+		end
+	end
 end
 
 local function submit(action)
@@ -272,12 +501,120 @@ local function submit(action)
 		return
 	end
 	current.Awaiting = false
+	turnPlan = nil
+	replacePlan = nil
+	pendingMoveIndex = nil
 	showPage(nil)
 	SubmitAction:FireServer(current.Id, action)
 end
 
-local function refreshMoves()
-	local active = activeOf(current.State.Player)
+local refreshMoves
+local refreshBag
+local refreshTeam
+local refreshActorPrompt
+
+-- Atualiza cabecalho de qual lutador esta escolhendo no 2x2
+function refreshActorPrompt()
+	if not current or not current.State then
+		return
+	end
+	local double = isDouble() and turnPlan ~= nil
+	mainActorChip.Visible = double
+	movesActorChip.Visible = double
+	mainStepBack.Visible = double and turnPlan.Step > 1
+	if double then
+		local fs = currentChoosingSlot()
+		local m = memberAt(current.State.Player, fs)
+		local name = if m then UI.upper(m.Name) else ("SLOT " .. fs)
+		local txt = string.format("%s (%d/%d)", name, turnPlan.Step, #turnPlan.SlotOrder)
+		mainActorChip.Face.Label.Text = txt
+		movesActorChip.Face.Label.Text = txt
+		local col = if fs == 1 then "orange" else "blue"
+		UI.paint(mainActorChip, col)
+		UI.paint(movesActorChip, col)
+	end
+	updateCardHighlights()
+end
+
+-- Registra a acao escolhida para o slot atual (1x1 envia na hora; 2x2 avanca para o proximo slot ou envia o pacote)
+local function commitSlotAction(action)
+	if not current or not current.Awaiting then
+		return
+	end
+	if not isDouble() or not turnPlan then
+		submit(action)
+		return
+	end
+	local fs = currentChoosingSlot()
+	action.FieldSlot = fs
+	turnPlan.Actions[fs] = action
+	turnPlan.Step += 1
+	if turnPlan.Step > #turnPlan.SlotOrder then
+		local dense = {}
+		for _, slotNum in ipairs(turnPlan.SlotOrder) do
+			if turnPlan.Actions[slotNum] then
+				table.insert(dense, turnPlan.Actions[slotNum])
+			end
+		end
+		submit({ Kind = "Double", Actions = dense })
+		return
+	end
+	-- Avanca para o 2o lutador
+	pendingMoveIndex = nil
+	teamMode = "Switch"
+	refreshMoves()
+	refreshBag()
+	refreshTeam()
+	refreshActorPrompt()
+	local nextM = memberAt(current.State.Player, currentChoosingSlot())
+	if nextM then
+		log("Agora: o que " .. nextM.Name .. " vai fazer?")
+	end
+	showPage("Main")
+end
+
+-- Conta quantos itens de um tipo ja foram reservados pelo Slot 1 neste turno 2x2
+local function reservedItemCount(itemId: string): number
+	if not turnPlan then
+		return 0
+	end
+	local n = 0
+	local curSlot = currentChoosingSlot()
+	for fs, act in pairs(turnPlan.Actions) do
+		if fs ~= curSlot and act.Kind == "Item" and act.ItemId == itemId then
+			n += 1
+		end
+	end
+	return n
+end
+
+-- Verifica se um membro do banco ja foi reservado para troca (ou substituicao) por outro slot
+local function isReservedBench(teamIdx: number): boolean
+	if teamMode == "Replace" and replacePlan then
+		for _, entry in ipairs(replacePlan.Replacements) do
+			if entry.Index == teamIdx then
+				return true
+			end
+		end
+		return false
+	end
+	if turnPlan then
+		local curSlot = currentChoosingSlot()
+		for fs, act in pairs(turnPlan.Actions) do
+			if fs ~= curSlot and act.Kind == "Switch" and act.Index == teamIdx then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+function refreshMoves()
+	local active = activeOf(current.State.Player, currentChoosingSlot())
+	if not active then
+		return
+	end
+	local double = isDouble()
 	for i, button in ipairs(moveButtons) do
 		local move = active.Moves and active.Moves[i]
 		button.Visible = move ~= nil
@@ -289,29 +626,106 @@ local function refreshMoves()
 			face.MoveName.Text = move.Name
 			face.TypeChip.Face.Label.Text = UI.upper(move.TypeName or TypeChart.DisplayName[move.Type] or move.Type or "")
 			face.Pp.Text = string.format("PP %d/%d", move.Pp, move.MaxPp)
+			local scope = face:FindFirstChild("ScopeChip")
+			if scope then
+				local isSpread = double and (move.Target == "AllEnemies" or move.Target == "AllOthers")
+				local isSelf = double and move.Target == "Self"
+				local showScope = isSpread or isSelf
+				scope.Visible = showScope
+				face.MoveName.Size = UDim2.fromScale(if showScope then 0.65 else 0.9, 0.42)
+				if isSpread then
+					scope.Face.Label.Text = "\u{c1}REA"
+					UI.paint(scope, "gold")
+				elseif isSelf then
+					scope.Face.Label.Text = "SI"
+					UI.paint(scope, "blue")
+				end
+			end
 		end
 	end
 end
 
-local refreshTeam -- definida mais abaixo (usada pela mochila para escolher o alvo)
+local function effectivenessBadge(move, target)
+	if move.Category ~= "Damage" then
+		return "STATUS", "blue"
+	end
+	local mult = TypeChart.Multiplier(move.Type, target.Type)
+	if mult > 1 then
+		return "2x SUPER!", "green"
+	elseif mult < 1 then
+		return "0.5x RESISTE", "red"
+	end
+	return "1x NORMAL", "slot"
+end
+
+-- Abre seletor de alvo para golpe de alvo unico no 2x2
+local function openTargetPicker(moveIdx: number, move)
+	pendingMoveIndex = moveIdx
+	targetHeaderChip.Face.Label.Text = "ALVO: " .. UI.upper(move.Name)
+
+	local enemyState = current.State.Enemy
+	local aliveEnemies = aliveFieldSlots(enemyState)
+	local onlyOneEnemy = #aliveEnemies == 1
+
+	for _, fs in ipairs({ 2, 1 }) do
+		local btn = targetEnemyBtns[fs]
+		local m = memberAt(enemyState, fs)
+		local alive = m ~= nil and m.Hp > 0
+		btn.Visible = alive
+		if alive then
+			if onlyOneEnemy then
+				btn.Size = UDim2.fromScale(1, 0.62)
+				btn.Position = UDim2.fromScale(0, 0)
+			else
+				btn.Size = UDim2.fromScale(0.485, 0.62)
+				btn.Position = UDim2.fromScale(if fs == 2 then 0 else 0.515, 0)
+			end
+			local face = btn.Face
+			face.TargetName.Text = m.Name
+			face.TypeChip.Face.Label.Text = UI.upper(TypeChart.DisplayName[m.Type] or m.Type or "")
+			UI.paint(face.TypeChip, typeColor(m.Type))
+			local ratio = math.clamp(m.Hp / math.max(1, m.MaxHp), 0, 1)
+			UI.setBar(face.Hp, ratio, hpColor(ratio), true)
+			face.HpText.Text = string.format("%d/%d", m.Hp, m.MaxHp)
+			local effText, effColor = effectivenessBadge(move, m)
+			face.EffChip.Face.Label.Text = effText
+			UI.paint(face.EffChip, effColor)
+		end
+	end
+
+	-- Opcao secundaria: mirar no aliado (regras oficiais de Pokemon Doubles)
+	local mySlot = currentChoosingSlot()
+	local otherSlot = if mySlot == 1 then 2 else 1
+	local ally = memberAt(current.State.Player, otherSlot)
+	if ally and ally.Hp > 0 then
+		pendingTargetAllySlot = otherSlot
+		targetAllyBtn.Visible = true
+		targetAllyLabel.Text = string.format("Atingir aliado: %s (HP %d/%d)", ally.Name, ally.Hp, ally.MaxHp)
+	else
+		pendingTargetAllySlot = nil
+		targetAllyBtn.Visible = false
+	end
+
+	showPage("Targets")
+end
 
 local ITEM_ICON = { HealHP = "potion", Revive = "heal", CureStatus = "heal", RestorePP = "potion", Capture = "seal" }
 
-local function refreshBag()
+function refreshBag()
 	for _, b in ipairs(bagItemButtons) do
 		b:Destroy()
 	end
 	table.clear(bagItemButtons)
 	for i, item in ipairs(current.State.Bag) do
+		local avail = math.max(0, item.Count - reservedItemCount(item.Id))
 		local b = UI.button(bagPage, {
-			Name = "Item_" .. item.Id, Text = item.Name .. "  x" .. item.Count, Icon = ITEM_ICON[item.Kind] or "bag",
-			Color = if item.Count > 0 then "green" else "grey", Layout = "row", Role = "Small", LayoutOrder = i, Corner = 0.24,
+			Name = "Item_" .. item.Id, Text = item.Name .. "  x" .. avail, Icon = ITEM_ICON[item.Kind] or "bag",
+			Color = if avail > 0 then "green" else "grey", Layout = "row", Role = "Small", LayoutOrder = i, Corner = 0.24,
 			OnClick = function()
-				if not current or not current.Awaiting or item.Count <= 0 then
+				if not current or not current.Awaiting or avail <= 0 then
 					return
 				end
 				if item.Kind == "HealHP" or item.Kind == "CureStatus" or item.Kind == "RestorePP" or item.Kind == "Revive" then
-					-- escolhe em quem usar
 					pendingItemId = item.Id
 					pendingItemKind = item.Kind
 					teamMode = "ItemTarget"
@@ -319,7 +733,7 @@ local function refreshBag()
 					showPage("Team")
 					log("Em quem usar " .. item.Name .. "?")
 				else
-					submit({ Kind = "Item", ItemId = item.Id })
+					commitSlotAction({ Kind = "Item", ItemId = item.Id })
 				end
 			end,
 		})
@@ -328,34 +742,50 @@ local function refreshBag()
 	end
 end
 
--- Lista do time. Em campo fica marcado; desmaiado fica cinza.
+-- Lista do time. Em campo fica marcado; reservado por outro slot fica marcado; desmaiado fica cinza.
 function refreshTeam()
 	local sideState = current.State.Player
-	sheetTitle.Text = if teamMode == "Replace" then "Escolha quem entra" elseif teamMode == "ItemTarget" then "Usar em quem?" else "Time"
+	if teamMode == "Replace" then
+		if replacePlan and #replacePlan.PendingSlots > 1 then
+			sheetTitle.Text = string.format("Escolha quem entra (%d/%d)", replacePlan.Step, #replacePlan.PendingSlots)
+		else
+			sheetTitle.Text = "Escolha quem entra"
+		end
+	elseif teamMode == "ItemTarget" then
+		sheetTitle.Text = "Usar em quem?"
+	else
+		sheetTitle.Text = "Time"
+	end
 	for i, button in ipairs(memberButtons) do
 		local m = sideState.Team[i]
 		button.Visible = m ~= nil
 		if m then
 			local badge = m.Status and STATUS_BADGE[m.Status]
+			local onField = isOnField(sideState, i)
+			local reserved = isReservedBench(i)
 			local usable
 			if teamMode == "ItemTarget" then
 				usable = itemTargetOk(m)
 			else
-				usable = m.Hp > 0 and i ~= sideState.Active
+				usable = m.Hp > 0 and not onField and not reserved
 			end
-			local color = if m.Hp <= 0 then "grey" elseif i == sideState.Active then "blue" else "panelAlt"
+			local color = if m.Hp <= 0 then "grey" elseif onField then "blue" elseif reserved then "orange" else "panelAlt"
 			UI.paint(button, color)
 			local face = button.Face
 			face.MemberName.Text = m.Name
 			face.Level.Text = "Nv. " .. m.Level
 			local ratio = math.clamp(m.Hp / math.max(1, m.MaxHp), 0, 1)
 			UI.setBar(face.Hp, ratio, hpColor(ratio), true)
-			local tag = if m.Hp <= 0 then "Desmaiado" elseif i == sideState.Active then "Em campo" else string.format("HP %d/%d", m.Hp, m.MaxHp)
+			local tag = if m.Hp <= 0 then "Desmaiado"
+				elseif onField then "Em campo"
+				elseif reserved then "Escolhido"
+				else string.format("HP %d/%d", m.Hp, m.MaxHp)
 			face.Info.Text = tag .. (if badge then "  " .. badge[1] else "")
 			button:SetAttribute("Usable", usable or nil)
 		end
 	end
-	sheetBack.Visible = teamMode ~= "Replace"
+	local canGoBack = teamMode ~= "Replace" or (replacePlan ~= nil and replacePlan.Step > 1)
+	sheetBack.Visible = canGoBack
 end
 
 local function refreshAll(instant: boolean?)
@@ -364,9 +794,9 @@ local function refreshAll(instant: boolean?)
 	refreshMoves()
 	refreshBag()
 	refreshTeam()
+	refreshActorPrompt()
 	UI.setText(fleeButton, if current.State.CanFlee then "FUGIR" else "DESISTIR")
 	UI.setIcon(fleeButton.Face.Icon, if current.State.CanFlee then "run" else "flag")
-	-- PvP: itens desativados
 	local pvp = current.State.Mode == "PvP"
 	UI.setDisabled(bagButton, pvp, "green")
 end
@@ -491,7 +921,6 @@ local function setInBattle(on: boolean)
 			atmos.Haze = 0
 		end
 		if bloom then
-			-- Reduz Bloom forte e eleva Threshold para luzes/capas claras nao estourarem a tela
 			bloom.Intensity = 0.16
 			bloom.Size = 14
 			bloom.Threshold = 2.35
@@ -524,6 +953,9 @@ end
 
 local function closeBattle()
 	current = nil
+	turnPlan = nil
+	replacePlan = nil
+	pendingMoveIndex = nil
 	timerHolder.Visible = false
 	VfxController.Cleanup()
 	setInBattle(false)
@@ -539,21 +971,30 @@ fightButton.Activated:Connect(function()
 	if not current or not current.Awaiting then
 		return
 	end
-	if current.State.MustStruggle then
-		submit({ Kind = "Move", Index = 0 })
+	local fs = currentChoosingSlot()
+	local mustStruggle = if current.State.MustStruggleSlots
+		then current.State.MustStruggleSlots[fs] == true
+		else current.State.MustStruggle == true
+	if mustStruggle then
+		commitSlotAction({ Kind = "Move", Index = 0 })
 	else
+		refreshMoves()
+		refreshActorPrompt()
 		showPage("Moves")
 	end
 end)
+
 bagButton.Activated:Connect(function()
 	if current and current.Awaiting then
 		if current.State.Mode == "PvP" then
 			log("Itens desativados no PvP.")
 			return
 		end
+		refreshBag()
 		showPage("Bag")
 	end
 end)
+
 teamButton.Activated:Connect(function()
 	if current and current.Awaiting then
 		teamMode = "Switch"
@@ -561,11 +1002,11 @@ teamButton.Activated:Connect(function()
 		showPage("Team")
 	end
 end)
+
 fleeButton.Activated:Connect(function()
 	if not current or not current.Awaiting then
 		return
 	end
-	-- Na torre e no PvP fugir conta como derrota: pede um segundo toque
 	if not current.State.CanFlee and os.clock() > fleeConfirmUntil then
 		fleeConfirmUntil = os.clock() + 4
 		log("<font color=\"#ffcc66\">Desistir conta como derrota. Toque de novo para confirmar.</font>")
@@ -574,9 +1015,32 @@ fleeButton.Activated:Connect(function()
 	fleeConfirmUntil = 0
 	submit({ Kind = "Flee" })
 end)
+
+mainStepBack.Activated:Connect(function()
+	if not current or not current.Awaiting or not turnPlan or turnPlan.Step <= 1 then
+		return
+	end
+	turnPlan.Step -= 1
+	local fs = currentChoosingSlot()
+	turnPlan.Actions[fs] = nil
+	refreshMoves()
+	refreshBag()
+	refreshTeam()
+	refreshActorPrompt()
+	local m = memberAt(current.State.Player, fs)
+	if m then
+		log("Voltou: o que " .. m.Name .. " vai fazer?")
+	end
+	showPage("Main")
+end)
+
 for i, button in ipairs(moveButtons) do
 	button.Activated:Connect(function()
-		local move = current and activeOf(current.State.Player).Moves[i]
+		if not current or not current.Awaiting then
+			return
+		end
+		local active = activeOf(current.State.Player, currentChoosingSlot())
+		local move = active and active.Moves and active.Moves[i]
 		if not move then
 			return
 		end
@@ -584,9 +1048,55 @@ for i, button in ipairs(moveButtons) do
 			log("Esse golpe est\u{e1} sem PP.")
 			return
 		end
-		submit({ Kind = "Move", Index = i })
+		if isDouble() and (move.Target or "Single") == "Single" then
+			local aliveEnemies = aliveFieldSlots(current.State.Enemy)
+			local mySlot = currentChoosingSlot()
+			local otherSlot = if mySlot == 1 then 2 else 1
+			local ally = memberAt(current.State.Player, otherSlot)
+			local hasAliveAlly = ally ~= nil and ally.Hp > 0
+			if #aliveEnemies == 1 and not hasAliveAlly then
+				commitSlotAction({ Kind = "Move", Index = i, TargetSide = "Enemy", TargetSlot = aliveEnemies[1] })
+			else
+				openTargetPicker(i, move)
+			end
+			return
+		end
+		commitSlotAction({ Kind = "Move", Index = i })
 	end)
 end
+
+for _, fs in ipairs({ 1, 2 }) do
+	targetEnemyBtns[fs].Activated:Connect(function()
+		if not current or not current.Awaiting or not pendingMoveIndex then
+			return
+		end
+		local m = memberAt(current.State.Enemy, fs)
+		if not m or m.Hp <= 0 then
+			return
+		end
+		local moveIdx = pendingMoveIndex
+		pendingMoveIndex = nil
+		commitSlotAction({ Kind = "Move", Index = moveIdx, TargetSide = "Enemy", TargetSlot = fs })
+	end)
+end
+
+targetAllyBtn.Activated:Connect(function()
+	if not current or not current.Awaiting or not pendingMoveIndex or not pendingTargetAllySlot then
+		return
+	end
+	local moveIdx = pendingMoveIndex
+	local allySlot = pendingTargetAllySlot
+	pendingMoveIndex = nil
+	commitSlotAction({ Kind = "Move", Index = moveIdx, TargetSide = "Ally", TargetSlot = allySlot })
+end)
+
+targetBack.Activated:Connect(function()
+	if current and current.Awaiting then
+		pendingMoveIndex = nil
+		showPage("Moves")
+	end
+end)
+
 for i, button in ipairs(memberButtons) do
 	button.Activated:Connect(function()
 		if not current or not current.Awaiting then
@@ -600,7 +1110,7 @@ for i, button in ipairs(memberButtons) do
 		if teamMode == "ItemTarget" then
 			local ok, why = itemTargetOk(m)
 			if ok then
-				submit({ Kind = "Item", ItemId = pendingItemId, TargetIndex = i })
+				commitSlotAction({ Kind = "Item", ItemId = pendingItemId, TargetIndex = i })
 			else
 				log(why)
 				UI.play("error")
@@ -612,30 +1122,126 @@ for i, button in ipairs(memberButtons) do
 			UI.play("error")
 			return
 		end
-		if i == sideState.Active then
+		if isOnField(sideState, i) then
 			log(m.Name .. " j\u{e1} est\u{e1} em campo.")
 			return
 		end
-		submit({ Kind = if teamMode == "Replace" then "Replace" else "Switch", Index = i })
+		if isReservedBench(i) then
+			log(m.Name .. " j\u{e1} foi escolhido.")
+			UI.play("error")
+			return
+		end
+		if teamMode == "Replace" then
+			if isDouble() and replacePlan and #replacePlan.PendingSlots > 0 then
+				local fs = replacePlan.PendingSlots[replacePlan.Step]
+				table.insert(replacePlan.Replacements, { FieldSlot = fs, Index = i })
+				replacePlan.Step += 1
+				if replacePlan.Step > #replacePlan.PendingSlots then
+					submit({ Kind = "Replace", Replacements = replacePlan.Replacements })
+				else
+					refreshTeam()
+					log("Escolha o pr\u{f3}ximo substituto.")
+				end
+				return
+			end
+			submit({ Kind = "Replace", Index = i })
+			return
+		end
+		commitSlotAction({ Kind = "Switch", Index = i })
 	end)
 end
+
 movesBack.Activated:Connect(function()
 	if current and current.Awaiting then
 		showPage("Main")
 	end
 end)
+
 sheetBack.Activated:Connect(function()
-	if current and current.Awaiting and teamMode ~= "Replace" then
-		teamMode = "Switch"
-		showPage("Main")
+	if not current or not current.Awaiting then
+		return
 	end
+	if teamMode == "Replace" then
+		if replacePlan and replacePlan.Step > 1 then
+			replacePlan.Step -= 1
+			table.remove(replacePlan.Replacements)
+			refreshTeam()
+		end
+		return
+	end
+	teamMode = "Switch"
+	showPage("Main")
 end)
 
 --------------------------------------------------------------------
 -- Remotes
 --------------------------------------------------------------------
+local function unpackSlotModels(payload)
+	local out = { Player = {}, Enemy = {} }
+	if payload.SlotModels then
+		for _, side in ipairs({ "Player", "Enemy" }) do
+			local src = payload.SlotModels[side]
+			if src then
+				out[side][1] = src.Slot1
+				out[side][2] = src.Slot2
+			end
+		end
+	end
+	if payload.Models then
+		out.Player[1] = out.Player[1] or payload.Models.Player
+		out.Enemy[1] = out.Enemy[1] or payload.Models.Enemy
+	end
+	return out
+end
+
+local function beginTurnPrompt()
+	local state = current.State
+	if isDouble() then
+		turnPlan = { SlotOrder = aliveFieldSlots(state.Player), Step = 1, Actions = {} }
+	else
+		turnPlan = nil
+	end
+	replacePlan = nil
+	pendingMoveIndex = nil
+	teamMode = "Switch"
+	refreshAll()
+	local m = memberAt(state.Player, currentChoosingSlot()) or activeOf(state.Player)
+	if m then
+		log("O que " .. m.Name .. " vai fazer?")
+	end
+	showPage("Main")
+end
+
+local function beginReplacePrompt()
+	local state = current.State
+	turnPlan = nil
+	pendingMoveIndex = nil
+	teamMode = "Replace"
+	if isDouble() and state.PendingReplaceSlots and #state.PendingReplaceSlots > 0 then
+		replacePlan = { PendingSlots = table.clone(state.PendingReplaceSlots), Step = 1, Replacements = {} }
+	else
+		replacePlan = nil
+	end
+	refreshAll()
+	if replacePlan and #replacePlan.PendingSlots > 1 then
+		log("Dois personagens desmaiaram! Escolha quem entra (" .. #replacePlan.PendingSlots .. ").")
+	else
+		log("Escolha quem entra agora.")
+	end
+	showPage("Team")
+end
+
 StartBattle.OnClientEvent:Connect(function(battleId, payload)
-	current = { Id = battleId, State = payload.State, Models = payload.Models or {}, Awaiting = false }
+	current = {
+		Id = battleId,
+		State = payload.State,
+		Models = payload.Models or {},
+		SlotModels = unpackSlotModels(payload),
+		Awaiting = false,
+	}
+	turnPlan = nil
+	replacePlan = nil
+	pendingMoveIndex = nil
 	waitingLabel.Text = "..."
 	timerHolder.Visible = false
 	table.clear(logLines)
@@ -643,19 +1249,25 @@ StartBattle.OnClientEvent:Connect(function(battleId, payload)
 	resultLabel.Visible = false
 	fleeConfirmUntil = 0
 	teamMode = "Switch"
+	applyFormatLayout(isDouble())
 	refreshAll(true)
 	setInBattle(true)
 	showPage(nil)
 	setControls(false)
 	setBattleCamera(payload.Camera)
-	for _, m in pairs(current.Models) do
-		preloadModel(m)
+	for _, slots in pairs(current.SlotModels) do
+		for _, m in pairs(slots) do
+			preloadModel(m)
+		end
 	end
 end)
 
--- Atualiza o membro em campo de um lado com os campos do evento
-local function patchActive(side: string, fields)
-	local m = activeOf(current.State[side])
+-- Atualiza o membro em campo de um lado/slot com os campos do evento
+local function patchActive(side: string, fieldSlot: number?, fields)
+	local m = memberAt(current.State[side], fieldSlot or 1)
+	if not m then
+		return
+	end
 	for k, v in pairs(fields) do
 		m[k] = v
 	end
@@ -670,8 +1282,9 @@ BattleUpdate.OnClientEvent:Connect(function(battleId, data)
 		current.Deadline = data.Deadline
 	end
 	if data.Waiting then
-		-- PvP: ja escolheu (ou o outro esta escolhendo); espera o adversario
 		current.Awaiting = false
+		turnPlan = nil
+		replacePlan = nil
 		waitingLabel.Text = data.Waiting
 		showPage(nil)
 		if data.State then
@@ -686,14 +1299,11 @@ BattleUpdate.OnClientEvent:Connect(function(battleId, data)
 		UI.play("error")
 		if data.State then
 			current.State = data.State
-			refreshAll()
 			current.Awaiting = true
 			if data.State.State == "WaitingForReplacement" then
-				teamMode = "Replace"
-				refreshTeam()
-				showPage("Team")
+				beginReplacePrompt()
 			else
-				showPage("Main")
+				beginTurnPrompt()
 			end
 		end
 		return
@@ -701,23 +1311,25 @@ BattleUpdate.OnClientEvent:Connect(function(battleId, data)
 
 	local ev = data.Event
 	if ev then
-		-- turno resolvendo: sem relogio
 		current.Deadline = nil
 		waitingLabel.Text = "..."
 		if ev.Text then
 			log(ev.Text)
 		end
 		local side = ev.Side
-		local model = side and current.Models[side]
+		local fs = ev.FieldSlot or 1
+		local model = side and slotModelFor(side, fs)
 		if ev.Kind == "UseMove" then
-			-- animacao e efeito do golpe (so golpes com Anim/Vfx em Data/Moves)
-			VfxController.PlayMove(ev.MoveId, model, current.Models[if side == "Player" then "Enemy" else "Player"])
+			local attackerModel = ev.Model or model
+			local targetSide = ev.TargetSide or (if side == "Player" then "Enemy" else "Player")
+			local targetModel = ev.TargetModel or slotModelFor(targetSide, ev.TargetFieldSlot or 1)
+			VfxController.PlayMove(ev.MoveId, attackerModel, targetModel)
 		elseif ev.Kind == "Damage" or ev.Kind == "StatusDamage" then
 			if ev.Crit then
 				VfxController.CritFlash()
 			end
-			patchActive(side, { Hp = ev.Hp })
-			setHp(cardFor(side), ev.Hp, ev.MaxHp)
+			patchActive(side, fs, { Hp = ev.Hp })
+			setHp(cardFor(side, fs), ev.Hp, ev.MaxHp)
 			popNumber(model, "-" .. ev.Amount, if ev.Kind == "StatusDamage" then Color3.fromRGB(255, 120, 60) elseif ev.Crit then Color3.fromRGB(255, 176, 32) else Color3.new(1, 1, 1))
 		elseif ev.Kind == "Heal" then
 			local m = current.State[side].Team[ev.Slot]
@@ -725,24 +1337,39 @@ BattleUpdate.OnClientEvent:Connect(function(battleId, data)
 				m.Hp = ev.Hp
 			end
 			if ev.Active then
-				setHp(cardFor(side), ev.Hp, ev.MaxHp)
-				popNumber(model, "+" .. ev.Amount, T.Palette.hpHigh)
+				local healSlot = ev.FieldSlot or 1
+				setHp(cardFor(side, healSlot), ev.Hp, ev.MaxHp)
+				popNumber(slotModelFor(side, healSlot), "+" .. ev.Amount, T.Palette.hpHigh)
 			end
 		elseif ev.Kind == "Miss" then
-			popNumber(current.Models[if side == "Player" then "Enemy" else "Player"], "Errou", Color3.fromRGB(210, 210, 225))
+			local targetSide = ev.TargetSide or (if side == "Player" then "Enemy" else "Player")
+			local targetModel = slotModelFor(targetSide, ev.TargetFieldSlot or 1)
+			popNumber(targetModel, "Errou", Color3.fromRGB(210, 210, 225))
 		elseif ev.Kind == "Status" then
-			patchActive(side, { Status = ev.Status })
-			setStatus(cardFor(side), ev.Status)
+			patchActive(side, fs, { Status = ev.Status })
+			setStatus(cardFor(side, fs), ev.Status)
 		elseif ev.Kind == "StatusCured" then
-			patchActive(side, { Status = nil })
-			setStatus(cardFor(side), nil)
+			patchActive(side, fs, { Status = nil })
+			setStatus(cardFor(side, fs), nil)
 		elseif ev.Kind == "Faint" then
-			patchActive(side, { Hp = 0, Status = nil, Fainted = true })
-			setStatus(cardFor(side), nil)
-			setPips(cardFor(side), current.State[side])
+			patchActive(side, fs, { Hp = 0, Status = nil, Fainted = true })
+			setStatus(cardFor(side, fs), nil)
+			refreshSide(side, true)
+		elseif ev.Kind == "ClearSlot" then
+			local sideState = current.State[side]
+			if sideState.ActiveSlots then
+				sideState.ActiveSlots[fs] = 0
+			end
+			setSlotModel(side, fs, nil)
+			refreshSide(side, true)
 		elseif ev.Kind == "Switch" then
 			local sideState = current.State[side]
-			sideState.Active = ev.ToIndex
+			if sideState.ActiveSlots then
+				sideState.ActiveSlots[fs] = ev.ToIndex
+			end
+			if fs == 1 then
+				sideState.Active = ev.ToIndex
+			end
 			if ev.Member then
 				local old = sideState.Team[ev.ToIndex]
 				if old and old.Moves and not ev.Member.Moves then
@@ -751,7 +1378,7 @@ BattleUpdate.OnClientEvent:Connect(function(battleId, data)
 				sideState.Team[ev.ToIndex] = ev.Member
 			end
 			if ev.Model then
-				current.Models[side] = ev.Model
+				setSlotModel(side, fs, ev.Model)
 				preloadModel(ev.Model)
 			end
 			refreshSide(side, true)
@@ -760,17 +1387,11 @@ BattleUpdate.OnClientEvent:Connect(function(battleId, data)
 
 	if data.State and (data.Await or data.AwaitReplacement) then
 		current.State = data.State
-		refreshAll()
 		current.Awaiting = true
 		if data.AwaitReplacement then
-			teamMode = "Replace"
-			refreshTeam()
-			log("Escolha quem entra agora.")
-			showPage("Team")
+			beginReplacePrompt()
 		else
-			teamMode = "Switch"
-			log("O que " .. activeOf(data.State.Player).Name .. " vai fazer?")
-			showPage("Main")
+			beginTurnPrompt()
 		end
 	end
 end)

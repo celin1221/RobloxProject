@@ -60,13 +60,15 @@ UI.clampHeight(bar, T.TouchMin, 50)
 local list = UI.scroll(body, { Name = "List", Size = UDim2.fromScale(1, 0.4), Position = UDim2.fromScale(0, 0.38) })
 
 local function layoutBody()
-	local W, H = body.AbsoluteSize.X, body.AbsoluteSize.Y
+	local W, H = UI.unscaledSize(body)
+	W, H = math.floor(W + 0.5), math.floor(H + 0.5)
 	if W < 20 or H < 20 then
 		return
 	end
-	local ih = info.AbsoluteSize.Y
-	local oh = oreStrip.AbsoluteSize.Y
-	local bh = bar.AbsoluteSize.Y
+	local _, ih = UI.unscaledSize(info)
+	local _, oh = UI.unscaledSize(oreStrip)
+	local _, bh = UI.unscaledSize(bar)
+	ih, oh, bh = math.floor(ih + 0.5), math.floor(oh + 0.5), math.floor(bh + 0.5)
 	local gap = 5
 	oreStrip.Position = UDim2.fromOffset(0, ih + gap)
 	local ly = ih + oh + gap * 2
@@ -139,15 +141,22 @@ local function rarityOf(id)
 	return def and def.Rarity
 end
 
-local function counts()
+local function countsFor(prof)
 	local active, miners = 0, 0
-	for _, s in pairs(profile.Base.Active) do
-		active += 1
-		if s == "Mine" then
-			miners += 1
+	local actMap = prof and prof.Base and prof.Base.Active
+	if actMap then
+		for _, s in pairs(actMap) do
+			active += 1
+			if s == "Mine" then
+				miners += 1
+			end
 		end
 	end
 	return active, miners
+end
+
+local function counts()
+	return countsFor(profile)
 end
 
 local function setState(uid, state)
@@ -155,7 +164,84 @@ local function setState(uid, state)
 	show(ok, if ok then "" else text)
 end
 
+local function openBasePicker(targetState: string)
+	if not profile or not profile.Base then
+		return
+	end
+	local isMine = targetState == "Mine"
+	UI.pickCharacter({
+		Title = if isMine then "COLOCAR PARA MINERAR" else "COLOCAR PARA PASSEAR",
+		HeaderColor = if isMine then "ore" else "gold",
+		Icon = if isMine then "pickaxe" else "house",
+		ActionLabel = if isMine then "COLOCAR NA MINA" else "COLOCAR PASSEIO",
+		ActionColor = if isMine then "ore" else "gold",
+		ReturnTo = "Base",
+		KeepOpen = true,
+		SubtitleFn = function(prof)
+			local act, min = countsFor(prof)
+			local sl = Base.MiningSlots(prof)
+			return string.format("Ativos %d/%d · Vagas Mina %d/%d", act, Base.MaxActive, min, sl)
+		end,
+		FormatSelected = function(_uid, m, def)
+			local rar = def.Rarity
+			local gWalk = Base.GoldPerHour[rar] or 0
+			local gMine = math.floor(gWalk * Base.MiningGoldRatio + 0.5)
+			local oMine = Base.OrePerHour[rar] or 0
+			local rate = if isMine then string.format("+%dg +%dm/h", gMine, oMine) else string.format("+%dg/h", gWalk)
+			return string.format("<b>%s</b> Nv.%d (%s · %s)", def.Name, m.Level or 1, Summon.RarityName and Summon.RarityName[rar] or rar, rate)
+		end,
+		GetBadge = function(uid, _m, _def, prof)
+			local capUid = prof.TrainingMachine and prof.TrainingMachine.Job and prof.TrainingMachine.Job.Uid
+			if uid == capUid then
+				return "C\u{c1}PSULA", "teal"
+			end
+			local st = prof.Base and prof.Base.Active and prof.Base.Active[uid]
+			if st == "Mine" then
+				return "MINERANDO", "ore"
+			elseif st == "Walk" then
+				return "PASSEANDO", "gold"
+			elseif table.find(prof.Team, uid) ~= nil then
+				return "NO TIME", "green"
+			end
+			return nil, nil
+		end,
+		IsEligible = function(uid, _m, _def, prof)
+			local capUid = prof.TrainingMachine and prof.TrainingMachine.Job and prof.TrainingMachine.Job.Uid
+			if uid == capUid then
+				return false, "Est\u{e1} na C\u{e1}psula de Treino."
+			end
+			local st = prof.Base and prof.Base.Active and prof.Base.Active[uid]
+			if st == targetState then
+				return false, if isMine then "J\u{e1} est\u{e1} minerando." else "J\u{e1} est\u{e1} passeando."
+			end
+			local act, min = countsFor(prof)
+			local sl = Base.MiningSlots(prof)
+			if not st and act >= Base.MaxActive then
+				return false, string.format("Base cheia (%d/%d). Tire algu\u{e9}m primeiro.", act, Base.MaxActive)
+			end
+			if isMine and min >= sl then
+				return false, string.format("Vagas de minera\u{e7}\u{e3}o cheias (%d/%d).", min, sl)
+			end
+			return true, nil
+		end,
+		OnPick = function(uid)
+			local beforeAct, beforeMin = countsFor(profile)
+			local wasActive = profile.Base and profile.Base.Active and profile.Base.Active[uid] ~= nil
+			local ok, text = Remotes.BaseSetState:InvokeServer(uid, targetState)
+			if not ok then
+				return false, text
+			end
+			local newAct = beforeAct + (if wasActive then 0 else 1)
+			local newMin = beforeMin + (if isMine then 1 else 0)
+			local sl = Base.MiningSlots(profile)
+			local full = if isMine then (newMin >= sl) else (newAct >= Base.MaxActive)
+			return true, if isMine then "Colocado para minerar!" else "Colocado para passear!", full
+		end,
+	})
+end
+
 local STATE_NAME = { Walk = Base.States.Walk, Mine = Base.States.Mine }
+local lastListKey = nil
 
 local function refreshNow()
 	if not profile or not profile.Base then
@@ -207,20 +293,21 @@ local function refreshNow()
 
 	local capsuleUid = profile.TrainingMachine and profile.TrainingMachine.Job and profile.TrainingMachine.Job.Uid
 
-	-- Lista: primeiro quem esta na base ou na capsula, depois o resto da colecao
-	UI.clear(list)
+	-- Exibe os botoes para abrir o seletor visual da Equipe + apenas os personagens ativos na base/capsula
 	local uids = {}
 	for uid in pairs(profile.Collection) do
-		table.insert(uids, uid)
+		if b.Active[uid] ~= nil or uid == capsuleUid then
+			table.insert(uids, uid)
+		end
 	end
 	table.sort(uids, function(x, y)
 		local cx, cy = x == capsuleUid, y == capsuleUid
 		if cx ~= cy then
 			return cx
 		end
-		local ax, ay = b.Active[x] ~= nil, b.Active[y] ~= nil
-		if ax ~= ay then
-			return ax
+		local mxState, myState = b.Active[x] == "Mine", b.Active[y] == "Mine"
+		if mxState ~= myState then
+			return mxState
 		end
 		local mx, my = profile.Collection[x], profile.Collection[y]
 		if mx.Level ~= my.Level then
@@ -228,45 +315,102 @@ local function refreshNow()
 		end
 		return x < y
 	end)
-	for i, uid in ipairs(uids) do
+
+	-- So recria os itens quando os ativos ou vagas mudam (evita travamento e pulo de rolagem a cada tick de 10s)
+	local sigParts = { string.format("H:%d/%d:%d/%d", active, Base.MaxActive, miners, slots) }
+	for _, uid in ipairs(uids) do
 		local m = profile.Collection[uid]
-		local def = Characters.Get(m.CharacterId)
-		if def then
-			local inCapsule = uid == capsuleUid
-			local state = b.Active[uid]
-			local row, face = UI.panel(list, { Name = "Row_" .. uid, Size = UDim2.fromScale(0.98, 0), Aspect = 9, RowMax = 64, Color = "panelAlt", Corner = 0.3, LayoutOrder = i })
-			if inCapsule then
-				UI.stroke(face, T.Palette.teal, 1.3)
-			elseif state then
-				UI.stroke(face, if state == "Mine" then T.Palette.ore else T.Palette.gold, 1.2)
-			end
-			local rarity = def.Rarity
-			local gWalk = Base.GoldPerHour[rarity] or 0
-			local gMine = math.floor(gWalk * Base.MiningGoldRatio + 0.5)
-			local oMine = Base.OrePerHour[rarity] or 0
-			UI.text(face, string.format("%s  Nv. %d", def.Name, m.Level), { Name = "Name", Size = UDim2.fromScale(0.34, 0.46), Position = UDim2.fromScale(0.02, 0.08), Role = "Body", AlignX = Enum.TextXAlignment.Left })
-			UI.text(face, string.format("%s \u{b7} Passeio %dg \u{b7} Mina %dg+%dm", Summon.RarityName and Summon.RarityName[rarity] or rarity, gWalk, gMine, oMine), { Name = "Rarity", Size = UDim2.fromScale(0.35, 0.34), Position = UDim2.fromScale(0.02, 0.58), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
-			local chipText = if inCapsule then "C\u{c1}PSULA" elseif state then UI.upper(STATE_NAME[state]) else "FORA"
-			local chipColor = if inCapsule then "teal" elseif state == "Mine" then "ore" elseif state then "gold" else "slot"
-			UI.chip(face, chipText, chipColor, { Name = "State", Size = UDim2.fromScale(0.17, 0.46), Position = UDim2.fromScale(0.38, 0.27) })
-			local function act(name, text, color, x, target, enabled)
-				UI.button(face, { Name = name, Text = text, Color = if enabled then color else "grey", Size = UDim2.fromScale(0.135, 0.76), Position = UDim2.fromScale(x, 0.12), Role = "Small",
-					OnClick = function()
-						if enabled then
-							setState(uid, target)
-						end
-					end,
-				})
-			end
-			act("Walk", "PASSEAR", "gold", 0.565, "Walk", (not inCapsule) and state ~= "Walk")
-			act("Mine", "MINERAR", "ore", 0.71, "Mine", (not inCapsule) and state ~= "Mine")
-			act("Remove", "TIRAR", "red", 0.855, "None", (not inCapsule) and state ~= nil)
-		end
+		table.insert(sigParts, string.format("%s:%s:%d:%s:%s", uid, tostring(m.CharacterId), m.Level or 1, tostring(b.Active[uid] or ""), if uid == capsuleUid then "1" else "0"))
 	end
+	local listKey = table.concat(sigParts, "|")
+	if listKey == lastListKey then
+		return
+	end
+	lastListKey = listKey
+
+	UI.keepScroll(list, function()
+		UI.clear(list)
+
+		-- Barra de selecao visual (abre o HUD da Equipe com filtros e cartoes 3D)
+		local addRow = UI.frame(list, { Name = "AddRow", Size = UDim2.new(0.98, 0, 0, T.TouchMin + 4), LayoutOrder = 0 })
+		local canAddAny = active < Base.MaxActive
+		local canAddMine = miners < slots and (active < Base.MaxActive or active > miners)
+		UI.button(addRow, {
+			Name = "AddWalk",
+			Text = "+ ESCOLHER PASSEIO",
+			Icon = "team",
+			Layout = "row",
+			Color = if canAddAny then "gold" else "grey",
+			Size = UDim2.fromScale(0.49, 1),
+			Position = UDim2.fromScale(0, 0),
+			Role = "Small",
+			Corner = 0.28,
+			OnClick = function()
+				openBasePicker("Walk")
+			end,
+		})
+		UI.button(addRow, {
+			Name = "AddMine",
+			Text = "+ ESCOLHER MINA",
+			Icon = "pickaxe",
+			Layout = "row",
+			Color = if canAddMine then "ore" else "grey",
+			Size = UDim2.fromScale(0.49, 1),
+			Position = UDim2.fromScale(0.51, 0),
+			Role = "Small",
+			Corner = 0.28,
+			OnClick = function()
+				openBasePicker("Mine")
+			end,
+		})
+
+		if #uids == 0 then
+			UI.text(list, "Nenhum personagem ativo na base. Use os bot\u{f5}es acima para escolher na cole\u{e7}\u{e3}o!", {
+				Name = "Empty", Size = UDim2.fromScale(0.96, 0), Aspect = 12, Role = "Small", Color = "inkSoft", LayoutOrder = 1,
+			})
+			return
+		end
+
+		for i, uid in ipairs(uids) do
+			local m = profile.Collection[uid]
+			local def = Characters.Get(m.CharacterId)
+			if def then
+				local inCapsule = uid == capsuleUid
+				local state = b.Active[uid]
+				local row, face = UI.panel(list, { Name = "Row_" .. uid, Size = UDim2.fromScale(0.98, 0), Aspect = 9, RowMax = 64, Color = "panelAlt", Corner = 0.3, LayoutOrder = i })
+				if inCapsule then
+					UI.stroke(face, T.Palette.teal, 1.3)
+				elseif state then
+					UI.stroke(face, if state == "Mine" then T.Palette.ore else T.Palette.gold, 1.2)
+				end
+				local rarity = def.Rarity
+				local gWalk = Base.GoldPerHour[rarity] or 0
+				local gMine = math.floor(gWalk * Base.MiningGoldRatio + 0.5)
+				local oMine = Base.OrePerHour[rarity] or 0
+				UI.text(face, string.format("%s  Nv. %d", def.Name, m.Level), { Name = "Name", Size = UDim2.fromScale(0.34, 0.46), Position = UDim2.fromScale(0.02, 0.08), Role = "Body", AlignX = Enum.TextXAlignment.Left })
+				UI.text(face, string.format("%s \u{b7} Passeio %dg \u{b7} Mina %dg+%dm", Summon.RarityName and Summon.RarityName[rarity] or rarity, gWalk, gMine, oMine), { Name = "Rarity", Size = UDim2.fromScale(0.35, 0.34), Position = UDim2.fromScale(0.02, 0.58), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
+				local chipText = if inCapsule then "C\u{c1}PSULA" elseif state then UI.upper(STATE_NAME[state]) else "FORA"
+				local chipColor = if inCapsule then "teal" elseif state == "Mine" then "ore" elseif state then "gold" else "slot"
+				UI.chip(face, chipText, chipColor, { Name = "State", Size = UDim2.fromScale(0.17, 0.46), Position = UDim2.fromScale(0.38, 0.27) })
+				local function act(name, text, color, x, target, enabled)
+					UI.button(face, { Name = name, Text = text, Color = if enabled then color else "grey", Size = UDim2.fromScale(0.135, 0.76), Position = UDim2.fromScale(x, 0.12), Role = "Small",
+						OnClick = function()
+							if enabled then
+								setState(uid, target)
+							end
+						end,
+					})
+				end
+				act("Walk", "PASSEAR", "gold", 0.565, "Walk", (not inCapsule) and state ~= "Walk")
+				act("Mine", "MINERAR", "ore", 0.71, "Mine", (not inCapsule) and state ~= "Mine")
+				act("Remove", "TIRAR", "red", 0.855, "None", (not inCapsule) and state ~= nil)
+			end
+		end
+	end)
 end
 
 local function refresh()
-	UI.keepScroll(list, refreshNow)
+	refreshNow()
 end
 
 Remotes:WaitForChild("ProfileUpdated").OnClientEvent:Connect(function(p)
@@ -293,7 +437,8 @@ UI.onOpen("Base", function()
 		return
 	end
 	msg.Text = ""
-	refresh()
 	win.Open()
+	layoutBody()
+	refresh()
 	task.defer(layoutBody)
 end)

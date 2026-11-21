@@ -9,7 +9,7 @@ local Audio = require(ReplicatedStorage.Data.Audio)
 
 local SettingsService = {}
 
-local KINDS = { MusicOn = "boolean", MusicVolume = "number", SfxOn = "boolean", SfxVolume = "number", MapFx = "boolean" }
+local KINDS = { MusicOn = "boolean", MusicVolume = "number", SfxOn = "boolean", SfxVolume = "number", MapFx = "boolean", CharacterAuras = "boolean" }
 local lastSave = {} -- [Player] = os.clock()
 
 function SettingsService.Apply(player: Player, incoming): (boolean, string?)

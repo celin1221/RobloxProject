@@ -76,7 +76,7 @@ function PvPService.TeamFor(player: Player)
 end
 
 -- Motivo para nao poder entrar em PvP (nil = pode)
-local function blocker(player: Player, who: string): string?
+local function blocker(player: Player, who: string, format: string?): string?
 	if not player.Parent then
 		return who .. " saiu do jogo."
 	end
@@ -86,8 +86,12 @@ local function blocker(player: Player, who: string): string?
 	if not inPlaza(player) then
 		return who .. " precisa estar na pra\u{e7}a."
 	end
-	if not PvPService.TeamFor(player) then
+	local team = PvPService.TeamFor(player)
+	if not team then
 		return who .. " ainda n\u{e3}o tem time."
+	end
+	if format == "2x2" and #team < 2 then
+		return who .. " precisa de pelo menos 2 personagens no time para PvP 2x2."
 	end
 	return nil
 end
@@ -111,15 +115,16 @@ local function throttled(player: Player): boolean
 	return false
 end
 
-function PvPService.Challenge(player: Player, targetUserId)
+function PvPService.Challenge(player: Player, targetUserId, format)
 	if throttled(player) then
 		return false, "Aguarde."
 	end
+	local fmt = if format == "2x2" then "2x2" else "1x1"
 	local target = typeof(targetUserId) == "number" and Players:GetPlayerByUserId(targetUserId)
 	if not target or target == player then
 		return false, "Jogador inv\u{e1}lido."
 	end
-	local why = blocker(player, "Voc\u{ea}") or blocker(target, target.DisplayName)
+	local why = blocker(player, "Voc\u{ea}", fmt) or blocker(target, target.DisplayName, fmt)
 	if why then
 		return false, why
 	end
@@ -134,13 +139,13 @@ function PvPService.Challenge(player: Player, targetUserId)
 		clearInvite(sent[player])
 	end
 	if invites[player] and invites[player].From == target then
-		-- os dois se desafiaram: vale como aceite
+		-- os dois se desafiaram: vale como aceite (no formato combinado)
 		return PvPService.Respond(player, target.UserId, true)
 	end
-	invites[target] = { From = player, Expires = os.clock() + Config.PvPInviteTime }
+	invites[target] = { From = player, Format = fmt, Expires = os.clock() + Config.PvPInviteTime }
 	sent[player] = target
-	Remotes.PvPInvite:FireClient(target, { Kind = "Incoming", FromUserId = player.UserId, FromName = player.DisplayName, Seconds = Config.PvPInviteTime })
-	Remotes.PvPInvite:FireClient(player, { Kind = "Sent", ToUserId = target.UserId, ToName = target.DisplayName, Seconds = Config.PvPInviteTime })
+	Remotes.PvPInvite:FireClient(target, { Kind = "Incoming", FromUserId = player.UserId, FromName = player.DisplayName, Format = fmt, Seconds = Config.PvPInviteTime })
+	Remotes.PvPInvite:FireClient(player, { Kind = "Sent", ToUserId = target.UserId, ToName = target.DisplayName, Format = fmt, Seconds = Config.PvPInviteTime })
 	local inv = invites[target]
 	task.delay(Config.PvPInviteTime, function()
 		if invites[target] == inv then
@@ -153,7 +158,7 @@ function PvPService.Challenge(player: Player, targetUserId)
 			end
 		end
 	end)
-	return true, "Desafio enviado para " .. target.DisplayName .. "."
+	return true, "Desafio " .. fmt .. " enviado para " .. target.DisplayName .. "."
 end
 
 function PvPService.Respond(player: Player, challengerUserId, accept)
@@ -163,6 +168,7 @@ function PvPService.Respond(player: Player, challengerUserId, accept)
 		return false, "Esse desafio n\u{e3}o vale mais."
 	end
 	local challenger = inv.From
+	local fmt = inv.Format or "1x1"
 	clearInvite(player)
 	if accept ~= true then
 		if challenger.Parent then
@@ -171,7 +177,7 @@ function PvPService.Respond(player: Player, challengerUserId, accept)
 		return true, "Desafio recusado."
 	end
 	-- aceite dos dois lados: confere tudo de novo
-	local why = blocker(challenger, challenger.DisplayName) or blocker(player, "Voc\u{ea}")
+	local why = blocker(challenger, challenger.DisplayName, fmt) or blocker(player, "Voc\u{ea}", fmt)
 	if why then
 		if challenger.Parent then
 			Remotes.PvPInvite:FireClient(challenger, { Kind = "Closed", Text = "PvP cancelado: " .. why })
@@ -181,9 +187,9 @@ function PvPService.Respond(player: Player, challengerUserId, accept)
 	local ok, err = BattleService.StartPvP(challenger, player, PvPService.TeamFor(challenger), PvPService.TeamFor(player), function(winnerSide, reason)
 		local winner = if winnerSide == "Player" then challenger elseif winnerSide == "Enemy" then player else nil
 		if winner then
-			print("[PvP] " .. challenger.Name .. " x " .. player.Name .. ": venceu " .. winner.Name .. " (" .. tostring(reason) .. ")")
+			print("[PvP " .. fmt .. "] " .. challenger.Name .. " x " .. player.Name .. ": venceu " .. winner.Name .. " (" .. tostring(reason) .. ")")
 		end
-	end)
+	end, { Format = fmt })
 	if not ok then
 		if challenger.Parent then
 			Remotes.PvPInvite:FireClient(challenger, { Kind = "Closed", Text = "PvP cancelado: " .. tostring(err) })

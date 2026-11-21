@@ -17,6 +17,7 @@ local TypeChart = require(ReplicatedStorage:WaitForChild("Data"):WaitForChild("T
 local DamageCalc = {}
 
 DamageCalc.SAME_TYPE_BONUS = 1.5
+DamageCalc.SPREAD_MULTIPLIER = 0.75 -- Regra Pokemon 2x2: golpes em area que atingem 2+ alvos causam 75% do dano
 DamageCalc.CRIT_CHANCE = 0.0625
 DamageCalc.CRIT_MULTIPLIER = 1.5
 DamageCalc.LUCK_MIN = 0.85
@@ -63,11 +64,13 @@ function DamageCalc.Base(level: number, power: number, attack: number, defense: 
 	return (2 * level / 5 + 2) * power * attack / defense / 50 + 2
 end
 
--- Dano real de um golpe. Retorna { Damage, Crit, TypeMultiplier, SameType }
-function DamageCalc.Compute(attacker, defender, move, rng: Random)
+-- Dano real de um golpe. Retorna { Damage, Crit, TypeMultiplier, SameType, Spread }
+-- spreadMult (opcional): 0.75 em golpes de area no 2x2 quando atingem 2+ alvos (padrao 1)
+function DamageCalc.Compute(attacker, defender, move, rng: Random, spreadMult: number?)
 	local typeMult = TypeChart.Multiplier(move.Type, defender.Type)
 	local sameType = move.Type == attacker.Type
 	local bonus = sameType and DamageCalc.SAME_TYPE_BONUS or 1
+	local spread = if typeof(spreadMult) == "number" then spreadMult else 1
 	local crit = rng:NextNumber() < DamageCalc.CRIT_CHANCE
 	local luck = rng:NextNumber(DamageCalc.LUCK_MIN, DamageCalc.LUCK_MAX)
 
@@ -77,18 +80,19 @@ function DamageCalc.Compute(attacker, defender, move, rng: Random)
 		DamageCalc.EffectiveStat(attacker, "Attack"),
 		DamageCalc.EffectiveStat(defender, "Defense")
 	)
-	local raw = base * bonus * typeMult * (crit and DamageCalc.CRIT_MULTIPLIER or 1) * luck
+	local raw = base * bonus * typeMult * spread * (crit and DamageCalc.CRIT_MULTIPLIER or 1) * luck
 	local damage = if typeMult == 0 then 0 else math.max(1, math.floor(raw + 0.5))
-	return { Damage = damage, Crit = crit, TypeMultiplier = typeMult, SameType = sameType }
+	return { Damage = damage, Crit = crit, TypeMultiplier = typeMult, SameType = sameType, Spread = spread }
 end
 
--- Dano medio esperado (usado pela IA). Conta precisao, chance de critico e sorte media.
-function DamageCalc.ExpectedDamage(attacker, defender, move): number
+-- Dano medio esperado (usado pela IA). Conta precisao, chance de critico, sorte media e spread (2x2).
+function DamageCalc.ExpectedDamage(attacker, defender, move, spreadMult: number?): number
 	if move.Category ~= "Damage" then
 		return 0
 	end
 	local typeMult = TypeChart.Multiplier(move.Type, defender.Type)
 	local bonus = (move.Type == attacker.Type) and DamageCalc.SAME_TYPE_BONUS or 1
+	local spread = if typeof(spreadMult) == "number" then spreadMult else 1
 	local critAvg = 1 + DamageCalc.CRIT_CHANCE * (DamageCalc.CRIT_MULTIPLIER - 1)
 	local luckAvg = (DamageCalc.LUCK_MIN + DamageCalc.LUCK_MAX) / 2
 	local hit = (move.Accuracy or 100) / 100
@@ -98,7 +102,7 @@ function DamageCalc.ExpectedDamage(attacker, defender, move): number
 		DamageCalc.EffectiveStat(attacker, "Attack"),
 		DamageCalc.EffectiveStat(defender, "Defense")
 	)
-	return base * bonus * typeMult * critAvg * luckAvg * hit
+	return base * bonus * typeMult * spread * critAvg * luckAvg * hit
 end
 
 return DamageCalc

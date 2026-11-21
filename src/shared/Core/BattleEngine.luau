@@ -2,11 +2,16 @@
 	BattleEngine (GDD secoes 5 e 10)
 	Logica pura da maquina de estados de batalha por turnos (testavel sem jogador e sem arena).
 
-	Time de ate 6 por lado, 1 em campo.
+	Suporta formatos:
+	  "1x1" (padrao) -> 1 lutador em campo por lado
+	  "2x2"          -> 2 lutadores em campo por lado (estilo Pokemon Doubles: ordem por Velocidade
+	                    entre os 4 ativos, escolha de alvo, golpes em area com 0.75x em 2+ alvos,
+	                    redirecionamento se o alvo desmaiar no meio do turno, substituicao dupla e 2x1).
+
 	Estados:
-	  "WaitingForInput"        cada lado escolhe Lutar / Mochila / Time / Fugir
+	  "WaitingForInput"        cada lado escolhe acoes do turno
 	  "Resolving"              resolvendo o turno
-	  "WaitingForReplacement"  o personagem do jogador desmaiou; ele escolhe o proximo
+	  "WaitingForReplacement"  um ou mais personagens desmaiaram; o dono escolhe quem entra
 	  "Ended"                  um lado ficou sem personagens de pe (ou desistiu/fugiu)
 	ResolveTurn e ResolveReplacement devolvem a lista de eventos do que aconteceu.
 ]]
@@ -52,9 +57,6 @@ local function freshStages()
 end
 
 -- Cria um lutador a partir dos dados (Characters + Moves)
--- moveIds = golpes ativos (salvos); sem eles, os 4 ultimos aprendidos ate o nivel
--- extra (opcional): StatMultiplier (chefes/andares/estrelas+variante), StatMultipliers (Genetica+Treino por atributo),
--- Genetics, Training, Hp, Status e Pp ({ [golpe] = pp })
 local function newBattler(characterId: string, level: number, moveIds: { string }?, uid: string?, extra)
 	local def = assert(Characters.Get(characterId), "Personagem desconhecido: " .. tostring(characterId))
 	local stats = Characters.StatsAt(characterId, level)
@@ -86,34 +88,36 @@ local function newBattler(characterId: string, level: number, moveIds: { string 
 		Hp = if typeof(extra.Hp) == "number" then math.clamp(math.floor(extra.Hp), 0, stats.HP) else stats.HP,
 		MaxHp = stats.HP,
 		Status = extra.Status, -- "Burn" | "Poison" | "Paralysis" | "Sleep" | "Freeze" | nil
-		StatusTurns = if extra.Status == "Sleep" then (extra.StatusTurns or 1) else 0, -- turnos restantes de sono
+		StatusTurns = if extra.Status == "Sleep" then (extra.StatusTurns or 1) else 0,
 		Stages = freshStages(),
 		Moves = moves,
-		Uid = uid, -- id na colecao do jogador (XP no fim da batalha)
+		Uid = uid,
 		Genetics = if typeof(extra.Genetics) == "table" then Genetics.SanitizeTable(extra.Genetics) else nil,
 		Training = if typeof(extra.Training) == "table" then Genetics.SanitizeTable(extra.Training) else nil,
-		Participated = false, -- entrou em campo nesta batalha
+		Participated = false,
 	}
 end
 
-local function newSide(teamDef)
+local function newSide(teamDef, slotsPerSide: number)
 	assert(typeof(teamDef) == "table" and #teamDef >= 1, "Time vazio")
 	assert(#teamDef <= MAX_TEAM, "Time com mais de " .. MAX_TEAM .. " personagens")
 	local team = {}
 	for i, entry in ipairs(teamDef) do
 		team[i] = newBattler(entry.CharacterId, entry.Level or 10, entry.Moves, entry.Uid, entry)
 	end
-	-- entra em campo o primeiro de pe (times herdados podem ter desmaiados)
-	local active = 1
+	-- entram em campo os primeiros de pe (ate slotsPerSide)
+	local activeSlots = {}
 	for i, b in ipairs(team) do
 		if b.Hp > 0 then
-			active = i
-			break
+			table.insert(activeSlots, i)
+			b.Participated = true
+			if #activeSlots >= slotsPerSide then
+				break
+			end
 		end
 	end
-	assert(team[active].Hp > 0, "Time sem ninguem de pe")
-	team[active].Participated = true
-	return { Team = team, Active = active }
+	assert(#activeSlots >= 1, "Time sem ninguem de pe")
+	return { Team = team, Active = activeSlots[1], ActiveSlots = activeSlots }
 end
 
 -- Aceita o formato antigo (CharacterId/Level) ou o novo (Team = {...})
@@ -125,6 +129,9 @@ local function teamFrom(def)
 end
 
 local function hasUsableMove(battler): boolean
+	if not battler then
+		return false
+	end
 	for _, slot in ipairs(battler.Moves) do
 		if slot.Pp > 0 then
 			return true
@@ -151,35 +158,113 @@ end
 	opts = {
 		Player = { Team = { { CharacterId = "Kaen", Level = 10 }, ... } },
 		Enemy  = { Team = { ... }, AI = "Medio" },
+		Format = "1x1" | "2x2", (padrao "1x1")
 		Mode = "Tower" | "Wild" | "PvP", Bag = { Pocao = 1 }, Seed = numero opcional
 	}
 ]]
 function BattleEngine.New(opts)
 	local self = setmetatable({}, BattleEngine)
 	self.Rng = if opts.Seed then Random.new(opts.Seed) else Random.new()
+	self.Format = if opts.Format == "2x2" then "2x2" else "1x1"
+	self.SlotsPerSide = if self.Format == "2x2" then 2 else 1
 	self.Sides = {
-		Player = newSide(teamFrom(opts.Player)),
-		Enemy = newSide(teamFrom(opts.Enemy)),
+		Player = newSide(teamFrom(opts.Player), self.SlotsPerSide),
+		Enemy = newSide(teamFrom(opts.Enemy), self.SlotsPerSide),
 	}
 	self.EnemyAI = opts.Enemy.AI or "Medio"
 	self.Mode = opts.Mode or "Tower"
-	self.CaptureBlocked = opts.CaptureBlocked -- texto: selos recusados (ex.: deposito de personagens cheio)
+	self.CaptureBlocked = opts.CaptureBlocked
 	-- GDD secao 5: fugir so contra selvagens; torre e PvP tem Desistir (derrota)
 	self.CanFlee = if opts.CanFlee ~= nil then opts.CanFlee == true else self.Mode == "Wild"
 	self.Bag = table.clone(opts.Bag or {})
 	self.Turn = 1
 	self.State = "WaitingForInput"
 	self.Winner = nil -- "Player" | "Enemy" | "None"
-	self.EndReason = nil -- "Faint" | "Forfeit" | "Fled" | "Disconnect"
-	-- PvP: o lado Enemy tambem e um jogador (escolhe acoes e substituicoes; sem IA)
+	self.EndReason = nil -- "Faint" | "Forfeit" | "Fled" | "Disconnect" | "Captured"
 	self.EnemyHuman = opts.EnemyHuman == true
-	self.PendingReplace = {} -- [lado] = true enquanto o dono precisa escolher o proximo
+	-- [lado] = { slot1, ... } enquanto o dono precisa escolher o(s) proximo(s)
+	self.PendingReplace = {}
 	return self
 end
 
-function BattleEngine:Active(side: string)
+function BattleEngine:IsDouble(): boolean
+	return self.SlotsPerSide > 1
+end
+
+function BattleEngine:SyncLegacyActive(side: string)
 	local s = self.Sides[side]
-	return s.Team[s.Active]
+	for fs = 1, self.SlotsPerSide do
+		local idx = s.ActiveSlots[fs]
+		if idx and s.Team[idx] and s.Team[idx].Hp > 0 then
+			s.Active = idx
+			return
+		end
+	end
+	s.Active = s.ActiveSlots[1] or s.ActiveSlots[2] or s.Active
+end
+
+function BattleEngine:ActiveIndex(side: string, fieldSlot: number?): number?
+	local s = self.Sides[side]
+	if fieldSlot then
+		return s.ActiveSlots[fieldSlot]
+	end
+	return s.ActiveSlots[1] or s.ActiveSlots[2] or s.Active
+end
+
+function BattleEngine:ActiveAt(side: string, fieldSlot: number?)
+	local s = self.Sides[side]
+	local idx = s.ActiveSlots[fieldSlot or 1]
+	return if idx then s.Team[idx] else nil
+end
+
+function BattleEngine:Active(side: string, fieldSlot: number?)
+	if fieldSlot ~= nil then
+		return self:ActiveAt(side, fieldSlot)
+	end
+	local s = self.Sides[side]
+	local idx = s.ActiveSlots[1] or s.ActiveSlots[2] or s.Active
+	return idx and s.Team[idx] or nil
+end
+
+function BattleEngine:FieldSlotOf(side: string, teamIndex: number): number?
+	local s = self.Sides[side]
+	for fs = 1, self.SlotsPerSide do
+		if s.ActiveSlots[fs] == teamIndex then
+			return fs
+		end
+	end
+	return nil
+end
+
+function BattleEngine:AliveFieldSlots(side: string): { number }
+	local out = {}
+	local s = self.Sides[side]
+	for fs = 1, self.SlotsPerSide do
+		local idx = s.ActiveSlots[fs]
+		local b = idx and s.Team[idx]
+		if b and b.Hp > 0 then
+			table.insert(out, fs)
+		end
+	end
+	return out
+end
+
+function BattleEngine:BenchAliveIndices(side: string): { number }
+	local s = self.Sides[side]
+	local onField = {}
+	for fs = 1, self.SlotsPerSide do
+		local idx = s.ActiveSlots[fs]
+		if idx then
+			onField[idx] = true
+		end
+	end
+	local out = {}
+	for i, m in ipairs(s.Team) do
+		if m.Hp > 0 and not onField[i] then
+			table.insert(out, i)
+		end
+	end
+	return out
 end
 
 -- Golpe de um slot do personagem em campo. Index 0 = golpe reserva.
@@ -191,50 +276,119 @@ function BattleEngine:GetMove(battler, index: number)
 	return slot and Moves.Get(slot.Id), slot
 end
 
--- Validacao de toda acao recebida. Retorna ok, mensagemDeErro.
-function BattleEngine:ValidateAction(side: string, action): (boolean, string?)
+-- Normaliza { Kind = "Double", Actions = ... } em mapa [fieldSlot] = action
+local function mapSlotActions(action, slotsPerSide: number)
+	if typeof(action.Actions) ~= "table" then
+		return nil
+	end
+	local bySlot = {}
+	for k, entry in pairs(action.Actions) do
+		if typeof(entry) ~= "table" then
+			return nil
+		end
+		local fs = if isInt(entry.FieldSlot) then entry.FieldSlot elseif isInt(k) then k else nil
+		if not fs or fs < 1 or fs > slotsPerSide then
+			return nil
+		end
+		if bySlot[fs] then
+			return nil
+		end
+		bySlot[fs] = entry
+	end
+	return bySlot
+end
+
+-- Normaliza substituicao para lista { { FieldSlot = fs, Index = teamIdx }, ... }
+local function normalizeReplacements(pendingSlots: { number }, actionOrChoice)
+	if typeof(actionOrChoice) == "number" then
+		if #pendingSlots ~= 1 then
+			return nil
+		end
+		return { { FieldSlot = pendingSlots[1], Index = actionOrChoice } }
+	end
+	if typeof(actionOrChoice) ~= "table" then
+		return nil
+	end
+	local rawList = actionOrChoice.Replacements
+	if rawList == nil and actionOrChoice.Kind == nil then
+		-- ResolveReplacement(side, { { FieldSlot = 1, Index = 3 }, ... })
+		rawList = actionOrChoice
+	end
+	if typeof(rawList) == "table" then
+		local out = {}
+		for i, entry in ipairs(rawList) do
+			if typeof(entry) == "table" and isInt(entry.Index) then
+				local fs = if isInt(entry.FieldSlot) then entry.FieldSlot else pendingSlots[i]
+				if not fs then
+					return nil
+				end
+				table.insert(out, { FieldSlot = fs, Index = entry.Index })
+			else
+				return nil
+			end
+		end
+		return out
+	elseif isInt(actionOrChoice.Index) and #pendingSlots == 1 then
+		return { { FieldSlot = pendingSlots[1], Index = actionOrChoice.Index } }
+	end
+	return nil
+end
+
+-- Valida a acao de um unico slot em campo (usado tanto no 1x1 quanto em cada slot do 2x2)
+function BattleEngine:_ValidateSlotAction(side: string, fieldSlot: number, action, reservedSwitch, reservedItems): (boolean, string?)
 	if typeof(action) ~= "table" or typeof(action.Kind) ~= "string" then
 		return false, "A\u{e7}\u{e3}o inv\u{e1}lida."
 	end
 	local sideState = self.Sides[side]
-	if not sideState then
-		return false, "A\u{e7}\u{e3}o inv\u{e1}lida."
+	local active = self:ActiveAt(side, fieldSlot)
+	if not active or active.Hp <= 0 then
+		return false, "Slot inativo."
 	end
-
-	-- Escolha obrigatoria do proximo depois de um desmaio
-	if self.State == "WaitingForReplacement" then
-		if not self.PendingReplace[side] or action.Kind ~= "Replace" then
-			return false, if self.PendingReplace[side] then "Escolha o pr\u{f3}ximo personagem." else "Aguardando o advers\u{e1}rio."
-		end
-		local member = isInt(action.Index) and sideState.Team[action.Index]
-		if not member or member.Hp <= 0 or action.Index == sideState.Active then
-			return false, "Esse personagem n\u{e3}o pode entrar."
-		end
-		return true
-	end
-
-	if self.State ~= "WaitingForInput" then
-		return false, "Ainda n\u{e3}o \u{e9} a sua vez."
-	end
-	local active = sideState.Team[sideState.Active]
 
 	if action.Kind == "Move" then
 		local index = action.Index
 		if not isInt(index) then
 			return false, "Golpe inv\u{e1}lido."
 		end
+		local move
 		if index == 0 then
 			if hasUsableMove(active) then
 				return false, "Ainda h\u{e1} golpes com PP."
 			end
-			return true
+			move = Moves.Get(Moves.FALLBACK_ID)
+		else
+			local slot = active.Moves[index]
+			if not slot then
+				return false, "Golpe inv\u{e1}lido."
+			end
+			if slot.Pp <= 0 then
+				return false, "Esse golpe est\u{e1} sem PP."
+			end
+			move = Moves.Get(slot.Id)
 		end
-		local slot = active.Moves[index]
-		if not slot then
-			return false, "Golpe inv\u{e1}lido."
-		end
-		if slot.Pp <= 0 then
-			return false, "Esse golpe est\u{e1} sem PP."
+
+		if self:IsDouble() and Moves.TargetMode(move) == "Single" and index ~= 0 then
+			local targetSide = action.TargetSide or "Enemy"
+			if targetSide ~= "Enemy" and targetSide ~= "Ally" then
+				return false, "Alvo inv\u{e1}lido."
+			end
+			local targetSlot = action.TargetSlot
+			if targetSlot ~= nil then
+				if not isInt(targetSlot) or targetSlot < 1 or targetSlot > self.SlotsPerSide then
+					return false, "Alvo inv\u{e1}lido."
+				end
+				if targetSide == "Ally" then
+					if targetSlot == fieldSlot then
+						return false, "N\u{e3}o \u{e9} poss\u{ed}vel mirar em si mesmo."
+					end
+					local ally = self:ActiveAt(side, targetSlot)
+					if not ally or ally.Hp <= 0 then
+						return false, "Aliado inv\u{e1}lido."
+					end
+				end
+			elseif targetSide == "Ally" then
+				return false, "Alvo inv\u{e1}lido."
+			end
 		end
 		return true
 	elseif action.Kind == "Switch" then
@@ -242,11 +396,17 @@ function BattleEngine:ValidateAction(side: string, action): (boolean, string?)
 		if not member then
 			return false, "Personagem inv\u{e1}lido."
 		end
-		if action.Index == sideState.Active then
+		if self:FieldSlotOf(side, action.Index) ~= nil then
 			return false, member.Name .. " j\u{e1} est\u{e1} em campo."
 		end
 		if member.Hp <= 0 then
 			return false, member.Name .. " est\u{e1} desmaiado."
+		end
+		if reservedSwitch and reservedSwitch[action.Index] then
+			return false, member.Name .. " j\u{e1} foi escolhido para outro slot."
+		end
+		if reservedSwitch then
+			reservedSwitch[action.Index] = true
 		end
 		return true
 	elseif action.Kind == "Item" then
@@ -261,10 +421,14 @@ function BattleEngine:ValidateAction(side: string, action): (boolean, string?)
 		if not item or not item.UsableInBattle then
 			return false, "Esse item n\u{e3}o pode ser usado em batalha."
 		end
-		if (self.Bag[itemId] or 0) <= 0 then
+		local already = if reservedItems then (reservedItems[itemId] or 0) else 0
+		if (self.Bag[itemId] or 0) - already <= 0 then
 			return false, "Voc\u{ea} n\u{e3}o tem " .. item.Name .. "."
 		end
-		-- Selos: so contra selvagens (GDD secao 7)
+		if reservedItems then
+			reservedItems[itemId] = already + 1
+		end
+		-- Selos: so contra selvagens (GDD secao 7) e apenas se houver 1 adversario em campo
 		if item.Kind == "Capture" then
 			if self.Mode ~= "Wild" then
 				return false, "Selos s\u{f3} funcionam contra personagens selvagens."
@@ -272,14 +436,18 @@ function BattleEngine:ValidateAction(side: string, action): (boolean, string?)
 			if self.CaptureBlocked then
 				return false, self.CaptureBlocked
 			end
-			if self:Active("Enemy").Hp <= 0 then
+			local aliveFoes = self:AliveFieldSlots("Enemy")
+			if #aliveFoes == 0 then
 				return false, "Alvo inv\u{e1}lido."
+			end
+			if #aliveFoes > 1 then
+				return false, "N\u{e3}o \u{e9} poss\u{ed}vel capturar com dois advers\u{e1}rios em campo."
 			end
 			return true
 		end
 		local targetIndex = action.TargetIndex
 		if targetIndex == nil then
-			targetIndex = sideState.Active
+			targetIndex = sideState.ActiveSlots[fieldSlot]
 		end
 		local target = isInt(targetIndex) and sideState.Team[targetIndex]
 		if not target then
@@ -319,6 +487,147 @@ function BattleEngine:ValidateAction(side: string, action): (boolean, string?)
 	return false, "A\u{e7}\u{e3}o inv\u{e1}lida."
 end
 
+-- Validacao de toda acao recebida. Retorna ok, mensagemDeErro.
+function BattleEngine:ValidateAction(side: string, action): (boolean, string?)
+	if typeof(action) ~= "table" or typeof(action.Kind) ~= "string" then
+		return false, "A\u{e7}\u{e3}o inv\u{e1}lida."
+	end
+	local sideState = self.Sides[side]
+	if not sideState then
+		return false, "A\u{e7}\u{e3}o inv\u{e1}lida."
+	end
+
+	-- Escolha obrigatoria do(s) proximo(s) depois de um desmaio
+	if self.State == "WaitingForReplacement" then
+		local pending = self.PendingReplace[side]
+		if not pending or #pending == 0 or action.Kind ~= "Replace" then
+			return false, if pending and #pending > 0 then "Escolha o pr\u{f3}ximo personagem." else "Aguardando o advers\u{e1}rio."
+		end
+		local list = normalizeReplacements(pending, action)
+		if not list or #list ~= #pending then
+			return false, "Escolha todos os substitutos necess\u{e1}rios."
+		end
+		local needSlot = {}
+		for _, fs in ipairs(pending) do
+			needSlot[fs] = true
+		end
+		local usedTeam = {}
+		for _, entry in ipairs(list) do
+			if not needSlot[entry.FieldSlot] then
+				return false, "Slot de substitui\u{e7}\u{e3}o inv\u{e1}lido."
+			end
+			needSlot[entry.FieldSlot] = nil
+			local member = sideState.Team[entry.Index]
+			if not member or member.Hp <= 0 or self:FieldSlotOf(side, entry.Index) ~= nil or usedTeam[entry.Index] then
+				return false, "Esse personagem n\u{e3}o pode entrar."
+			end
+			usedTeam[entry.Index] = true
+		end
+		if next(needSlot) ~= nil then
+			return false, "Escolha todos os substitutos necess\u{e1}rios."
+		end
+		return true
+	end
+
+	if self.State ~= "WaitingForInput" then
+		return false, "Ainda n\u{e3}o \u{e9} a sua vez."
+	end
+
+	if action.Kind == "Flee" then
+		return true
+	end
+
+	if not self:IsDouble() then
+		return self:_ValidateSlotAction(side, 1, action)
+	end
+
+	-- Formato 2x2: aceita { Kind = "Double", Actions = { ... } }
+	if action.Kind ~= "Double" then
+		-- Conveniencia: se so ha 1 lutador vivo em campo, tambem aceita acao simples direta
+		local aliveSlots = self:AliveFieldSlots(side)
+		if #aliveSlots == 1 then
+			return self:_ValidateSlotAction(side, aliveSlots[1], action)
+		end
+		return false, "Escolha a a\u{e7}\u{e3}o de todos os lutadores em campo."
+	end
+
+	local bySlot = mapSlotActions(action, self.SlotsPerSide)
+	if not bySlot then
+		return false, "A\u{e7}\u{f5}es de dupla inv\u{e1}lidas."
+	end
+	local aliveSlots = self:AliveFieldSlots(side)
+	local reservedSwitch = {}
+	local reservedItems = {}
+	for _, fs in ipairs(aliveSlots) do
+		local sub = bySlot[fs]
+		if not sub or sub.Kind == "Flee" or sub.Kind == "Double" or sub.Kind == "Replace" then
+			return false, "Faltou escolher a a\u{e7}\u{e3}o de um personagem em campo."
+		end
+		local ok, err = self:_ValidateSlotAction(side, fs, sub, reservedSwitch, reservedItems)
+		if not ok then
+			return false, err
+		end
+	end
+	return true
+end
+
+-- Empilha acoes de um lado na fila do turno
+function BattleEngine:_EnqueueSide(queue, side: string, sideAction)
+	if sideAction.Kind == "Flee" then
+		table.insert(queue, {
+			Side = side,
+			FieldSlot = 0,
+			Action = sideAction,
+			Priority = 2,
+			Speed = 0,
+			Tiebreak = self.Rng:NextNumber(),
+		})
+		return
+	end
+	if not self:IsDouble() then
+		local actor = self:ActiveAt(side, 1)
+		if actor and actor.Hp > 0 then
+			local kind = sideAction.Kind
+			table.insert(queue, {
+				Side = side,
+				FieldSlot = 1,
+				Actor = actor,
+				Action = sideAction,
+				Priority = if kind == "Switch" or kind == "Item" then 1 else 0,
+				Speed = DamageCalc.EffectiveStat(actor, "Speed"),
+				Tiebreak = self.Rng:NextNumber(),
+			})
+		end
+		return
+	end
+
+	local bySlot
+	if sideAction.Kind == "Double" then
+		bySlot = mapSlotActions(sideAction, self.SlotsPerSide)
+	else
+		local alive = self:AliveFieldSlots(side)
+		if #alive == 1 then
+			bySlot = { [alive[1]] = sideAction }
+		end
+	end
+	for _, fs in ipairs(self:AliveFieldSlots(side)) do
+		local sub = bySlot and bySlot[fs]
+		local actor = self:ActiveAt(side, fs)
+		if sub and actor and actor.Hp > 0 then
+			local kind = sub.Kind
+			table.insert(queue, {
+				Side = side,
+				FieldSlot = fs,
+				Actor = actor,
+				Action = sub,
+				Priority = if kind == "Switch" or kind == "Item" then 1 else 0,
+				Speed = DamageCalc.EffectiveStat(actor, "Speed"),
+				Tiebreak = self.Rng:NextNumber(),
+			})
+		end
+	end
+end
+
 -- Resolve um turno inteiro. Devolve a lista de eventos, na ordem em que aconteceram.
 -- enemyAction: so no PvP (o outro jogador); sem ela, a IA escolhe.
 -- prefix: eventos que entram antes (ex.: aviso de tempo esgotado)
@@ -341,21 +650,21 @@ function BattleEngine:ResolveTurn(playerAction, enemyAction, prefix)
 	end
 
 	local enemy = self.Sides.Enemy
-	enemyAction = enemyAction or AIController.ChooseAction(
-		self.EnemyAI, self:Active("Enemy"), self:Active("Player"), self.Rng, enemy.Team, enemy.Active
-	)
-
-	-- Ordem (GDD): fuga, troca e item primeiro; depois golpes do mais veloz ao mais lento; empate sorteado
-	local queue = {
-		{ Side = "Player", Action = playerAction },
-		{ Side = "Enemy", Action = enemyAction },
-	}
-	for _, q in ipairs(queue) do
-		local kind = q.Action.Kind
-		q.Priority = if kind == "Flee" then 2 elseif kind == "Switch" or kind == "Item" then 1 else 0
-		q.Speed = DamageCalc.EffectiveStat(self:Active(q.Side), "Speed")
-		q.Tiebreak = self.Rng:NextNumber()
+	if not enemyAction then
+		if self:IsDouble() then
+			enemyAction = AIController.ChooseActionsDouble(self.EnemyAI, enemy, self.Sides.Player, self.Rng)
+		else
+			enemyAction = AIController.ChooseAction(
+				self.EnemyAI, self:Active("Enemy"), self:Active("Player"), self.Rng, enemy.Team, enemy.Active
+			)
+		end
 	end
+
+	-- Ordem (GDD + Pokemon 2x2): fuga, troca e item primeiro; depois golpes do mais veloz ao mais lento; empate sorteado
+	local queue = {}
+	self:_EnqueueSide(queue, "Player", playerAction)
+	self:_EnqueueSide(queue, "Enemy", enemyAction)
+
 	table.sort(queue, function(a, b)
 		if a.Priority ~= b.Priority then
 			return a.Priority > b.Priority
@@ -370,17 +679,20 @@ function BattleEngine:ResolveTurn(playerAction, enemyAction, prefix)
 		if self.Winner then
 			break
 		end
-		-- quem desmaiou antes de agir perde a acao
-		if self:Active(q.Side).Hp > 0 then
-			local kind = q.Action.Kind
-			if kind == "Move" then
-				self:_DoMove(q.Side, q.Action.Index, push)
-			elseif kind == "Switch" then
-				self:_DoSwitch(q.Side, q.Action.Index, push, false)
-			elseif kind == "Item" then
-				self:_DoItem(q.Side, q.Action.ItemId, q.Action.TargetIndex, push)
-			elseif kind == "Flee" then
-				self:_DoFlee(q.Side, push)
+		local kind = q.Action.Kind
+		if kind == "Flee" then
+			self:_DoFlee(q.Side, push)
+		else
+			-- quem desmaiou (ou saiu do slot) antes de agir perde a acao
+			local current = self:ActiveAt(q.Side, q.FieldSlot)
+			if current and current == q.Actor and current.Hp > 0 then
+				if kind == "Move" then
+					self:_DoMove(q.Side, q.FieldSlot, q.Action, push)
+				elseif kind == "Switch" then
+					self:_DoSwitch(q.Side, q.FieldSlot, q.Action.Index, push, false)
+				elseif kind == "Item" then
+					self:_DoItem(q.Side, q.FieldSlot, q.Action.ItemId, q.Action.TargetIndex, push)
+				end
 			end
 		end
 	end
@@ -399,20 +711,51 @@ function BattleEngine:_AfterTurn(push)
 		return
 	end
 	self.Turn += 1
-	-- A maquina escolhe o proximo na hora; no PvP o outro jogador escolhe pela tela
-	if self:Active("Enemy").Hp <= 0 then
-		if self.EnemyHuman then
-			self.PendingReplace.Enemy = true
-		else
-			local enemy = self.Sides.Enemy
-			local index = AIController.ChooseReplacement(self.EnemyAI, enemy.Team, enemy.Active, self:Active("Player"), self.Rng)
-			self:_DoSwitch("Enemy", index, push, true)
+
+	for _, side in ipairs({ "Enemy", "Player" }) do
+		local s = self.Sides[side]
+		local faintedSlots = {}
+		for fs = 1, self.SlotsPerSide do
+			local idx = s.ActiveSlots[fs]
+			if idx and s.Team[idx] and s.Team[idx].Hp <= 0 then
+				table.insert(faintedSlots, fs)
+			end
 		end
+		if #faintedSlots > 0 then
+			local bench = self:BenchAliveIndices(side)
+			if side == "Enemy" and not self.EnemyHuman then
+				-- Maquina escolhe imediatamente quantos substitutos tiver no banco
+				local foe = self:Active("Player")
+				local exclude = {}
+				for _, fs in ipairs(faintedSlots) do
+					local nextIdx = AIController.ChooseReplacement(self.EnemyAI, s.Team, s.ActiveSlots, foe, self.Rng, exclude)
+					if nextIdx then
+						exclude[nextIdx] = true
+						self:_DoSwitch("Enemy", fs, nextIdx, push, true)
+					else
+						s.ActiveSlots[fs] = nil
+						push({ Kind = "ClearSlot", Side = "Enemy", FieldSlot = fs })
+					end
+				end
+			else
+				local needCount = math.min(#faintedSlots, #bench)
+				for i = needCount + 1, #faintedSlots do
+					local emptySlot = faintedSlots[i]
+					s.ActiveSlots[emptySlot] = nil
+					push({ Kind = "ClearSlot", Side = side, FieldSlot = emptySlot })
+				end
+				if needCount > 0 then
+					local pending = {}
+					for i = 1, needCount do
+						table.insert(pending, faintedSlots[i])
+					end
+					self.PendingReplace[side] = pending
+				end
+			end
+		end
+		self:SyncLegacyActive(side)
 	end
-	-- O jogador escolhe o proximo pela tela
-	if self:Active("Player").Hp <= 0 then
-		self.PendingReplace.Player = true
-	end
+
 	self.State = if next(self.PendingReplace) then "WaitingForReplacement" else "WaitingForInput"
 end
 
@@ -438,126 +781,238 @@ end
 
 -- Acao automatica quando o tempo do turno acaba (golpe aleatorio com PP, ou o golpe reserva)
 function BattleEngine:AutoAction(side: string)
+	if self:IsDouble() then
+		return AIController.ChooseActionsDouble("Facil", self.Sides[side], self.Sides[otherSide(side)], self.Rng)
+	end
 	return AIController.ChooseAction("Facil", self:Active(side), self:Active(otherSide(side)), self.Rng)
 end
 
--- Substituicao automatica: o proximo de pe na ordem do time
-function BattleEngine:AutoReplacement(side: string): number?
+-- Substituicao automatica: proximo(s) de pe na ordem do time
+function BattleEngine:AutoReplacement(side: string)
 	local s = self.Sides[side]
-	return AIController.ChooseReplacement("Facil", s.Team, s.Active, self:Active(otherSide(side)), self.Rng)
+	local pending = self.PendingReplace[side]
+	if not self:IsDouble() then
+		return AIController.ChooseReplacement("Facil", s.Team, s.ActiveSlots, self:Active(otherSide(side)), self.Rng)
+	end
+	local list = {}
+	local exclude = {}
+	for _, fs in ipairs(pending or {}) do
+		local idx = AIController.ChooseReplacement("Facil", s.Team, s.ActiveSlots, self:Active(otherSide(side)), self.Rng, exclude)
+		if idx then
+			exclude[idx] = true
+			table.insert(list, { FieldSlot = fs, Index = idx })
+		end
+	end
+	return list
 end
 
--- Escolha do proximo depois de um desmaio (estado WaitingForReplacement)
-function BattleEngine:ResolveReplacement(side: string, index: number)
-	local ok, err = self:ValidateAction(side, { Kind = "Replace", Index = index })
+-- Escolha do(s) proximo(s) depois de um desmaio (estado WaitingForReplacement)
+-- choice pode ser numero (1x1 ou 1 slot pendente) ou lista { { FieldSlot = fs, Index = idx }, ... }
+function BattleEngine:ResolveReplacement(side: string, choice)
+	local pending = self.PendingReplace[side]
+	local action = if typeof(choice) == "number"
+		then { Kind = "Replace", Index = choice }
+		else { Kind = "Replace", Replacements = choice }
+	local ok, err = self:ValidateAction(side, action)
 	assert(ok, err)
+	local list = normalizeReplacements(pending, action)
 	local events = {}
-	self:_DoSwitch(side, index, function(ev)
+	local function push(ev)
 		table.insert(events, ev)
-	end, true)
+	end
+	for _, entry in ipairs(list) do
+		self:_DoSwitch(side, entry.FieldSlot, entry.Index, push, true)
+	end
 	self.PendingReplace[side] = nil
+	self:SyncLegacyActive(side)
 	self.State = if next(self.PendingReplace) then "WaitingForReplacement" else "WaitingForInput"
 	return events
 end
 
 -- Paralisia, sono e congelamento podem impedir o golpe. Retorna true se pode agir.
-function BattleEngine:_CanAct(side: string, actor, push): boolean
+function BattleEngine:_CanAct(side: string, fieldSlot: number, actor, push): boolean
 	if actor.Status == "Sleep" then
-		push({ Kind = "Message", Side = side, Text = actor.Name .. " est\u{e1} dormindo." })
+		push({ Kind = "Message", Side = side, FieldSlot = fieldSlot, Text = actor.Name .. " est\u{e1} dormindo." })
 		return false
 	end
 	if actor.Status == "Freeze" then
 		if self.Rng:NextNumber() < DamageCalc.STATUS.Freeze.ThawChance then
 			actor.Status = nil
-			push({ Kind = "StatusCured", Side = side, Status = "Freeze", Text = actor.Name .. " descongelou!" })
+			push({ Kind = "StatusCured", Side = side, FieldSlot = fieldSlot, Status = "Freeze", Text = actor.Name .. " descongelou!" })
 		else
-			push({ Kind = "Message", Side = side, Text = actor.Name .. " est\u{e1} congelado e n\u{e3}o consegue se mover." })
+			push({ Kind = "Message", Side = side, FieldSlot = fieldSlot, Text = actor.Name .. " est\u{e1} congelado e n\u{e3}o consegue se mover." })
 			return false
 		end
 	end
 	if actor.Status == "Paralysis" and self.Rng:NextNumber() < DamageCalc.STATUS.Paralysis.SkipChance then
-		push({ Kind = "Message", Side = side, Text = actor.Name .. " est\u{e1} paralisado! N\u{e3}o consegue se mover." })
+		push({ Kind = "Message", Side = side, FieldSlot = fieldSlot, Text = actor.Name .. " est\u{e1} paralisado! N\u{e3}o consegue se mover." })
 		return false
 	end
 	return true
 end
 
-function BattleEngine:_DoMove(side: string, index: number, push)
-	local actor = self:Active(side)
-	local targetSide = otherSide(side)
-	local target = self:Active(targetSide)
-	local move, slot = self:GetMove(actor, index)
+-- Resolve a lista de alvos de um golpe no momento da execucao (com redirecionamento Pokemon 2x2)
+function BattleEngine:_ResolveTargets(side: string, fieldSlot: number, move, action)
+	local targetMode = Moves.TargetMode(move)
+	local foeSide = otherSide(side)
+	local targets = {}
 
-	if not self:_CanAct(side, actor, push) then
+	if targetMode == "Self" then
+		local actor = self:ActiveAt(side, fieldSlot)
+		if actor and actor.Hp > 0 then
+			table.insert(targets, { Side = side, FieldSlot = fieldSlot, Battler = actor })
+		end
+		return targets, targetMode
+	elseif targetMode == "AllAllies" then
+		for _, fs in ipairs(self:AliveFieldSlots(side)) do
+			table.insert(targets, { Side = side, FieldSlot = fs, Battler = self:ActiveAt(side, fs) })
+		end
+		return targets, targetMode
+	elseif targetMode == "AllEnemies" then
+		for _, fs in ipairs(self:AliveFieldSlots(foeSide)) do
+			table.insert(targets, { Side = foeSide, FieldSlot = fs, Battler = self:ActiveAt(foeSide, fs) })
+		end
+		return targets, targetMode
+	elseif targetMode == "AllOthers" then
+		for _, fs in ipairs(self:AliveFieldSlots(foeSide)) do
+			table.insert(targets, { Side = foeSide, FieldSlot = fs, Battler = self:ActiveAt(foeSide, fs) })
+		end
+		for _, fs in ipairs(self:AliveFieldSlots(side)) do
+			if fs ~= fieldSlot then
+				table.insert(targets, { Side = side, FieldSlot = fs, Battler = self:ActiveAt(side, fs) })
+			end
+		end
+		return targets, targetMode
+	end
+
+	-- "Single" (padrao)
+	local reqSide = if action.TargetSide == "Ally" then side else foeSide
+	local reqSlot = action.TargetSlot
+	if not reqSlot then
+		local alive = self:AliveFieldSlots(reqSide)
+		reqSlot = alive[1] or 1
+	end
+	local chosen = self:ActiveAt(reqSide, reqSlot)
+	if chosen and chosen.Hp > 0 then
+		table.insert(targets, { Side = reqSide, FieldSlot = reqSlot, Battler = chosen })
+		return targets, targetMode
+	end
+
+	-- Redirecionamento Pokemon 2x2: se o inimigo escolhido ja desmaiou neste turno, redireciona para o outro inimigo de pe
+	if reqSide == foeSide then
+		for _, fs in ipairs(self:AliveFieldSlots(foeSide)) do
+			table.insert(targets, { Side = foeSide, FieldSlot = fs, Battler = self:ActiveAt(foeSide, fs) })
+			break
+		end
+	end
+	return targets, targetMode
+end
+
+function BattleEngine:_DoMove(side: string, fieldSlot: number, action, push)
+	local actor = self:ActiveAt(side, fieldSlot)
+	local move, slot = self:GetMove(actor, action.Index)
+
+	if not self:_CanAct(side, fieldSlot, actor, push) then
 		return -- o PP nao e gasto
 	end
 
 	if slot then
 		slot.Pp -= 1
 	end
+
+	local targets, targetMode = self:_ResolveTargets(side, fieldSlot, move, action)
+	local targetRefs = {}
+	for _, t in ipairs(targets) do
+		table.insert(targetRefs, { Side = t.Side, FieldSlot = t.FieldSlot })
+	end
+
 	push({
 		Kind = "UseMove",
 		Side = side,
+		FieldSlot = fieldSlot,
 		MoveId = move.Id,
 		MoveName = move.Name,
 		MoveType = move.Type,
+		TargetMode = targetMode,
+		TargetSide = targets[1] and targets[1].Side or otherSide(side),
+		TargetFieldSlot = targets[1] and targets[1].FieldSlot or 1,
+		Targets = targetRefs,
 		Text = actor.Name .. " usou " .. move.Name .. "!",
 	})
 
-	local selfOnly = move.Category == "Status" and move.Effect and move.Effect.Target == "Self"
-	if not selfOnly and target.Hp <= 0 then
+	if #targets == 0 then
 		push({ Kind = "Message", Text = "Mas n\u{e3}o havia alvo." })
 		return
 	end
 
-	-- Precisao (golpes de status no proprio usuario nunca erram)
-	if move.Accuracy and not selfOnly then
-		local chance = move.Accuracy * DamageCalc.StageMultiplier(actor.Stages.Accuracy)
-		if self.Rng:NextNumber() * 100 >= chance then
-			push({ Kind = "Miss", Side = side, Text = "Mas errou!" })
-			return
-		end
-	end
+	local isSpread = targetMode == "AllEnemies" or targetMode == "AllOthers"
+	local spreadMult = if isSpread and #targets >= 2 then DamageCalc.SPREAD_MULTIPLIER else 1
+	local multiTarget = #targets > 1
 
-	if move.Category == "Damage" then
-		local result = DamageCalc.Compute(actor, target, move, self.Rng)
-		target.Hp = math.max(0, target.Hp - result.Damage)
-		push({
-			Kind = "Damage",
-			Side = targetSide,
-			Amount = result.Damage,
-			Hp = target.Hp,
-			MaxHp = target.MaxHp,
-			Crit = result.Crit,
-			TypeMultiplier = result.TypeMultiplier,
-			MoveType = move.Type,
-			Text = target.Name .. " perdeu " .. result.Damage .. " de HP.",
-		})
-		if result.Crit then
-			push({ Kind = "Message", Text = "Golpe cr\u{ed}tico!" })
+	for _, t in ipairs(targets) do
+		if self.Winner then
+			break
 		end
-		if result.TypeMultiplier > 1 then
-			push({ Kind = "Message", Text = "\u{c9} super efetivo!" })
-		elseif result.TypeMultiplier < 1 then
-			push({ Kind = "Message", Text = "N\u{e3}o \u{e9} muito efetivo..." })
+		if t.Battler.Hp <= 0 then
+			continue
 		end
-		if target.Hp <= 0 then
-			self:_Faint(targetSide, push)
-			return
+
+		-- Precisao por alvo (golpes de status no proprio usuario nunca erram)
+		if move.Accuracy and targetMode ~= "Self" then
+			local chance = move.Accuracy * DamageCalc.StageMultiplier(actor.Stages.Accuracy)
+			if self.Rng:NextNumber() * 100 >= chance then
+				push({
+					Kind = "Miss",
+					Side = side,
+					FieldSlot = fieldSlot,
+					TargetSide = t.Side,
+					TargetFieldSlot = t.FieldSlot,
+					Text = if multiTarget then t.Battler.Name .. " desviou!" else "Mas errou!",
+				})
+				continue
+			end
 		end
-		if move.Effect then
-			self:_ApplyEffect(side, move.Effect, false, push)
+
+		if move.Category == "Damage" then
+			local result = DamageCalc.Compute(actor, t.Battler, move, self.Rng, spreadMult)
+			t.Battler.Hp = math.max(0, t.Battler.Hp - result.Damage)
+			push({
+				Kind = "Damage",
+				Side = t.Side,
+				FieldSlot = t.FieldSlot,
+				Amount = result.Damage,
+				Hp = t.Battler.Hp,
+				MaxHp = t.Battler.MaxHp,
+				Crit = result.Crit,
+				TypeMultiplier = result.TypeMultiplier,
+				MoveType = move.Type,
+				Spread = spreadMult,
+				Text = t.Battler.Name .. " perdeu " .. result.Damage .. " de HP.",
+			})
+			if result.Crit then
+				push({ Kind = "Message", Text = if multiTarget then "Golpe cr\u{ed}tico em " .. t.Battler.Name .. "!" else "Golpe cr\u{ed}tico!" })
+			end
+			if result.TypeMultiplier > 1 then
+				push({ Kind = "Message", Text = if multiTarget then "\u{c9} super efetivo em " .. t.Battler.Name .. "!" else "\u{c9} super efetivo!" })
+			elseif result.TypeMultiplier < 1 then
+				push({ Kind = "Message", Text = if multiTarget then "N\u{e3}o \u{e9} muito efetivo em " .. t.Battler.Name .. "..." else "N\u{e3}o \u{e9} muito efetivo..." })
+			end
+			if t.Battler.Hp <= 0 then
+				self:_Faint(t.Side, t.FieldSlot, push)
+			elseif move.Effect then
+				self:_ApplyEffect(side, fieldSlot, t.Side, t.FieldSlot, move.Effect, false, push)
+			end
+		else
+			self:_ApplyEffect(side, fieldSlot, t.Side, t.FieldSlot, move.Effect, true, push)
 		end
-	else
-		self:_ApplyEffect(side, move.Effect, true, push)
 	end
 end
 
--- Aplica um status no personagem em campo de um lado. Retorna true se aplicou.
-function BattleEngine:_SetStatus(side: string, status: string, push, isPrimary: boolean?): boolean
+-- Aplica um status em um lutador ativo. Retorna true se aplicou.
+function BattleEngine:_SetStatus(side: string, fieldSlot: number, status: string, push, isPrimary: boolean?): boolean
 	assert(DamageCalc.STATUS[status], "Status desconhecido: " .. tostring(status))
-	local target = self:Active(side)
-	if target.Hp <= 0 then
+	local target = self:ActiveAt(side, fieldSlot)
+	if not target or target.Hp <= 0 then
 		return false
 	end
 	if target.Status then
@@ -571,32 +1026,36 @@ function BattleEngine:_SetStatus(side: string, status: string, push, isPrimary: 
 		local rule = DamageCalc.STATUS.Sleep
 		target.StatusTurns = self.Rng:NextInteger(rule.MinTurns, rule.MaxTurns)
 	end
-	push({ Kind = "Status", Side = side, Status = status, Text = target.Name .. STATUS_TEXT[status] })
+	push({ Kind = "Status", Side = side, FieldSlot = fieldSlot, Status = status, Text = target.Name .. STATUS_TEXT[status] })
 	return true
 end
 
 -- Uso externo (testes, itens e golpes futuros): aplica um status e devolve os eventos
-function BattleEngine:ApplyStatus(side: string, status: string)
+function BattleEngine:ApplyStatus(side: string, status: string, fieldSlot: number?)
 	local events = {}
-	self:_SetStatus(side, status, function(ev)
+	self:_SetStatus(side, fieldSlot or 1, status, function(ev)
 		table.insert(events, ev)
 	end, true)
 	return events
 end
 
 -- Aplica o Effect de um golpe. isPrimary = golpe de status (avisa quando falha).
-function BattleEngine:_ApplyEffect(side: string, effect, isPrimary: boolean, push)
+function BattleEngine:_ApplyEffect(actorSide: string, actorSlot: number, hitSide: string, hitSlot: number, effect, isPrimary: boolean, push)
 	if not effect then
 		return
 	end
 	if self.Rng:NextNumber() * 100 >= (effect.Chance or 100) then
 		return
 	end
-	local targetSide = if effect.Target == "Self" then side else otherSide(side)
-	local target = self:Active(targetSide)
+	local targetSide = if effect.Target == "Self" then actorSide else hitSide
+	local targetSlot = if effect.Target == "Self" then actorSlot else hitSlot
+	local target = self:ActiveAt(targetSide, targetSlot)
+	if not target or target.Hp <= 0 then
+		return
+	end
 
 	if effect.Kind == "Status" then
-		self:_SetStatus(targetSide, effect.Status, push, isPrimary)
+		self:_SetStatus(targetSide, targetSlot, effect.Status, push, isPrimary)
 	elseif effect.Kind == "StatStage" then
 		local before = target.Stages[effect.Stat] or 0
 		local after = math.clamp(before + effect.Stages, DamageCalc.MIN_STAGE, DamageCalc.MAX_STAGE)
@@ -609,6 +1068,7 @@ function BattleEngine:_ApplyEffect(side: string, effect, isPrimary: boolean, pus
 		push({
 			Kind = "StatStage",
 			Side = targetSide,
+			FieldSlot = targetSlot,
 			Stat = effect.Stat,
 			Stage = after,
 			Text = statName .. " de " .. target.Name .. (if effect.Stages > 0 then " aumentou!" else " diminuiu!"),
@@ -616,23 +1076,27 @@ function BattleEngine:_ApplyEffect(side: string, effect, isPrimary: boolean, pus
 	end
 end
 
--- Troca o personagem em campo. Os estagios de quem sai voltam a zero (GDD secao 5).
+-- Troca o personagem em campo de um slot. Os estagios de quem sai voltam a zero (GDD secao 5).
 -- isReplacement = entrada depois de um desmaio (nao gasta turno).
-function BattleEngine:_DoSwitch(side: string, index: number, push, isReplacement: boolean)
+function BattleEngine:_DoSwitch(side: string, fieldSlot: number, index: number, push, isReplacement: boolean)
 	local sideState = self.Sides[side]
-	local outgoing = sideState.Team[sideState.Active]
+	local fromIndex = sideState.ActiveSlots[fieldSlot]
+	local outgoing = fromIndex and sideState.Team[fromIndex]
 	local incoming = sideState.Team[index]
-	outgoing.Stages = freshStages()
-	local fromIndex = sideState.Active
-	sideState.Active = index
+	if outgoing then
+		outgoing.Stages = freshStages()
+	end
+	sideState.ActiveSlots[fieldSlot] = index
+	self:SyncLegacyActive(side)
 	incoming.Participated = true
 
-	-- texto do ponto de vista de quem le (o dono do lado ou o adversario)
-	local ownText = if isReplacement then "Vai, " .. incoming.Name .. "!" else "Volte, " .. outgoing.Name .. "! Vai, " .. incoming.Name .. "!"
-	local foeText = if isReplacement then "O advers\u{e1}rio mandou " .. incoming.Name .. "." else "O advers\u{e1}rio trocou " .. outgoing.Name .. " por " .. incoming.Name .. "."
+	local outName = if outgoing then outgoing.Name else ""
+	local ownText = if isReplacement or not outgoing then "Vai, " .. incoming.Name .. "!" else "Volte, " .. outName .. "! Vai, " .. incoming.Name .. "!"
+	local foeText = if isReplacement or not outgoing then "O advers\u{e1}rio mandou " .. incoming.Name .. "." else "O advers\u{e1}rio trocou " .. outName .. " por " .. incoming.Name .. "."
 	push({
 		Kind = "Switch",
 		Side = side,
+		FieldSlot = fieldSlot,
 		FromIndex = fromIndex,
 		ToIndex = index,
 		Replacement = isReplacement == true,
@@ -643,24 +1107,27 @@ function BattleEngine:_DoSwitch(side: string, index: number, push, isReplacement
 	})
 end
 
--- Item da mochila: gasta o turno do jogador. Pode mirar qualquer membro de pe do time.
-function BattleEngine:_DoItem(side: string, itemId: string, targetIndex: number?, push)
+-- Item da mochila: gasta o turno do slot. Pode mirar qualquer membro do time.
+function BattleEngine:_DoItem(side: string, fieldSlot: number, itemId: string, targetIndex: number?, push)
 	local sideState = self.Sides[side]
-	targetIndex = targetIndex or sideState.Active
+	targetIndex = targetIndex or sideState.ActiveSlots[fieldSlot] or sideState.Active
 	local target = sideState.Team[targetIndex]
+	local targetFieldSlot = self:FieldSlotOf(side, targetIndex)
 	local item = Items.Get(itemId)
 	self.Bag[itemId] -= 1
 	if item.Kind == "Capture" then
-		local foe = self:Active("Enemy")
+		local aliveFoes = self:AliveFieldSlots("Enemy")
+		local foeSlot = aliveFoes[1] or 1
+		local foe = self:ActiveAt("Enemy", foeSlot)
 		local chance = Characters.CaptureChance(foe.Id, foe.Hp, foe.MaxHp, item.SealMultiplier, foe.Status ~= nil)
 		push({ Kind = "Message", Text = "Voc\u{ea} usou " .. item.Name .. "!" })
 		if self.Rng:NextNumber() < chance then
 			self.Winner = "Player"
 			self.EndReason = "Captured"
 			self.Captured = { CharacterId = foe.Id, Level = foe.Level, Genetics = foe.Genetics }
-			push({ Kind = "Capture", Side = "Enemy", Success = true, Chance = chance, Text = foe.Name .. " foi capturado!" })
+			push({ Kind = "Capture", Side = "Enemy", FieldSlot = foeSlot, Success = true, Chance = chance, Text = foe.Name .. " foi capturado!" })
 		else
-			push({ Kind = "Capture", Side = "Enemy", Success = false, Chance = chance, Text = "O selo se rompeu! " .. foe.Name .. " escapou." })
+			push({ Kind = "Capture", Side = "Enemy", FieldSlot = foeSlot, Success = false, Chance = chance, Text = "O selo se rompeu! " .. foe.Name .. " escapou." })
 		end
 		return
 	end
@@ -668,13 +1135,12 @@ function BattleEngine:_DoItem(side: string, itemId: string, targetIndex: number?
 		local old = target.Status
 		target.Status = nil
 		target.StatusTurns = 0
-		push({ Kind = "ItemUsed", Side = side, Slot = targetIndex, ItemId = itemId, Text = "Voc\u{ea} usou " .. item.Name .. ". " .. target.Name .. " est\u{e1} sem status." })
-		if targetIndex == sideState.Active and old then
-			push({ Kind = "StatusCured", Side = side, Status = old })
+		push({ Kind = "ItemUsed", Side = side, Slot = targetIndex, FieldSlot = targetFieldSlot, ItemId = itemId, Text = "Voc\u{ea} usou " .. item.Name .. ". " .. target.Name .. " est\u{e1} sem status." })
+		if targetFieldSlot and old then
+			push({ Kind = "StatusCured", Side = side, FieldSlot = targetFieldSlot, Status = old })
 		end
 		return
 	elseif item.Kind == "RestorePP" then
-		-- o golpe com mais PP faltando
 		local best, missing = nil, 0
 		for _, slot in ipairs(target.Moves) do
 			if slot.MaxPp - slot.Pp > missing then
@@ -686,14 +1152,14 @@ function BattleEngine:_DoItem(side: string, itemId: string, targetIndex: number?
 			gained = math.min(item.Amount, missing)
 			best.Pp += gained
 		end
-		push({ Kind = "ItemUsed", Side = side, Slot = targetIndex, ItemId = itemId, Text = "Voc\u{ea} usou " .. item.Name .. ". " .. (if best then Moves.Get(best.Id).Name .. " recuperou " .. gained .. " de PP." else "Nada aconteceu.") })
+		push({ Kind = "ItemUsed", Side = side, Slot = targetIndex, FieldSlot = targetFieldSlot, ItemId = itemId, Text = "Voc\u{ea} usou " .. item.Name .. ". " .. (if best then Moves.Get(best.Id).Name .. " recuperou " .. gained .. " de PP." else "Nada aconteceu.") })
 		return
 	elseif item.Kind == "Revive" then
 		target.Hp = math.max(1, math.floor(target.MaxHp * item.Percent))
 		target.Status = nil
 		target.StatusTurns = 0
 		target.Stages = freshStages()
-		push({ Kind = "Heal", Side = side, Slot = targetIndex, Active = targetIndex == sideState.Active, Amount = target.Hp, Hp = target.Hp, MaxHp = target.MaxHp, ItemId = itemId, Text = "Voc\u{ea} usou " .. item.Name .. ". " .. target.Name .. " voltou com " .. target.Hp .. " de HP!" })
+		push({ Kind = "Heal", Side = side, Slot = targetIndex, FieldSlot = targetFieldSlot, Active = targetFieldSlot ~= nil, Amount = target.Hp, Hp = target.Hp, MaxHp = target.MaxHp, ItemId = itemId, Text = "Voc\u{ea} usou " .. item.Name .. ". " .. target.Name .. " voltou com " .. target.Hp .. " de HP!" })
 		return
 	end
 	if item.Kind == "HealHP" then
@@ -703,7 +1169,8 @@ function BattleEngine:_DoItem(side: string, itemId: string, targetIndex: number?
 			Kind = "Heal",
 			Side = side,
 			Slot = targetIndex,
-			Active = targetIndex == sideState.Active,
+			FieldSlot = targetFieldSlot,
+			Active = targetFieldSlot ~= nil,
 			Amount = healed,
 			Hp = target.Hp,
 			MaxHp = target.MaxHp,
@@ -727,48 +1194,54 @@ function BattleEngine:_DoFlee(side: string, push)
 	end
 end
 
-function BattleEngine:_Faint(side: string, push)
-	local battler = self:Active(side)
+function BattleEngine:_Faint(side: string, fieldSlot: number, push)
+	local battler = self:ActiveAt(side, fieldSlot)
+	if not battler then
+		return
+	end
 	battler.Status = nil
 	battler.StatusTurns = 0
-	push({ Kind = "Faint", Side = side, Text = battler.Name .. " desmaiou!" })
+	push({ Kind = "Faint", Side = side, FieldSlot = fieldSlot, Text = battler.Name .. " desmaiou!" })
 	if aliveCount(self.Sides[side]) == 0 then
 		self.Winner = otherSide(side)
 		self.EndReason = "Faint"
 	end
 end
 
--- Fim do turno (GDD secao 5): queimadura, veneno e contagem de sono, so de quem esta em campo
+-- Fim do turno (GDD secao 5): queimadura, veneno e contagem de sono, de todos os ativos em campo
 function BattleEngine:_EndOfTurn(push)
 	for _, side in ipairs(SIDES) do
-		local b = self:Active(side)
-		if b.Hp > 0 then
-			local rule = b.Status and DamageCalc.STATUS[b.Status]
-			if rule and rule.TickFraction then
-				local dmg = math.max(1, math.floor(b.MaxHp * rule.TickFraction))
-				b.Hp = math.max(0, b.Hp - dmg)
-				local cause = if b.Status == "Burn" then "da queimadura" else "do veneno"
-				push({
-					Kind = "StatusDamage",
-					Side = side,
-					Status = b.Status,
-					Amount = dmg,
-					Hp = b.Hp,
-					MaxHp = b.MaxHp,
-					Text = b.Name .. " sofreu " .. dmg .. " de dano " .. cause .. ".",
-				})
-				if b.Hp <= 0 then
-					self:_Faint(side, push)
-					if self.Winner then
-						return
+		for fs = 1, self.SlotsPerSide do
+			local b = self:ActiveAt(side, fs)
+			if b and b.Hp > 0 then
+				local rule = b.Status and DamageCalc.STATUS[b.Status]
+				if rule and rule.TickFraction then
+					local dmg = math.max(1, math.floor(b.MaxHp * rule.TickFraction))
+					b.Hp = math.max(0, b.Hp - dmg)
+					local cause = if b.Status == "Burn" then "da queimadura" else "do veneno"
+					push({
+						Kind = "StatusDamage",
+						Side = side,
+						FieldSlot = fs,
+						Status = b.Status,
+						Amount = dmg,
+						Hp = b.Hp,
+						MaxHp = b.MaxHp,
+						Text = b.Name .. " sofreu " .. dmg .. " de dano " .. cause .. ".",
+					})
+					if b.Hp <= 0 then
+						self:_Faint(side, fs, push)
+						if self.Winner then
+							return
+						end
 					end
-				end
-			elseif b.Status == "Sleep" then
-				b.StatusTurns -= 1
-				if b.StatusTurns <= 0 then
-					b.Status = nil
-					b.StatusTurns = 0
-					push({ Kind = "StatusCured", Side = side, Status = "Sleep", Text = b.Name .. " acordou!" })
+				elseif b.Status == "Sleep" then
+					b.StatusTurns -= 1
+					if b.StatusTurns <= 0 then
+						b.Status = nil
+						b.StatusTurns = 0
+						push({ Kind = "StatusCured", Side = side, FieldSlot = fs, Status = "Sleep", Text = b.Name .. " acordou!" })
+					end
 				end
 			end
 		end
@@ -799,6 +1272,7 @@ function BattleEngine:_MemberInfo(b, withMoves: boolean)
 				Type = m.Type,
 				TypeName = TypeChart.DisplayName[m.Type],
 				Category = m.Category,
+				Target = Moves.TargetMode(m),
 				Power = m.Power,
 				Accuracy = m.Accuracy,
 				Pp = slot.Pp,
@@ -811,6 +1285,7 @@ function BattleEngine:_MemberInfo(b, withMoves: boolean)
 end
 
 -- Foto do estado para o cliente (so leitura). view = lado de quem le ("Enemy" no PvP: tudo espelhado)
+-- Arrays sempre densos (0 = slot vazio) para evitar buracos na serializacao de RemoteEvents do Roblox.
 function BattleEngine:Snapshot(view: string?)
 	view = view or "Player"
 	local function sideInfo(side: string)
@@ -819,15 +1294,36 @@ function BattleEngine:Snapshot(view: string?)
 		for i, m in ipairs(s.Team) do
 			team[i] = self:_MemberInfo(m, side == view)
 		end
-		return { Active = s.Active, Team = team }
+		local activeSlots = {}
+		for fs = 1, self.SlotsPerSide do
+			activeSlots[fs] = s.ActiveSlots[fs] or 0
+		end
+		return { Active = s.Active, ActiveSlots = activeSlots, Team = team }
 	end
+	local function struggleSlots(side: string)
+		local out = {}
+		for fs = 1, self.SlotsPerSide do
+			local b = self:ActiveAt(side, fs)
+			out[fs] = b ~= nil and b.Hp > 0 and not hasUsableMove(b)
+		end
+		return out
+	end
+	local function pendingSlots(side: string)
+		local p = self.PendingReplace[side]
+		return if p then table.clone(p) else {}
+	end
+
 	if view == "Enemy" then
 		return {
+			Format = self.Format,
+			SlotsPerSide = self.SlotsPerSide,
 			Turn = self.Turn,
-			State = if self.PendingReplace.Enemy then "WaitingForReplacement" else self.State,
+			State = if self.PendingReplace.Enemy then "WaitingForReplacement" elseif self.State == "WaitingForReplacement" then "WaitingForOpponent" else self.State,
 			Mode = self.Mode,
 			CanFlee = self.CanFlee,
 			MustStruggle = not hasUsableMove(self:Active("Enemy")),
+			MustStruggleSlots = struggleSlots("Enemy"),
+			PendingReplaceSlots = pendingSlots("Enemy"),
 			Player = sideInfo("Enemy"),
 			Enemy = sideInfo("Player"),
 			Bag = {},
@@ -844,11 +1340,15 @@ function BattleEngine:Snapshot(view: string?)
 		return a.Name < b.Name
 	end)
 	return {
+		Format = self.Format,
+		SlotsPerSide = self.SlotsPerSide,
 		Turn = self.Turn,
 		State = if self.State == "WaitingForReplacement" and not self.PendingReplace.Player then "WaitingForOpponent" else self.State,
 		Mode = self.Mode,
 		CanFlee = self.CanFlee,
 		MustStruggle = not hasUsableMove(self:Active("Player")),
+		MustStruggleSlots = struggleSlots("Player"),
+		PendingReplaceSlots = pendingSlots("Player"),
 		Player = sideInfo("Player"),
 		Enemy = sideInfo("Enemy"),
 		Bag = if self.Mode == "PvP" then {} else bag,

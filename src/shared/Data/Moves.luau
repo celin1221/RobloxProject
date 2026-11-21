@@ -17,6 +17,8 @@
 	  Vfx       (opcional) nome do efeito em ReplicatedStorage/Vfx; tocado pelo VfxController no cliente
 	  Timing    (com Anim) instantes dos marcadores Charge, Release e Impact da animacao, em segundos.
 	            O servidor espera ate o Impact para mandar o dano; o cliente usa como reserva se o marcador falhar.
+	  Target    (opcional, usado no 2x2): "Single" (padrao), "AllEnemies" (atinge ambos os adversarios, 0.75x em 2+ alvos),
+	            "AllOthers", "AllAllies" ou "Self".
 	  Signature true na tecnica assinatura do personagem
 ]]
 
@@ -28,6 +30,7 @@ Moves.List = {
 	Investida = { Name = "Investida", Type = "Neutro", Category = "Damage", Power = 40, Accuracy = 100, PP = 30 },
 	BrasaViva = {
 		Name = "Brasa Viva", Type = "Fogo", Category = "Damage", Power = 35, Accuracy = 100, PP = 15,
+		Target = "AllEnemies",
 		Effect = { Kind = "Status", Status = "Burn", Chance = 30, Target = "Target" },
 	},
 	-- O GDD nao define tipo para Postura de Combate; Neutro (o tipo nao afeta golpe de status)
@@ -37,7 +40,7 @@ Moves.List = {
 	},
 
 	-- Raiko
-	Descarga = { Name = "Descarga", Type = "Raio", Category = "Damage", Power = 50, Accuracy = 100, PP = 20 },
+	Descarga = { Name = "Descarga", Type = "Raio", Category = "Damage", Power = 50, Accuracy = 100, PP = 20, Target = "AllEnemies" },
 	SocoDireto = { Name = "Soco Direto", Type = "Neutro", Category = "Damage", Power = 40, Accuracy = 100, PP = 30 },
 	-- Existe para testar a vantagem de tipo (Agua contra Fogo) no prototipo
 	PunhoDeMare = { Name = "Punho de Maré", Type = "Agua", Category = "Damage", Power = 40, Accuracy = 95, PP = 15 },
@@ -50,6 +53,7 @@ Moves.List = {
 	-- Yomogi (Natureza, skill personagem-anime-roblox)
 	GaiolaDeEspinhos = {
 		Name = "Gaiola de Espinhos", Type = "Natureza", Category = "Damage", Power = 50, Accuracy = 100, PP = 20,
+		Target = "AllEnemies",
 		Signature = true, Anim = "GaiolaDeEspinhos", Vfx = "GaiolaDeEspinhos",
 		Timing = { Charge = 0.15, Release = 0.72, Impact = 1.05, Length = 1.5 },
 	},
@@ -79,6 +83,7 @@ Moves.List = {
 	},
 	TudoRoxo = {
 		Name = "Tudo Roxo", Type = "Luz", Category = "Damage", Power = 65, Accuracy = 95, PP = 10,
+		Target = "AllEnemies",
 		Signature = true, CutIn = true, Anim = "TudoRoxo", Vfx = "TudoRoxo",
 		Timing = { Charge = 0.25, Release = 0.95, Impact = 1.45, Length = 2.00 },
 	},
@@ -99,6 +104,7 @@ Moves.List = {
 	},
 	GenkiDama = {
 		Name = "Genki Dama", Type = "Luz", Category = "Damage", Power = 70, Accuracy = 95, PP = 10,
+		Target = "AllEnemies",
 		Signature = true, CutIn = true, Anim = "GenkiDama", Vfx = "GenkiDama", AnimSpeed = 1.35,
 		CutInFocusY = 3.8, CutInFov = 48, CutInBannerY = 0.84,
 		CutInColors = {
@@ -139,6 +145,7 @@ Moves.List = {
 	},
 	CeuETerra = {
 		Name = "Abalo do Céu e da Terra", Type = "Agua", Category = "Damage", Power = 75, Accuracy = 90, PP = 10,
+		Target = "AllEnemies",
 		Signature = true, CutIn = true, Anim = "CeuETerra", Vfx = "CeuETerra", AnimSpeed = 1.45,
 		CutInFocusY = 2.0, CutInFov = 46, CutInBannerY = 0.16,
 		CutInColors = {
@@ -176,6 +183,20 @@ end
 
 function Moves.Get(id: string)
 	return Moves.List[id]
+end
+
+-- Modo de alvo do golpe (usado no 2x2): "Single" | "AllEnemies" | "AllOthers" | "AllAllies" | "Self"
+function Moves.TargetMode(move): string
+	if not move then
+		return "Single"
+	end
+	if move.Target then
+		return move.Target
+	end
+	if move.Category == "Status" and move.Effect and move.Effect.Target == "Self" then
+		return "Self"
+	end
+	return "Single"
 end
 
 return Moves

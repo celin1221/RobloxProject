@@ -27,6 +27,7 @@ local draft = Training.ZeroOres() -- incrementos escolhidos de 20 em 20
 local canvas = UI.screen(gui)
 gui.DisplayOrder = 10
 
+local selectedPortrait, activePortrait
 local win = UI.window(canvas, {
 	Name = "TrainingWindow",
 	Title = "M\u{c1}QUINA DE TREINO",
@@ -34,6 +35,14 @@ local win = UI.window(canvas, {
 	HeaderColor = "teal",
 	Size = UDim2.fromScale(0.94, 0.88),
 	MaxSize = Vector2.new(1080, 580),
+	OnClose = function()
+		if selectedPortrait then
+			selectedPortrait.Clear()
+		end
+		if activePortrait then
+			activePortrait.Clear()
+		end
+	end,
 })
 do
 	local hi = win.Header:FindFirstChild("Icon")
@@ -53,7 +62,7 @@ local function fmtTime(sec: number): string
 	return string.format("%02d:%02d", sec // 60, sec % 60)
 end
 
-local onUpgradeMachine, onStartTraining, onActiveAction, onStepStat
+local onUpgradeMachine, onStartTraining, onActiveAction, onStepStat, onPickCharacter
 
 -- Barra superior: nivel de eficiencia da maquina, estoque dos 4 minerios e botao de upgrade com Gold
 local topBar, topFace = UI.panel(body, { Name = "TopBar", Color = "slot", Corner = 0.2, Shadow = false, ZIndex = 2 })
@@ -75,9 +84,25 @@ local upgradeBtn = UI.button(topFace, { Name = "UpgradeMachine", Text = "", Colo
 -- Area de mensagem
 local msgLabel = UI.text(body, "", { Name = "Message", Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right, ZIndex = 3 })
 
--- Conteudo modo OCIOSO (escolher personagem e configurar crafting de +20 em +20)
+-- Conteudo modo OCIOSO (retrato 3D do personagem escolhido + botao para abrir o seletor Equipe + crafting +20)
 local idleView = UI.frame(body, { Name = "IdleView", ZIndex = 2 })
-local charScroll = UI.scroll(idleView, { Name = "Characters", Gap = 0.02, ZIndex = 2 })
+local charPanel, charFace = UI.panel(idleView, { Name = "SelectedChar", Color = "slot", Corner = 0.08, Shadow = false, ZIndex = 2 })
+selectedPortrait = TeamCards.new(charFace, { Name = "SelectedCard", ZIndex = 3 })
+selectedPortrait.Root.Activated:Connect(function()
+	UI.play("click")
+	if onPickCharacter then
+		onPickCharacter()
+	end
+end)
+local selectedMeta = UI.text(charFace, "", { Name = "SelectedMeta", Role = "Small", Color = "inkSoft", StrokeMult = 0.45, ZIndex = 4 })
+local pickCharBtn = UI.button(charFace, {
+	Name = "PickCharacter", Text = "ESCOLHER", Icon = "team", Layout = "row", Color = "blue", Role = "Small", Corner = 0.25, ZIndex = 4,
+	OnClick = function()
+		if onPickCharacter then
+			onPickCharacter()
+		end
+	end,
+})
 local configPanel, configFace = UI.panel(idleView, { Name = "Config", Color = "slot", Corner = 0.08, Shadow = false, ZIndex = 2 })
 local configTitle = UI.text(configFace, "", { Name = "Title", Role = "Small", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45, ZIndex = 3 })
 local statGrid = UI.frame(configFace, { Name = "StatGrid", ZIndex = 3 })
@@ -126,7 +151,7 @@ end
 
 -- Conteudo modo ATIVO (personagem na capsula)
 local activeView, activeFace = UI.panel(body, { Name = "ActiveView", Color = "slot", Corner = 0.08, Shadow = false, Visible = false, ZIndex = 2 })
-local activePortrait = TeamCards.new(activeFace, { Name = "Portrait", ZIndex = 3 })
+activePortrait = TeamCards.new(activeFace, { Name = "Portrait", ZIndex = 3 })
 activePortrait.Root.Active = false
 activePortrait.Root.Selectable = false
 local activeTitle = UI.text(activeFace, "", { Name = "Title", Role = "Heading", AlignX = Enum.TextXAlignment.Left, ZIndex = 3 })
@@ -146,7 +171,8 @@ local function showMsg(ok: boolean, text: string?)
 end
 
 local function layout()
-	local W, H = body.AbsoluteSize.X, body.AbsoluteSize.Y
+	local rawW, rawH = UI.unscaledSize(body)
+	local W, H = math.floor(rawW + 0.5), math.floor(rawH + 0.5)
 	if W < 20 or H < 20 then
 		return
 	end
@@ -178,13 +204,25 @@ local function layout()
 	activeView.Position = UDim2.fromOffset(0, contentY)
 	activeView.Size = UDim2.fromOffset(W, contentH)
 
-	-- Idle: Lista esquerda + Configurador direita (grade 2x2 de atributos com botoes >= 44 px)
-	local leftW = math.floor(W * 0.34)
+	-- Idle: Retrato 3D + botao Escolher a esquerda | Configurador 2x2 a direita
+	local leftW = math.clamp(math.floor(W * 0.30), 156, 290)
 	local rightW = math.max(160, W - leftW - pad)
-	charScroll.Position = UDim2.fromOffset(0, 0)
-	charScroll.Size = UDim2.fromOffset(leftW, contentH)
+	charPanel.Position = UDim2.fromOffset(0, 0)
+	charPanel.Size = UDim2.fromOffset(leftW, contentH)
 	configPanel.Position = UDim2.fromOffset(leftW + pad, 0)
 	configPanel.Size = UDim2.fromOffset(rightW, contentH)
+
+	local padL = 8
+	local btnH = T.TouchMin
+	local metaH = if contentH < 150 then 16 else 22
+	pickCharBtn.Position = UDim2.fromOffset(padL, contentH - padL - btnH)
+	pickCharBtn.Size = UDim2.fromOffset(math.max(88, leftW - padL * 2), btnH)
+	selectedMeta.Position = UDim2.fromOffset(padL, contentH - padL - btnH - metaH - 4)
+	selectedMeta.Size = UDim2.fromOffset(math.max(88, leftW - padL * 2), metaH)
+	local availCardH = math.max(48, contentH - padL * 2 - btnH - metaH - 10)
+	local cardS = math.clamp(math.min(leftW - padL * 2, availCardH), 48, 168)
+	selectedPortrait.Root.Position = UDim2.fromOffset(math.floor((leftW - cardS) / 2), padL + math.max(0, math.floor((availCardH - cardS) / 2)))
+	selectedPortrait.Root.Size = UDim2.fromOffset(cardS, cardS)
 
 	local cp = 8
 	local cw, ch = rightW - cp * 2, contentH - cp * 2
@@ -375,6 +413,63 @@ local function refreshActiveJob()
 	end
 end
 
+local function isFullyTrained(member): boolean
+	local cur = Genetics.SanitizeTable(member and member.Training)
+	for _, st in ipairs(Training.Stats) do
+		if (cur[st] or 0) + Training.Step <= Training.Max then
+			return false
+		end
+	end
+	return true
+end
+
+onPickCharacter = function()
+	if not profile then
+		return
+	end
+	UI.pickCharacter({
+		Title = "ESCOLHER PARA TREINO",
+		HeaderColor = "teal",
+		Icon = "sparkle",
+		Subtitle = "Escolha quem entrar\u{e1} na C\u{e1}psula de Treino",
+		ActionLabel = "TREINAR ESTE",
+		ActionColor = "teal",
+		ReturnTo = "Training",
+		SelectedUid = selectedUid,
+		GetBadge = function(uid, m, _def, prof)
+			if #prof.Team <= 1 and table.find(prof.Team, uid) ~= nil then
+				return "\u{da}NICO TIME", "red"
+			end
+			if isFullyTrained(m) then
+				return "TRN 100%", "gold"
+			end
+			local trnAvg = math.floor(Genetics.Average(m.Training) + 0.5)
+			if trnAvg > 0 then
+				return string.format("TRN %d%%", trnAvg), "teal"
+			end
+			if table.find(prof.Team, uid) ~= nil then
+				return "NO TIME", "green"
+			end
+			return nil, nil
+		end,
+		IsEligible = function(uid, m, _def, prof)
+			if #prof.Team <= 1 and table.find(prof.Team, uid) ~= nil then
+				return false, "Deixe outro personagem no time primeiro."
+			end
+			if isFullyTrained(m) then
+				return false, "Treino j\u{e1} est\u{e1} em 100%."
+			end
+			return true, nil
+		end,
+		OnPick = function(uid)
+			selectedUid = uid
+			draft = Training.ZeroOres()
+			msgLabel.Text = ""
+			return true, nil, true
+		end,
+	})
+end
+
 refresh = function()
 	if not profile then
 		return
@@ -399,28 +494,30 @@ refresh = function()
 	activeView.Visible = job ~= nil
 
 	if job then
+		selectedPortrait.Clear()
 		refreshActiveJob()
 		return
 	end
+	activePortrait.Clear()
 
-	-- Lista de personagens elegiveis
-	UI.clear(charScroll)
-	local uids = {}
-	for uid in pairs(profile.Collection) do
-		table.insert(uids, uid)
-	end
-	table.sort(uids, function(a, b)
-		local ma, mb = profile.Collection[a], profile.Collection[b]
-		if ma.Level ~= mb.Level then
-			return ma.Level > mb.Level
-		end
-		return a < b
-	end)
+	-- Escolhe um personagem inicial valido se nenhum estiver selecionado
 	if not selectedUid or not profile.Collection[selectedUid] then
-		-- Prefere alguem fora do time ou o ultimo do time para nao travar time unico
+		local uids = {}
+		for uid in pairs(profile.Collection) do
+			table.insert(uids, uid)
+		end
+		table.sort(uids, function(a, b)
+			local ma, mb = profile.Collection[a], profile.Collection[b]
+			if ma.Level ~= mb.Level then
+				return ma.Level > mb.Level
+			end
+			return a < b
+		end)
 		selectedUid = uids[1]
 		for _, uid in ipairs(uids) do
-			if not table.find(profile.Team, uid) or #profile.Team > 1 then
+			local m = profile.Collection[uid]
+			local lone = #profile.Team <= 1 and table.find(profile.Team, uid) ~= nil
+			if not lone and not isFullyTrained(m) then
 				selectedUid = uid
 				break
 			end
@@ -428,45 +525,18 @@ refresh = function()
 		draft = Training.ZeroOres()
 	end
 
-	for i, uid in ipairs(uids) do
-		local m = profile.Collection[uid]
-		local def = Characters.Get(m.CharacterId)
-		if def then
-			local trnAvg = math.floor(Genetics.Average(m.Training) + 0.5)
-			local isSel = uid == selectedUid
-			local onTeam = table.find(profile.Team, uid) ~= nil
-			local btn, face = UI.button(charScroll, {
-				Name = "Char_" .. uid,
-				Color = if isSel then "teal" else "panelAlt",
-				Size = UDim2.fromScale(0.96, 0),
-				Aspect = 4.2,
-				RowMax = 60,
-				LayoutOrder = i,
-				Corner = 0.22,
-				OnClick = function()
-					selectedUid = uid
-					draft = Training.ZeroOres()
-					msgLabel.Text = ""
-					refresh()
-				end,
-			})
-			UI.text(face, def.Name .. "  Nv." .. m.Level, {
-				Name = "Title",
-				Size = UDim2.fromScale(0.68, 0.46),
-				Position = UDim2.fromScale(0.05, 0.06),
-				Role = "Small",
-				AlignX = Enum.TextXAlignment.Left,
-			})
-			UI.text(face, string.format("TRN %d%%%s", trnAvg, if onTeam then " · [TIME]" else ""), {
-				Name = "Sub",
-				Size = UDim2.fromScale(0.9, 0.38),
-				Position = UDim2.fromScale(0.05, 0.54),
-				Role = "Small",
-				Color = "inkSoft",
-				AlignX = Enum.TextXAlignment.Left,
-				StrokeMult = 0.4,
-			})
-		end
+	local selMember = selectedUid and profile.Collection[selectedUid]
+	if selMember then
+		selectedPortrait.Set(selectedUid, selMember)
+		local genAvg = math.floor(Genetics.Average(selMember.Genetics) + 0.5)
+		local trnAvg = math.floor(Genetics.Average(selMember.Training) + 0.5)
+		local onTeam = table.find(profile.Team, selectedUid) ~= nil
+		selectedMeta.Text = string.format("GEN %d%% · TRN %d%%%s", genAvg, trnAvg, if onTeam then " · [TIME]" else "")
+		UI.setText(pickCharBtn, "TROCAR")
+	else
+		selectedPortrait.Clear()
+		selectedMeta.Text = "Nenhum personagem"
+		UI.setText(pickCharBtn, "ESCOLHER")
 	end
 
 	refreshConfig()
@@ -564,8 +634,9 @@ UI.onOpen("Training", function()
 		return
 	end
 	msgLabel.Text = ""
-	refresh()
 	win.Open()
+	layout()
+	refresh()
 	task.defer(layout)
 end)
 

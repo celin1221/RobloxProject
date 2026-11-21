@@ -102,7 +102,7 @@ local function defaultProfile()
 		-- maquina de treinamento (secao 8): nivel (eficiencia) e trabalho ativo na cupula
 		TrainingMachine = { Level = 1, Job = nil },
 		-- configuracoes do jogador (volumes de 0 a 100)
-		Settings = { MusicOn = true, MusicVolume = 50, SfxOn = true, SfxVolume = 80, MapFx = true },
+		Settings = { MusicOn = true, MusicVolume = 50, SfxOn = true, SfxVolume = 80, MapFx = true, CharacterAuras = true },
 		-- Refugio (secao 14): nivel da Forja, contadores, Bau ({ {Id, Qty} }), selvagens pendentes e ultimo surgimento
 		Refuge = { Forja = 1, WildDefeated = 0, Captures = 0, Bau = {}, Pending = {}, LastSpawn = 0, NextId = 1 },
 		CreatedAt = os.time(),

@@ -72,9 +72,18 @@ function CS.applyMapFx()
 	end
 end
 
+function CS.applyCharacterAuras()
+	local on = CS.Current.CharacterAuras ~= false
+	local pg = Players.LocalPlayer and Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	if pg then
+		pg:SetAttribute("CharacterAuras", on)
+	end
+end
+
 local function applyAll()
 	CS.applySound()
 	CS.applyMapFx()
+	CS.applyCharacterAuras()
 	changed:Fire(CS.Current)
 end
 

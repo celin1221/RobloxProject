@@ -1,13 +1,14 @@
 --[[
-	SummonClient (GDD secoes 10 e 13 - Invocacao e Album)
-	- Abre no ProximityPrompt do portal (atributo Portal: "Comum" ou "Premium"). Abas Portal, Album e Repetidos.
-	- Chances sempre visiveis (cor por raridade), barra da garantia, invocacoes gratis.
-	- Portal Premium: banner da semana; escondido onde itens aleatorios pagos sao restritos (atributo PaidRandomRestricted).
-	- Invocacao Rapida: botao Invocar 3 e sem animacao. Sorte em Dobro: chances do Portal Comum em dobro na tela.
-	- Animacao no cliente: o nucleo do portal abre e um raio sobe na cor da raridade (cinza, azul, roxo, dourado);
-	  depois as cartas aparecem uma a uma, com brilho nas raras.
-	- Album (obtidos, variantes, premios por tipo e raridade) e Repetidos (fusao e venda). Tambem abre pelo botao Album do HUD.
-	O sorteio e todo no servidor (SummonService).
+	SummonClient (Invocacao estilo Anime Vanguards + Palco 3D ao vivo + Album + Repetidos)
+	- Abre no ProximityPrompt dos portais (Estrela Comum / Estrela Premium).
+	- Na aba PORTAL: exibe o Palco 3D ao vivo (SummonBannerStage) com cenario tematico por anime
+	  (Todos Comum/Premium, Naruto, One Piece), os 3 personagens principais em poses heroicas
+	  (1 Lendario no centro + 2 Epicos/Destaques nas laterais) e HUD translucido estilo Anime Vanguards
+	  com placas de nome flutuantes sincronizadas em tempo real.
+	- Nas abas ALBUM e REPETIDOS: alterna suavemente para a janela padrao preservando toda a colecao,
+	  premios, fusao e venda de repetidos.
+	- Preserva integralmente: SummonService, PolicyService (PaidRandomRestricted), InvocacaoRapida,
+	  SorteEmDobro, Tickets gratis, SummonBanner semanal, playShowcase, showCards e Announce.
 ]]
 
 local RunService = game:GetService("RunService")
@@ -26,6 +27,8 @@ local Characters = require(Data:WaitForChild("Characters"))
 local Summon = require(Data:WaitForChild("Summon"))
 local TypeChart = require(Data:WaitForChild("TypeChart"))
 local Benefits = require(Data:WaitForChild("Benefits"))
+local StageThemes = require(Data:WaitForChild("SummonStageThemes"))
+local BannerStage = require(ReplicatedStorage:WaitForChild("SummonBannerStage"))
 local UI = require(ReplicatedStorage:WaitForChild("UI"))
 local T = UI.Theme
 local player = Players.LocalPlayer
@@ -33,7 +36,8 @@ local player = Players.LocalPlayer
 local PORTAL = "Comum"
 local portal = Summon.Portals[PORTAL]
 local selectedBannerId = "Todos"
-local bannerName = nil -- destaque da semana (Premium)
+local bannerName = nil -- nome exibido do destaque da semana (Premium)
+local weeklyCharId = nil -- id resolvido para o Palco 3D
 local profile = nil
 local busy = false
 
@@ -50,18 +54,110 @@ local function rarityColor(r)
 	return T.Rarity[r] or Summon.RarityColor[r] or T.Palette.comum
 end
 
+local function resolveCharacterIdByName(nameOrId: string?): string?
+	if not nameOrId or nameOrId == "" then
+		return nil
+	end
+	if Characters.List[nameOrId] then
+		return nameOrId
+	end
+	for id, def in pairs(Characters.List) do
+		if def.Name == nameOrId then
+			return id
+		end
+	end
+	return nil
+end
+
 local canvas = UI.screen(gui)
 gui.DisplayOrder = 9
 
 --------------------------------------------------------------------
--- Janela com abas
+-- Janela principal (controla o ciclo de vida no UI.window + Abas Album/Dupes)
 --------------------------------------------------------------------
-local win = UI.window(canvas, { Name = "SummonWindow", Title = "PORTAL COMUM", Icon = "portal", Size = UDim2.fromScale(0.92, 0.86), Aspect = 1.95 })
-local body = win.Body
-local pages = {}
+local bannerHud: Frame
+local nameplateConn: RBXScriptConnection? = nil
 local currentTab = "Portal"
-local refreshMain, refreshAlbum, refreshDupes
-local selectTab = UI.tabs(body, {
+local refreshMain, refreshAlbum, refreshDupes, refreshSlotNameplates, startNameplateSync
+
+local function stopNameplateSync()
+	if nameplateConn then
+		nameplateConn:Disconnect()
+		nameplateConn = nil
+	end
+end
+
+local savedSiblingGuis: { [ScreenGui]: boolean } = {}
+local function setWorldHudHidden(hide: boolean)
+	pcall(function()
+		local pg = player:FindFirstChildOfClass("PlayerGui")
+		if not pg then
+			return
+		end
+		if hide then
+			for _, gName in ipairs({ "HudGui", "TeamBarGui", "ProximityPrompts" }) do
+				local g = pg:FindFirstChild(gName)
+				if g and g:IsA("ScreenGui") and savedSiblingGuis[g] == nil then
+					savedSiblingGuis[g] = g.Enabled
+					g.Enabled = false
+				end
+			end
+		else
+			for g, wasOn in pairs(savedSiblingGuis) do
+				if g and g.Parent then
+					g.Enabled = wasOn
+				end
+			end
+			table.clear(savedSiblingGuis)
+		end
+	end)
+end
+
+local win = UI.window(canvas, {
+	Name = "SummonWindow",
+	Title = "PORTAL COMUM",
+	Icon = "portal",
+	Size = UDim2.fromScale(0.92, 0.86),
+	Aspect = 1.95,
+	OnClose = function()
+		stopNameplateSync()
+		if bannerHud then
+			bannerHud.Visible = false
+		end
+		BannerStage.Close()
+		setWorldHudHidden(false)
+	end,
+})
+local body = win.Body
+local winScrim = win.Root:FindFirstChild("Scrim")
+local pages = {}
+
+local function syncPortalStageMode()
+	local isPortal = win.IsOpen() and currentTab == "Portal"
+	if isPortal then
+		win.Panel.Visible = false
+		if winScrim then
+			winScrim.Visible = false
+		end
+		setWorldHudHidden(true)
+		bannerHud.Visible = true
+		BannerStage.Open(selectedBannerId, PORTAL, weeklyCharId)
+		if refreshSlotNameplates then refreshSlotNameplates() end
+		if startNameplateSync then startNameplateSync() end
+	else
+		stopNameplateSync()
+		bannerHud.Visible = false
+		BannerStage.Close()
+		setWorldHudHidden(false)
+		win.Panel.Visible = true
+		if winScrim then
+			winScrim.Visible = true
+		end
+	end
+end
+
+local selectTab
+selectTab = UI.tabs(body, {
 	{ Id = "Portal", Text = "PORTAL" },
 	{ Id = "Album", Text = "\u{c1}LBUM" },
 	{ Id = "Dupes", Text = "REPETIDOS" },
@@ -70,6 +166,7 @@ local selectTab = UI.tabs(body, {
 	for name, f in pairs(pages) do
 		f.Visible = name == id
 	end
+	syncPortalStageMode()
 	refreshMain()
 	if id == "Album" then
 		refreshAlbum()
@@ -77,6 +174,7 @@ local selectTab = UI.tabs(body, {
 		refreshDupes()
 	end
 end)
+
 local walletHolder, walletLabel = UI.pill(body, "coin", "gold", { Name = "Wallet", Size = UDim2.fromScale(0.3, 0.095), Position = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(1, 0), Aspect = 3.2, MaxSize = Vector2.new(math.huge, 46) })
 local msg = UI.text(body, "", { Name = "Message", Size = UDim2.fromScale(1, 0.055), Position = UDim2.fromScale(0, 0.945), Role = "Small", Color = "hpLow" })
 
@@ -87,98 +185,214 @@ local function page(name)
 	return f
 end
 
+-- Pagina placeholder na janela padrao (a aba Portal usa o HUD ao vivo bannerHud sobre o Palco 3D)
+page("Portal")
+
 --------------------------------------------------------------------
--- Aba Portal + Paineis de Selecao de Anime
+-- HUD ESTILO ANIME VANGUARDS SOBRE O PALCO 3D AO VIVO (Aba Portal)
 --------------------------------------------------------------------
-local portalPage = page("Portal")
-local topArea = UI.frame(portalPage, { Name = "TopArea", Size = UDim2.fromScale(1, 0.57), Position = UDim2.fromScale(0, 0) })
-local rates, ratesFace = UI.panel(topArea, { Name = "Rates", Size = UDim2.fromScale(0.47, 1), Color = "slot", Corner = 0.07, Shadow = false })
-UI.text(ratesFace, "CHANCES", { Name = "Title", Size = UDim2.fromScale(0.9, 0.11), Position = UDim2.fromScale(0.05, 0.02), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.5 })
-local rateRows = {}
-for i, r in ipairs(Summon.RarityOrder) do
-	local row, rface = UI.panel(ratesFace, { Name = "Rate_" .. r, Size = UDim2.fromScale(0.9, 0.16), Position = UDim2.fromScale(0.05, 0.15 + (i - 1) * 0.18), Color = rarityColor(r), Corner = T.Corner.Pill })
-	local name = UI.text(rface, UI.upper(Summon.RarityName[r]), { Name = "Name", Size = UDim2.fromScale(0.6, 0.74), Position = UDim2.fromScale(0.05, 0.13), Role = "Small", AlignX = Enum.TextXAlignment.Left })
-	local val = UI.text(rface, "", { Name = "Value", Size = UDim2.fromScale(0.36, 0.74), Position = UDim2.fromScale(0.95, 0.13), AnchorPoint = Vector2.new(1, 0), Role = "Small", AlignX = Enum.TextXAlignment.Right })
-	if r == "Lendario" then
-		UI.shine(row)
-	end
-	rateRows[r] = { Name = name, Value = val }
+bannerHud = UI.frame(win.Root, { Name = "BannerStageHUD", Size = UDim2.fromScale(1, 1), Position = UDim2.fromScale(0, 0), Visible = false, ZIndex = 22 })
+
+local function makeGlassCard(parent: Instance, name: string, size: UDim2, pos: UDim2, anchor: Vector2?, cornerPx: number?, zIndex: number?): (Frame, UIStroke)
+	local f = Instance.new("Frame")
+	f.Name = name
+	f.Size = size
+	f.Position = pos
+	f.AnchorPoint = anchor or Vector2.zero
+	f.BackgroundColor3 = Color3.fromRGB(14, 11, 28)
+	f.BackgroundTransparency = 0.22
+	f.BorderSizePixel = 0
+	f.ZIndex = zIndex or 24
+	f.Parent = parent
+
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, cornerPx or 14)
+	c.Parent = f
+
+	local st = Instance.new("UIStroke")
+	st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	st.Color = Color3.fromRGB(108, 86, 178)
+	st.Thickness = 2
+	st.Transparency = 0.12
+	st.Parent = f
+
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(34, 26, 62)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 10, 24)),
+	})
+	g.Parent = f
+	return f, st
 end
-local shinyLabel = UI.text(ratesFace, "\u{2726} Brilhante: " .. pct(Summon.ShinyChance) .. " em toda invoca\u{e7}\u{e3}o", { Name = "Shiny", Size = UDim2.fromScale(0.9, 0.095), Position = UDim2.fromScale(0.05, 0.885), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45 })
 
-local side = UI.frame(topArea, { Name = "Actions", Size = UDim2.fromScale(0.5, 1), Position = UDim2.fromScale(0.5, 0) })
-local bannerLabel = UI.text(side, "", { Name = "Banner", Size = UDim2.fromScale(1, 0.12), Position = UDim2.fromScale(0, 0), Role = "Small", Color = "lendario", AlignX = Enum.TextXAlignment.Left })
-UI.text(side, "GARANTIA DE LEND\u{c1}RIO", { Name = "PityTitle", Size = UDim2.fromScale(0.75, 0.11), Position = UDim2.fromScale(0, 0.13), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45 })
-local pityValue = UI.text(side, "", { Name = "PityValue", Size = UDim2.fromScale(0.25, 0.11), Position = UDim2.fromScale(1, 0.13), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "lendario", AlignX = Enum.TextXAlignment.Right })
-local pityBar = UI.bar(side, { Name = "Pity", Size = UDim2.fromScale(1, 0.09), Position = UDim2.fromScale(0, 0.25), FillColor = "lendario", Value = 0 })
-local freeHolder, freeFace = UI.panel(side, { Name = "Free", Size = UDim2.fromScale(1, 0.14), Position = UDim2.fromScale(0, 0.37), Color = "slot", Corner = T.Corner.Pill, Shadow = false })
-UI.icon(freeHolder, "ticket", { Size = UDim2.fromScale(0.14, 1.25), Position = UDim2.fromScale(0.02, 0.5), AnchorPoint = Vector2.new(0, 0.5), ZIndex = 3 })
-local freeLabel = UI.text(freeFace, "", { Name = "Text", Size = UDim2.fromScale(0.78, 0.72), Position = UDim2.fromScale(0.18, 0.14), Role = "Small", AlignX = Enum.TextXAlignment.Left })
+-- Flash suave ao trocar de banner de anime
+local swapFlash = Instance.new("Frame")
+swapFlash.Name = "SwapFlash"
+swapFlash.Size = UDim2.fromScale(3, 3)
+swapFlash.Position = UDim2.fromScale(-1, -1)
+swapFlash.BackgroundColor3 = Color3.fromRGB(255, 224, 130)
+swapFlash.BackgroundTransparency = 1
+swapFlash.BorderSizePixel = 0
+swapFlash.ZIndex = 36
+swapFlash.Parent = bannerHud
 
--- botoes de invocar (altura generosa para toque >= 44 px ate em celulares pequenos)
-local function summonButton(name, x, w)
-	local b, face = UI.button(side, { Name = name, Color = "green", Size = UDim2.fromScale(w, 0.44), Position = UDim2.fromScale(x, 0.55), Corner = 0.22, Sound = false })
-	UI.text(face, "", { Name = "Title", Size = UDim2.fromScale(0.9, 0.38), Position = UDim2.fromScale(0.05, 0.08), Role = "Body" })
-	local price = UI.frame(face, { Name = "Price", Size = UDim2.fromScale(0.9, 0.36), Position = UDim2.fromScale(0.05, 0.54) })
-	local pl = Instance.new("UIListLayout")
-	pl.FillDirection = Enum.FillDirection.Horizontal
-	pl.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	pl.VerticalAlignment = Enum.VerticalAlignment.Center
-	pl.Padding = UDim.new(0.04, 0)
-	pl.SortOrder = Enum.SortOrder.LayoutOrder
-	pl.Parent = price
-	UI.icon(price, "coin", { Name = "Icon", Size = UDim2.fromScale(0.3, 1), LayoutOrder = 1 })
-	local t = UI.text(price, "", { Name = "Value", Size = UDim2.fromScale(0.6, 1), Role = "Body", AlignX = Enum.TextXAlignment.Left, LayoutOrder = 2 })
-	t.AutomaticSize = Enum.AutomaticSize.None
-	return b
+local function pulseSwapFlash(col: Color3)
+	swapFlash.BackgroundColor3 = col:Lerp(Color3.new(1, 1, 1), 0.35)
+	swapFlash.BackgroundTransparency = 0.66
+	TweenService:Create(swapFlash, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 1,
+	}):Play()
 end
-local one = summonButton("Summon1", 0, 0.48)
-local three = summonButton("Summon3", 0.52, 0.48)
-three.Visible = false
-local ten = summonButton("Summon10", 0.52, 0.48)
 
--- Faixa inferior com paineis de selecao de anime (estilo banner ilustrado)
-local bannerStrip = UI.frame(portalPage, { Name = "BannerStrip", Size = UDim2.fromScale(1, 0.40), Position = UDim2.fromScale(0, 0.60) })
-UI.text(bannerStrip, "ESCOLHER ANIME / ESTRELA", {
+-- === 1. BARRA SUPERIOR (Titulo do Portal/Anime + Abas + Carteira + Fechar) ===
+local topBar = UI.frame(bannerHud, { Name = "TopBar", Size = UDim2.fromScale(0.96, 0.095), Position = UDim2.fromScale(0.02, 0.016), ZIndex = 25 })
+
+local titleCard, titleCardStroke = makeGlassCard(topBar, "TitleCard", UDim2.fromScale(0.31, 1), UDim2.fromScale(0, 0), Vector2.zero, 14, 26)
+local titleAccentBar = Instance.new("Frame")
+titleAccentBar.Name = "AccentBar"
+titleAccentBar.Size = UDim2.new(0, 6, 0.72, 0)
+titleAccentBar.Position = UDim2.new(0, 10, 0.5, 0)
+titleAccentBar.AnchorPoint = Vector2.new(0, 0.5)
+titleAccentBar.BackgroundColor3 = T.Palette.gold
+titleAccentBar.BorderSizePixel = 0
+titleAccentBar.ZIndex = 27
+titleAccentBar.Parent = titleCard
+do
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(1, 0)
+	c.Parent = titleAccentBar
+end
+local hudTitleLabel = UI.text(titleCard, "PORTAL COMUM", {
 	Name = "Title",
-	Size = UDim2.fromScale(0.38, 0.19),
-	Position = UDim2.fromScale(0, 0),
-	Role = "Small",
-	Color = "inkSoft",
+	Size = UDim2.new(1, -28, 0.54, 0),
+	Position = UDim2.new(0, 24, 0.06, 0),
+	Role = "Heading",
 	AlignX = Enum.TextXAlignment.Left,
-	StrokeMult = 0.45,
+	ZIndex = 27,
 })
-local bannerPoolLabel = UI.text(bannerStrip, "", {
-	Name = "PoolInfo",
-	Size = UDim2.fromScale(0.62, 0.19),
-	Position = UDim2.fromScale(1, 0),
-	AnchorPoint = Vector2.new(1, 0),
+local hudTaglineLabel = UI.text(titleCard, "TODOS OS ANIMES", {
+	Name = "Tagline",
+	Size = UDim2.new(1, -28, 0.36, 0),
+	Position = UDim2.new(0, 24, 0.58, 0),
 	Role = "Small",
 	Color = "gold",
-	AlignX = Enum.TextXAlignment.Right,
+	AlignX = Enum.TextXAlignment.Left,
 	StrokeMult = 0.45,
+	ZIndex = 27,
 })
-local bannersRow = UI.frame(bannerStrip, { Name = "BannersRow", Size = UDim2.fromScale(1, 0.78), Position = UDim2.fromScale(0, 0.22) })
+
+-- Abas centrais (PORTAL / ALBUM / REPETIDOS)
+local hudTabsBox = UI.frame(topBar, { Name = "NavTabs", Size = UDim2.fromScale(0.32, 0.88), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 26 })
+do
+	local hl = Instance.new("UIListLayout")
+	hl.FillDirection = Enum.FillDirection.Horizontal
+	hl.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	hl.VerticalAlignment = Enum.VerticalAlignment.Center
+	hl.Padding = UDim.new(0.025, 0)
+	hl.SortOrder = Enum.SortOrder.LayoutOrder
+	hl.Parent = hudTabsBox
+end
+local hudNavTabs = {
+	{ Id = "Portal", Text = "PORTAL", Color = "lendario" },
+	{ Id = "Album", Text = "\u{c1}LBUM", Color = "slot" },
+	{ Id = "Dupes", Text = "REPETIDOS", Color = "slot" },
+}
+for i, def in ipairs(hudNavTabs) do
+	local tb = UI.button(hudTabsBox, {
+		Name = "HudTab_" .. def.Id,
+		Text = def.Text,
+		Color = def.Color,
+		Size = UDim2.fromScale(0.31, 0.92),
+		Role = "Small",
+		Corner = 0.28,
+		LayoutOrder = i,
+		ZIndex = 27,
+		OnClick = function()
+			if busy then
+				return
+			end
+			selectTab(def.Id)
+		end,
+	})
+	local sc = Instance.new("UISizeConstraint")
+	sc.MinSize = Vector2.new(56, 40)
+	sc.Parent = tb
+end
+
+-- Carteira + Botao Fechar (direita)
+local hudRightTop = UI.frame(topBar, { Name = "RightTop", Size = UDim2.fromScale(0.28, 0.9), Position = UDim2.fromScale(1, 0.5), AnchorPoint = Vector2.new(1, 0.5), ZIndex = 26 })
+local hudWalletHolder, hudWalletLabel = UI.pill(hudRightTop, "coin", "gold", {
+	Name = "HudWallet",
+	Size = UDim2.fromScale(0.72, 0.90),
+	Position = UDim2.fromScale(0.76, 0.5),
+	AnchorPoint = Vector2.new(1, 0.5),
+	Aspect = 3.2,
+	MaxSize = Vector2.new(230, 46),
+	ZIndex = 27,
+})
+local hudCloseBtn = UI.button(hudRightTop, {
+	Name = "HudClose",
+	Icon = "close",
+	Color = "red",
+	Size = UDim2.fromScale(0.20, 0.96),
+	Position = UDim2.fromScale(1, 0.5),
+	AnchorPoint = Vector2.new(1, 0.5),
+	Aspect = 1,
+	Corner = 0.28,
+	ZIndex = 28,
+	Sound = "close",
+	OnClick = function()
+		if not busy then
+			win.Close()
+		end
+	end,
+})
+do
+	local sc = Instance.new("UISizeConstraint")
+	sc.MinSize = Vector2.new(44, 44)
+	sc.Parent = hudCloseBtn
+end
+
+-- === 2. TRILHO LATERAL ESQUERDO: SELECAO DE BANNER POR ANIME (estilo Anime Vanguards) ===
+local leftRail, leftRailStroke = makeGlassCard(bannerHud, "BannerRail", UDim2.fromScale(0.168, 0.61), UDim2.fromScale(0.018, 0.145), Vector2.zero, 16, 25)
+UI.text(leftRail, "BANNERS", {
+	Name = "Header",
+	Size = UDim2.fromScale(0.9, 0.08),
+	Position = UDim2.fromScale(0.05, 0.025),
+	Role = "Small",
+	Color = "gold",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.45,
+	ZIndex = 26,
+})
+local bannersList = UI.frame(leftRail, { Name = "BannersList", Size = UDim2.fromScale(0.90, 0.86), Position = UDim2.fromScale(0.05, 0.115), ZIndex = 26 })
+do
+	local vl = Instance.new("UIListLayout")
+	vl.FillDirection = Enum.FillDirection.Vertical
+	vl.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	vl.VerticalAlignment = Enum.VerticalAlignment.Top
+	vl.Padding = UDim.new(0.032, 0)
+	vl.SortOrder = Enum.SortOrder.LayoutOrder
+	vl.Parent = bannersList
+end
 
 local bannerButtons = {}
-local bannerCount = #Summon.BannerOrder
-local bannerGap = 0.018
-local bannerW = (1 - bannerGap * math.max(0, bannerCount - 1)) / math.max(1, bannerCount)
+local bannerCount = math.max(1, #Summon.BannerOrder)
+local bannerBtnH = math.min(0.30, (1 - 0.032 * math.max(0, bannerCount - 1)) / bannerCount)
 
 local function updateBannerSelection()
-	local activeCfg = Summon.GetBanner(selectedBannerId)
-	bannerPoolLabel.Text = activeCfg.Subtitle or activeCfg.Name
 	for id, entry in pairs(bannerButtons) do
 		local isSel = id == selectedBannerId
 		local accent = entry.Config.Accent or T.Palette.gold
-		entry.Stroke.Color = if isSel then accent:Lerp(Color3.new(1, 1, 1), 0.35) else Color3.fromRGB(48, 38, 86)
+		entry.Stroke.Color = if isSel then accent:Lerp(Color3.new(1, 1, 1), 0.35) else Color3.fromRGB(64, 52, 112)
 		entry.Stroke.Thickness = if isSel then 3 else 1.5
-		entry.Scale.Scale = if isSel then 1.02 else 0.98
+		entry.Scale.Scale = if isSel then 1.02 else 0.97
 		entry.ActiveTag.Visible = isSel
 		entry.ShadeGrad.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, if isSel then 0.25 else 0.45),
-			NumberSequenceKeypoint.new(0.55, if isSel then 0.38 else 0.56),
-			NumberSequenceKeypoint.new(1, 0.14),
+			NumberSequenceKeypoint.new(0, if isSel then 0.22 else 0.48),
+			NumberSequenceKeypoint.new(0.55, if isSel then 0.36 else 0.62),
+			NumberSequenceKeypoint.new(1, 0.12),
 		})
 	end
 end
@@ -186,6 +400,10 @@ end
 local function fetchBannerFeatured()
 	if not portal.Banner then
 		bannerName = nil
+		weeklyCharId = nil
+		if win.IsOpen() and currentTab == "Portal" then
+			BannerStage.SetBanner(selectedBannerId, PORTAL, nil)
+		end
 		refreshMain()
 		return
 	end
@@ -197,6 +415,10 @@ local function fetchBannerFeatured()
 		end)
 		if ok and PORTAL == curPortal and selectedBannerId == curBanner then
 			bannerName = name
+			weeklyCharId = resolveCharacterIdByName(name)
+			if win.IsOpen() and currentTab == "Portal" then
+				BannerStage.SetBanner(selectedBannerId, PORTAL, weeklyCharId)
+			end
 			refreshMain()
 		end
 	end)
@@ -204,25 +426,24 @@ end
 
 for idx, bannerId in ipairs(Summon.BannerOrder) do
 	local cfg = Summon.Banners[bannerId]
-	local x = (idx - 1) * (bannerW + bannerGap)
 	local btn = Instance.new("TextButton")
-	btn.Name = "BannerPanel_" .. bannerId
+	btn.Name = "BannerTab_" .. bannerId
 	btn.Text = ""
 	btn.AutoButtonColor = false
 	btn.BackgroundColor3 = Color3.fromRGB(22, 16, 48)
 	btn.BorderSizePixel = 0
-	btn.Size = UDim2.fromScale(bannerW, 1)
-	btn.Position = UDim2.fromScale(x, 0)
+	btn.Size = UDim2.fromScale(1, bannerBtnH)
 	btn.ClipsDescendants = true
-	btn.ZIndex = 2
-	btn.Parent = bannersRow
+	btn.LayoutOrder = idx
+	btn.ZIndex = 27
+	btn.Parent = bannersList
 
 	local minTouch = Instance.new("UISizeConstraint")
-	minTouch.MinSize = Vector2.new(44, 44)
+	minTouch.MinSize = Vector2.new(44, 52)
 	minTouch.Parent = btn
 
 	local bCorner = Instance.new("UICorner")
-	bCorner.CornerRadius = UDim.new(0.14, 0)
+	bCorner.CornerRadius = UDim.new(0, 12)
 	bCorner.Parent = btn
 
 	local bScale = Instance.new("UIScale")
@@ -230,7 +451,7 @@ for idx, bannerId in ipairs(Summon.BannerOrder) do
 
 	local bStroke = Instance.new("UIStroke")
 	bStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	bStroke.Color = Color3.fromRGB(48, 38, 86)
+	bStroke.Color = Color3.fromRGB(64, 52, 112)
 	bStroke.Thickness = 1.5
 	bStroke.Parent = btn
 
@@ -240,7 +461,7 @@ for idx, bannerId in ipairs(Summon.BannerOrder) do
 	art.Image = "rbxassetid://" .. tostring(cfg.ImageId)
 	art.ScaleType = Enum.ScaleType.Crop
 	art.Size = UDim2.fromScale(1, 1)
-	art.ZIndex = 2
+	art.ZIndex = 27
 	art.Parent = btn
 
 	local shade = Instance.new("Frame")
@@ -248,33 +469,33 @@ for idx, bannerId in ipairs(Summon.BannerOrder) do
 	shade.Size = UDim2.fromScale(1, 1)
 	shade.BackgroundColor3 = Color3.fromRGB(12, 8, 28)
 	shade.BorderSizePixel = 0
-	shade.ZIndex = 3
+	shade.ZIndex = 28
 	shade.Parent = btn
 	local shadeGrad = Instance.new("UIGradient")
 	shadeGrad.Rotation = 90
 	shadeGrad.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.35),
-		NumberSequenceKeypoint.new(0.55, 0.45),
+		NumberSequenceKeypoint.new(0.55, 0.48),
 		NumberSequenceKeypoint.new(1, 0.14),
 	})
 	shadeGrad.Parent = shade
 
 	local activePill, activeFace = UI.panel(btn, {
 		Name = "SelectedTag",
-		Size = UDim2.fromScale(0.38, 0.25),
-		Position = UDim2.fromScale(0.96, 0.08),
+		Size = UDim2.fromScale(0.48, 0.27),
+		Position = UDim2.fromScale(0.95, 0.08),
 		AnchorPoint = Vector2.new(1, 0),
 		Color = cfg.Accent or "gold",
 		Corner = T.Corner.Pill,
 		Shadow = false,
 		Visible = false,
-		ZIndex = 5,
+		ZIndex = 30,
 	})
-	UI.text(activeFace, "\u{2605} ATIVO", { Name = "Label", Size = UDim2.fromScale(0.92, 0.8), Position = UDim2.fromScale(0.04, 0.1), Role = "Small", StrokeMult = 0.45, ZIndex = 6 })
+	UI.text(activeFace, "\u{2605} ATIVO", { Name = "Label", Size = UDim2.fromScale(0.92, 0.8), Position = UDim2.fromScale(0.04, 0.1), Role = "Small", StrokeMult = 0.45, ZIndex = 31 })
 
-	local titleBar = UI.frame(btn, { Name = "BottomRow", Size = UDim2.fromScale(0.92, 0.34), Position = UDim2.fromScale(0.04, 0.62), ZIndex = 5 })
-	UI.icon(titleBar, cfg.Icon or "star", { Name = "Icon", Size = UDim2.fromScale(0.18, 0.9), Position = UDim2.fromScale(0, 0.05), DominantAxis = Enum.DominantAxis.Height, ZIndex = 6 })
-	UI.text(titleBar, cfg.Short or cfg.Name, { Name = "Name", Size = UDim2.fromScale(0.80, 0.9), Position = UDim2.fromScale(0.19, 0.05), Role = "Body", AlignX = Enum.TextXAlignment.Left, ZIndex = 6 })
+	local titleRow = UI.frame(btn, { Name = "BottomRow", Size = UDim2.fromScale(0.92, 0.38), Position = UDim2.fromScale(0.04, 0.58), ZIndex = 30 })
+	UI.icon(titleRow, cfg.Icon or "star", { Name = "Icon", Size = UDim2.fromScale(0.22, 0.88), Position = UDim2.fromScale(0, 0.06), DominantAxis = Enum.DominantAxis.Height, ZIndex = 31 })
+	UI.text(titleRow, UI.upper(cfg.Short or cfg.Name), { Name = "Name", Size = UDim2.fromScale(0.75, 0.9), Position = UDim2.fromScale(0.24, 0.05), Role = "Small", AlignX = Enum.TextXAlignment.Left, ZIndex = 31 })
 
 	btn.Activated:Connect(function()
 		if busy or selectedBannerId == bannerId then
@@ -283,6 +504,11 @@ for idx, bannerId in ipairs(Summon.BannerOrder) do
 		selectedBannerId = bannerId
 		UI.play("click")
 		updateBannerSelection()
+		local th = StageThemes.GetTheme(selectedBannerId, PORTAL)
+		pulseSwapFlash(th.Primary)
+		if win.IsOpen() and currentTab == "Portal" then
+			BannerStage.SetBanner(selectedBannerId, PORTAL, nil)
+		end
 		refreshMain()
 		fetchBannerFeatured()
 	end)
@@ -298,6 +524,285 @@ for idx, bannerId in ipairs(Summon.BannerOrder) do
 end
 updateBannerSelection()
 
+-- === 3. PAINEL LATERAL DIREITO COMPACTO: CHANCES + DESTAQUE SEMANAL + TICKETS ===
+local rightRail, rightRailStroke = makeGlassCard(bannerHud, "RatesRail", UDim2.fromScale(0.175, 0.56), UDim2.fromScale(0.982, 0.145), Vector2.new(1, 0), 16, 25)
+UI.text(rightRail, "CHANCES", {
+	Name = "Header",
+	Size = UDim2.fromScale(0.9, 0.09),
+	Position = UDim2.fromScale(0.05, 0.025),
+	Role = "Small",
+	Color = "gold",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.45,
+	ZIndex = 26,
+})
+local rateRows = {}
+for i, r in ipairs(Summon.RarityOrder) do
+	local row, rface = UI.panel(rightRail, {
+		Name = "Rate_" .. r,
+		Size = UDim2.fromScale(0.90, 0.125),
+		Position = UDim2.fromScale(0.05, 0.125 + (i - 1) * 0.142),
+		Color = rarityColor(r),
+		Corner = T.Corner.Pill,
+		Shadow = false,
+		ZIndex = 26,
+	})
+	local nameLbl = UI.text(rface, UI.upper(Summon.RarityName[r]), { Name = "Name", Size = UDim2.fromScale(0.58, 0.78), Position = UDim2.fromScale(0.06, 0.11), Role = "Small", AlignX = Enum.TextXAlignment.Left, ZIndex = 27 })
+	local valLbl = UI.text(rface, "", { Name = "Value", Size = UDim2.fromScale(0.36, 0.78), Position = UDim2.fromScale(0.94, 0.11), AnchorPoint = Vector2.new(1, 0), Role = "Small", AlignX = Enum.TextXAlignment.Right, ZIndex = 27 })
+	if r == "Lendario" then
+		UI.shine(row)
+	end
+	rateRows[r] = { Name = nameLbl, Value = valLbl }
+end
+
+UI.text(rightRail, "\u{2726} Brilhante: " .. pct(Summon.ShinyChance), {
+	Name = "Shiny",
+	Size = UDim2.fromScale(0.90, 0.075),
+	Position = UDim2.fromScale(0.05, 0.705),
+	Role = "Small",
+	Color = "gold",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.45,
+	ZIndex = 26,
+})
+
+local bannerLabel = UI.text(rightRail, "", {
+	Name = "WeeklyFeatured",
+	Size = UDim2.fromScale(0.90, 0.095),
+	Position = UDim2.fromScale(0.05, 0.785),
+	Role = "Small",
+	Color = "lendario",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.45,
+	ZIndex = 26,
+})
+
+local freeHolder, freeFace = UI.panel(rightRail, {
+	Name = "FreeTickets",
+	Size = UDim2.fromScale(0.90, 0.105),
+	Position = UDim2.fromScale(0.05, 0.88),
+	Color = "green",
+	Corner = T.Corner.Pill,
+	Shadow = false,
+	Visible = false,
+	ZIndex = 26,
+})
+UI.icon(freeHolder, "ticket", { Size = UDim2.fromScale(0.20, 1.15), Position = UDim2.fromScale(0.04, 0.5), AnchorPoint = Vector2.new(0, 0.5), ZIndex = 28 })
+local freeLabel = UI.text(freeFace, "", { Name = "Text", Size = UDim2.fromScale(0.74, 0.8), Position = UDim2.fromScale(0.24, 0.1), Role = "Small", AlignX = Enum.TextXAlignment.Left, ZIndex = 28 })
+
+-- === 4. PLACAS DE NOME FLUTUANTES DOS 3 PERSONAGENS DO PALCO ===
+local nameplatesLayer = UI.frame(bannerHud, { Name = "Nameplates", Size = UDim2.fromScale(1, 1), ZIndex = 24 })
+local slotCards = {}
+for i = 1, 3 do
+	local isHero = (i == 2)
+	local w = if isHero then 0.175 else 0.145
+	local h = if isHero then 0.098 else 0.084
+	local defaultX = if i == 1 then 0.30 elseif i == 2 then 0.50 else 0.70
+	local defaultY = if isHero then 0.675 else 0.695
+
+	local card, stroke = makeGlassCard(nameplatesLayer, "SlotPlate_" .. i, UDim2.fromScale(w, h), UDim2.fromScale(defaultX, defaultY), Vector2.new(0.5, 0.2), 12, if isHero then 26 else 25)
+	card.BackgroundTransparency = 0.16
+
+	local topStripe = Instance.new("Frame")
+	topStripe.Name = "RarityBar"
+	topStripe.Size = UDim2.new(0.76, 0, 0, 4)
+	topStripe.Position = UDim2.new(0.5, 0, 0, 4)
+	topStripe.AnchorPoint = Vector2.new(0.5, 0)
+	topStripe.BorderSizePixel = 0
+	topStripe.ZIndex = 27
+	topStripe.Parent = card
+	do
+		local rc = Instance.new("UICorner")
+		rc.CornerRadius = UDim.new(1, 0)
+		rc.Parent = topStripe
+	end
+
+	-- Selo dourado flutuante acima da placa do Lendario Central
+	local crownPill, crownText = nil, nil
+	if isHero then
+		local cp, cface = UI.panel(card, {
+			Name = "HeroCrown",
+			Size = UDim2.fromScale(0.76, 0.34),
+			Position = UDim2.fromScale(0.5, -0.06),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Color = "lendario",
+			Corner = T.Corner.Pill,
+			Shadow = false,
+			ZIndex = 29,
+		})
+		crownPill = cp
+		crownText = UI.text(cface, "\u{2605} DESTAQUE PRINCIPAL", {
+			Name = "Txt",
+			Size = UDim2.fromScale(0.94, 0.84),
+			Position = UDim2.fromScale(0.03, 0.08),
+			Role = "Small",
+			StrokeMult = 0.45,
+			ZIndex = 30,
+		})
+	end
+
+	local nameLbl = UI.text(card, "", {
+		Name = "CharName",
+		Size = UDim2.fromScale(0.92, 0.46),
+		Position = UDim2.fromScale(0.04, if isHero then 0.22 else 0.14),
+		Role = if isHero then "Heading" else "Body",
+		ZIndex = 27,
+	})
+	local metaLbl = UI.text(card, "", {
+		Name = "CharMeta",
+		Size = UDim2.fromScale(0.92, 0.30),
+		Position = UDim2.fromScale(0.04, if isHero then 0.67 else 0.62),
+		Role = "Small",
+		Color = "gold",
+		StrokeMult = 0.45,
+		ZIndex = 27,
+	})
+
+	slotCards[i] = {
+		Card = card,
+		Stroke = stroke,
+		TopStripe = topStripe,
+		CrownPill = crownPill,
+		CrownText = crownText,
+		NameLabel = nameLbl,
+		MetaLabel = metaLbl,
+		DefaultX = defaultX,
+		DefaultY = defaultY,
+		IsHero = isHero,
+	}
+end
+
+refreshSlotNameplates = function()
+	local featured = BannerStage.GetFeatured()
+	if #featured == 0 then
+		featured = StageThemes.ResolveFeatured(selectedBannerId, PORTAL, weeklyCharId)
+	end
+	for i = 1, 3 do
+		local sc = slotCards[i]
+		local pick = featured[i]
+		if pick and pick.Def then
+			sc.Card.Visible = true
+			local rInfo = StageThemes.RarityColors[pick.Def.Rarity] or StageThemes.RarityColors.Epico
+			sc.Stroke.Color = rInfo.Main
+			sc.Stroke.Thickness = if sc.IsHero then 2.8 else 2.0
+			sc.TopStripe.BackgroundColor3 = rInfo.Main
+			sc.NameLabel.Text = UI.upper(pick.Def.Name or pick.Id)
+			sc.MetaLabel.Text = rInfo.Label .. " \u{b7} " .. UI.upper(typeName(pick.Def.Type or "Neutro"))
+			sc.MetaLabel.TextColor3 = rInfo.Glow
+			if sc.CrownText then
+				if portal.Banner and bannerName and (pick.Def.Name == bannerName or pick.Id == weeklyCharId) then
+					sc.CrownText.Text = "\u{2605} DESTAQUE SEMANAL"
+				else
+					sc.CrownText.Text = "\u{2605} LEND\u{c1}RIO DO BANNER"
+				end
+			end
+		else
+			sc.Card.Visible = false
+		end
+	end
+end
+
+startNameplateSync = function()
+	stopNameplateSync()
+	nameplateConn = RunService.RenderStepped:Connect(function()
+		if not bannerHud.Visible then
+			return
+		end
+		local cam = workspace.CurrentCamera
+		if not cam then
+			return
+		end
+		local vs = cam.ViewportSize
+		if vs.X < 10 or vs.Y < 10 then
+			return
+		end
+		local anchors = BannerStage.GetSlotScreenAnchors()
+		for i = 1, 3 do
+			local sc = slotCards[i]
+			local a = anchors[i]
+			if a and a.Visible then
+				local sx = math.clamp(a.Pos.X / vs.X, 0.25, 0.75)
+				local sy = math.clamp(a.Pos.Y / vs.Y, 0.58, 0.715)
+				sc.Card.Position = UDim2.fromScale(sx, sy)
+			else
+				sc.Card.Position = UDim2.fromScale(sc.DefaultX, sc.DefaultY)
+			end
+		end
+	end)
+end
+
+-- === 5. DOCA INFERIOR: GARANTIA DE LENDARIO + BOTOES DE INVOCAR ===
+local bottomDock, bottomDockStroke = makeGlassCard(bannerHud, "BottomDock", UDim2.fromScale(0.58, 0.185), UDim2.fromScale(0.5, 0.982), Vector2.new(0.5, 1), 16, 26)
+local bannerMsg = UI.text(bannerHud, "", {
+	Name = "BannerMessage",
+	Size = UDim2.fromScale(0.56, 0.042),
+	Position = UDim2.fromScale(0.5, 0.785),
+	AnchorPoint = Vector2.new(0.5, 1),
+	Role = "Small",
+	Color = "hpLow",
+	ZIndex = 29,
+})
+
+local pityRow = UI.frame(bottomDock, { Name = "PityRow", Size = UDim2.fromScale(0.94, 0.28), Position = UDim2.fromScale(0.03, 0.06), ZIndex = 27 })
+UI.text(pityRow, "GARANTIA DE LEND\u{c1}RIO", {
+	Name = "PityTitle",
+	Size = UDim2.fromScale(0.32, 1),
+	Position = UDim2.fromScale(0, 0),
+	Role = "Small",
+	Color = "inkSoft",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.45,
+	ZIndex = 28,
+})
+local pityBar = UI.bar(pityRow, { Name = "Pity", Size = UDim2.fromScale(0.52, 0.62), Position = UDim2.fromScale(0.33, 0.19), FillColor = "lendario", Value = 0, ZIndex = 28 })
+local pityValue = UI.text(pityRow, "", {
+	Name = "PityValue",
+	Size = UDim2.fromScale(0.14, 1),
+	Position = UDim2.fromScale(1, 0),
+	AnchorPoint = Vector2.new(1, 0),
+	Role = "Small",
+	Color = "lendario",
+	AlignX = Enum.TextXAlignment.Right,
+	ZIndex = 28,
+})
+
+local actionsRow = UI.frame(bottomDock, { Name = "ActionsRow", Size = UDim2.fromScale(0.94, 0.56), Position = UDim2.fromScale(0.03, 0.38), ZIndex = 27 })
+
+local function summonButton(name, x, w, colorKey, shine)
+	local b, face = UI.button(actionsRow, {
+		Name = name,
+		Color = colorKey or "green",
+		Size = UDim2.fromScale(w, 1),
+		Position = UDim2.fromScale(x, 0),
+		Corner = 0.24,
+		Sound = false,
+		ZIndex = 28,
+	})
+	local minTouch = Instance.new("UISizeConstraint")
+	minTouch.MinSize = Vector2.new(88, 44)
+	minTouch.Parent = b
+	UI.text(face, "", { Name = "Title", Size = UDim2.fromScale(0.92, 0.42), Position = UDim2.fromScale(0.04, 0.06), Role = "Body", ZIndex = 29 })
+	local price = UI.frame(face, { Name = "Price", Size = UDim2.fromScale(0.92, 0.42), Position = UDim2.fromScale(0.04, 0.50), ZIndex = 29 })
+	local pl = Instance.new("UIListLayout")
+	pl.FillDirection = Enum.FillDirection.Horizontal
+	pl.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	pl.VerticalAlignment = Enum.VerticalAlignment.Center
+	pl.Padding = UDim.new(0.04, 0)
+	pl.SortOrder = Enum.SortOrder.LayoutOrder
+	pl.Parent = price
+	UI.icon(price, "coin", { Name = "Icon", Size = UDim2.fromScale(0.24, 0.92), LayoutOrder = 1, ZIndex = 30 })
+	local t = UI.text(price, "", { Name = "Value", Size = UDim2.fromScale(0.58, 0.92), Role = "Body", AlignX = Enum.TextXAlignment.Left, LayoutOrder = 2, ZIndex = 30 })
+	t.AutomaticSize = Enum.AutomaticSize.None
+	if shine then
+		UI.shine(b)
+	end
+	return b
+end
+local one = summonButton("Summon1", 0, 0.485, "green", false)
+local three = summonButton("Summon3", 0.345, 0.31, "purple", false)
+three.Visible = false
+local ten = summonButton("Summon10", 0.515, 0.485, "lendario", true)
+
 local function setSummonButton(b, title, cost, icon, free)
 	local face = b.Face
 	face.Title.Text = title
@@ -312,11 +817,32 @@ refreshMain = function()
 	local gems = portal.Currency == "Gems"
 	local icon = if gems then "gem" else "coin"
 	local bCfg = Summon.GetBanner(selectedBannerId)
-	win.Title.Text = UI.upper(portal.Name) .. " \u{b7} " .. UI.upper(bCfg.Short or bCfg.Name)
+	local theme = StageThemes.GetTheme(selectedBannerId, PORTAL)
+
+	-- Titulo e cores tematicas tanto na janela padrao quanto no HUD 3D
+	local fullTitle = UI.upper(portal.Name) .. " \u{b7} " .. UI.upper(bCfg.Short or bCfg.Name)
+	win.Title.Text = fullTitle
 	UI.paint(win.Header, if gems then "lendario" else "header")
+	hudTitleLabel.Text = fullTitle
+	hudTaglineLabel.Text = theme.Tagline
+	hudTaglineLabel.TextColor3 = theme.Accent
+	titleAccentBar.BackgroundColor3 = theme.Primary
+	titleCardStroke.Color = theme.Primary
+	leftRailStroke.Color = theme.Primary:Lerp(Color3.fromRGB(90, 74, 150), 0.35)
+	rightRailStroke.Color = theme.Primary:Lerp(Color3.fromRGB(90, 74, 150), 0.35)
+	bottomDockStroke.Color = theme.Primary
+
+	-- Carteira nas duas vistas
+	local amount = if gems then (profile.Gems or 0) else (profile.Gold or 0)
+	local amtColor = if gems then T.Palette.gems else T.Palette.gold
 	UI.setIcon(walletHolder.Icon, icon)
-	walletLabel.TextColor3 = if gems then T.Palette.gems else T.Palette.gold
-	UI.countTo(walletLabel, if gems then (profile.Gems or 0) else (profile.Gold or 0))
+	walletLabel.TextColor3 = amtColor
+	UI.countTo(walletLabel, amount)
+	UI.setIcon(hudWalletHolder.Icon, icon)
+	hudWalletLabel.TextColor3 = amtColor
+	UI.countTo(hudWalletLabel, amount)
+
+	-- Chances
 	local ratesNow = Summon.RatesFor(PORTAL, profile.Benefits)
 	local lucky = PORTAL == "Comum" and Benefits.Has(profile, "SorteEmDobro")
 	for _, r in ipairs(Summon.RarityOrder) do
@@ -327,32 +853,46 @@ refreshMain = function()
 		rateRows[r].Value.Text = text
 	end
 	if portal.Banner then
-		bannerLabel.Text = if bannerName then string.format("\u{2605} DESTAQUE (%s): %s (%s)", bCfg.Name, bannerName, pct((ratesNow.Lendario or 0) * portal.Banner.Share)) else ("\u{2605} Estrela " .. bCfg.Name .. ": sem destaque Lend\u{e1}rio")
+		bannerLabel.Text = if bannerName
+			then string.format("\u{2605} %s (%s)", bannerName, pct((ratesNow.Lendario or 0) * portal.Banner.Share))
+			else "\u{2605} Banner " .. (bCfg.Short or bCfg.Name)
 	else
-		bannerLabel.Text = "\u{2605} Estrela selecionada: " .. bCfg.Name
+		bannerLabel.Text = "\u{2605} " .. (bCfg.Subtitle or bCfg.Name)
 	end
+
+	-- Pity & Tickets
 	local pity = (profile.SummonPity and profile.SummonPity[portal.PityKey]) or 0
 	pityValue.Text = string.format("%d/%d", pity, portal.PityAt)
 	UI.setBar(pityBar, pity / portal.PityAt, "lendario")
 	local free = (profile.Tickets and profile.Tickets[portal.PityKey]) or 0
 	freeHolder.Visible = free > 0
-	freeLabel.Text = free .. " invoca\u{e7}\u{e3}o" .. (if free > 1 then "\u{f5}es" else "") .. " gr\u{e1}tis"
+	freeLabel.Text = free .. " gr\u{e1}tis"
+
+	-- Botoes de invocacao
 	local quick = Benefits.Has(profile, "InvocacaoRapida")
 	three.Visible = quick
 	if quick then
-		one.Size = UDim2.fromScale(0.31, 0.44)
-		three.Size = UDim2.fromScale(0.31, 0.44)
-		three.Position = UDim2.fromScale(0.345, 0.55)
-		ten.Size = UDim2.fromScale(0.31, 0.44)
-		ten.Position = UDim2.fromScale(0.69, 0.55)
+		one.Size = UDim2.fromScale(0.315, 1)
+		one.Position = UDim2.fromScale(0, 0)
+		three.Size = UDim2.fromScale(0.315, 1)
+		three.Position = UDim2.fromScale(0.342, 0)
+		ten.Size = UDim2.fromScale(0.315, 1)
+		ten.Position = UDim2.fromScale(0.685, 0)
 	else
-		one.Size = UDim2.fromScale(0.48, 0.44)
-		ten.Size = UDim2.fromScale(0.48, 0.44)
-		ten.Position = UDim2.fromScale(0.52, 0.55)
+		one.Size = UDim2.fromScale(0.485, 1)
+		one.Position = UDim2.fromScale(0, 0)
+		ten.Size = UDim2.fromScale(0.485, 1)
+		ten.Position = UDim2.fromScale(0.515, 0)
 	end
 	setSummonButton(one, "INVOCAR 1", portal.Cost, icon, free > 0)
 	setSummonButton(three, "INVOCAR " .. Benefits.QuickSummonCount, portal.Cost * Benefits.QuickSummonCount, icon, false)
 	setSummonButton(ten, "INVOCAR 10", portal.Cost10, icon, false)
+
+	-- Placas dos 3 personagens em destaque
+	refreshSlotNameplates()
+	if win.IsOpen() and currentTab == "Portal" and not nameplateConn then
+		startNameplateSync()
+	end
 end
 
 --------------------------------------------------------------------
@@ -406,7 +946,6 @@ local function frameChestCamera(view: ViewportFrame, model: Model)
 	return { Cam = cam, Target = target, Front = front, Dist = dist, Height = 0 }
 end
 
--- Sons dedicados controlaveis para poder interromper suavemente se o jogador clicar PULAR
 local sfxPlayers = {}
 local function playControlledSfx(soundKey: string)
 	local def = UI.Sounds[soundKey]
@@ -701,7 +1240,6 @@ local function playShowcase(results)
 		end
 	end
 
-	-- Fase 1 (0 -> 0.40s): Carga rapida + antecipacao sonora (aquece ViewportFrame durante a carga)
 	TweenService:Create(showScrim, TweenInfo.new(0.25), { BackgroundTransparency = 0.16 }):Play()
 	TweenService:Create(orbScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1.25 }):Play()
 	playControlledSfx("summon_charge")
@@ -717,7 +1255,6 @@ local function playShowcase(results)
 	end
 
 	if not skipFlag then
-		-- Fase 2 (0.40s -> 1.90s): Explosao na frente da tela + Personagem 3D rodando + SFX estimulante
 		orbCore.Visible = false
 		skipBtn.Visible = true
 		playControlledSfx("summon_reveal")
@@ -803,12 +1340,18 @@ end
 --------------------------------------------------------------------
 -- Cartas reveladas (com previa 3D dos personagens obtidos)
 --------------------------------------------------------------------
-local reveal = UI.window(canvas, { Name = "RevealWindow", Title = "RESULTADO", Icon = "star", HeaderColor = "lendario", Size = UDim2.fromScale(0.92, 0.86), Aspect = 1.95,
+local reveal = UI.window(canvas, {
+	Name = "RevealWindow",
+	Title = "RESULTADO",
+	Icon = "star",
+	HeaderColor = "lendario",
+	Size = UDim2.fromScale(0.92, 0.86),
+	Aspect = 1.95,
 	OnClose = function(silent)
 		if not silent then
 			task.defer(function()
 				win.Open()
-				refreshMain()
+				selectTab("Portal")
 			end)
 		end
 	end,
@@ -826,7 +1369,16 @@ local gridAspect = Instance.new("UIAspectRatioConstraint")
 gridAspect.AspectRatio = 0.90
 gridAspect.Parent = grid
 local revealInfo = UI.text(reveal.Body, "", { Name = "Info", Size = UDim2.fromScale(0.72, 0.18), Position = UDim2.fromScale(0, 0.80), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.5 })
-UI.button(reveal.Body, { Name = "OK", Text = "OK", Icon = "tick", Layout = "row", Color = "green", Size = UDim2.fromScale(0.24, 0.17), Position = UDim2.fromScale(1, 0.81), AnchorPoint = Vector2.new(1, 0), Role = "Heading",
+UI.button(reveal.Body, {
+	Name = "OK",
+	Text = "OK",
+	Icon = "tick",
+	Layout = "row",
+	Color = "green",
+	Size = UDim2.fromScale(0.24, 0.17),
+	Position = UDim2.fromScale(1, 0.81),
+	AnchorPoint = Vector2.new(1, 0),
+	Role = "Heading",
 	OnClick = function()
 		reveal.Close()
 	end,
@@ -906,7 +1458,6 @@ local function showCards(results)
 		end
 		task.delay(0.09 * i, function()
 			card.Visible = true
-			-- Forca re-desenho imediato do ViewportFrame ao sair de Visible = false
 			vp.Size = UDim2.new(1, 1, 1, 1)
 			task.defer(function()
 				if vp.Parent then
@@ -940,16 +1491,18 @@ local function doSummon(count)
 	end
 	busy = true
 	msg.Text = ""
+	bannerMsg.Text = ""
 	local ok, res = Remotes.Summon:InvokeServer(PORTAL, count, selectedBannerId)
 	if not ok then
-		msg.Text = res or "N\u{e3}o foi poss\u{ed}vel invocar."
+		local errTxt = res or "N\u{e3}o foi poss\u{ed}vel invocar."
+		msg.Text = errTxt
+		bannerMsg.Text = errTxt
 		UI.play("error")
 		busy = false
 		return
 	end
 	UI.play("purchase")
 	win.Close(true)
-	-- Invocacao Rapida pula a animacao
 	if not Benefits.Has(profile, "InvocacaoRapida") then
 		playShowcase(res)
 	end
@@ -984,7 +1537,7 @@ refreshAlbum = function()
 	local claimed = profile.Album and profile.Album.Claimed or {}
 	local ids = {}
 	for id, def in pairs(Characters.List) do
-		if not def.Prototype then -- prototipos de teste fora do album
+		if not def.Prototype then
 			table.insert(ids, id)
 		end
 	end
@@ -1064,8 +1617,8 @@ UI.text(dupPage, string.format("%d c\u{f3}pias iguais viram +1 estrela (at\u{e9}
 local dupList = UI.scroll(dupPage, { Name = "List", Size = UDim2.fromScale(1, 0.88), Position = UDim2.fromScale(0, 0.12) })
 
 refreshDupes = function()
-	UI.clear(dupList)
 	if not profile then
+		UI.clear(dupList)
 		return
 	end
 	local groups = {}
@@ -1086,34 +1639,51 @@ refreshDupes = function()
 		table.insert(ids, id)
 	end
 	table.sort(ids)
-	for i, id in ipairs(ids) do
-		local g = groups[id]
-		local def = Characters.Get(id)
-		local row, face = UI.panel(dupList, { Name = "Row_" .. id, Size = UDim2.fromScale(0.98, 0), Aspect = 7.5, Color = "panelAlt", Corner = 0.24, LayoutOrder = i })
-		UI.stroke(face, rarityColor(def.Rarity), 1.2)
-		UI.text(face, string.format("%s  x%d   %s", def.Name, g.Count, string.rep("\u{2605}", g.Stars)), { Name = "Name", Size = UDim2.fromScale(0.44, 0.46), Position = UDim2.fromScale(0.03, 0.08), Role = "Body", AlignX = Enum.TextXAlignment.Left })
-		UI.text(face, string.format("%s \u{b7} %d no time", Summon.RarityName[def.Rarity], g.InTeam), { Name = "Info", Size = UDim2.fromScale(0.44, 0.3), Position = UDim2.fromScale(0.03, 0.6), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
-		local canFuse = g.Count >= Summon.Stars.CopiesPerStar
-		local canSell = g.Count >= 2
-		UI.button(face, { Name = "Fuse_" .. id, Text = "FUNDIR +1\u{2605}", Color = if canFuse then "purple" else "grey", Size = UDim2.fromScale(0.24, 0.74), Position = UDim2.fromScale(0.48, 0.13), Role = "Small", Sound = false,
-			OnClick = function()
-				local ok, text = Remotes.Fuse:InvokeServer(id)
-				msg.TextColor3 = if ok then T.Palette.gold else T.Palette.hpLow
-				msg.Text = text or (if ok then "Pronto." else "N\u{e3}o foi poss\u{ed}vel.")
-				UI.play(if ok then "reward" else "error")
-			end,
-		})
-		local sell, sface = UI.button(face, { Name = "Sell_" .. id, Color = if canSell then "green" else "grey", Size = UDim2.fromScale(0.24, 0.74), Position = UDim2.fromScale(0.74, 0.13), Sound = false,
-			OnClick = function()
-				local ok, text = Remotes.SellDuplicate:InvokeServer(id)
-				msg.TextColor3 = if ok then T.Palette.gold else T.Palette.hpLow
-				msg.Text = text or (if ok then "Pronto." else "N\u{e3}o foi poss\u{ed}vel.")
-				UI.play(if ok then "purchase" else "error")
-			end,
-		})
-		UI.icon(sface, "coin", { Size = UDim2.fromScale(0.3, 0.8), Position = UDim2.fromScale(0.05, 0.1) })
-		UI.text(sface, "+" .. UI.fmt(Summon.SellPrice[def.Rarity]), { Name = "Price", Size = UDim2.fromScale(0.6, 0.7), Position = UDim2.fromScale(0.36, 0.15), Role = "Small", AlignX = Enum.TextXAlignment.Left })
-	end
+	UI.keepScroll(dupList, function()
+		UI.clear(dupList)
+		for i, id in ipairs(ids) do
+			local g = groups[id]
+			local def = Characters.Get(id)
+			if def then
+				local row, face = UI.panel(dupList, { Name = "Row_" .. id, Size = UDim2.fromScale(0.98, 0), Aspect = 7.5, RowMax = 68, Color = "panelAlt", Corner = 0.24, LayoutOrder = i })
+				UI.stroke(face, rarityColor(def.Rarity), 1.2)
+				UI.text(face, string.format("%s  x%d   %s", def.Name, g.Count, string.rep("\u{2605}", g.Stars)), { Name = "Name", Size = UDim2.fromScale(0.44, 0.46), Position = UDim2.fromScale(0.03, 0.08), Role = "Body", AlignX = Enum.TextXAlignment.Left })
+				UI.text(face, string.format("%s \u{b7} %d no time", Summon.RarityName[def.Rarity], g.InTeam), { Name = "Info", Size = UDim2.fromScale(0.44, 0.3), Position = UDim2.fromScale(0.03, 0.6), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
+				local canFuse = g.Count >= Summon.Stars.CopiesPerStar
+				local canSell = g.Count >= 2
+				UI.button(face, {
+					Name = "Fuse_" .. id,
+					Text = "FUNDIR +1\u{2605}",
+					Color = if canFuse then "purple" else "grey",
+					Size = UDim2.fromScale(0.24, 0.74),
+					Position = UDim2.fromScale(0.48, 0.13),
+					Role = "Small",
+					Sound = false,
+					OnClick = function()
+						local ok, text = Remotes.Fuse:InvokeServer(id)
+						msg.TextColor3 = if ok then T.Palette.gold else T.Palette.hpLow
+						msg.Text = text or (if ok then "Pronto." else "N\u{e3}o foi poss\u{ed}vel.")
+						UI.play(if ok then "reward" else "error")
+					end,
+				})
+				local sell, sface = UI.button(face, {
+					Name = "Sell_" .. id,
+					Color = if canSell then "green" else "grey",
+					Size = UDim2.fromScale(0.24, 0.74),
+					Position = UDim2.fromScale(0.74, 0.13),
+					Sound = false,
+					OnClick = function()
+						local ok, text = Remotes.SellDuplicate:InvokeServer(id)
+						msg.TextColor3 = if ok then T.Palette.gold else T.Palette.hpLow
+						msg.Text = text or (if ok then "Pronto." else "N\u{e3}o foi poss\u{ed}vel.")
+						UI.play(if ok then "purchase" else "error")
+					end,
+				})
+				UI.icon(sface, "coin", { Size = UDim2.fromScale(0.3, 0.8), Position = UDim2.fromScale(0.05, 0.1) })
+				UI.text(sface, "+" .. UI.fmt(Summon.SellPrice[def.Rarity]), { Name = "Price", Size = UDim2.fromScale(0.6, 0.7), Position = UDim2.fromScale(0.36, 0.15), Role = "Small", AlignX = Enum.TextXAlignment.Left })
+			end
+		end
+	end)
 end
 
 --------------------------------------------------------------------
@@ -1197,7 +1767,9 @@ local function openPortal(id, tab)
 	PORTAL = id
 	portal = def
 	bannerName = nil
+	weeklyCharId = nil
 	msg.Text = ""
+	bannerMsg.Text = ""
 	reveal.Close(true)
 	showcase.Visible = false
 	skipFlag = true
@@ -1227,7 +1799,9 @@ UI.onBattle(function(inBattle)
 		skipFlag = true
 		stopShowcaseSfx()
 		stopCardSpins()
+		stopNameplateSync()
 		showcase.Visible = false
+		BannerStage.Close()
 		win.Close(true)
 		reveal.Close(true)
 	end

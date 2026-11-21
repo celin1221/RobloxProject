@@ -131,16 +131,30 @@ function TeamCards.new(parent: Instance, p)
 	glow.Parent = inner
 	inner.Parent = border
 
-	local view = Instance.new("ViewportFrame")
-	view.Name = "View"
-	view.Size = UDim2.fromScale(1, 1)
-	view.BackgroundTransparency = 1
-	view.Ambient = Color3.fromRGB(170, 165, 190)
-	view.LightColor = Color3.fromRGB(255, 248, 235)
-	view.LightDirection = Vector3.new(-0.4, -1, -0.6)
-	view.ZIndex = z + 2
-	corner(view, 0.18)
-	view.Parent = inner
+	local view: ViewportFrame? = nil
+	local function destroyView()
+		if view then
+			view:Destroy()
+			view = nil
+			card.View = nil
+		end
+	end
+	local function recreateView(): ViewportFrame
+		destroyView()
+		local v = Instance.new("ViewportFrame")
+		v.Name = "View"
+		v.Size = UDim2.fromScale(1, 1)
+		v.BackgroundTransparency = 1
+		v.Ambient = Color3.fromRGB(170, 165, 190)
+		v.LightColor = Color3.fromRGB(255, 248, 235)
+		v.LightDirection = Vector3.new(-0.4, -1, -0.6)
+		v.ZIndex = z + 2
+		corner(v, 0.18)
+		v.Parent = inner
+		view = v
+		card.View = v
+		return v
+	end
 
 	-- sombra escura embaixo, para o nome ler bem sobre o modelo
 	local fade = Instance.new("Frame")
@@ -264,7 +278,7 @@ function TeamCards.new(parent: Instance, p)
 	hpFill.Parent = hp
 	hp.Parent = root
 
-	-- selo "No time" (grade da Equipe)
+	-- selo contextual ("NO TIME", "MINERANDO", "PASSEANDO", "CAPSULA", etc.)
 	local badge = Instance.new("Frame")
 	badge.Name = "InTeam"
 	badge.Size = UDim2.fromScale(0.86, 0.2)
@@ -276,8 +290,20 @@ function TeamCards.new(parent: Instance, p)
 	badge.Visible = false
 	corner(badge, 0.5)
 	UI.stroke(badge, nil, 0.7)
-	UI.text(badge, "NO TIME", { Name = "Text", Size = UDim2.fromScale(0.9, 0.84), Position = UDim2.fromScale(0.05, 0.08), Role = "Small", ZIndex = z + 7, StrokeMult = 0.5 })
+	local badgeText = UI.text(badge, "NO TIME", { Name = "Text", Size = UDim2.fromScale(0.9, 0.84), Position = UDim2.fromScale(0.05, 0.08), Role = "Small", ZIndex = z + 7, StrokeMult = 0.5 })
 	badge.Parent = root
+
+	-- escurecimento leve para personagens inelegiveis no modo seletor (continua clicavel)
+	local dim = Instance.new("Frame")
+	dim.Name = "Dim"
+	dim.Size = UDim2.fromScale(1, 1)
+	dim.BackgroundColor3 = Color3.fromRGB(16, 12, 38)
+	dim.BackgroundTransparency = 0.56
+	dim.BorderSizePixel = 0
+	dim.ZIndex = z + 5
+	dim.Visible = false
+	corner(dim, 0.18)
+	dim.Parent = inner
 
 	-- brilhos (Brilhante e Lendario)
 	local sparkle = UI.icon(root, "sparkle", { Name = "Sparkle", Size = UDim2.fromScale(0.26, 0.26), Position = UDim2.fromScale(0.03, 0.29), ZIndex = z + 6, Visible = false })
@@ -298,6 +324,7 @@ function TeamCards.new(parent: Instance, p)
 			model:Destroy()
 			model = nil
 		end
+		destroyView()
 		framing = nil
 		currentKey = nil
 		if shine then
@@ -319,6 +346,7 @@ function TeamCards.new(parent: Instance, p)
 		stars.Visible = false
 		hp.Visible = false
 		badge.Visible = false
+		dim.Visible = false
 		sparkle.Visible = false
 		card.Uid = nil
 		card.Member = nil
@@ -387,21 +415,26 @@ function TeamCards.new(parent: Instance, p)
 			shine = nil
 		end
 		select.Color = if shiny then Color3.fromRGB(255, 250, 200) else Color3.fromRGB(255, 255, 255)
-		-- modelo (so troca se mudou o personagem)
+		-- modelo (recria ViewportFrame ao trocar personagem para evitar cache/textura antiga no Roblox)
 		local key = def.ModelName .. "|" .. tostring(m.Variant)
-		if key ~= currentKey then
-			currentKey = key
+		if key ~= currentKey or not model or not view then
 			if model then
 				model:Destroy()
 				model = nil
 			end
+			framing = nil
+			currentKey = nil
 			local folder = previews()
 			local src = folder and folder:FindFirstChild(def.ModelName)
 			if src then
+				local v = recreateView()
+				currentKey = key
 				model = src:Clone()
-				model.Parent = view
-				framing = frameModel(view, model)
+				model.Parent = v
+				framing = frameModel(v, model)
 				card.SetAngle(0)
+			else
+				destroyView()
 			end
 		end
 	end
@@ -420,8 +453,29 @@ function TeamCards.new(parent: Instance, p)
 		scale.Scale = if on then 1.06 else 1
 	end
 
+	function card.SetBadge(text: string?, color: (string | Color3)?)
+		if not text or text == "" then
+			badge.Visible = false
+			return
+		end
+		badgeText.Text = text
+		local c = color
+		if typeof(c) == "string" then
+			c = T.Palette[c] or T.Types[c] or T.Rarity[c] or T.Palette.green
+		end
+		if typeof(c) == "table" then
+			c = c[1]
+		end
+		badge.BackgroundColor3 = if typeof(c) == "Color3" then c else T.Palette.green
+		badge.Visible = true
+	end
+
+	function card.SetDimmed(on: boolean)
+		dim.Visible = on == true
+	end
+
 	function card.SetInTeam(on: boolean)
-		badge.Visible = on
+		card.SetBadge(if on then "NO TIME" else nil, "green")
 	end
 
 	function card.Destroy()

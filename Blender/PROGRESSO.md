@@ -772,3 +772,97 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - `Server` Play Mode: todos os 6 modelos provisórios de Naruto em `ReplicatedStorage/CharacterPreviews` (`MissingPrev = vazio`), `CharacterLibrary.Spawn` verificado nos 6 personagens (`anims = 12`, sem visor), `SummonService.BannerOf("Premium", "Naruto") == "Sarutobi"`, `SummonService.BannerOf("Premium", "OnePiece") == "BarbaBranca"`, e turnos simulados em `BattleEngine` (`SarutobivSakura`, `NarutovSasuke`, `KakashivShikamaru` -> `dmgEvs = 2` cada).
 - `Client` Play Mode: abertura pelo `SummonPrompt` de `PortalComum` (tecla `E`), seleção visual das estrelas `Todos`, `Naruto` e `One Piece`, roleta `Summon1` em `One Piece` (`Usopp`) e `Summon10` em `Naruto` (`Sakura`, `Shikamaru`, `Kakashi` em grade `5x2` com todos os 10 `ViewportFrame`s visíveis de imediato e sem truncamento), auditoria `_UITestKit.audit()` limpa (apenas `Scrim`) em `SummonWindow` e `RevealWindow` nas resoluções Desktop, `667x375`, `932x430` e `1024x768`, perfil do jogador restaurado (`1.002.219` gold, `14` personagens) e console sem erros de execução do jogo.
 - `sync_studio.py status` (`82/82` `100% in sync`) e `sync_studio.py test` (`PASS`).
+
+
+## Sincronização do Place v248 (Studio → Disco) (20/11/2026)
+
+**Feito**
+- Extraídos do Roblox Studio (`PlaceVersion = 248`) para `src/` os **8 scripts modificados** e **4 novos scripts** produzidos após a `v228`:
+  - **Auras dos personagens (`CharacterAuras`):** novo `src/client/PlayerScripts/CharacterAuraClient.client.luau` + configuração persistida em `SettingsClient.client.luau`, `SettingsService.luau`, `PlayerDataService.luau`, `ClientSettings.luau` e `Data/Audio.luau`.
+  - **Palco 3D ao vivo de Invocação & Selos dos Portais:** novos `src/shared/SummonBannerStage.luau` e `src/shared/Data/SummonStageThemes.luau` + atualizações em `SummonClient.client.luau`, `CharacterPreviews.server.luau` (`ReplicatedStorage/SummonShowcaseModels`) e `MapFxClient.client.luau` (`PortalSeal`).
+  - **Arenas Santuário Malevolente:** novo `src/server_storage/_ConstrutorArenasSukuna.luau` (v5).
+- Atualizados `default.project.json`, `ARQUITETURA_PROJETO.md` e `HANDOFF_CONTEXTO.md` para refletir o estado **Place v248 / 86 scripts**.
+
+**Testado (20/11/2026)**
+- `python scripts/sync_studio.py status`: `All 86 scripts in src/ are 100% in sync with Roblox Studio.`
+- `python scripts/sync_studio.py test`: `PASS` (`GDD Damage [12..14] verified & Kaen vs Raiko completed in 6 turns`).
+
+
+## Correção dos HUDs de Lista de Personagens com Muitos Personagens (20/11/2026)
+
+**Causa identificada**
+1. **Explosão exponencial de `CanvasSize` em `UI.scroll` (`src/shared/UI.luau`):** `UIPadding` (`PaddingTop = 0.015`, `PaddingBottom = 0.03`) e `UIListLayout.Padding` (`Gap = 0.02` / `0.015`) usavam `Scale` vertical dentro de `ScrollingFrame`. No Roblox, `Scale` vertical dentro de `ScrollingFrame` multiplica `CanvasSize.Y` (e não `AbsoluteSize.Y`): com 50+ personagens (perfil real com 68 personagens), o espaçamento ultrapassava `100%` do canvas e disparava um loop exponencial (`BaseGui` explodindo para `613.704 px`, `BagGui > Targets` para `10.555.389 px`, `TrainingGui` para `400.835 px` e `BagGui > Personagens` para `104.387 px`), jogando os itens para fora da tela.
+2. **Altura preguiçosa de linhas fora da tela, perda de rolagem e vazamento em `UI.luau`:** linhas fora da viewport dentro de `ScrollingFrame` tinham `AbsoluteSize` adiado pelo Roblox; `canvases` guardava referências fortes a `Strokes`/`Texts`/`Shadows` destruídos a cada reconstrução; `BaseGui`/`TrainingGui`/`BagGui`/`SummonGui > Repetidos` reconstruíam listas inteiras ou voltavam a rolagem ao topo durante ticks de `ProfileUpdated` ou cliques.
+3. **Cartões 3D em branco / textura antiga em `EquipeGui` (`EquipeClient`, `TeamCards`, `CharacterPreviews`):** com muitos personagens, `EquipeGui` abria até 46 `ViewportFrame`s simultâneos redimensionados durante o tween `UIScale` da janela, reutilizando a mesma instância de `ViewportFrame` (gerando cartões em branco e textura antiga misturada ao rolar) com clones de até 275 descendentes por retrato.
+
+**Feito**
+- `src/shared/UI.luau`:
+  - `UI.scroll`: migrados `UIPadding` e `UIListLayout.Padding` para pixels (`Offset`) calculados a partir de `AbsoluteSize` normalizado por `UIScale` (`UI.unscaledSize`), atualizando a altura (`_RowAspect`/`_RowMax`) de todas as linhas (visíveis e fora da tela) em `fitMetrics()` e calculando `CanvasSize` sem loop.
+  - `UI.screen`: tabelas de métricas (`Strokes`, `Texts`, `Shadows`) convertidas para chaves fracas (`__mode = "k"`).
+  - `UI.keepScroll`: restauração garantida com clamp para `AbsoluteCanvasSize.Y - AbsoluteWindowSize.Y`.
+- `src/client/Gui/BaseGui/BaseUiClient.client.luau`, `BagGui/BagClient.client.luau`, `TrainingGui/TrainingClient.client.luau`, `SummonGui/SummonClient.client.luau`:
+  - Aplicados `UI.keepScroll`, `UI.unscaledSize`, ordem de abertura `win.Open()` → `layout()` → `refresh()`, e assinatura de lista (`lastListKey`/`lastCharListKey` + troca instantânea de seleção em `TrainingGui`) para evitar reconstrução desnecessária a cada tick de 10 s.
+- `src/client/Gui/EquipeGui/EquipeClient.client.luau`, `src/shared/TeamCards.luau`, `src/server/CharacterPreviews.server.luau`:
+  - Virtualização estrita apenas das linhas visíveis (`cols <= 7`, ~20 `ViewportFrame`s simultâneos) e layout normalizado por `UI.unscaledSize` sem redimensionamento durante tween.
+  - `TeamCards`: recriação limpa do `ViewportFrame` ao trocar personagem (eliminando cache/textura antiga e liberando `ViewportFrame`s de cartões vazios/reciclados).
+  - `CharacterPreviews.server.luau`: limpeza de `Attachment` (preservando `Bone`), `JointInstance`, `WeldConstraint`, `Animator`, `VariantPresets` e partes invisíveis nas prévias 2D (`Luffy` `168 → 24`, `BarbaBranca` `275 → 78` descendentes).
+
+**Testado (Play Mode + Capturas Visuais + Estresse 150 personagens, 20/11/2026)**
+- Perfil real (68 personagens): `BaseGui.List` (`4.777 px`, `gap = 6 px`, último item `INTEIRO`), `BagGui.Targets` (`5.323 px`, `INTEIRO`), `BagGui.Characters` (`4.509 px`, `INTEIRO`), `TrainingGui.Characters` (`4.509 px`, `INTEIRO`, clique no item #15 manteve rolagem em `600 px`), `SummonGui.DupesList` (`833 px`, `INTEIRO`), `EquipeGui` (`20/20` retratos 3D nítidos no topo e após rolagem para o meio, zero mistura de textura).
+- Teste de estresse com 150 personagens simulados em memória (teto máximo com Depósito Ampliado): `BaseGui` (`10.517 px`), `BagGui.Characters` (`9.921 px`), `TrainingGui` (`9.921 px`), todos estáveis e com o último item `INTEIRO`.
+- Auditoria `_UITestKit.audit()` limpa (`0` problemas reais em `16/16` combinações: `Desktop`, `667x375`, `932x430`, `1024x768` × `Base`, `Bag`, `Training`, `Equipe`) e console sem erros.
+- `python scripts/sync_studio.py status` (`86/86` `100% in sync`), `python scripts/sync_studio.py test` (`PASS`) e Place salvo no Studio.
+
+
+## Seletor Visual Unificado via HUD da Equipe (`UI.pickCharacter`) para Treino, Base e Mochila (20/11/2026)
+
+**Feito**
+- `src/shared/UI.luau`: adicionados `UI.onPickCharacter` e `UI.pickCharacter` (roteamento direto em Luau para preservar callbacks `OnPick`, `GetBadge`, `IsEligible`, `SubtitleFn`, `FormatSelected` e `OnCancel` sem serialização de `BindableEvent`).
+- `src/shared/TeamCards.luau`: adicionados `card.SetBadge(text, color)` (selos contextuais no cartão 3D: `TRN 60%`, `MINERANDO`, `PASSEANDO`, `CÁPSULA`, `63/111`, `CHEIO`, `DESMAIADO`, `NO TIME`) e `card.SetDimmed(on)` (destaque visual entre elegíveis e inelegíveis).
+- `src/client/Gui/EquipeGui/EquipeClient.client.luau`: adicionado o **Modo Seletor** reaproveitando toda a grade 3D virtualizada e a barra completa de filtros (`Buscar nome...`, `Anime`, `Raridade`, `Tipo`, `Ordenação`, `VER INFO`), com cabeçalho dinâmico (título/cor/ícone da função), barra contextual (`VOLTAR`, resumo do personagem/vagas, botão de ação da função + duplo toque para confirmar) e retorno automático para a tela chamadora; modo `Equipe` padrão preservado 100%.
+- `src/client/Gui/TrainingGui/TrainingClient.client.luau`: substituída a lista textual esquerda por retrato 3D (`TeamCards`) do personagem selecionado + resumo `GEN/TRN` + botão `TROCAR` (e clique no retrato) abrindo `ESCOLHER PARA TREINO`.
+- `src/client/Gui/BaseGui/BaseUiClient.client.luau`: lista da Base simplificada para os botões `+ ESCOLHER PASSEIO` / `+ ESCOLHER MINA` (abrindo o seletor visual com contadores ao vivo `Ativos` / `Vagas Mina` e selos `MINERANDO`/`PASSEANDO`/`CÁPSULA`) + apenas os personagens ativos/na cápsula abaixo.
+- `src/client/Gui/BagGui/BagClient.client.luau`: aba `Itens` atualizada com botão `ESCOLHER NA COLEÇÃO` abrindo o seletor visual `USAR <ITEM>` (para Poções, Reviver e Doces de XP, destacando alvos feridos/desmaiados) + atalho rápido para os até 6 personagens do time ativo.
+
+**Testado (Play Mode + 6 Capturas Visuais + Auditoria 4 Resoluções, 20/11/2026)**
+- Fluxos completos verificados em Play Mode com os 68 personagens reais:
+  - `TrainingGui` (retrato 3D `Barba Branca`) → `ESCOLHER PARA TREINO` → filtro `ONE PIECE` → confirmação `TREINAR ESTE` retornando para `TrainingGui`.
+  - `BaseGui` (4 linhas: barra de botões + 3 mineradores ativos) → `COLOCAR PARA MINERAR` (`Ativos 3/6 · Vagas Mina 3/3`, selos `MINERANDO`) → `VOLTAR` retornando para `BaseGui`.
+  - `BagGui > Itens` (`Poção`) → `ESCOLHER NA COLEÇÃO` → `USAR POÇÃO` (`Restam x6`, destaque verde `63/111` / `29/85` nos feridos vs `CHEIO` escurecido).
+  - Regressão: abertura normal de `Equipe` restaurando cabeçalho azul `EQUIPE`, 6 slots do time e ocultando `PickerBar`.
+- Auditoria `_UITestKit.audit()` limpa (`0` problemas em `20/20` combinações: `Desktop`, `667x375`, `932x430`, `1024x768` × `Training`, `EquipePicker`, `Base`, `Bag`, `EquipeNormal`) e console sem erros.
+- `python scripts/sync_studio.py status` (`86/86` `100% in sync`), `python scripts/sync_studio.py test` (`PASS`) e Place salvo no Studio.
+
+
+## Batalha 2x2 Estilo Pokémon (Foco em PvP 2x2 e 1x1) (20/11/2026)
+
+**Feito**
+- **Camada 1 (`Data` / `Net`):**
+  - `src/shared/Data/Moves.luau`: adicionado campo `Target` (`"AllEnemies"` em `BrasaViva`, `Descarga`, `GaiolaDeEspinhos`, `TudoRoxo`, `GenkiDama` e `CeuETerra`) e helper `Moves.TargetMode(move)` (`"Single" | "AllEnemies" | "AllOthers" | "AllAllies" | "Self"`), preservando 100% o comportamento 1x1.
+  - `src/shared/Net.luau`: atualizados os contratos de `StartBattle`, `SubmitAction`, `PvPChallenge` e `PvPInvite` para incluir formato (`"1x1" | "2x2"`), `SlotModels` e ações `Double`.
+- **Camada 2 (`Core` — lógica pura):**
+  - `src/shared/Core/DamageCalc.luau`: adicionado `SPREAD_MULTIPLIER = 0.75` (regra oficial Pokémon 2x2 ao atingir 2+ alvos; `1.0x` quando resta só 1 alvo) em `Compute` e `ExpectedDamage`.
+  - `src/shared/Core/AIController.luau`: adicionados `exclude` em `ChooseReplacement` (evita duplicatas em substituição dupla) e `ChooseActionsDouble` (IA 2x2 e ações automáticas por timeout no PvP 2x2).
+  - `src/shared/Core/BattleEngine.luau`: generalizada a máquina de estados para `Format = "1x1" | "2x2"` (`SlotsPerSide`, `ActiveSlots`, `ActiveAt`, `FieldSlotOf`, `AliveFieldSlots`, `BenchAliveIndices`), fila de prioridade/Velocidade com até 4 lutadores simultâneos, escolha de alvo relativo (`"Enemy"` / `"Ally"`), redirecionamento automático quando o alvo inimigo desmaia no meio do turno, precisão e efeitos por alvo, `ClearSlot` para continuação 2x1 quando o banco acaba, substituição dupla sem duplicatas e `Snapshot(view)` com arrays densos (`0` = slot vazio, imune a buracos em `RemoteEvent`).
+- **Camada 3 (`Server`):**
+  - `src/server/Battle/ArenaManager.luau`: adicionados `DOUBLE_LATERAL = 5.2`, `SlotCFrame`, `BattleCamera(arena, format)` (câmera 2x2 simétrica para `MirroredCamera` no PvP espelhado), `SpawnActive(..., fieldSlot)`, `ClearSlot` e `PlaceViewer(..., isDouble)`.
+  - `src/server/Battle/BattleService.luau`: rastreamento de modelos por slot (`SlotModels`), espelhamento de eventos `2x2` (`TargetSide`, `Targets`), sanitização estrita de ações `Double`/`Replace` no servidor (`sanitizeAction`), apresentação de VFX/animações/impactos secundários em área por slot exato, vitória nos 2 modelos ativos e suporte a `Format = "2x2"` em `StartPvP` e `StartBattle`.
+  - `src/server/Battle/PvPService.luau`: `Challenge(player, targetUserId, format)` aceitando `"1x1"` e `"2x2"`, validando mínimo de 2 personagens no time de ambos os jogadores no `2x2`, enviando `Format` no convite `PvPInvite` e iniciando `BattleService.StartPvP(..., { Format = inv.Format })`.
+- **Camada 4 (`Client`):**
+  - `src/client/Gui/PvPGui/PvPClient.client.luau`: ao acionar `Desafiar (PvP)` (tecla `F`), abre o seletor de formato **`2x2 EM DUPLA`** vs **`1x1 CLÁSSICO`**; convites recebidos/enviados exibem o selo de formato em destaque (`2x2 EM DUPLA` / `1x1 INDIVIDUAL`).
+  - `src/client/Gui/BattleGui/BattleClient.client.luau`: HUD 2x2 completo com 2 cartões inimigos escalonados no topo à direita (alinhados esquerda→direita com o 3D), 2 cartões aliados embaixo à esquerda com borda dourada no lutador escolhendo, fluxo sequencial Slot 1 → Slot 2 com botão `VOLTAR`, seletor de alvo com indicador de efetividade (`2x SUPER!`, `0.5x RESISTE`, `1x NORMAL`) + opção secundária de atingir aliado, selo `ÁREA`/`SI` nos golpes, substituição dupla e suporte a `ClearSlot` (2x1), mantendo o 1x1 100% idêntico.
+- **Testes automatizados (`scripts/sync_studio.py`):**
+  - Atualizado `cmd_test` com sandbox de recarga limpa (`_TestSandbox`) e 5 baterias de validação cobrindo fórmula GDD 1x1 `[12..14]`, spread `0.75x`/`1.0x`, redirecionamento mid-turn, `ClearSlot` 2x1, rejeição de troca/substituição duplicada, substituição dupla e simulação completa de PvP 2x2.
+
+**Testado (Edit Mode + Play Mode + Capturas Visuais + Auditoria UI, 20/11/2026)**
+- `python scripts/sync_studio.py status`: `All 86 scripts in src/ are 100% in sync with Roblox Studio.`
+- `python scripts/sync_studio.py test`: `PASS: 1x1 GDD [12..14] (6 turns) & 2x2 Doubles (spread 0.75/1.0, redirect, 2v1 ClearSlot, double replace, PvP sim 11 turns, Winner=Player)`.
+- **Play Mode ao vivo (`Barba Branca` + `Setero` + `San` + `Yomogi` vs `San` + `Yomogi` + `Kaen` + `Raiko`):**
+  - Capturas inspecionadas de `PvPGui` (convite `2x2 EM DUPLA` + seletor de formato `2x2 EM DUPLA` / `1x1 CLÁSSICO`), arena 2x2 com 4 lutadores enquadrados, cartões duplos com borda dourada ativa, golpes com selos `ÁREA`/`SI`, seletor de alvo (`0.5x RESISTE` / `1x NORMAL` + aliado), botão `VOLTAR` no passo 2/2, troca em campo (`Setero` → `San`), nocaute duplo com substituição dupla do adversário (`Kaen` + `Raiko`), continuação `2x1` via `ClearSlot` e retorno limpo à praça após vitória.
+  - Teste de regressão `1x1` (`Kaen` vs `Raiko`): cartões extras e cabeçalho de dupla ocultos (`E2=false, P2=false, actorChip=false`).
+  - `_UITestKit.audit()` limpo (`0` problemas) e console sem erros de execução do jogo.
+- Place salvo no Roblox Studio na **versão 259** (`TeamCreate`).
+
+**Pendências**
+- Testar o fluxo de desafio PvP 2x2 entre **2 clientes reais** (Local Server com 2 jogadores no Studio ou 2 contas) para validar em tempo real o convite ponta-a-ponta e a câmera espelhada do Jogador B.
+- Opcional (caso o usuário queira depois): adicionar modo de treino solo 2x2 ou Torre 2x2 usando o mesmo `BattleService.StartBattle(..., { Format = "2x2" })`, e futuros golpes táticos exclusivos de dupla (ex.: *Proteção*, *Ajudar Aliado*, *Vento em Cauda*).

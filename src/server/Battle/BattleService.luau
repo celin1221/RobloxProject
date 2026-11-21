@@ -65,11 +65,114 @@ end
 
 BattleService.ReturnToPlaza = ArenaManager.ReturnToPlaza
 
+local function modelFor(session, side: string?, fieldSlot: number?): Model?
+	if not side then
+		return nil
+	end
+	local slot = fieldSlot or 1
+	local bySide = session.SlotModels and session.SlotModels[side]
+	if bySide and bySide[slot] then
+		return bySide[slot]
+	end
+	if slot == 1 then
+		return session.Models and session.Models[side]
+	end
+	return nil
+end
+
+local function destroyAllModels(session)
+	local destroyed = {}
+	if session.SlotModels then
+		for _, slots in pairs(session.SlotModels) do
+			for _, m in pairs(slots) do
+				if m and m.Parent and not destroyed[m] then
+					destroyed[m] = true
+					m:Destroy()
+				end
+			end
+		end
+	end
+	for _, m in pairs(session.Models or {}) do
+		if m and m.Parent and not destroyed[m] then
+			destroyed[m] = true
+			m:Destroy()
+		end
+	end
+end
+
+-- Empacota modelos ativos por slot com chaves de string ("Slot1", "Slot2") para evitar buracos na rede
+local function buildClientModels(session, view: string)
+	local mySide = view
+	local foeSide = otherSide(view)
+	local function packSide(side: string)
+		local t = {}
+		local m1 = modelFor(session, side, 1)
+		local m2 = modelFor(session, side, 2)
+		if m1 then
+			t.Slot1 = m1
+		end
+		if m2 then
+			t.Slot2 = m2
+		end
+		return t
+	end
+	return {
+		Player = modelFor(session, mySide, 1),
+		Enemy = modelFor(session, foeSide, 1),
+	}, {
+		Player = packSide(mySide),
+		Enemy = packSide(foeSide),
+	}
+end
+
+local function activeNamesText(battle, side: string): string
+	local names = {}
+	for fs = 1, battle.SlotsPerSide do
+		local b = battle:ActiveAt(side, fs)
+		if b and b.Hp > 0 then
+			table.insert(names, b.Name)
+		end
+	end
+	if #names >= 2 then
+		return names[1] .. " e " .. names[2]
+	end
+	return names[1] or (battle:Active(side) and battle:Active(side).Name) or ""
+end
+
+local function playVictoryModels(session, winnerSide: string?)
+	if not winnerSide then
+		return
+	end
+	local battle = session.Battle
+	for fs = 1, battle.SlotsPerSide do
+		local b = battle:ActiveAt(winnerSide, fs)
+		local model = if b and b.Hp > 0 then modelFor(session, winnerSide, fs) else nil
+		if model and model.Parent then
+			model:SetAttribute("Victory", true)
+			local folder = model:FindFirstChild("Animations")
+			if folder and folder:FindFirstChild("Victory") then
+				CharacterLibrary.Stop(model)
+				CharacterLibrary.Play(model, "Victory")
+			end
+		end
+	end
+end
+
 -- PvP: quem le do lado Enemy ve tudo espelhado (o lado dele vira "Player")
 local function mirrorEvent(ev)
 	local m = table.clone(ev)
 	if ev.Side then
 		m.Side = otherSide(ev.Side)
+	end
+	if ev.TargetSide then
+		m.TargetSide = otherSide(ev.TargetSide)
+	end
+	if typeof(ev.Targets) == "table" then
+		local mirrored = {}
+		for i, t in ipairs(ev.Targets) do
+			mirrored[i] = { Side = if t.Side then otherSide(t.Side) else nil, FieldSlot = t.FieldSlot }
+		end
+		m.Targets = mirrored
 	end
 	if ev.TextEnemy then
 		m.Text = ev.TextEnemy
@@ -113,15 +216,31 @@ end
 -- Envia os eventos ao cliente um a um, tocando as animacoes
 local function present(session, events)
 	local clientMove = nil
+	local primaryTargetSide = nil
+	local primaryTargetSlot = nil
 	for _, ev in ipairs(events) do
 		if not sessionAlive(session) then
 			return
 		end
 		local payload = ev
 		if ev.Kind == "Switch" then
-			local model = ArenaManager.SpawnActive(session, ev.Side, ev.ToIndex)
+			local model = ArenaManager.SpawnActive(session, ev.Side, ev.ToIndex, ev.FieldSlot or 1)
 			payload = table.clone(ev)
 			payload.Model = model
+		elseif ev.Kind == "UseMove" then
+			payload = table.clone(ev)
+			payload.Model = modelFor(session, ev.Side, ev.FieldSlot)
+			payload.TargetModel = ev.TargetSide and modelFor(session, ev.TargetSide, ev.TargetFieldSlot)
+			if typeof(ev.Targets) == "table" and #ev.Targets > 1 then
+				local tModels = {}
+				for _, t in ipairs(ev.Targets) do
+					local tm = modelFor(session, t.Side, t.FieldSlot)
+					if tm then
+						table.insert(tModels, tm)
+					end
+				end
+				payload.TargetModels = tModels
+			end
 		end
 		fireViewers(session, BattleUpdateRE, function(side)
 			if side == "Enemy" then
@@ -135,11 +254,16 @@ local function present(session, events)
 			end
 			return { Event = payload }
 		end)
-		local model = ev.Side and session.Models[ev.Side]
+		local model = ev.Side and modelFor(session, ev.Side, ev.FieldSlot)
 		local delay = Config.EventDelay[ev.Kind] or Config.EventDelay.Default
-		if ev.Kind == "UseMove" then
+		if ev.Kind == "ClearSlot" then
+			ArenaManager.ClearSlot(session, ev.Side, ev.FieldSlot or 1)
+			delay = 0.25
+		elseif ev.Kind == "UseMove" then
 			local mv = Moves.Get(ev.MoveId)
 			clientMove = if mv and mv.Anim and mv.Vfx then mv else nil
+			primaryTargetSide = ev.TargetSide
+			primaryTargetSlot = ev.TargetFieldSlot or 1
 			if clientMove then
 				delay = math.max(delay, (clientMove.Timing and clientMove.Timing.Impact or 0) + 0.05)
 			elseif model then
@@ -147,7 +271,8 @@ local function present(session, events)
 			end
 		elseif ev.Kind == "Damage" and model then
 			CharacterLibrary.Play(model, "Hit")
-			if not clientMove then
+			local isSecondarySpreadHit = clientMove ~= nil and (ev.Side ~= primaryTargetSide or (ev.FieldSlot or 1) ~= primaryTargetSlot)
+			if not clientMove or isSecondarySpreadHit then
 				ArenaManager.ImpactBurst(model, TypeChart.Color[ev.MoveType] or Color3.new(1, 1, 1))
 			end
 		elseif ev.Kind == "StatusDamage" and model then
@@ -211,9 +336,7 @@ local function cleanup(session, returnPlayer: boolean)
 		end
 		session.Closed = true
 		session.TurnToken = (session.TurnToken or 0) + 1
-		for _, model in pairs(session.Models) do
-			model:Destroy()
-		end
+		destroyAllModels(session)
 		if session.Arena and session.Arena.Parent then
 			session.Arena:SetAttribute("InUse", false)
 		end
@@ -232,9 +355,7 @@ local function cleanup(session, returnPlayer: boolean)
 		return
 	end
 	sessions[session.Player] = nil
-	for _, model in pairs(session.Models) do
-		model:Destroy()
-	end
+	destroyAllModels(session)
 	if session.Arena and session.Arena.Parent then
 		session.Arena:SetAttribute("InUse", false)
 	end
@@ -267,15 +388,7 @@ local function finish(session)
 			local r = if battle.Winner == side then "Win" elseif battle.Winner == "None" then "Fled" else "Lose"
 			return { Result = r, Reason = battle.EndReason }
 		end)
-		local winnerModel = battle.Winner and session.Models[battle.Winner]
-		if winnerModel and winnerModel.Parent then
-			winnerModel:SetAttribute("Victory", true)
-			local folder = winnerModel:FindFirstChild("Animations")
-			if folder and folder:FindFirstChild("Victory") then
-				CharacterLibrary.Stop(winnerModel)
-				CharacterLibrary.Play(winnerModel, "Victory")
-			end
-		end
+		playVictoryModels(session, battle.Winner)
 		if session.OnPvPEnd then
 			task.spawn(session.OnPvPEnd, battle.Winner, battle.EndReason)
 		end
@@ -313,15 +426,7 @@ local function finish(session)
 		return
 	end
 	BattleEndRE:FireClient(session.Player, session.Id, { Result = result, Reason = battle.EndReason })
-	local winnerModel = battle.Winner and session.Models[battle.Winner]
-	if winnerModel then
-		winnerModel:SetAttribute("Victory", true)
-		local folder = winnerModel:FindFirstChild("Animations")
-		if folder and folder:FindFirstChild("Victory") then
-			CharacterLibrary.Stop(winnerModel)
-			CharacterLibrary.Play(winnerModel, "Victory")
-		end
-	end
+	playVictoryModels(session, battle.Winner)
 	task.wait(Config.EndScreenTime * (Config.TimeScale or 1))
 	cleanup(session, not (session.Opts and session.Opts.KeepPlayer))
 end
@@ -356,6 +461,7 @@ function BattleService.StartBattle(player: Player, opts): boolean
 	local okNew, battle = pcall(BattleEngine.New, {
 		Player = { Team = playerTeam },
 		Enemy = { Team = opts.EnemyTeam or Config.EnemyTeam, AI = opts.EnemyAI or Config.EnemyAI },
+		Format = opts.Format,
 		Mode = opts.Mode or Config.Mode,
 		CaptureBlocked = opts.CaptureBlocked,
 		Bag = opts.Bag or (hooks.BagFor and hooks.BagFor(player)) or Config.StartingBag,
@@ -372,6 +478,7 @@ function BattleService.StartBattle(player: Player, opts): boolean
 		Arena = arena,
 		Opts = opts,
 		Models = {},
+		SlotModels = { Player = {}, Enemy = {} },
 		Busy = true,
 	}
 	sessions[player] = session
@@ -382,9 +489,15 @@ function BattleService.StartBattle(player: Player, opts): boolean
 		actors.Name = "BattleActors"
 		actors.Parent = arena
 		session.Actors = actors
-		ArenaManager.SpawnActive(session, "Player")
-		ArenaManager.SpawnActive(session, "Enemy")
-		ArenaManager.PlaceViewer(session, player, arena.PlayerPoint)
+		for fs = 1, battle.SlotsPerSide do
+			if battle:ActiveAt("Player", fs) then
+				ArenaManager.SpawnActive(session, "Player", nil, fs)
+			end
+			if battle:ActiveAt("Enemy", fs) then
+				ArenaManager.SpawnActive(session, "Enemy", nil, fs)
+			end
+		end
+		ArenaManager.PlaceViewer(session, player, arena.PlayerPoint, battle:IsDouble())
 	end)
 	if not ok then
 		warn("[BattleService] Falha ao montar a batalha: " .. tostring(err))
@@ -392,19 +505,23 @@ function BattleService.StartBattle(player: Player, opts): boolean
 		return false
 	end
 
-	local cameraPoint = arena:FindFirstChild("CameraPoint")
+	local models, slotModels = buildClientModels(session, "Player")
 	StartBattleRE:FireClient(player, session.Id, {
-		Camera = cameraPoint and cameraPoint.CFrame,
-		Models = { Player = session.Models.Player, Enemy = session.Models.Enemy },
+		Camera = ArenaManager.BattleCamera(arena, battle.Format),
+		Models = models,
+		SlotModels = slotModels,
 		State = battle:Snapshot(),
 	})
 
 	task.spawn(function()
 		local intro = {}
-		for _, text in ipairs(opts.Intro or { "Voc\u{ea} foi desafiado! O advers\u{e1}rio tem " .. #battle.Sides.Enemy.Team .. " personagens." }) do
+		local defaultIntro = if battle:IsDouble()
+			then "Batalha em Dupla (2x2)! O advers\u{e1}rio tem " .. #battle.Sides.Enemy.Team .. " personagens."
+			else "Voc\u{ea} foi desafiado! O advers\u{e1}rio tem " .. #battle.Sides.Enemy.Team .. " personagens."
+		for _, text in ipairs(opts.Intro or { defaultIntro }) do
 			table.insert(intro, { Kind = "Message", Text = text })
 		end
-		table.insert(intro, { Kind = "Message", Text = "Vai, " .. battle:Active("Player").Name .. "!" })
+		table.insert(intro, { Kind = "Message", Text = "Vai, " .. activeNamesText(battle, "Player") .. "!" })
 		present(session, intro)
 		if sessions[player] == session then
 			session.Busy = false
@@ -460,7 +577,13 @@ local function pvpTryResolve(session, timedOut: boolean?)
 				if not timedOut then
 					return
 				end
-				session.Choices[side] = { Kind = "Replace", Index = battle:AutoReplacement(side), Auto = true }
+				local auto = battle:AutoReplacement(side)
+				session.Choices[side] = {
+					Kind = "Replace",
+					Index = if typeof(auto) == "number" then auto else nil,
+					Replacements = if typeof(auto) == "table" then auto else nil,
+					Auto = true,
+				}
 			end
 		end
 		session.Busy = true
@@ -471,7 +594,7 @@ local function pvpTryResolve(session, timedOut: boolean?)
 				if c.Auto then
 					table.insert(events, { Kind = "Message", Text = if side == "Player" then "Tempo esgotado! Escolha autom\u{e1}tica." else "O advers\u{e1}rio n\u{e3}o escolheu a tempo.", TextEnemy = if side == "Enemy" then "Tempo esgotado! Escolha autom\u{e1}tica." else "O advers\u{e1}rio n\u{e3}o escolheu a tempo." })
 				end
-				for _, ev in ipairs(battle:ResolveReplacement(side, c.Index)) do
+				for _, ev in ipairs(battle:ResolveReplacement(side, c.Replacements or c.Index)) do
 					table.insert(events, ev)
 				end
 			end
@@ -552,7 +675,9 @@ local function pvpDrop(session, player: Player)
 	task.spawn(pvpAfter, session, events)
 end
 
-function BattleService.StartPvP(playerA: Player, playerB: Player, teamA, teamB, onEnd)
+function BattleService.StartPvP(playerA: Player, playerB: Player, teamA, teamB, onEnd, opts)
+	opts = opts or {}
+	local format = if opts.Format == "2x2" then "2x2" else "1x1"
 	if sessions[playerA] or sessions[playerB] then
 		return false, "Algu\u{e9}m j\u{e1} est\u{e1} em batalha."
 	end
@@ -563,6 +688,14 @@ function BattleService.StartPvP(playerA: Player, playerB: Player, teamA, teamB, 
 			return false, p.DisplayName .. " n\u{e3}o est\u{e1} pronto."
 		end
 	end
+	if format == "2x2" then
+		if typeof(teamA) ~= "table" or #teamA < 2 then
+			return false, playerA.DisplayName .. " precisa de pelo menos 2 personagens no time para 2x2."
+		end
+		if typeof(teamB) ~= "table" or #teamB < 2 then
+			return false, playerB.DisplayName .. " precisa de pelo menos 2 personagens no time para 2x2."
+		end
+	end
 	local arena = ArenaManager.FindFreeArena()
 	if not arena then
 		return false, "Nenhuma arena livre agora. Tente de novo em instantes."
@@ -570,6 +703,7 @@ function BattleService.StartPvP(playerA: Player, playerB: Player, teamA, teamB, 
 	local okNew, battle = pcall(BattleEngine.New, {
 		Player = { Team = teamA },
 		Enemy = { Team = teamB },
+		Format = format,
 		Mode = "PvP",
 		EnemyHuman = true,
 		Bag = {},
@@ -586,8 +720,9 @@ function BattleService.StartPvP(playerA: Player, playerB: Player, teamA, teamB, 
 		PvP = true,
 		Battle = battle,
 		Arena = arena,
-		Opts = {},
+		Opts = opts,
 		Models = {},
+		SlotModels = { Player = {}, Enemy = {} },
 		Gone = {},
 		Choices = {},
 		TurnToken = 0,
@@ -603,10 +738,16 @@ function BattleService.StartPvP(playerA: Player, playerB: Player, teamA, teamB, 
 		actors.Name = "BattleActors"
 		actors.Parent = arena
 		session.Actors = actors
-		ArenaManager.SpawnActive(session, "Player")
-		ArenaManager.SpawnActive(session, "Enemy")
-		ArenaManager.PlaceViewer(session, playerA, arena.PlayerPoint)
-		ArenaManager.PlaceViewer(session, playerB, arena.EnemyPoint)
+		for fs = 1, battle.SlotsPerSide do
+			if battle:ActiveAt("Player", fs) then
+				ArenaManager.SpawnActive(session, "Player", nil, fs)
+			end
+			if battle:ActiveAt("Enemy", fs) then
+				ArenaManager.SpawnActive(session, "Enemy", nil, fs)
+			end
+		end
+		ArenaManager.PlaceViewer(session, playerA, arena.PlayerPoint, battle:IsDouble())
+		ArenaManager.PlaceViewer(session, playerB, arena.EnemyPoint, battle:IsDouble())
 	end)
 	if not ok then
 		warn("[BattleService] Falha ao montar o PvP: " .. tostring(err))
@@ -614,29 +755,116 @@ function BattleService.StartPvP(playerA: Player, playerB: Player, teamA, teamB, 
 		return false, "Falha ao montar a arena."
 	end
 
-	local cameraPoint = arena:FindFirstChild("CameraPoint")
-	local cam = cameraPoint and cameraPoint.CFrame
+	local cam = ArenaManager.BattleCamera(arena, battle.Format)
+	local modelsA, slotModelsA = buildClientModels(session, "Player")
+	local modelsB, slotModelsB = buildClientModels(session, "Enemy")
 	StartBattleRE:FireClient(playerA, session.Id, {
 		Camera = cam,
-		Models = { Player = session.Models.Player, Enemy = session.Models.Enemy },
+		Models = modelsA,
+		SlotModels = slotModelsA,
 		State = battle:Snapshot("Player"),
 		OpponentName = playerB.DisplayName,
 	})
 	StartBattleRE:FireClient(playerB, session.Id, {
 		Camera = ArenaManager.MirroredCamera(arena, cam),
-		Models = { Player = session.Models.Enemy, Enemy = session.Models.Player },
+		Models = modelsB,
+		SlotModels = slotModelsB,
 		State = battle:Snapshot("Enemy"),
 		OpponentName = playerA.DisplayName,
 	})
 
 	task.spawn(function()
+		local modeTitle = if battle:IsDouble() then "PvP 2x2 (Em Dupla)" else "PvP 1x1"
 		local intro = {
-			{ Kind = "Message", Text = "PvP contra " .. playerB.DisplayName .. "! N\u{ed}veis igualados em 50, sem itens.", TextEnemy = "PvP contra " .. playerA.DisplayName .. "! N\u{ed}veis igualados em 50, sem itens." },
-			{ Kind = "Message", Text = "Vai, " .. battle:Active("Player").Name .. "!", TextEnemy = "Vai, " .. battle:Active("Enemy").Name .. "!" },
+			{
+				Kind = "Message",
+				Text = modeTitle .. " contra " .. playerB.DisplayName .. "! N\u{ed}veis igualados em 50, sem itens.",
+				TextEnemy = modeTitle .. " contra " .. playerA.DisplayName .. "! N\u{ed}veis igualados em 50, sem itens.",
+			},
+			{
+				Kind = "Message",
+				Text = "Vai, " .. activeNamesText(battle, "Player") .. "!",
+				TextEnemy = "Vai, " .. activeNamesText(battle, "Enemy") .. "!",
+			},
 		}
 		pvpAfter(session, intro)
 	end)
 	return true
+end
+
+-- Sanitiza acao vinda do cliente (nunca confiar em tabelas cruas do cliente)
+local function sanitizeSingleAction(raw, allowItems: boolean)
+	if typeof(raw) ~= "table" or typeof(raw.Kind) ~= "string" then
+		return nil
+	end
+	local kind = raw.Kind
+	if kind == "Flee" then
+		return { Kind = "Flee" }
+	elseif kind == "Move" then
+		return {
+			Kind = "Move",
+			Index = if typeof(raw.Index) == "number" then raw.Index else nil,
+			TargetSide = if raw.TargetSide == "Enemy" or raw.TargetSide == "Ally" then raw.TargetSide else nil,
+			TargetSlot = if typeof(raw.TargetSlot) == "number" then raw.TargetSlot else nil,
+		}
+	elseif kind == "Switch" then
+		return {
+			Kind = "Switch",
+			Index = if typeof(raw.Index) == "number" then raw.Index else nil,
+		}
+	elseif kind == "Item" and allowItems then
+		return {
+			Kind = "Item",
+			ItemId = if typeof(raw.ItemId) == "string" then raw.ItemId else nil,
+			TargetIndex = if typeof(raw.TargetIndex) == "number" then raw.TargetIndex else nil,
+		}
+	end
+	return nil
+end
+
+local function sanitizeAction(raw, allowItems: boolean)
+	if typeof(raw) ~= "table" or typeof(raw.Kind) ~= "string" then
+		return nil
+	end
+	if raw.Kind == "Replace" then
+		local out = {
+			Kind = "Replace",
+			Index = if typeof(raw.Index) == "number" then raw.Index else nil,
+		}
+		if typeof(raw.Replacements) == "table" then
+			local list = {}
+			for i = 1, math.min(2, #raw.Replacements) do
+				local entry = raw.Replacements[i]
+				if typeof(entry) == "table" and typeof(entry.Index) == "number" then
+					table.insert(list, {
+						FieldSlot = if typeof(entry.FieldSlot) == "number" then entry.FieldSlot else nil,
+						Index = entry.Index,
+					})
+				end
+			end
+			out.Replacements = list
+		end
+		return out
+	elseif raw.Kind == "Double" then
+		if typeof(raw.Actions) ~= "table" then
+			return nil
+		end
+		local list = {}
+		local count = 0
+		for k, entry in pairs(raw.Actions) do
+			count += 1
+			if count > 4 then
+				break
+			end
+			local sub = sanitizeSingleAction(entry, allowItems)
+			if sub and sub.Kind ~= "Flee" then
+				sub.FieldSlot = if typeof(entry.FieldSlot) == "number" then entry.FieldSlot elseif typeof(k) == "number" then k else nil
+				table.insert(list, sub)
+			end
+		end
+		return { Kind = "Double", Actions = list }
+	end
+	return sanitizeSingleAction(raw, allowItems)
 end
 
 function BattleService.Init()
@@ -651,21 +879,18 @@ function BattleService.Init()
 		if not session or session.Id ~= battleId then
 			return
 		end
+		local clean = sanitizeAction(action, not session.PvP)
+		if not clean then
+			return
+		end
 		if session.PvP then
-			if typeof(action) ~= "table" then
-				return
-			end
-			pvpSubmit(session, player, { Kind = action.Kind, Index = action.Index })
+			pvpSubmit(session, player, clean)
 			return
 		end
 		if session.Busy then
 			BattleUpdateRE:FireClient(player, session.Id, { Error = "Aguarde o fim do turno." })
 			return
 		end
-		if typeof(action) ~= "table" then
-			return
-		end
-		local clean = { Kind = action.Kind, Index = action.Index, ItemId = action.ItemId, TargetIndex = action.TargetIndex }
 		local battle = session.Battle
 		local ok, err = battle:ValidateAction("Player", clean)
 		if not ok then
@@ -676,7 +901,7 @@ function BattleService.Init()
 		session.Busy = true
 		local events
 		if clean.Kind == "Replace" then
-			events = battle:ResolveReplacement("Player", clean.Index)
+			events = battle:ResolveReplacement("Player", clean.Replacements or clean.Index)
 		else
 			events = battle:ResolveTurn(clean)
 		end

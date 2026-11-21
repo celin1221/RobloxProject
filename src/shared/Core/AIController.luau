@@ -50,12 +50,30 @@ local function matchup(member, foe): number
 	return attack - defend
 end
 
--- Escolhe quem entra depois de um desmaio. team = lista do lado; active = indice atual.
-function AIController.ChooseReplacement(level: string, team, active: number, foe, rng: Random): number?
+-- Escolhe quem entra depois de um desmaio.
+-- team = lista do lado; active = indice atual (ou lista ActiveSlots); exclude = tabela [teamIndex] = true a ignorar.
+function AIController.ChooseReplacement(level: string, team, active, foe, rng: Random, exclude): number?
+	local blocked = {}
+	if typeof(active) == "table" then
+		for _, idx in pairs(active) do
+			if typeof(idx) == "number" then
+				blocked[idx] = true
+			end
+		end
+	elseif typeof(active) == "number" then
+		blocked[active] = true
+	end
+	if typeof(exclude) == "table" then
+		for idx, on in pairs(exclude) do
+			if on then
+				blocked[idx] = true
+			end
+		end
+	end
 	local best, bestScore = nil, -math.huge
 	for i, member in ipairs(team) do
-		if i ~= active and member.Hp > 0 then
-			if level ~= "Dificil" then
+		if not blocked[i] and member.Hp > 0 then
+			if level ~= "Dificil" or not foe then
 				return i -- Facil e Medio: o proximo da ordem do time
 			end
 			local score = matchup(member, foe)
@@ -115,6 +133,135 @@ function AIController.ChooseAction(level: string, self, foe, rng: Random, team, 
 		end
 	end
 	return { Kind = "Move", Index = index }
+end
+
+-- Escolha para batalha 2x2: devolve { Kind = "Double", Actions = { { FieldSlot = fs, ... }, ... } }
+function AIController.ChooseActionsDouble(level: string, ownSide, foeSide, rng: Random)
+	local foes = {}
+	local foeSlots = foeSide.ActiveSlots or { foeSide.Active }
+	for fs = 1, 2 do
+		local idx = foeSlots[fs]
+		local b = idx and foeSide.Team[idx]
+		if b and b.Hp > 0 then
+			table.insert(foes, { FieldSlot = fs, Battler = b })
+		end
+	end
+
+	local ownSlots = ownSide.ActiveSlots or { ownSide.Active }
+	local onField = {}
+	for fs = 1, 2 do
+		local idx = ownSlots[fs]
+		if idx then
+			onField[idx] = true
+		end
+	end
+
+	local reservedSwitches = {}
+	local actions = {}
+
+	for fs = 1, 2 do
+		local teamIdx = ownSlots[fs]
+		local battler = teamIdx and ownSide.Team[teamIdx]
+		if not battler or battler.Hp <= 0 then
+			continue
+		end
+
+		local chosen = nil
+
+		-- Dificil: se algum oponente tem vantagem de tipo, tenta trocar para alguem melhor no banco
+		if level == "Dificil" and #foes > 0 then
+			local threatened = false
+			local curScore = 0
+			for _, f in ipairs(foes) do
+				if TypeChart.Multiplier(f.Battler.Type, battler.Type) > 1 then
+					threatened = true
+				end
+				curScore += matchup(battler, f.Battler)
+			end
+			if threatened then
+				local best, bestScore = nil, curScore
+				for i, member in ipairs(ownSide.Team) do
+					if not onField[i] and not reservedSwitches[i] and member.Hp > 0 then
+						local score = 0
+						for _, f in ipairs(foes) do
+							score += matchup(member, f.Battler)
+						end
+						if score > bestScore then
+							best, bestScore = i, score
+						end
+					end
+				end
+				if best then
+					reservedSwitches[best] = true
+					chosen = { FieldSlot = fs, Kind = "Switch", Index = best }
+				end
+			end
+		end
+
+		if not chosen then
+			local usable = usableMoves(battler)
+			local defaultTargetSlot = if #foes > 0 then foes[rng:NextInteger(1, #foes)].FieldSlot else 1
+			if #usable == 0 then
+				chosen = { FieldSlot = fs, Kind = "Move", Index = 0, TargetSide = "Enemy", TargetSlot = defaultTargetSlot }
+			else
+				local function pickBestMoveAndTarget()
+					local bestMoveIdx, bestSlot, bestVal = usable[1], defaultTargetSlot, -1
+					for _, mIdx in ipairs(usable) do
+						local move = Moves.Get(battler.Moves[mIdx].Id)
+						local mode = Moves.TargetMode(move)
+						if mode == "AllEnemies" or mode == "AllOthers" then
+							local spread = if #foes >= 2 then DamageCalc.SPREAD_MULTIPLIER else 1
+							local total = 0
+							for _, f in ipairs(foes) do
+								total += DamageCalc.ExpectedDamage(battler, f.Battler, move, spread)
+							end
+							if total > bestVal then
+								bestMoveIdx, bestSlot, bestVal = mIdx, defaultTargetSlot, total
+							end
+						elseif mode == "Single" then
+							for _, f in ipairs(foes) do
+								local val = DamageCalc.ExpectedDamage(battler, f.Battler, move, 1)
+								if val > bestVal then
+									bestMoveIdx, bestSlot, bestVal = mIdx, f.FieldSlot, val
+								end
+							end
+						end
+					end
+					return bestMoveIdx, bestSlot
+				end
+
+				local moveIdx, targetSlot = usable[rng:NextInteger(1, #usable)], defaultTargetSlot
+				if level == "Dificil" then
+					local pickedStatus = false
+					for _, f in ipairs(foes) do
+						if not f.Battler.Status then
+							for _, mIdx in ipairs(usable) do
+								local move = Moves.Get(battler.Moves[mIdx].Id)
+								if move.Effect and move.Effect.Kind == "Status" and move.Effect.Target ~= "Self" and move.Category == "Status" then
+									moveIdx, targetSlot = mIdx, f.FieldSlot
+									pickedStatus = true
+									break
+								end
+							end
+							if pickedStatus then
+								break
+							end
+						end
+					end
+					if not pickedStatus then
+						moveIdx, targetSlot = pickBestMoveAndTarget()
+					end
+				elseif level == "Medio" and rng:NextNumber() < AIController.MEDIUM_BEST_CHANCE then
+					moveIdx, targetSlot = pickBestMoveAndTarget()
+				end
+				chosen = { FieldSlot = fs, Kind = "Move", Index = moveIdx, TargetSide = "Enemy", TargetSlot = targetSlot }
+			end
+		end
+
+		table.insert(actions, chosen)
+	end
+
+	return { Kind = "Double", Actions = actions }
 end
 
 return AIController

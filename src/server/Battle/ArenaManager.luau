@@ -15,6 +15,9 @@ local CharacterLibrary = require(ServerScriptService:WaitForChild("CharacterLibr
 
 local ArenaManager = {}
 
+-- Deslocamento lateral (studs) dos slots 1 (esquerda) e 2 (direita) em batalhas 2x2
+ArenaManager.DOUBLE_LATERAL = 5.2
+
 function ArenaManager.FindFreeArena(): Model?
 	local folder = workspace:FindFirstChild("Arenas")
 	if not folder then
@@ -74,30 +77,84 @@ function ArenaManager.ImpactBurst(model: Model?, color: Color3)
 	Debris:AddItem(att, 1.5)
 end
 
--- Cria (pelo nome do modelo nos dados) o personagem em campo de um lado.
--- index = posicao no time (padrao: quem esta em campo agora)
-function ArenaManager.SpawnActive(session, side: string, index: number?): Model
+-- Ponto 3D do lutador em um slot (1x1 = centro do ponto; 2x2 = esquerda/direita)
+function ArenaManager.SlotCFrame(arena: Model, side: string, fieldSlot: number?, isDouble: boolean?): CFrame
+	local point = if side == "Player" then arena.PlayerPoint else arena.EnemyPoint
+	if not isDouble then
+		return point.CFrame
+	end
+	local xOff = if (fieldSlot or 1) == 1 then -ArenaManager.DOUBLE_LATERAL else ArenaManager.DOUBLE_LATERAL
+	return point.CFrame * CFrame.new(xOff, 0, 0)
+end
+
+-- Camera da arena: 1x1 usa CameraPoint original; 2x2 afasta e eleva levemente para enquadrar os 4 lutadores
+function ArenaManager.BattleCamera(arena: Model, format: string?): CFrame?
+	if format ~= "2x2" then
+		local cameraPoint = arena:FindFirstChild("CameraPoint")
+		return cameraPoint and cameraPoint.CFrame
+	end
+	local pp = arena:FindFirstChild("PlayerPoint")
+	local ep = arena:FindFirstChild("EnemyPoint")
+	if not (pp and ep) then
+		local cameraPoint = arena:FindFirstChild("CameraPoint")
+		return cameraPoint and cameraPoint.CFrame
+	end
+	local center = (pp.Position + ep.Position) / 2
+	local camPos = (pp.CFrame * CFrame.new(13.5, 5.8, 15.5)).Position
+	return CFrame.lookAt(camPos, center + Vector3.new(0, 0.5, 0))
+end
+
+-- Cria (pelo nome do modelo nos dados) o personagem em campo de um lado/slot.
+-- index = posicao no time (padrao: quem esta em campo nesse slot agora)
+-- fieldSlot = 1 (padrao) ou 2 (em batalhas 2x2)
+function ArenaManager.SpawnActive(session, side: string, index: number?, fieldSlot: number?): Model?
 	local arena = session.Arena
 	local sideState = session.Battle.Sides[side]
-	local member = sideState.Team[index or sideState.Active]
-	local point = if side == "Player" then arena.PlayerPoint else arena.EnemyPoint
+	local slot = fieldSlot or 1
+	local isDouble = session.Battle.IsDouble and session.Battle:IsDouble()
+	local teamIdx = index or (sideState.ActiveSlots and sideState.ActiveSlots[slot]) or sideState.Active
+	local member = teamIdx and sideState.Team[teamIdx]
+	if not member then
+		return nil
+	end
+	local spot = ArenaManager.SlotCFrame(arena, side, slot, isDouble)
 	local model = CharacterLibrary.Spawn(member.ModelName, nil, session.Actors)
 	local hum = model:FindFirstChildOfClass("Humanoid")
 	hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
 	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	model.HumanoidRootPart.Anchored = true
-	ArenaManager.StandAt(model, point.CFrame, session.FloorY)
+	ArenaManager.StandAt(model, spot, session.FloorY)
 	CollectionService:AddTag(model, "BattleCharacter")
-	local old = session.Models[side]
-	if old then
+
+	session.SlotModels = session.SlotModels or { Player = {}, Enemy = {} }
+	session.SlotModels[side] = session.SlotModels[side] or {}
+	local old = session.SlotModels[side][slot]
+	if old and old.Parent then
 		old:Destroy()
 	end
-	session.Models[side] = model
+	session.SlotModels[side][slot] = model
+	if slot == 1 then
+		session.Models[side] = model
+	end
 	return model
 end
 
--- Coloca o personagem do jogador atras do seu lutador
-function ArenaManager.PlaceViewer(session, player: Player, point: BasePart)
+-- Remove o modelo 3D de um slot que ficou vazio (ex.: 2x1 quando o banco acabou)
+function ArenaManager.ClearSlot(session, side: string, fieldSlot: number)
+	if session.SlotModels and session.SlotModels[side] then
+		local old = session.SlotModels[side][fieldSlot]
+		if old and old.Parent then
+			old:Destroy()
+		end
+		session.SlotModels[side][fieldSlot] = nil
+	end
+	if fieldSlot == 1 then
+		session.Models[side] = nil
+	end
+end
+
+-- Coloca o personagem do jogador atras do(s) seu(s) lutador(es)
+function ArenaManager.PlaceViewer(session, player: Player, point: BasePart, isDouble: boolean?)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not root then
@@ -106,7 +163,7 @@ function ArenaManager.PlaceViewer(session, player: Player, point: BasePart)
 	pcall(function()
 		player:RequestStreamAroundAsync(point.Position, 5)
 	end)
-	local spot = point.CFrame * CFrame.new(-5, 0, 8)
+	local spot = if isDouble then point.CFrame * CFrame.new(-3, 0, 16) else point.CFrame * CFrame.new(-5, 0, 8)
 	root.Anchored = true
 	ArenaManager.StandAt(character, CFrame.lookAt(spot.Position, spot.Position + point.CFrame.LookVector), session.FloorY)
 end

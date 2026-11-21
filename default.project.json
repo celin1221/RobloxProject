@@ -20,6 +20,9 @@
       },
       "_ConstrutorMapaV2": {
         "$path": "src/server_storage/_ConstrutorMapaV2.luau"
+      },
+      "_ConstrutorArenasSukuna": {
+        "$path": "src/server_storage/_ConstrutorArenasSukuna.luau"
       }
     },
     "StarterGui": {
@@ -89,6 +92,16 @@
         "$className": "ScreenGui",
         "$ignoreUnknownInstances": true,
         "$path": "src/client/Gui/EquipeGui"
+      },
+      "CharacterDetailGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/CharacterDetailGui"
+      },
+      "TrainingGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/TrainingGui"
       }
     },
     "StarterPlayer": {
