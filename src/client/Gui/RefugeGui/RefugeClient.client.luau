@@ -46,8 +46,8 @@ local fbody = forge.Body
 
 local top, topFace = UI.panel(fbody, { Name = "Top", Size = UDim2.fromScale(1, 0.15), Color = "slot", Corner = 0.2, Shadow = false })
 UI.clampHeight(top, 44, 70)
-local levelLabel = UI.text(topFace, "", { Name = "Level", Size = UDim2.fromScale(0.3, 0.7), Position = UDim2.fromScale(0.02, 0.15), Role = "Heading", Color = "gold", AlignX = Enum.TextXAlignment.Left })
-local fieldLabel = UI.text(topFace, "", { Name = "Field", Size = UDim2.fromScale(0.46, 0.6), Position = UDim2.fromScale(0.3, 0.2), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
+local levelLabel = UI.text(topFace, "", { Name = "Level", Size = UDim2.fromScale(0.24, 0.7), Position = UDim2.fromScale(0.02, 0.15), Role = "Heading", Color = "gold", AlignX = Enum.TextXAlignment.Left })
+local fieldLabel = UI.text(topFace, "", { Name = "Field", Size = UDim2.fromScale(0.47, 0.68), Position = UDim2.fromScale(0.27, 0.16), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
 local _, gemsLabel = UI.pill(topFace, "gem", "gems", { Name = "Gems", Size = UDim2.fromScale(0.2, 0.7), Position = UDim2.fromScale(0.98, 0.15), AnchorPoint = Vector2.new(1, 0), Aspect = 3.2, Role = "Body" })
 
 -- chances: agora e proximo nivel
@@ -60,7 +60,7 @@ local function chanceColumn(name: string, x: number)
 		-- grade 2 x 2 (Comum | Raro / Epico | Lendario): cabe no celular pequeno
 		local gx, gy = (i - 1) % 2, (i - 1) // 2
 		local row, rf = UI.panel(face, { Name = "Rate_" .. r, Size = UDim2.fromScale(0.455, 0.26), Position = UDim2.fromScale(0.03 + gx * 0.485, 0.22 + gy * 0.3), Color = RARITY_COLOR[r], Corner = T.Corner.Pill, Shadow = false })
-		UI.text(rf, UI.upper(Summon.RarityName[r] or r), { Name = "Name", Size = UDim2.fromScale(0.6, 0.72), Position = UDim2.fromScale(0.05, 0.14), Role = "Small", AlignX = Enum.TextXAlignment.Left })
+		UI.text(rf, UI.upper(Summon.RarityName[r] or r), { Name = "Name", Size = UDim2.fromScale(0.52, 0.72), Position = UDim2.fromScale(0.05, 0.14), Role = "Small", AlignX = Enum.TextXAlignment.Left })
 		local v = UI.text(rf, "", { Name = "Value", Size = UDim2.fromScale(0.36, 0.72), Position = UDim2.fromScale(0.95, 0.14), AnchorPoint = Vector2.new(1, 0), Role = "Small", AlignX = Enum.TextXAlignment.Right })
 		if r == "Lendario" then
 			UI.shine(row)
@@ -80,7 +80,29 @@ local fmsg = UI.text(bar, "", { Name = "Message", Size = UDim2.fromScale(0.44, 1
 local upgradeButton = UI.button(bar, { Name = "Upgrade", Text = "MELHORAR", Icon = "plus", Layout = "row", Color = "green", Size = UDim2.fromScale(0.28, 1), Position = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(1, 0), Role = "Body", Sound = false })
 
 local reqs = UI.scroll(fbody, { Name = "Reqs", Size = UDim2.fromScale(1, 0.24), Position = UDim2.fromScale(0, 0.59) })
-UI.fillBetween(reqs, cols, bar, 6)
+
+local function layoutForge()
+	local H = fbody.AbsoluteSize.Y
+	if H < 40 then
+		return
+	end
+	local topH = math.max(44, math.floor(top.AbsoluteSize.Y))
+	local barH = math.max(T.TouchMin, math.floor(bar.AbsoluteSize.Y))
+	local gap = 6
+	local colsY = topH + gap
+	local avail = math.max(80, H - colsY - barH - gap * 2)
+	local colsH = math.clamp(math.floor(avail * 0.54), 76, math.floor(H * 0.40))
+	cols.Position = UDim2.fromOffset(0, colsY)
+	cols.Size = UDim2.new(1, 0, 0, colsH)
+	local reqY = colsY + colsH + gap
+	local reqH = math.max(36, H - reqY - barH - gap)
+	reqs.Position = UDim2.fromOffset(0, reqY)
+	reqs.Size = UDim2.new(1, 0, 0, reqH)
+end
+fbody:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutForge)
+top:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutForge)
+bar:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutForge)
+task.defer(layoutForge)
 
 local state = nil
 local stateAt = 0
@@ -133,8 +155,8 @@ local function refreshForgeNow()
 	end
 	for i, rq in ipairs(state.Reqs) do
 		local row, face = UI.panel(reqs, { Name = "Req" .. i, Size = UDim2.fromScale(0.98, 0), Aspect = 11, RowMax = 52, Color = if rq.Done then "green" else "panelAlt", Corner = 0.3, Shadow = false, LayoutOrder = i })
-		UI.text(face, rq.Text, { Name = "Text", Size = UDim2.fromScale(0.66, 0.7), Position = UDim2.fromScale(0.03, 0.15), Role = "Small", AlignX = Enum.TextXAlignment.Left })
-		UI.text(face, string.format("%s/%s", UI.fmt(rq.Have), UI.fmt(rq.Need)), { Name = "Progress", Size = UDim2.fromScale(0.2, 0.7), Position = UDim2.fromScale(0.86, 0.15), AnchorPoint = Vector2.new(1, 0), Role = "Small", AlignX = Enum.TextXAlignment.Right })
+		UI.text(face, rq.Text, { Name = "Text", Size = UDim2.fromScale(0.60, 0.7), Position = UDim2.fromScale(0.03, 0.15), Role = "Small", AlignX = Enum.TextXAlignment.Left })
+		UI.text(face, string.format("%s/%s", UI.fmt(rq.Have), UI.fmt(rq.Need)), { Name = "Progress", Size = UDim2.fromScale(0.21, 0.7), Position = UDim2.fromScale(0.87, 0.15), AnchorPoint = Vector2.new(1, 0), Role = "Small", AlignX = Enum.TextXAlignment.Right })
 		if rq.Done then
 			UI.icon(row, "tick", { Name = "Tick", Size = UDim2.fromScale(0.1, 0.9), Position = UDim2.fromScale(0.985, 0.5), AnchorPoint = Vector2.new(1, 0.5), ZIndex = 3 })
 		else
@@ -172,8 +194,8 @@ local chest = UI.window(canvas, { Name = "BauWindow", Title = "BA\u{da}", Icon =
 local cbody = chest.Body
 local ctop, ctopFace = UI.panel(cbody, { Name = "Top", Size = UDim2.fromScale(1, 0.14), Color = "slot", Corner = 0.2, Shadow = false })
 UI.clampHeight(ctop, 40, 64)
-local capLabel = UI.text(ctopFace, "", { Name = "Capacity", Size = UDim2.fromScale(0.6, 0.7), Position = UDim2.fromScale(0.03, 0.15), Role = "Body", AlignX = Enum.TextXAlignment.Left })
-local hint = UI.text(ctopFace, "30% de chance por selvagem derrotado ou capturado", { Name = "Hint", Size = UDim2.fromScale(0.5, 0.6), Position = UDim2.fromScale(0.97, 0.2), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Right, StrokeMult = 0.4 })
+local capLabel = UI.text(ctopFace, "", { Name = "Capacity", Size = UDim2.fromScale(0.34, 0.7), Position = UDim2.fromScale(0.03, 0.15), Role = "Body", AlignX = Enum.TextXAlignment.Left })
+local hint = UI.text(ctopFace, "30% de chance por selvagem derrotado ou capturado", { Name = "Hint", Size = UDim2.fromScale(0.58, 0.66), Position = UDim2.fromScale(0.97, 0.17), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Right, StrokeMult = 0.4 })
 local cbar = UI.frame(cbody, { Name = "Actions", Size = UDim2.fromScale(1, 0.13), Position = UDim2.fromScale(0, 1), AnchorPoint = Vector2.new(0, 1) })
 UI.clampHeight(cbar, T.TouchMin, 50)
 local cmsg = UI.text(cbar, "", { Name = "Message", Size = UDim2.fromScale(0.6, 1), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Left })
@@ -222,6 +244,7 @@ local function openForge()
 	fetch()
 	refreshForgeNow()
 	forge.Open()
+	task.defer(layoutForge)
 end
 
 local function openChest()

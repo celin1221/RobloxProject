@@ -19,6 +19,7 @@ export type RemoteEventName =
 	| "Notify"        -- Server -> Client: toast / notificacao na tela
 	| "PvPInvite"     -- Server -> Client: convite de desafio PvP (inclui Format: "1x1" | "2x2")
 	| "TrainingOpen"  -- Server -> Client: abre tela da Maquina de Treinamento pela capsula 3D
+	| "AccountXpGain" -- Server -> Client: ganho de XP / subida de nivel da conta
 
 export type RemoteFunctionName =
 	"GetProfile"      -- Client -> Server: retorna snapshot do perfil salvo
@@ -47,6 +48,7 @@ export type RemoteFunctionName =
 	| "PvPRespond"    -- Client -> Server: aceita ou recusa convite de PvP
 	| "PvPCancel"     -- Client -> Server: cancela convite de PvP
 	| "Rewards"       -- Client -> Server: coleta login diario, bau de tempo, missoes ou codigos
+	| "ClaimLevelReward" -- Client -> Server: resgata recompensa de nivel da conta (level ou "All")
 	| "SaveSettings"  -- Client -> Server: salva configuracoes do cliente (som, qualidade baixa, etc.)
 
 local Net = {}

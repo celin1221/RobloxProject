@@ -3,10 +3,12 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local RunService = game:GetService("RunService")
 
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local AccountLevelService = require(script.Parent:WaitForChild("AccountLevelService"))
 local ProgressionService = require(script.Parent.ProgressionService)
 local BattleService = require(ServerScriptService:WaitForChild("Battle"):WaitForChild("BattleService"))
 
 PlayerDataService.Init()
+AccountLevelService.Init()
 ProgressionService.Init(BattleService)
 require(ServerScriptService:WaitForChild("Economy"):WaitForChild("SummonService")).Init()
 require(ServerScriptService.Economy:WaitForChild("InventoryService")).Init()
@@ -41,6 +43,8 @@ if RunService:IsStudio() then
 			local lines = ProgressionService.AddXp(player, ...)
 			PlayerDataService.MarkChanged(player)
 			return lines
+		elseif action == "addaccxp" then
+			return AccountLevelService.AddXp(player, ...)
 		elseif action == "save" then
 			return PlayerDataService.SaveNow(player)
 		elseif action == "backup" then

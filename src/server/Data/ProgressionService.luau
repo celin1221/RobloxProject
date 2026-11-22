@@ -13,8 +13,10 @@ local Data = ReplicatedStorage:WaitForChild("Data")
 local Characters = require(Data.Characters)
 local Moves = require(Data.Moves)
 local Progression = require(Data.Progression)
+local AccountLevel = require(Data:WaitForChild("AccountLevel"))
 local Genetics = require(Data:WaitForChild("Genetics"))
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local AccountLevelService = require(script.Parent:WaitForChild("AccountLevelService"))
 local AlbumService = require(script.Parent.AlbumService)
 local Summon = require(Data.Summon)
 local Benefits = require(Data.Benefits)
@@ -328,6 +330,10 @@ function ProgressionService.OnBattleFinished(player: Player, battle, result: str
 		for _, line in ipairs(benchLeveled) do
 			table.insert(lines, line)
 		end
+	end
+	local accGain, accLevels = AccountLevelService.AddXp(player, AccountLevel.BattleVictoryXp(levels), "Batalha", true)
+	if accGain > 0 then
+		table.insert(lines, string.format("Conta: +%d XP%s.", accGain, if accLevels > 0 then string.format(" (N\u{ed}vel %d!)", data.Account and data.Account.Level or 1) else ""))
 	end
 	autoHeal(player, battle, lines)
 	PlayerDataService.MarkChanged(player)

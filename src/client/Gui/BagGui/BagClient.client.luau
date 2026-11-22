@@ -455,10 +455,10 @@ refresh = function()
 					refresh()
 				end,
 			})
-			UI.icon(face, ITEM_ICON[id] or "bag", { Name = "Icon", Size = UDim2.fromScale(0.32, 0.32), Position = UDim2.fromScale(0.5, 0.14), AnchorPoint = Vector2.new(0.5, 0) })
-			UI.text(face, "x" .. n, { Name = "Count", Size = UDim2.fromScale(0.36, 0.24), Position = UDim2.fromScale(0.95, 0.06), AnchorPoint = Vector2.new(1, 0), Role = "Body", Color = "gold", AlignX = Enum.TextXAlignment.Right })
+			UI.text(face, "x" .. n, { Name = "Count", Size = UDim2.fromScale(0.44, 0.17), Position = UDim2.fromScale(0.94, 0.04), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right })
+			UI.icon(face, ITEM_ICON[id] or "bag", { Name = "Icon", Size = UDim2.fromScale(0.32, 0.32), Position = UDim2.fromScale(0.5, 0.22), AnchorPoint = Vector2.new(0.5, 0) })
 			UI.text(face, item.Name, { Name = "ItemName", Size = UDim2.fromScale(0.9, 0.2), Position = UDim2.fromScale(0.05, 0.56), Role = "Small" })
-			UI.text(face, if item.OutsideBattle or item.TeamUse then (item.Short or item.Description or "") else "S\u{f3} em batalha", { Name = "Desc", Size = UDim2.fromScale(0.9, 0.16), Position = UDim2.fromScale(0.05, 0.79), Role = "Small", Color = "inkSoft", StrokeMult = 0.4 })
+			UI.text(face, if item.OutsideBattle or item.TeamUse then (item.Short or item.Description or "") else "S\u{f3} em batalha", { Name = "Desc", Size = UDim2.fromScale(0.9, 0.16), Position = UDim2.fromScale(0.05, 0.78), Role = "Small", Color = "inkSoft", StrokeMult = 0.4 })
 		end
 	end
 	if not any then

@@ -352,6 +352,10 @@ refreshTowerView = function()
 		local open = Tower.IsUnlocked(unlocked, id)
 		r.Open = open
 		UI.setText(r.Button, if open then "ENTRAR" else "")
+		local lbl = r.Button.Face:FindFirstChild("Label")
+		if lbl then
+			lbl.Visible = open
+		end
 		UI.setDisabled(r.Button, not open, MODE_COLOR[id])
 		r.Lock.Visible = not open
 	end
@@ -656,8 +660,8 @@ local function makeOptionRow(order: number, label: string, choices: { { Id: stri
 	local _, f = UI.panel(treinoScroll, {
 		Name = "Opt_" .. order,
 		Size = UDim2.fromScale(1, 0),
-		Aspect = 10,
-		RowMax = 56,
+		Aspect = 8.5,
+		RowMax = 60,
 		Color = "panelAlt",
 		Corner = 0.22,
 		LayoutOrder = order,
@@ -670,7 +674,7 @@ local function makeOptionRow(order: number, label: string, choices: { { Id: stri
 		Color = "gold",
 		AlignX = Enum.TextXAlignment.Left,
 	})
-	local wrap = UI.frame(f, { Name = "Choices", Size = UDim2.fromScale(0.70, 0.82), Position = UDim2.fromScale(0.28, 0.09) })
+	local wrap = UI.frame(f, { Name = "Choices", Size = UDim2.fromScale(0.70, 0.88), Position = UDim2.fromScale(0.28, 0.06) })
 	local maxW = math.min(0.48, (1 - 0.02 * (#choices - 1)) / #choices)
 	local sel = UI.tabs(wrap, choices, {
 		Size = UDim2.fromScale(1, 1),

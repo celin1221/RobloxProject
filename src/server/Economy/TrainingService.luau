@@ -16,8 +16,10 @@ local Data = ReplicatedStorage:WaitForChild("Data")
 local Characters = require(Data.Characters)
 local Genetics = require(Data:WaitForChild("Genetics"))
 local Training = require(Data:WaitForChild("Training"))
+local AccountLevel = require(Data:WaitForChild("AccountLevel"))
 
 local PlayerDataService = require(ServerScriptService:WaitForChild("Data"):WaitForChild("PlayerDataService"))
+local AccountLevelService = require(ServerScriptService.Data:WaitForChild("AccountLevelService"))
 local BaseService = require(ServerScriptService:WaitForChild("Economy"):WaitForChild("BaseService"))
 local CharacterLibrary = require(ServerScriptService:WaitForChild("CharacterLibrary"))
 
@@ -519,6 +521,7 @@ function TrainingService.Claim(player: Player): (boolean, string?)
 		end
 		data.TrainingMachine.Job = nil
 		syncPlotCapsule(player, BaseService.PlotOf(player))
+		AccountLevelService.AddXp(player, AccountLevel.XpSources.TrainingClaim, "Treino", false)
 		changed(player, true)
 		local def = Characters.Get(member.CharacterId)
 		return true, (def and def.Name or "Personagem") .. " concluiu o treino! (" .. table.concat(gains, " · ") .. ")"

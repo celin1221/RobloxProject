@@ -949,3 +949,38 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
   - `TowerGui` exibindo novas recompensas (`300 gold, Doce Comum`, `1200 gold, Superpoção, Doce Raro`) e aba `PVP` no placar (`Ranking PvP · Bronze (1000 ELO)` + `Bônus hoje: 0/3`).
   - `_UITestKit.audit()` limpo (`0` problemas reais em `HudGui` e `TowerGui` × `Desktop / 667x375 / 932x430 / 1024x768`) e `get_console_output` 100% limpo (zero erros/avisos).
 - Place salvo no Roblox Studio na **versão 282** (`TeamCreate`).
+
+
+## Auditoria Completa de HUDs + Correção do Nível da Conta e Recompensas de Nível (22/11/2026)
+
+**Feito**
+- **1. Restauração & Integração Disk-First do Nível da Conta e Recompensas de Nível (92 scripts sincronizados):**
+  - Trazidos para `src/` (antes existiam apenas no Studio, por isso `sync_studio.py` havia desconectado o backend):
+    - `src/shared/Data/AccountLevel.luau` (**NOVO no disco**): adicionadas fontes `GymWin = 180`, `PvPWin = 90` e `StarterStep = 60` à tabela `XpSources`.
+    - `src/server/Data/AccountLevelService.luau` (**NOVO no disco**): corrigido `canFitItems` para usar `Benefits.BagSlots(data, Items.BagSlots)` (em vez de `Items.BagSlots` fixo), aplicado `PaidRandomRestricted` na entrega de `Tickets.Premium` (converte para `Retention.PremiumTicketGems` gemas quando restrito) e atualizado atributo `LiveGold` ao creditar Gold.
+    - `src/client/Gui/LevelRewardsGui/LevelRewardsClient.client.luau` (**NOVO no disco**): corrigido espaçamento de `Tick`/`Lock` vs `Label` em `ClaimedTag` e `LockedTag`.
+    - `src/shared/Net.luau`: documentados os remotes `AccountXpGain` e `ClaimLevelReward`.
+  - `src/server/Data/PlayerDataService.luau`: adicionado campo `Account = { Level = 1, Xp = 0, TotalXp = 0, Claimed = {} }` em `defaultProfile()` e sanitização em `sanitize(data)` preservando progresso salvo.
+  - `src/server/Data/DataMain.server.luau`: inicializado `AccountLevelService.Init()` logo após `PlayerDataService.Init()` (restaurando `Remotes.ClaimLevelReward.OnServerInvoke`) e adicionado comando de teste `addaccxp` em `_DevData`.
+  - **Todas as 8 fontes de XP da Conta reconectadas no servidor:** `ProgressionService` (vitórias em batalha), `TowerService` (conclusão de modos, andares/chefes do Infinito e Ginásios), `SummonService` (invocações Comum/Premium), `BaseService` (coleta da Base), `TrainingService` (conclusão na Cápsula), `RetentionService` (missões diárias/semanais e passos da Trilha Inicial), `RefugeService` (captura e vitória sobre selvagens) e `PvPService` (vitórias PvP ranqueadas dentro do limite diário anti-farm).
+  - `src/client/Gui/HudGui/HudClient.client.luau`: restaurado o cartão **`AccountLevelCard`** no canto superior direito (medalha `NV. X`, barra de XP azul, badge vermelho de recompensas pendentes, flash `+X XP` via `Remotes.AccountXpGain` e clique direto para abrir `RECOMPENSAS DE NÍVEL`), com pilha responsiva (`layoutRightStack`) acima da `StarterTrack`.
+- **2. Auditoria e Correção Geométrica de Todas as 15 HUDs (Desktop + Celular `667x375`):**
+  - `src/shared/UI.luau`: corrigido `UI.button` com `Layout = "row"` (`Icon` `0.05..0.33` vs `Label` `0.35..0.96`), eliminando sobreposição de ícone e texto em botões estreitos de todo o jogo (`ClaimAll`, `ClaimBtn`, `StartPractice`, etc.).
+  - `src/client/Gui/HudGui/HudClient.client.luau`: reescalado `Top` (`0.50`, padding `0.045`) e `Event` (`X=0.895`) sem colisão em `667x375`; `TeamWindow` (Golpes) ganhou `BottomBar` com `UI.clampHeight` e `layoutTeamDetail` para `Use_Doce*` e `SaveMoves` nunca vazarem da moldura.
+  - `src/client/Gui/RefugeGui/RefugeClient.client.luau`: na Forja, separados `Level` (`0.02..0.26`) e `Field` (`0.27..0.74`), `Chances` reposicionado dinamicamente abaixo do `Top` (`layoutForge`), pílulas de raridade (`Name 0.05..0.57` vs `Value 0.59..0.95`) e requisitos (`Text 0.03..0.63` vs `Progress 0.66..0.87`); no Baú, separados `Capacity` (`0.03..0.37`) e `Hint` (`0.39..0.97`).
+  - `src/client/Gui/BagGui/BagClient.client.luau`: separados verticalmente `Count` (`Y=0.04..0.21`) e `Icon` (`Y=0.22..0.54`) nos cartões de item.
+  - `src/client/Gui/TrainingGui/TrainingClient.client.luau`: `StatGrid` convertido em `ScrollingFrame` adaptativo com altura exata sem colidir com `Footer` e preservando botões `-`/`+` `>= 44x44px` no celular `667x375`.
+  - `src/client/Gui/CharacterDetailGui/CharacterDetailClient.client.luau`: corrigida sobreposição `Top` (`0.52`) vs `Final` (`0.54..1.00`) nas 4 linhas de atributos e atualizado texto do rodapé sobre a Cápsula de Treino.
+  - `src/client/Gui/RewardsGui/RewardsClient.client.luau`: botão `Open` dos Baús de Tempo ancorado na base (`AnchorPoint=(0,1), Y=0.96`) sem estourar o cartão no celular.
+  - `src/client/Gui/SummonGui/SummonClient.client.luau`: `TopBar` clamped (`48..60px`) com `layoutBannerRails`, `BannerTab` sem encolher abaixo de `44px` (`Scale=1.0`), `RatesRail` (`Name 0.06..0.56` vs `Value 0.58..0.94`), `Album` ocultando `Variants` em cartas bloqueadas (`Lock` em `Y=0.78`), `BottomDock` (`clampHeight 82..134`) e `SlotPlate_*` (`clampHeight 40..68`/`46..82`) sem sobreposição de `RarityBar` e sem overflow de `Summon1`/`Summon10`.
+  - `src/client/Gui/TowerGui/TowerClient.client.luau`: ocultado `Label` em modos trancados da Torre (evitando sobreposição com `Lock`) e ajustadas linhas de opção da aba `Treino` (`Aspect=8.5, RowMax=60`, `Choices 0.88`) para caber `Tabs` sem overflow no celular.
+
+**Testado (Edit Mode + Play Mode ao vivo + Auditoria Geométrica em todas as 15 GUIs, 22/11/2026)**
+- `python scripts/sync_studio.py status`: `All 92 scripts in src/ are 100% in sync with Roblox Studio.`
+- `python scripts/sync_studio.py test`: `PASS: 1x1 GDD [12..14] (7 turns), 2x2 Doubles (8 turns), Classes/Gyms/Practice + Progression Rebalance + AccountLevel` (inclui Teste 8 validando curva de XP, marcos, `BattleVictoryXp` e contagem de pendentes).
+- **Play Mode ao vivo (com backup/restore do DataStore para manter perfil intacto):**
+  - `AccountLevelCard` exibido no HUD (`NV. 2`, `34/176`, badge `1`) e clique abrindo `RECOMPENSAS DE NÍVEL`.
+  - `ClaimLevelReward:InvokeServer(2)` retornou `true` (`Nível 2 resgatado: +190 gold, +3x Poção!`), limpou badge e bloqueou resgate duplicado.
+  - `addaccxp(+200)` subiu a conta ao vivo para `NV. 3` (`58/231`), atualizou o cartão via `AccountXpGain` e `ClaimLevelReward:InvokeServer("All")` resgatou o Nível 3 (`+230 gold, +2 itens`).
+  - Auditor geométrico automatizado rodado em **todas as 15 GUIs** (Desktop + `667x375`): **0 sobreposições reais e 0 overflows reais**; `get_console_output` 100% limpo.
+- Place salvo no Roblox Studio na **versão 287** (`TeamCreate`).

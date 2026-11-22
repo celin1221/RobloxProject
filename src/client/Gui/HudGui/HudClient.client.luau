@@ -20,6 +20,7 @@ local Characters = require(Data:WaitForChild("Characters"))
 local Moves = require(Data:WaitForChild("Moves"))
 local TypeChart = require(Data:WaitForChild("TypeChart"))
 local Progression = require(Data:WaitForChild("Progression"))
+local AccountLevel = require(Data:WaitForChild("AccountLevel"))
 local StarterTrack = require(Data:WaitForChild("StarterTrack"))
 local UI = require(ReplicatedStorage:WaitForChild("UI"))
 local T = UI.Theme
@@ -36,16 +37,16 @@ end
 -- Topo: moedas
 --------------------------------------------------------------------
 local hud = UI.frame(canvas, { Name = "Hud" })
-local top = UI.frame(hud, { Name = "Top", Size = UDim2.fromScale(0.6, 0.11), Position = UDim2.fromScale(0.02, 0.03), MaxSize = Vector2.new(700, 62) })
+local top = UI.frame(hud, { Name = "Top", Size = UDim2.fromScale(0.50, 0.11), Position = UDim2.fromScale(0.02, 0.03), MaxSize = Vector2.new(600, 56) })
 local topLayout = Instance.new("UIListLayout")
 topLayout.FillDirection = Enum.FillDirection.Horizontal
-topLayout.Padding = UDim.new(0.035, 0)
+topLayout.Padding = UDim.new(0.045, 0)
 topLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 topLayout.SortOrder = Enum.SortOrder.LayoutOrder
 topLayout.Parent = top
-local _, goldLabel = UI.pill(top, "coin", "gold", { Name = "Gold", Size = UDim2.fromScale(0.36, 1), Aspect = 3.4, LayoutOrder = 1 })
-local _, gemsLabel = UI.pill(top, "gem", "gems", { Name = "Gems", Size = UDim2.fromScale(0.27, 1), Aspect = 2.6, LayoutOrder = 2 })
-local _, oreLabel = UI.pill(top, "ore", "ore", { Name = "Ore", Size = UDim2.fromScale(0.3, 1), Aspect = 2.9, LayoutOrder = 3 })
+local _, goldLabel = UI.pill(top, "coin", "gold", { Name = "Gold", Size = UDim2.fromScale(0.33, 1), Aspect = 3.2, LayoutOrder = 1 })
+local _, gemsLabel = UI.pill(top, "gem", "gems", { Name = "Gems", Size = UDim2.fromScale(0.27, 1), Aspect = 2.5, LayoutOrder = 2 })
+local _, oreLabel = UI.pill(top, "ore", "ore", { Name = "Ore", Size = UDim2.fromScale(0.29, 1), Aspect = 2.8, LayoutOrder = 3 })
 -- um pequeno respiro a esquerda para o icone que sai da pilula
 local topPad = Instance.new("UIPadding")
 topPad.PaddingLeft = UDim.new(0.02, 0)
@@ -55,7 +56,7 @@ topPad.Parent = top
 local liveRateLabel = UI.text(hud, "", {
 	Name = "LiveGoldRate",
 	Size = UDim2.fromScale(0.20, 0.042),
-	Position = UDim2.fromScale(0.032, 0.142),
+	Position = UDim2.fromScale(0.032, 0.145),
 	Role = "Small",
 	Color = "gold",
 	AlignX = Enum.TextXAlignment.Left,
@@ -83,15 +84,117 @@ end
 player:GetAttributeChangedSignal("LiveGoldRate"):Connect(syncLiveGoldRate)
 syncLiveGoldRate()
 
--- Card compacto da Trilha de Objetivos Iniciais (canto superior direito, abaixo das Configuracoes)
+-- Cartao do Nivel da Conta (canto superior direito, logo abaixo da engrenagem; abre Recompensas de Nivel)
+local accBtn, accFace = UI.button(hud, {
+	Name = "AccountLevelCard",
+	Color = "panel",
+	Size = UDim2.fromScale(0.25, 0.145),
+	Position = UDim2.fromScale(0.985, 0.20),
+	AnchorPoint = Vector2.new(1, 0),
+	Corner = 0.22,
+	MaxSize = Vector2.new(255, 58),
+	Visible = false,
+	Sound = "click",
+	OnClick = function()
+		if not profile or not profile.StarterChosen then
+			return
+		end
+		UI.open("LevelRewards")
+	end,
+})
+local accStroke = UI.stroke(accFace, T.Palette.gold, 1.1)
+local accLvPill, accLvFace = UI.panel(accFace, {
+	Name = "LvPill",
+	Size = UDim2.fromScale(0.30, 0.74),
+	Position = UDim2.fromScale(0.04, 0.13),
+	Color = "lendario",
+	Corner = 0.26,
+	Shadow = false,
+})
+local _accLvPill = accLvPill
+local accLvText = UI.text(accLvFace, "NV. 1", {
+	Name = "Text",
+	Size = UDim2.fromScale(0.92, 0.80),
+	Position = UDim2.fromScale(0.04, 0.10),
+	Role = "Small",
+})
+local accTitle = UI.text(accFace, "CONTA", {
+	Name = "Title",
+	Size = UDim2.fromScale(0.60, 0.34),
+	Position = UDim2.fromScale(0.37, 0.09),
+	Role = "Small",
+	Color = "gold",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.45,
+})
+local accBar = UI.bar(accFace, {
+	Name = "XpBar",
+	Size = UDim2.fromScale(0.60, 0.36),
+	Position = UDim2.fromScale(0.37, 0.50),
+	FillColor = "blue",
+})
+local accBarText = UI.text(accBar, "0 / 129", {
+	Name = "XpLabel",
+	Size = UDim2.fromScale(0.94, 0.90),
+	Position = UDim2.fromScale(0.03, 0.05),
+	Role = "Small",
+	StrokeMult = 0.6,
+	ZIndex = 4,
+})
+local accBadge = UI.frame(accBtn, {
+	Name = "Badge",
+	Size = UDim2.fromOffset(20, 20),
+	Position = UDim2.fromScale(0.0, 0.0),
+	AnchorPoint = Vector2.new(0.35, 0.2),
+	Color = "red",
+	Corner = 0.5,
+	ZIndex = 6,
+	Visible = false,
+})
+UI.stroke(accBadge)
+local accBadgeText = UI.text(accBadge, "!", {
+	Name = "Count",
+	Size = UDim2.fromScale(1, 1),
+	Role = "Small",
+	ZIndex = 7,
+})
+local accXpFlashId = 0
+
+local function refreshAccountCard(instant: boolean?)
+	if not profile or not profile.StarterChosen then
+		accBtn.Visible = false
+		return
+	end
+	local acc = profile.Account or { Level = 1, Xp = 0, TotalXp = 0, Claimed = {} }
+	local lv = math.max(1, math.floor(tonumber(acc.Level) or 1))
+	local xp = math.max(0, math.floor(tonumber(acc.Xp) or 0))
+	local need = AccountLevel.XpToNext(lv)
+	local frac = math.clamp(if need > 0 then xp / need else 0, 0, 1)
+	local unclaimed = AccountLevel.CountUnclaimed(acc)
+
+	accBtn.Visible = true
+	accLvText.Text = "NV. " .. lv
+	UI.setBar(accBar, frac, "blue", instant == true)
+	accBarText.Text = UI.fmt(xp) .. "/" .. UI.fmt(need)
+	if unclaimed > 0 then
+		accBadge.Visible = true
+		accBadgeText.Text = if unclaimed > 9 then "9+" else tostring(unclaimed)
+		accStroke.Color = T.Palette.gold
+	else
+		accBadge.Visible = false
+		accStroke.Color = T.Palette.blue
+	end
+end
+
+-- Card compacto da Trilha de Objetivos Iniciais (canto superior direito, abaixo do Nivel da Conta)
 local trackBtn, trackFace = UI.button(hud, {
 	Name = "StarterTrack",
 	Color = "panel",
-	Size = UDim2.fromScale(0.28, 0.175),
-	Position = UDim2.fromScale(0.985, 0.21),
+	Size = UDim2.fromScale(0.25, 0.21),
+	Position = UDim2.fromScale(0.985, 0.365),
 	AnchorPoint = Vector2.new(1, 0),
 	Corner = 0.16,
-	MaxSize = Vector2.new(275, 94),
+	MaxSize = Vector2.new(255, 86),
 	Visible = false,
 	Sound = false,
 })
@@ -188,7 +291,7 @@ end)
 --------------------------------------------------------------------
 -- Menu 3x2 (acima da zona do analogico)
 --------------------------------------------------------------------
-local menu = UI.frame(hud, { Name = "Menu", Size = UDim2.fromScale(0.3, 0.4), Position = UDim2.fromScale(0.02, 0.19), Aspect = 1.55, AspectAxis = Enum.DominantAxis.Height, MaxSize = Vector2.new(330, 213) })
+local menu = UI.frame(hud, { Name = "Menu", Size = UDim2.fromScale(0.3, 0.4), Position = UDim2.fromScale(0.02, 0.20), Aspect = 1.55, AspectAxis = Enum.DominantAxis.Height, MaxSize = Vector2.new(330, 213) })
 local MENU = {
 	{ "Equipe", "team", "EQUIPE", "blue" }, -- tela de Equipe (EquipeClient); golpes e doces abrem pelo cartao do personagem
 	{ "Bag", "bag", "MOCHILA", "green" },
@@ -217,7 +320,24 @@ local settingsButton = UI.button(hud, { Name = "SettingsButton", Icon = "gear", 
 		UI.open("Settings")
 	end,
 })
-local _ = settingsButton
+
+-- Posiciona a pilha direita (AccountLevelCard + StarterTrack) exatamente abaixo da engrenagem sem colisoes
+local function layoutRightStack()
+	local h = hud.AbsoluteSize.Y
+	if h < 40 then
+		return
+	end
+	local topY = math.floor(h * 0.03)
+	local gearH = math.max(T.TouchMin, math.floor(settingsButton.AbsoluteSize.Y))
+	local accY = topY + gearH + 8
+	accBtn.Position = UDim2.new(0.985, 0, 0, accY)
+	local accH = math.max(T.TouchMin, math.floor(accBtn.AbsoluteSize.Y))
+	trackBtn.Position = UDim2.new(0.985, 0, 0, accY + accH + 8)
+end
+hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutRightStack)
+settingsButton:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutRightStack)
+accBtn:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutRightStack)
+task.defer(layoutRightStack)
 
 -- ponto vermelho dos Premios (RewardsClient marca o atributo RewardsBadge no PlayerGui)
 local badge = UI.frame(menuButtons.Rewards, { Name = "Badge", Size = UDim2.fromScale(0.36, 0.36), Position = UDim2.fromScale(0.95, -0.08), AnchorPoint = Vector2.new(0.5, 0), Color = "red", Aspect = 1, ZIndex = 4, Visible = false })
@@ -227,7 +347,7 @@ UI.text(badge, "!", { Size = UDim2.fromScale(1, 1), Role = "Small", ZIndex = 5 }
 --------------------------------------------------------------------
 -- Evento de fim de semana (RewardsClient marca WeekendEvent) e avisos
 --------------------------------------------------------------------
-local eventHolder, eventFace = UI.panel(hud, { Name = "Event", Size = UDim2.fromScale(0.32, 0.1), Position = UDim2.fromScale(0.78, 0.03), AnchorPoint = Vector2.new(1, 0), Color = "lendario", Corner = T.Corner.Pill, Aspect = 4.6, Visible = false, MaxSize = Vector2.new(300, 65) })
+local eventHolder, eventFace = UI.panel(hud, { Name = "Event", Size = UDim2.fromScale(0.32, 0.1), Position = UDim2.fromScale(0.895, 0.03), AnchorPoint = Vector2.new(1, 0), Color = "lendario", Corner = T.Corner.Pill, Aspect = 4.6, Visible = false, MaxSize = Vector2.new(280, 56) })
 UI.icon(eventHolder, "star", { Size = UDim2.fromScale(0.25, 1.25), Position = UDim2.fromScale(-0.04, 0.5), AnchorPoint = Vector2.new(0, 0.5), AspectAxis = Enum.DominantAxis.Height, ZIndex = 3 })
 local eventLabel = UI.text(eventFace, "", { Name = "Text", Size = UDim2.fromScale(0.78, 0.74), Position = UDim2.fromScale(0.2, 0.13), Role = "Small" })
 
@@ -339,14 +459,35 @@ local detail, detailFace = UI.panel(teamWin.Body, { Name = "Detail", Size = UDim
 local detailTitle = UI.text(detailFace, "", { Name = "Title", Size = UDim2.fromScale(0.7, 0.12), Position = UDim2.fromScale(0.04, 0.03), Role = "Heading", AlignX = Enum.TextXAlignment.Left })
 local detailType = UI.chip(detailFace, "", "grey", { Name = "Type", Size = UDim2.fromScale(0.22, 0.09), Position = UDim2.fromScale(0.96, 0.045), AnchorPoint = Vector2.new(1, 0) })
 local detailInfo = UI.text(detailFace, "", { Name = "Info", Size = UDim2.fromScale(0.92, 0.09), Position = UDim2.fromScale(0.04, 0.16), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
-local movesBox = UI.scroll(detailFace, { Name = "Moves", Size = UDim2.fromScale(0.94, 0.46), Position = UDim2.fromScale(0.03, 0.26), Columns = 2, CellAspect = 2.3, Gap = 0.03 })
+local movesBox = UI.scroll(detailFace, { Name = "Moves", Size = UDim2.fromScale(0.94, 0.44), Position = UDim2.fromScale(0.03, 0.26), Columns = 2, CellAspect = 2.3, Gap = 0.03 })
 -- Doces de XP (so caem no Refugio): um botao por doce, usa no personagem escolhido
 local CANDIES = { { Id = "DoceComum", Icon = "doce_comum", Color = "panelAlt" }, { Id = "DoceRaro", Icon = "doce_raro", Color = "blue" }, { Id = "DoceEpico", Icon = "doce_epico", Color = "purple" } }
-local candyRow = UI.frame(detailFace, { Name = "Candies", Size = UDim2.fromScale(0.58, 0.12), Position = UDim2.fromScale(0.03, 0.84) })
+local detailBottomBar = UI.frame(detailFace, { Name = "BottomBar", Size = UDim2.fromScale(0.94, 0.16), Position = UDim2.fromScale(0.03, 0.97), AnchorPoint = Vector2.new(0, 1) })
+UI.clampHeight(detailBottomBar, T.TouchMin, 50)
+local candyRow = UI.frame(detailBottomBar, { Name = "Candies", Size = UDim2.fromScale(0.60, 1), Position = UDim2.fromScale(0, 0) })
 local candyButtons = {}
 local useCandy
-local detailMsg = UI.text(detailFace, "", { Name = "Message", Size = UDim2.fromScale(0.92, 0.1), Position = UDim2.fromScale(0.04, 0.73), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
-local saveButton = UI.button(detailFace, { Name = "SaveMoves", Text = "SALVAR", Icon = "tick", Color = "green", Layout = "row", Size = UDim2.fromScale(0.34, 0.12), Position = UDim2.fromScale(0.96, 0.84), AnchorPoint = Vector2.new(1, 0), Role = "Body" })
+local detailMsg = UI.text(detailFace, "", { Name = "Message", Size = UDim2.fromScale(0.92, 0.08), Position = UDim2.fromScale(0.04, 0.72), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
+local saveButton = UI.button(detailBottomBar, { Name = "SaveMoves", Text = "SALVAR", Icon = "tick", Color = "green", Layout = "row", Size = UDim2.fromScale(0.37, 1), Position = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(1, 0), Role = "Body" })
+
+local function layoutTeamDetail()
+	local h = detailFace.AbsoluteSize.Y
+	if h < 40 then
+		return
+	end
+	local bottomH = math.max(T.TouchMin, math.floor(detailBottomBar.AbsoluteSize.Y))
+	local msgH = math.max(16, math.floor(h * 0.075))
+	local msgY = h - math.floor(h * 0.03) - bottomH - msgH - 4
+	detailMsg.Position = UDim2.new(0.04, 0, 0, msgY)
+	detailMsg.Size = UDim2.new(0.92, 0, 0, msgH)
+	local movesTop = math.floor(h * 0.255)
+	local movesH = math.max(44, msgY - movesTop - 4)
+	movesBox.Position = UDim2.new(0.03, 0, 0, movesTop)
+	movesBox.Size = UDim2.new(0.94, 0, 0, movesH)
+end
+detailFace:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutTeamDetail)
+detailBottomBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutTeamDetail)
+task.defer(layoutTeamDetail)
 
 local selectedUid = nil
 local pick = {} -- golpes marcados no menu
@@ -494,6 +635,7 @@ UI.onOpen("Team", function(uid)
 	refreshList()
 	refreshDetail()
 	teamWin.Open()
+	task.defer(layoutTeamDetail)
 end)
 
 --------------------------------------------------------------------
@@ -505,6 +647,7 @@ local function apply(p)
 		return
 	end
 	profile = p
+	local isFirst = first
 	if first then
 		goldLabel.Text = UI.fmt(p.Gold or 0)
 		gemsLabel.Text = UI.fmt(p.Gems or 0)
@@ -522,7 +665,9 @@ local function apply(p)
 			UI.play("coin")
 		end
 	end
+	refreshAccountCard(isFirst)
 	refreshStarterTrack()
+	layoutRightStack()
 	if not p.StarterChosen then
 		if not starterWin.IsOpen() then
 			buildStarterCards()
@@ -542,6 +687,37 @@ local function apply(p)
 end
 
 Remotes:WaitForChild("ProfileUpdated").OnClientEvent:Connect(apply)
+Remotes:WaitForChild("AccountXpGain").OnClientEvent:Connect(function(info)
+	if typeof(info) ~= "table" then
+		return
+	end
+	if profile then
+		profile.Account = profile.Account or { Level = 1, Xp = 0, TotalXp = 0, Claimed = {} }
+		if typeof(info.Level) == "number" then
+			profile.Account.Level = info.Level
+		end
+		if typeof(info.Xp) == "number" then
+			profile.Account.Xp = info.Xp
+		end
+	end
+	refreshAccountCard(false)
+	local amt = tonumber(info.Amount) or 0
+	if amt > 0 then
+		accXpFlashId += 1
+		local fid = accXpFlashId
+		accTitle.Text = if info.LeveledUp then ("SUBIU NV. " .. tostring(info.Level) .. "!") else ("+" .. UI.fmt(amt) .. " XP")
+		accTitle.TextColor3 = if info.LeveledUp then T.Palette.hpHigh else T.Palette.gold
+		if info.LeveledUp then
+			UI.play("reward")
+		end
+		task.delay(2.4, function()
+			if accXpFlashId == fid then
+				accTitle.Text = "CONTA"
+				accTitle.TextColor3 = T.Palette.gold
+			end
+		end)
+	end
+end)
 -- Atualiza gold ao vivo a cada segundo enquanto a Base gera renda online
 player:GetAttributeChangedSignal("LiveGold"):Connect(function()
 	if first or not profile then

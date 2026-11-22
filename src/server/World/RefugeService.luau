@@ -27,8 +27,10 @@ local Base = require(Data.Base)
 local Tower = require(Data.Tower)
 local Encounters = require(Data.Encounters)
 local Genetics = require(Data:WaitForChild("Genetics"))
+local AccountLevel = require(Data:WaitForChild("AccountLevel"))
 
 local PlayerDataService = require(ServerScriptService:WaitForChild("Data"):WaitForChild("PlayerDataService"))
+local AccountLevelService = require(ServerScriptService.Data:WaitForChild("AccountLevelService"))
 local ProgressionService = require(ServerScriptService.Data:WaitForChild("ProgressionService"))
 local BattleService = require(ServerScriptService:WaitForChild("Battle"):WaitForChild("BattleService"))
 local TowerService = require(ServerScriptService:WaitForChild("Tower"):WaitForChild("TowerService"))
@@ -681,12 +683,14 @@ startWild = function(player: Player, entryId)
 				end
 				rr.Captures += 1
 				outcome = "Captured"
+				AccountLevelService.AddXp(player, AccountLevel.XpSources.RefugeCapture, "Captura no Ref\u{fa}gio", true)
 			elseif result == "Win" then
 				local gold = Refuge.GoldPerLevel * entry.Level
 				profile.Gold += gold
 				table.insert(lines, "+" .. gold .. " gold.")
 				rr.WildDefeated += 1
 				outcome = "Defeated"
+				AccountLevelService.AddXp(player, AccountLevel.XpSources.RefugeWildDefeat, "Selvagem no Ref\u{fa}gio", true)
 			end
 			if outcome then
 				removePending(rr, entryId)

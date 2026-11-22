@@ -21,11 +21,13 @@ local Characters = require(Data.Characters)
 local Summon = require(Data.Summon)
 local Gyms = require(Data:WaitForChild("Gyms"))
 local Progression = require(Data.Progression)
+local AccountLevel = require(Data:WaitForChild("AccountLevel"))
 local Benefits = require(Data.Benefits)
 local Genetics = require(Data:WaitForChild("Genetics"))
 
 local DataFolder = ServerScriptService:WaitForChild("Data")
 local PlayerDataService = require(DataFolder:WaitForChild("PlayerDataService"))
+local AccountLevelService = require(DataFolder:WaitForChild("AccountLevelService"))
 local ProgressionService = require(DataFolder:WaitForChild("ProgressionService"))
 local RetentionService = require(DataFolder:WaitForChild("RetentionService"))
 local BattleService = require(ServerScriptService:WaitForChild("Battle"):WaitForChild("BattleService"))
@@ -223,6 +225,8 @@ function SummonService.Summon(player: Player, portalId: string, count: number, b
 	end
 	data.SummonPity[portal.PityKey] = pity
 	RetentionService.Track(player, "Summon", count)
+	local perSummon = if portalId == "Premium" then AccountLevel.XpSources.SummonPremium else AccountLevel.XpSources.SummonComum
+	AccountLevelService.AddXp(player, count * perSummon, "Invoca\u{e7}\u{e3}o", false)
 	PlayerDataService.MarkChanged(player)
 	task.spawn(PlayerDataService.SaveNow, player) -- compra: salva ja
 	return true, results

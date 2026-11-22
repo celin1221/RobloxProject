@@ -19,10 +19,12 @@ local Genetics = require(Data:WaitForChild("Genetics"))
 local PvPRank = require(Data:WaitForChild("PvPRank"))
 local Items = require(Data.Items)
 local Benefits = require(Data.Benefits)
+local AccountLevel = require(Data:WaitForChild("AccountLevel"))
 
 local BattleService = require(script.Parent.BattleService)
 local Config = require(script.Parent.BattleConfig)
 local PlayerDataService = require(ServerScriptService:WaitForChild("Data"):WaitForChild("PlayerDataService"))
+local AccountLevelService = require(ServerScriptService.Data:WaitForChild("AccountLevelService"))
 local Clock = require(ServerScriptService.Data:WaitForChild("Clock"))
 local TowerService = require(ServerScriptService:WaitForChild("Tower"):WaitForChild("TowerService"))
 
@@ -154,6 +156,7 @@ local function recordPvPResult(winner: Player?, loser: Player?, fmt: string, rea
 			table.insert(parts, "+1 " .. (itemDef and itemDef.Name or rw.Item))
 		end
 		winBonusText = string.format(" \u{b7} %s (%d/%d hoje)", table.concat(parts, " "), wp.DailyRewards, PvPRank.DailyRewardCap)
+		AccountLevelService.AddXp(winner, AccountLevel.XpSources.PvPWin, "Vit\u{f3}ria PvP " .. fmt, true)
 	end
 
 	local loseBonusText = ""

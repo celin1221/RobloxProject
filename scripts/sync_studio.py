@@ -202,6 +202,7 @@ local ok, res = pcall(function()
     local StarterTrack = require(dataClone:WaitForChild("StarterTrack"))
     local PvPRank = require(dataClone:WaitForChild("PvPRank"))
     local Refuge = require(dataClone:WaitForChild("Refuge"))
+    local AccountLevel = require(dataClone:WaitForChild("AccountLevel"))
 
 -- Test 1: GDD Section 5 Damage Conference (Kaen Corte Flamejante on Raiko at Lv 10 = 12 to 14 non-crit)
 local b = BattleEngine.New({
@@ -409,7 +410,18 @@ local gain1x1, _ = PvPRank.Delta(1000, 1000, "1x1")
 assert(gain2x2 > gain1x1 and loss2x2 >= 6 and PvPRank.TierFor(1250).Id == "Ouro", "Expected PvPRank 2x2 Elo & Tiers")
 assert(Refuge.Upgrades[3].Gems == 100 and Refuge.Levels[1].Interval == 90, "Expected hard Forge gems & agile Lv1 Refuge")
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), Classes/Gyms/Practice + Progression Rebalance (Live Gold/s, StarterTrack 7, PvP Elo, Scaled NPCs)", b.Turn, simTurns)
+-- Test 8: AccountLevel XP curve, milestones & unclaimed count
+assert(AccountLevel.XpToNext(1) == 129 and AccountLevel.XpToNext(2) == 176, "Expected AccountLevel XpToNext(1)=129, (2)=176")
+assert(AccountLevel.XpToNext(31) > AccountLevel.XpToNext(30), "Expected monotonic AccountLevel XP curve")
+local r1 = AccountLevel.RewardFor(1)
+local r5 = AccountLevel.RewardFor(5)
+local r10 = AccountLevel.RewardFor(10)
+assert(r1.Gold == 150 and r5.Tier == "Epico" and r10.Tier == "Lendario" and r10.Tickets and r10.Tickets.Premium == 1, "Expected AccountLevel milestone rewards")
+assert(AccountLevel.BattleVictoryXp({ 10, 10 }) == 60, "Expected BattleVictoryXp({10,10}) = 60")
+assert(AccountLevel.CountUnclaimed({ Level = 3, Claimed = { ["1"] = true } }) == 2, "Expected 2 unclaimed level rewards")
+assert(AccountLevel.FirstUnclaimedLevel({ Level = 3, Claimed = { ["1"] = true } }) == 2, "Expected first unclaimed = 2")
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), Classes/Gyms/Practice + Progression Rebalance + AccountLevel", b.Turn, simTurns)
 end)
 sandbox:Destroy()
 assert(ok, res)

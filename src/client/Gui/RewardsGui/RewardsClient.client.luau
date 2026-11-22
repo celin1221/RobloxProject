@@ -198,10 +198,10 @@ local function renderChests()
 	end)
 	for i, c in ipairs(Retention.Chests) do
 		local card, face = UI.panel(content, { Name = "Chest" .. i, Size = UDim2.fromScale(0.235, 0.86), Position = UDim2.fromScale((i - 1) * 0.255, 0.13), Color = "panelAlt", Corner = T.Corner.Card })
-		UI.text(face, c.Minutes .. " MIN", { Name = "Time", Size = UDim2.fromScale(0.9, 0.12), Position = UDim2.fromScale(0.05, 0.04), Role = "Body" })
-		UI.icon(face, "chest", { Name = "Icon", Size = UDim2.fromScale(0.62, 0.3), Position = UDim2.fromScale(0.5, 0.17), AnchorPoint = Vector2.new(0.5, 0) })
-		UI.text(face, rewardText(c), { Name = "Reward", Size = UDim2.fromScale(0.9, 0.18), Position = UDim2.fromScale(0.05, 0.5), Role = "Small", Color = "gold" })
-		local b = UI.button(face, { Name = "Open", Text = "", Color = "grey", Size = UDim2.fromScale(0.86, 0.22), Position = UDim2.fromScale(0.07, 0.74), Role = "Body", Sound = false,
+		UI.text(face, c.Minutes .. " MIN", { Name = "Time", Size = UDim2.fromScale(0.9, 0.11), Position = UDim2.fromScale(0.05, 0.03), Role = "Body" })
+		UI.icon(face, "chest", { Name = "Icon", Size = UDim2.fromScale(0.56, 0.26), Position = UDim2.fromScale(0.5, 0.15), AnchorPoint = Vector2.new(0.5, 0) })
+		UI.text(face, rewardText(c), { Name = "Reward", Size = UDim2.fromScale(0.9, 0.17), Position = UDim2.fromScale(0.05, 0.43), Role = "Small", Color = "gold" })
+		local b = UI.button(face, { Name = "Open", Text = "", Color = "grey", Size = UDim2.fromScale(0.86, 0.22), Position = UDim2.fromScale(0.07, 0.96), AnchorPoint = Vector2.new(0, 1), Role = "Body", Sound = false,
 			OnClick = function()
 				ask("Chest", i)
 			end,

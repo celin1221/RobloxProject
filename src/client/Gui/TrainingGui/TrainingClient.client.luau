@@ -105,7 +105,17 @@ local pickCharBtn = UI.button(charFace, {
 })
 local configPanel, configFace = UI.panel(idleView, { Name = "Config", Color = "slot", Corner = 0.08, Shadow = false, ZIndex = 2 })
 local configTitle = UI.text(configFace, "", { Name = "Title", Role = "Small", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45, ZIndex = 3 })
-local statGrid = UI.frame(configFace, { Name = "StatGrid", ZIndex = 3 })
+local statGrid = Instance.new("ScrollingFrame")
+statGrid.Name = "StatGrid"
+statGrid.BackgroundTransparency = 1
+statGrid.BorderSizePixel = 0
+statGrid.ClipsDescendants = true
+statGrid.ScrollingDirection = Enum.ScrollingDirection.Y
+statGrid.ScrollBarThickness = 0
+statGrid.ScrollBarImageColor3 = T.Palette.inkSoft
+statGrid.CanvasSize = UDim2.new(0, 0, 0, 0)
+statGrid.ZIndex = 3
+statGrid.Parent = configFace
 local configFooter = UI.frame(configFace, { Name = "Footer", ZIndex = 3 })
 local summaryLabel = UI.text(configFooter, "", { Name = "Summary", Role = "Small", Rich = true, AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45, ZIndex = 4 })
 local startBtn = UI.button(configFooter, { Name = "StartTraining", Text = "INICIAR TREINO", Icon = "sparkle", Layout = "row", Color = "green", Role = "Small", Corner = 0.25, ZIndex = 4,
@@ -224,9 +234,9 @@ local function layout()
 	selectedPortrait.Root.Position = UDim2.fromOffset(math.floor((leftW - cardS) / 2), padL + math.max(0, math.floor((availCardH - cardS) / 2)))
 	selectedPortrait.Root.Size = UDim2.fromOffset(cardS, cardS)
 
-	local cp = 8
+	local cp = if contentH < 190 then 4 else 8
 	local cw, ch = rightW - cp * 2, contentH - cp * 2
-	local titleH = math.max(16, math.floor(ch * 0.11))
+	local titleH = if contentH < 190 then 14 else math.max(16, math.floor(ch * 0.11))
 	local footerH = T.TouchMin
 	configTitle.Position = UDim2.fromOffset(cp, cp)
 	configTitle.Size = UDim2.fromOffset(cw, titleH)
@@ -241,13 +251,18 @@ local function layout()
 	startBtn.Size = UDim2.fromOffset(startW, footerH)
 
 	local gridY = cp + titleH + 4
-	local gridH = math.max(80, contentH - gridY - footerH - cp - 4)
+	local gridH = math.max(44, contentH - gridY - footerH - cp - 4)
 	statGrid.Position = UDim2.fromOffset(cp, gridY)
 	statGrid.Size = UDim2.fromOffset(cw, gridH)
 
-	local gGap = 6
-	local cellW = math.floor((cw - gGap) / 2)
-	local cellH = math.floor((gridH - gGap) / 2)
+	local gGap = if contentH < 190 then 4 else 6
+	local cellH = math.max(T.TouchMin + 4, math.floor((gridH - gGap) / 2))
+	local totalGridH = cellH * 2 + gGap
+	local needsScroll = totalGridH > gridH + 1
+	statGrid.ScrollBarThickness = if needsScroll then 4 else 0
+	statGrid.CanvasSize = UDim2.fromOffset(0, totalGridH)
+	local usableW = if needsScroll then (cw - 6) else cw
+	local cellW = math.floor((usableW - gGap) / 2)
 	for idx, statKey in ipairs(Training.OreOrder) do
 		local col = (idx - 1) % 2
 		local row = (idx - 1) // 2

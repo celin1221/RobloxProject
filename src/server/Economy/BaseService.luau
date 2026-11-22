@@ -22,8 +22,10 @@ local Data = ReplicatedStorage:WaitForChild("Data")
 local Base = require(Data.Base)
 local Training = require(Data:WaitForChild("Training"))
 local Characters = require(Data.Characters)
+local AccountLevel = require(Data:WaitForChild("AccountLevel"))
 
 local PlayerDataService = require(ServerScriptService:WaitForChild("Data"):WaitForChild("PlayerDataService"))
+local AccountLevelService = require(ServerScriptService.Data:WaitForChild("AccountLevelService"))
 local CharacterLibrary = require(ServerScriptService:WaitForChild("CharacterLibrary"))
 local RetentionService = require(ServerScriptService.Data:WaitForChild("RetentionService"))
 local Clock = require(ServerScriptService.Data:WaitForChild("Clock"))
@@ -673,6 +675,16 @@ function BaseService.Collect(player: Player)
 	end
 	changed(player, true)
 	RetentionService.Track(player, "Collect", 1)
+	local attrTotal = 0
+	for _, qty in pairs(attrTaken) do
+		attrTotal += qty
+	end
+	local xpAmt = math.clamp(
+		math.floor((gold + oreTaken + attrTotal * 5) / AccountLevel.XpSources.BaseCollectGoldDivisor),
+		AccountLevel.XpSources.BaseCollectMin,
+		AccountLevel.XpSources.BaseCollectMax
+	)
+	AccountLevelService.AddXp(player, xpAmt, "Coleta da Base", false)
 	local parts = {}
 	if gold > 0 then
 		table.insert(parts, fmt(gold) .. " gold")

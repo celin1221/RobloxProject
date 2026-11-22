@@ -20,12 +20,14 @@ local Tower = require(Data.Tower)
 local Gyms = require(Data:WaitForChild("Gyms"))
 local Items = require(Data.Items)
 local Progression = require(Data.Progression)
+local AccountLevel = require(Data:WaitForChild("AccountLevel"))
 local Benefits = require(Data.Benefits)
 local Genetics = require(Data:WaitForChild("Genetics"))
 
 local BattleService = require(ServerScriptService:WaitForChild("Battle"):WaitForChild("BattleService"))
 local Config = require(ServerScriptService.Battle:WaitForChild("BattleConfig"))
 local PlayerDataService = require(ServerScriptService:WaitForChild("Data"):WaitForChild("PlayerDataService"))
+local AccountLevelService = require(ServerScriptService.Data:WaitForChild("AccountLevelService"))
 local ProgressionService = require(ServerScriptService.Data:WaitForChild("ProgressionService"))
 local RetentionService = require(ServerScriptService.Data:WaitForChild("RetentionService"))
 local Clock = require(ServerScriptService.Data:WaitForChild("Clock"))
@@ -349,6 +351,10 @@ local function completeMode(player: Player, run, lines)
 		tSlot.Unlocked = nextMode
 		table.insert(lines, "Modo " .. Tower.Modes[nextMode].Name .. " (" .. run.Format .. ") desbloqueado!")
 	end
+	local modeXp = AccountLevel.XpSources.TowerModeComplete[run.Mode] or 0
+	if modeXp > 0 then
+		AccountLevelService.AddXp(player, modeXp, "Torre " .. mode.Name, true)
+	end
 end
 
 -- Recompensa ao vencer o Lider de um Ginasio (luta 3/3)
@@ -402,6 +408,7 @@ local function completeGym(player: Player, run, lines)
 		end
 		table.insert(lines, gym.Name .. " vencido novamente! +" .. gold .. " gold.")
 	end
+	AccountLevelService.AddXp(player, AccountLevel.XpSources.GymWin, gym.Name, true)
 end
 
 local function onBattleEnd(player: Player, run, battle, result: string)
@@ -482,6 +489,8 @@ local function onBattleEnd(player: Player, run, battle, result: string)
 			end
 		end
 		-- recupera 30% do HP entre andares (time salvo)
+		local infXp = AccountLevel.XpSources.TowerInfiniteBase + floor * AccountLevel.XpSources.TowerInfinitePerFloor + (if Tower.IsBossFloor(floor) then AccountLevel.XpSources.TowerInfiniteBossBonus else 0)
+		AccountLevelService.AddXp(player, infXp, "Infinito Andar " .. floor, true)
 		for _, uid in ipairs(data.Team) do
 			local m = data.Collection[uid]
 			if m and m.Hp ~= nil then

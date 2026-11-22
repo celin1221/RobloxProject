@@ -584,7 +584,7 @@ function UI.button(parent, p)
 		if layout == "stack" then
 			ip = { Name = "Icon", Size = UDim2.fromScale(0.78, 0.62), Position = UDim2.fromScale(0.5, 0.06), AnchorPoint = Vector2.new(0.5, 0) }
 		elseif layout == "row" then
-			ip = { Name = "Icon", Size = UDim2.fromScale(0.36, 0.8), Position = UDim2.fromScale(0.05, 0.5), AnchorPoint = Vector2.new(0, 0.5), AspectAxis = Enum.DominantAxis.Height }
+			ip = { Name = "Icon", Size = UDim2.fromScale(0.28, 0.78), Position = UDim2.fromScale(0.05, 0.5), AnchorPoint = Vector2.new(0, 0.5), AspectAxis = Enum.DominantAxis.Height }
 		else
 			ip = { Name = "Icon", Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5) }
 		end
@@ -595,7 +595,7 @@ function UI.button(parent, p)
 		if layout == "stack" then
 			tp = { Name = "Label", Size = UDim2.fromScale(1.12, 0.34), Position = UDim2.fromScale(0.5, 1.04), AnchorPoint = Vector2.new(0.5, 1), Role = p.Role or "Small" }
 		elseif layout == "row" then
-			tp = { Name = "Label", Size = UDim2.fromScale(0.58, 0.7), Position = UDim2.fromScale(0.39, 0.15), Role = p.Role or "Body", AlignX = Enum.TextXAlignment.Left }
+			tp = { Name = "Label", Size = UDim2.fromScale(0.61, 0.72), Position = UDim2.fromScale(0.35, 0.14), Role = p.Role or "Body", AlignX = Enum.TextXAlignment.Left }
 		else
 			tp = { Name = "Label", Size = UDim2.fromScale(0.9, 0.72), Position = UDim2.fromScale(0.05, 0.14), Role = p.Role or "Body" }
 		end

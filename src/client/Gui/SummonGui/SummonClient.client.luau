@@ -248,8 +248,9 @@ end
 
 -- === 1. BARRA SUPERIOR (Titulo do Portal/Anime + Abas + Carteira + Fechar) ===
 local topBar = UI.frame(bannerHud, { Name = "TopBar", Size = UDim2.fromScale(0.96, 0.095), Position = UDim2.fromScale(0.02, 0.016), ZIndex = 25 })
+UI.clampHeight(topBar, 48, 60)
 
-local titleCard, titleCardStroke = makeGlassCard(topBar, "TitleCard", UDim2.fromScale(0.31, 1), UDim2.fromScale(0, 0), Vector2.zero, 14, 26)
+local titleCard, titleCardStroke = makeGlassCard(topBar, "TitleCard", UDim2.fromScale(0.30, 1), UDim2.fromScale(0, 0), Vector2.zero, 14, 26)
 local titleAccentBar = Instance.new("Frame")
 titleAccentBar.Name = "AccentBar"
 titleAccentBar.Size = UDim2.new(0, 6, 0.72, 0)
@@ -284,7 +285,7 @@ local hudTaglineLabel = UI.text(titleCard, "TODOS OS ANIMES", {
 })
 
 -- Abas centrais (PORTAL / ALBUM / REPETIDOS)
-local hudTabsBox = UI.frame(topBar, { Name = "NavTabs", Size = UDim2.fromScale(0.32, 0.88), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 26 })
+local hudTabsBox = UI.frame(topBar, { Name = "NavTabs", Size = UDim2.fromScale(0.34, 1), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 26 })
 do
 	local hl = Instance.new("UIListLayout")
 	hl.FillDirection = Enum.FillDirection.Horizontal
@@ -316,17 +317,18 @@ for i, def in ipairs(hudNavTabs) do
 			selectTab(def.Id)
 		end,
 	})
-	local sc = Instance.new("UISizeConstraint")
-	sc.MinSize = Vector2.new(56, 40)
-	sc.Parent = tb
+	local existingSc = tb:FindFirstChildOfClass("UISizeConstraint")
+	if existingSc then
+		existingSc.MinSize = Vector2.new(52, T.TouchMin)
+	end
 end
 
 -- Carteira + Botao Fechar (direita)
-local hudRightTop = UI.frame(topBar, { Name = "RightTop", Size = UDim2.fromScale(0.28, 0.9), Position = UDim2.fromScale(1, 0.5), AnchorPoint = Vector2.new(1, 0.5), ZIndex = 26 })
+local hudRightTop = UI.frame(topBar, { Name = "RightTop", Size = UDim2.fromScale(0.29, 1), Position = UDim2.fromScale(1, 0.5), AnchorPoint = Vector2.new(1, 0.5), ZIndex = 26 })
 local hudWalletHolder, hudWalletLabel = UI.pill(hudRightTop, "coin", "gold", {
 	Name = "HudWallet",
-	Size = UDim2.fromScale(0.72, 0.90),
-	Position = UDim2.fromScale(0.76, 0.5),
+	Size = UDim2.fromScale(0.70, 0.88),
+	Position = UDim2.fromScale(0.75, 0.5),
 	AnchorPoint = Vector2.new(1, 0.5),
 	Aspect = 3.2,
 	MaxSize = Vector2.new(230, 46),
@@ -336,7 +338,7 @@ local hudCloseBtn = UI.button(hudRightTop, {
 	Name = "HudClose",
 	Icon = "close",
 	Color = "red",
-	Size = UDim2.fromScale(0.20, 0.96),
+	Size = UDim2.fromScale(0.22, 0.92),
 	Position = UDim2.fromScale(1, 0.5),
 	AnchorPoint = Vector2.new(1, 0.5),
 	Aspect = 1,
@@ -349,11 +351,6 @@ local hudCloseBtn = UI.button(hudRightTop, {
 		end
 	end,
 })
-do
-	local sc = Instance.new("UISizeConstraint")
-	sc.MinSize = Vector2.new(44, 44)
-	sc.Parent = hudCloseBtn
-end
 
 -- === 2. TRILHO LATERAL ESQUERDO: SELECAO DE BANNER POR ANIME (estilo Anime Vanguards) ===
 local leftRail, leftRailStroke = makeGlassCard(bannerHud, "BannerRail", UDim2.fromScale(0.168, 0.68), UDim2.fromScale(0.018, 0.132), Vector2.zero, 16, 25)
@@ -435,7 +432,7 @@ local function updateBannerSelection()
 			then (if unlocked then accent:Lerp(Color3.new(1, 1, 1), 0.35) else T.Palette.red)
 			else Color3.fromRGB(64, 52, 112)
 		entry.Stroke.Thickness = if isSel then 3 else 1.5
-		entry.Scale.Scale = if isSel then 1.02 else 0.97
+		entry.Scale.Scale = if isSel then 1.02 else 1.0
 		entry.ActiveTag.Visible = isSel and unlocked
 		entry.LockedTag.Visible = not unlocked
 		entry.Artwork.ImageColor3 = if unlocked then Color3.new(1, 1, 1) else Color3.fromRGB(130, 125, 148)
@@ -594,6 +591,23 @@ updateBannerSelection()
 
 -- === 3. PAINEL LATERAL DIREITO COMPACTO: CHANCES + DESTAQUE SEMANAL + TICKETS ===
 local rightRail, rightRailStroke = makeGlassCard(bannerHud, "RatesRail", UDim2.fromScale(0.175, 0.56), UDim2.fromScale(0.982, 0.145), Vector2.new(1, 0), 16, 25)
+-- Garante que BannerRail e RatesRail sempre comecem abaixo do TopBar sem colidir em telas pequenas
+local function layoutBannerRails()
+	local H = bannerHud.AbsoluteSize.Y
+	if H < 40 then
+		return
+	end
+	local topBottom = math.floor(H * 0.016) + math.max(48, math.floor(topBar.AbsoluteSize.Y)) + 6
+	local railH = math.max(120, H - topBottom - math.floor(H * 0.04))
+	leftRail.Position = UDim2.new(0.018, 0, 0, topBottom)
+	leftRail.Size = UDim2.new(0.168, 0, 0, math.min(math.floor(H * 0.68), railH))
+	rightRail.Position = UDim2.new(0.982, 0, 0, topBottom)
+	rightRail.Size = UDim2.new(0.175, 0, 0, math.min(math.floor(H * 0.56), railH))
+end
+bannerHud:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutBannerRails)
+topBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutBannerRails)
+task.defer(layoutBannerRails)
+
 UI.text(rightRail, "CHANCES", {
 	Name = "Header",
 	Size = UDim2.fromScale(0.9, 0.09),
@@ -615,7 +629,7 @@ for i, r in ipairs(Summon.RarityOrder) do
 		Shadow = false,
 		ZIndex = 26,
 	})
-	local nameLbl = UI.text(rface, UI.upper(Summon.RarityName[r]), { Name = "Name", Size = UDim2.fromScale(0.58, 0.78), Position = UDim2.fromScale(0.06, 0.11), Role = "Small", AlignX = Enum.TextXAlignment.Left, ZIndex = 27 })
+	local nameLbl = UI.text(rface, UI.upper(Summon.RarityName[r]), { Name = "Name", Size = UDim2.fromScale(0.50, 0.78), Position = UDim2.fromScale(0.06, 0.11), Role = "Small", AlignX = Enum.TextXAlignment.Left, ZIndex = 27 })
 	local valLbl = UI.text(rface, "", { Name = "Value", Size = UDim2.fromScale(0.36, 0.78), Position = UDim2.fromScale(0.94, 0.11), AnchorPoint = Vector2.new(1, 0), Role = "Small", AlignX = Enum.TextXAlignment.Right, ZIndex = 27 })
 	if r == "Lendario" then
 		UI.shine(row)
@@ -669,6 +683,7 @@ for i = 1, 3 do
 	local defaultY = if isHero then 0.675 else 0.695
 
 	local card, stroke = makeGlassCard(nameplatesLayer, "SlotPlate_" .. i, UDim2.fromScale(w, h), UDim2.fromScale(defaultX, defaultY), Vector2.new(0.5, 0.2), 12, if isHero then 26 else 25)
+	UI.clampHeight(card, if isHero then 46 else 40, if isHero then 82 else 68)
 	card.BackgroundTransparency = 0.16
 
 	local topStripe = Instance.new("Frame")
@@ -711,15 +726,15 @@ for i = 1, 3 do
 
 	local nameLbl = UI.text(card, "", {
 		Name = "CharName",
-		Size = UDim2.fromScale(0.92, 0.46),
-		Position = UDim2.fromScale(0.04, if isHero then 0.22 else 0.14),
+		Size = UDim2.fromScale(0.92, 0.40),
+		Position = UDim2.new(0.04, 0, if isHero then 0.24 else 0.22, 2),
 		Role = if isHero then "Heading" else "Body",
 		ZIndex = 27,
 	})
 	local metaLbl = UI.text(card, "", {
 		Name = "CharMeta",
-		Size = UDim2.fromScale(0.92, 0.30),
-		Position = UDim2.fromScale(0.04, if isHero then 0.67 else 0.62),
+		Size = UDim2.fromScale(0.92, 0.28),
+		Position = UDim2.fromScale(0.04, 0.68),
 		Role = "Small",
 		Color = "gold",
 		StrokeMult = 0.45,
@@ -801,6 +816,7 @@ end
 
 -- === 5. DOCA INFERIOR: GARANTIA DE LENDARIO + BOTOES DE INVOCAR ===
 local bottomDock, bottomDockStroke = makeGlassCard(bannerHud, "BottomDock", UDim2.fromScale(0.58, 0.185), UDim2.fromScale(0.5, 0.982), Vector2.new(0.5, 1), 16, 26)
+UI.clampHeight(bottomDock, 82, 134)
 local bannerMsg = UI.text(bannerHud, "", {
 	Name = "BannerMessage",
 	Size = UDim2.fromScale(0.56, 0.042),
@@ -811,7 +827,7 @@ local bannerMsg = UI.text(bannerHud, "", {
 	ZIndex = 29,
 })
 
-local pityRow = UI.frame(bottomDock, { Name = "PityRow", Size = UDim2.fromScale(0.94, 0.28), Position = UDim2.fromScale(0.03, 0.06), ZIndex = 27 })
+local pityRow = UI.frame(bottomDock, { Name = "PityRow", Size = UDim2.fromScale(0.94, 0.26), Position = UDim2.fromScale(0.03, 0.05), ZIndex = 27 })
 UI.text(pityRow, "GARANTIA DE LEND\u{c1}RIO", {
 	Name = "PityTitle",
 	Size = UDim2.fromScale(0.32, 1),
@@ -834,7 +850,7 @@ local pityValue = UI.text(pityRow, "", {
 	ZIndex = 28,
 })
 
-local actionsRow = UI.frame(bottomDock, { Name = "ActionsRow", Size = UDim2.fromScale(0.94, 0.56), Position = UDim2.fromScale(0.03, 0.38), ZIndex = 27 })
+local actionsRow = UI.frame(bottomDock, { Name = "ActionsRow", Size = UDim2.fromScale(0.94, 0.58), Position = UDim2.fromScale(0.03, 0.36), ZIndex = 27 })
 
 local function summonButton(name, x, w, colorKey, shine)
 	local b, face = UI.button(actionsRow, {
@@ -1684,9 +1700,10 @@ refreshAlbum = function()
 		for v in pairs(has and owned[id].Variants or {}) do
 			table.insert(variants, "\u{2726}" .. v)
 		end
-		UI.text(face, table.concat(variants, " "), { Name = "Variants", Size = UDim2.fromScale(0.9, 0.2), Position = UDim2.fromScale(0.05, 0.72), Role = "Small", Color = "gold" })
-		if not has then
-			UI.icon(face, "lock", { Name = "Lock", Size = UDim2.fromScale(0.3, 0.3), Position = UDim2.fromScale(0.5, 0.7), AnchorPoint = Vector2.new(0.5, 0.5) })
+		if has then
+			UI.text(face, table.concat(variants, " "), { Name = "Variants", Size = UDim2.fromScale(0.9, 0.2), Position = UDim2.fromScale(0.05, 0.72), Role = "Small", Color = "gold" })
+		else
+			UI.icon(face, "lock", { Name = "Lock", Size = UDim2.fromScale(0.24, 0.24), Position = UDim2.fromScale(0.5, 0.78), AnchorPoint = Vector2.new(0.5, 0.5) })
 		end
 	end
 	local order = 0

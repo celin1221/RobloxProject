@@ -164,7 +164,7 @@ for _, statKey in ipairs(Genetics.Stats) do
 	}
 end
 
-local footerNote = UI.text(statsFace, "Treino inicia em 0% (evolu\u{e7}\u{e3}o em breve).", {
+local footerNote = UI.text(statsFace, "Treine atributos na C\u{e1}psula da Base para subir at\u{e9} 100%.", {
 	Name = "Note",
 	Role = "Small",
 	Color = "inkSoft",
@@ -272,9 +272,9 @@ local function layout()
 		local barH = math.max(4, math.floor(rh * 0.14))
 
 		st.Top.Position = UDim2.fromOffset(6, 2)
-		st.Top.Size = UDim2.fromOffset(math.floor(rw * 0.56), topH)
+		st.Top.Size = UDim2.fromOffset(math.floor(rw * 0.52), topH)
 		st.Final.Position = UDim2.fromOffset(math.floor(rw * 0.54) + 6, 2)
-		st.Final.Size = UDim2.fromOffset(math.floor(rw * 0.46), topH)
+		st.Final.Size = UDim2.fromOffset(math.max(20, rw - math.floor(rw * 0.54)), topH)
 
 		st.Pcts.Position = UDim2.fromOffset(6, 2 + topH)
 		st.Pcts.Size = UDim2.fromOffset(rw, pctH)

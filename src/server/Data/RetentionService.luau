@@ -20,8 +20,10 @@ local StarterTrack = require(Data:WaitForChild("StarterTrack"))
 local Items = require(Data.Items)
 local Benefits = require(Data.Benefits)
 local Characters = require(Data.Characters)
+local AccountLevel = require(Data:WaitForChild("AccountLevel"))
 
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local AccountLevelService = require(script.Parent:WaitForChild("AccountLevelService"))
 local ProgressionService = require(script.Parent.ProgressionService)
 local Clock = require(script.Parent.Clock)
 local Codes = require(ServerStorage:WaitForChild("Codes"))
@@ -405,6 +407,7 @@ function RetentionService.Track(player: Player, event: string, amount: number?)
 				rewarded = true
 				dailyDone += 1
 				local lines = grant(player, data, Retention.Daily.Reward)
+				AccountLevelService.AddXp(player, AccountLevel.XpSources.DailyMission, "Miss\u{e3}o Di\u{e1}ria", false)
 				notify(player, "Miss\u{e3}o di\u{e1}ria: " .. string.format(def.Text, def.Goal) .. "! " .. table.concat(lines, ", "))
 			end
 		end
@@ -417,6 +420,7 @@ function RetentionService.Track(player: Player, event: string, amount: number?)
 		if all then
 			m.AllDone = true
 			local lines = grant(player, data, Retention.Daily.AllReward)
+			AccountLevelService.AddXp(player, AccountLevel.XpSources.AllDailyBonus, "Todas Di\u{e1}rias", false)
 			task.delay(1.5, notify, player, "As 3 miss\u{f5}es di\u{e1}rias conclu\u{ed}das! " .. table.concat(lines, ", "))
 		end
 	end
@@ -428,6 +432,7 @@ function RetentionService.Track(player: Player, event: string, amount: number?)
 			if e.Progress >= w.Goal then
 				e.Done = true
 				rewarded = true
+				AccountLevelService.AddXp(player, AccountLevel.XpSources.WeeklyMission, "Miss\u{e3}o Semanal", false)
 				task.delay(0.8, notify, player, "Miss\u{e3}o semanal conclu\u{ed}da: " .. string.format(w.Text, w.Goal) .. "!")
 			end
 		end
@@ -440,6 +445,7 @@ function RetentionService.Track(player: Player, event: string, amount: number?)
 		if all then
 			m.WeeklyDone = true
 			local lines = grant(player, data, Retention.Weekly.AllReward)
+			AccountLevelService.AddXp(player, AccountLevel.XpSources.AllWeeklyBonus, "Todas Semanais", false)
 			task.delay(2.5, notify, player, "As 5 miss\u{f5}es semanais conclu\u{ed}das! " .. table.concat(lines, ", "))
 		end
 	end
@@ -518,6 +524,7 @@ function RetentionService.ClaimStarterStep(player: Player, stepId)
 	end
 	data.StarterTrack.Claimed[stepId] = true
 	local lines = grant(player, data, step.Reward or {})
+	AccountLevelService.AddXp(player, AccountLevel.XpSources.StarterStep, "Trilha Inicial", false)
 	changed(player, true)
 	return true, step.Title .. ": " .. table.concat(lines, ", ") .. "!"
 end

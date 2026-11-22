@@ -83,6 +83,7 @@ local function defaultProfile()
 		Tower2x2 = { Unlocked = "Facil", BestInfiniteFloor = 0, LastHardRewardDay = 0 },
 		UnlockedBanners = {}, -- [animeId] = true (desbloqueado pelo inicial ou vencendo o Ginasio respectivo)
 		GymsCleared = {}, -- [gymId] = true (Insignias conquistadas nos Ginasios da Torre)
+		Account = { Level = 1, Xp = 0, TotalXp = 0, Claimed = {} }, -- nivel da conta (cresce continuamente) e recompensas resgatadas
 		StarterTrack = { Claimed = {} }, -- trilha guiada inicial (7 passos)
 		PvP = PvPRank.DefaultState(), -- patente, ELO, vitorias 1x1/2x2 e bonus diario anti-farm
 		GemsSold = { Day = 0, Amount = 0 }, -- gemas vendidas no dia
@@ -253,6 +254,16 @@ local function sanitize(data)
 	end
 	if typeof(data.GymsCleared) ~= "table" then
 		data.GymsCleared = {}
+	end
+	if typeof(data.Account) ~= "table" then
+		data.Account = { Level = 1, Xp = 0, TotalXp = 0, Claimed = {} }
+	else
+		data.Account.Level = math.max(1, cleanNumber(if typeof(data.Account.Level) == "number" then data.Account.Level else 1, 1e6))
+		data.Account.Xp = cleanNumber(data.Account.Xp)
+		data.Account.TotalXp = cleanNumber(data.Account.TotalXp)
+		if typeof(data.Account.Claimed) ~= "table" then
+			data.Account.Claimed = {}
+		end
 	end
 	if typeof(data.StarterTrack) ~= "table" then
 		data.StarterTrack = { Claimed = {} }
