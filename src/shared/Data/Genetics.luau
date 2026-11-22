@@ -35,10 +35,23 @@ Genetics.Max = 100
 Genetics.GeneticsMaxBonus = 0.40 -- +40% em Genetica 100%
 Genetics.TrainingMaxBonus = 0.30 -- +30% em Treino 100%
 
--- NPCs PvE da Torre (GDD secao 6)
+-- NPCs PvE da Torre e Ginasios (escalado por dificuldade para curva justa do inicio ao Infinito)
 Genetics.TowerPreset = {
 	Genetics = 70,
 	Training = 100,
+}
+
+Genetics.TowerPresets = {
+	Facil = { Genetics = 25, Training = 0 },     -- 1.10x: acessivel para novatos Nv. 5-10
+	Medio = { Genetics = 45, Training = 35 },    -- 1.285x: pede time organizado e treino inicial
+	Dificil = { Genetics = 60, Training = 75 },  -- 1.465x: desafio real mid/late game
+	Infinito = { Genetics = 70, Training = 100 }, -- 1.58x: teto endgame do GDD
+}
+
+Genetics.GymPresets = {
+	[1] = { Genetics = 35, Training = 15 }, -- Konoha (1o Ginasio): 1.185x
+	[2] = { Genetics = 50, Training = 45 }, -- Grand Line (2o Ginasio): 1.335x
+	[3] = { Genetics = 65, Training = 75 }, -- Soul Society (3o Ginasio): 1.485x
 }
 
 -- Parametros por raridade:
@@ -179,8 +192,15 @@ function Genetics.Roll(rarity: string?, rng: Random?)
 	return out
 end
 
-function Genetics.TowerEnemyPreset()
-	return Genetics.UniformTable(Genetics.TowerPreset.Genetics), Genetics.UniformTable(Genetics.TowerPreset.Training)
+function Genetics.TowerEnemyPreset(modeId: string?)
+	local p = (modeId and Genetics.TowerPresets[modeId]) or Genetics.TowerPreset
+	return Genetics.UniformTable(p.Genetics), Genetics.UniformTable(p.Training)
+end
+
+function Genetics.GymEnemyPreset(tierIndex: number?)
+	local idx = math.clamp(math.floor(tierIndex or 1), 1, #Genetics.GymPresets)
+	local p = Genetics.GymPresets[idx] or Genetics.TowerPreset
+	return Genetics.UniformTable(p.Genetics), Genetics.UniformTable(p.Training)
 end
 
 return Genetics

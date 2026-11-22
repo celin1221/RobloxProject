@@ -19,6 +19,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Data = ReplicatedStorage:WaitForChild("Data")
 local Characters = require(Data.Characters)
 local Summon = require(Data.Summon)
+local Gyms = require(Data:WaitForChild("Gyms"))
 local Progression = require(Data.Progression)
 local Benefits = require(Data.Benefits)
 local Genetics = require(Data:WaitForChild("Genetics"))
@@ -37,13 +38,49 @@ local MAX_TEAM = 6
 local rng = Random.new()
 local busy = {} -- [Player] = true durante um pedido
 
--- Personagens do elenco por raridade (opcionalmente filtrados por Anime)
-local function byRarity(animeFilter: string?)
+-- Confere se o banner esta desbloqueado para o jogador ("Todos" e sempre aberto; banners de anime exigem inicial ou Ginasio)
+function SummonService.IsBannerUnlocked(data, bannerId: string?): (boolean, any)
+	local cfg = Summon.GetBanner(bannerId)
+	if not cfg or not cfg.Anime then
+		return true, nil
+	end
+	local gym = Gyms.ForBanner(cfg.Id)
+	if not gym then
+		return true, nil
+	end
+	local unlocked = data and typeof(data.UnlockedBanners) == "table" and data.UnlockedBanners[gym.Anime] == true
+	return unlocked == true, gym
+end
+
+-- Animes permitidos no banner "Todos" para este jogador (apenas os desbloqueados; fallback para Generico se nenhum ainda)
+local function unlockedAnimeSet(data): { [string]: boolean }
+	local set = {}
+	local any = false
+	if data and typeof(data.UnlockedBanners) == "table" then
+		for animeId, on in pairs(data.UnlockedBanners) do
+			if on == true then
+				set[animeId] = true
+				any = true
+			end
+		end
+	end
+	if not any then
+		set.Generico = true
+	end
+	return set
+end
+
+-- Personagens do elenco por raridade (filtrados por Anime ou por conjunto de Animes desbloqueados)
+local function byRarity(animeFilter: string?, allowedAnimes: { [string]: boolean }?)
 	local map = {}
 	for id, def in pairs(Characters.List) do
-		if not def.Prototype and (not animeFilter or Characters.AnimeOf(id) == animeFilter) then -- prototipos de teste nunca saem na invocacao
-			map[def.Rarity] = map[def.Rarity] or {}
-			table.insert(map[def.Rarity], id)
+		if not def.Prototype then
+			local anime = Characters.AnimeOf(id)
+			local ok = if animeFilter then (anime == animeFilter) elseif allowedAnimes then (allowedAnimes[anime] == true) else true
+			if ok then
+				map[def.Rarity] = map[def.Rarity] or {}
+				table.insert(map[def.Rarity], id)
+			end
 		end
 	end
 	for _, list in pairs(map) do
@@ -59,18 +96,18 @@ local function resolveBanner(bannerId: string?)
 	return Summon.GetBanner(bannerId)
 end
 
-function SummonService.Legendaries(animeFilter: string?): { string }
-	return byRarity(animeFilter).Lendario or {}
+function SummonService.Legendaries(animeFilter: string?, allowedAnimes: { [string]: boolean }?): { string }
+	return byRarity(animeFilter, allowedAnimes).Lendario or {}
 end
 
-function SummonService.BannerOf(portalId: string, bannerId: string?): string?
+function SummonService.BannerOf(portalId: string, bannerId: string?, allowedAnimes: { [string]: boolean }?): string?
 	local cfg = resolveBanner(bannerId)
 	local animeFilter = cfg and cfg.Anime or nil
-	return Summon.BannerOf(portalId, os.time(), SummonService.Legendaries(animeFilter))
+	return Summon.BannerOf(portalId, os.time(), SummonService.Legendaries(animeFilter, if animeFilter then nil else allowedAnimes))
 end
 
-local function pickCharacter(rarity: string, banner: string?, share: number?, animeFilter: string?)
-	local map = byRarity(animeFilter)
+local function pickCharacter(rarity: string, banner: string?, share: number?, animeFilter: string?, allowedAnimes: { [string]: boolean }?)
+	local map = byRarity(animeFilter, if animeFilter then nil else allowedAnimes)
 	-- banner: o Lendario em destaque leva metade das vezes que sai Lendario; a outra metade e dos demais
 	if rarity == "Lendario" and banner and Characters.Get(banner) then
 		local others = {}
@@ -127,6 +164,11 @@ function SummonService.Summon(player: Player, portalId: string, count: number, b
 	if not data.StarterChosen then
 		return false, "Escolha seu personagem inicial primeiro."
 	end
+	local unlocked, reqGym = SummonService.IsBannerUnlocked(data, bannerCfg.Id)
+	if not unlocked then
+		local gymName = if reqGym then reqGym.Name else ("Gin\u{e1}sio de " .. (bannerCfg.Name or bannerCfg.Id))
+		return false, "Banner trancado! Ven\u{e7}a o " .. gymName .. " na Torre para desbloquear."
+	end
 	if BattleService.IsInBattle(player) then
 		return false, "N\u{e3}o d\u{e1} para invocar durante a batalha."
 	end
@@ -146,11 +188,12 @@ function SummonService.Summon(player: Player, portalId: string, count: number, b
 	local results = {}
 	local pity = data.SummonPity[portal.PityKey] or 0
 	local rates = Summon.RatesFor(portalId, data.Benefits)
-	local banner = SummonService.BannerOf(portalId, bannerCfg.Id)
+	local allowedAnimes = if not animeFilter then unlockedAnimeSet(data) else nil
+	local banner = SummonService.BannerOf(portalId, bannerCfg.Id, allowedAnimes)
 	for i = 1, count do
 		local rarity, forced, newPity, shiny = Summon.Roll(portalId, rng, pity, rates)
 		pity = newPity
-		local charId = pickCharacter(rarity, banner, portal.Banner and portal.Banner.Share, animeFilter)
+		local charId = pickCharacter(rarity, banner, portal.Banner and portal.Banner.Share, animeFilter, allowedAnimes)
 		local def = Characters.Get(charId)
 		local isNew = data.Album.Owned[charId] == nil
 		local variant = if shiny then "Brilhante" else nil
@@ -316,14 +359,17 @@ function SummonService.Init()
 	-- destaque da semana do Portal Premium (para a tela, considerando o painel/anime escolhido)
 	local bannerRF = Remotes:FindFirstChild("SummonBanner")
 	if bannerRF then
-		bannerRF.OnServerInvoke = function(_, portalId, bannerId)
+		bannerRF.OnServerInvoke = function(player, portalId, bannerId)
 			if typeof(portalId) ~= "string" or not Summon.Portals[portalId] then
 				return nil
 			end
 			if bannerId ~= nil and (typeof(bannerId) ~= "string" or not Summon.Banners[bannerId]) then
 				return nil
 			end
-			local id = SummonService.BannerOf(portalId, bannerId)
+			local data = PlayerDataService.Get(player)
+			local cfg = resolveBanner(bannerId)
+			local allowed = if cfg and not cfg.Anime then unlockedAnimeSet(data) else nil
+			local id = SummonService.BannerOf(portalId, bannerId, allowed)
 			local def = id and Characters.Get(id)
 			return def and def.Name or nil
 		end

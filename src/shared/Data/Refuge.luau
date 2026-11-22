@@ -8,29 +8,29 @@ Refuge.RarityOrder = { "Comum", "Raro", "Epico", "Lendario" }
 
 -- Chances (%) por raridade, nivel do selvagem, maximo simultaneo e intervalo (segundos)
 Refuge.Levels = {
-	[1] = { Chances = { Comum = 80, Raro = 18, Epico = 2, Lendario = 0 }, MinLevel = 3, MaxLevel = 8, Max = 2, Interval = 240 },
-	[2] = { Chances = { Comum = 75, Raro = 22, Epico = 3, Lendario = 0 }, MinLevel = 6, MaxLevel = 12, Max = 2, Interval = 240 },
-	[3] = { Chances = { Comum = 70, Raro = 25, Epico = 5, Lendario = 0 }, MinLevel = 10, MaxLevel = 16, Max = 3, Interval = 210 },
-	[4] = { Chances = { Comum = 65, Raro = 28, Epico = 6.5, Lendario = 0.5 }, MinLevel = 14, MaxLevel = 20, Max = 3, Interval = 210 },
-	[5] = { Chances = { Comum = 60, Raro = 30, Epico = 9, Lendario = 1 }, MinLevel = 18, MaxLevel = 25, Max = 3, Interval = 180 },
-	[6] = { Chances = { Comum = 55, Raro = 32, Epico = 11.5, Lendario = 1.5 }, MinLevel = 22, MaxLevel = 30, Max = 4, Interval = 180 },
-	[7] = { Chances = { Comum = 50, Raro = 34, Epico = 14, Lendario = 2 }, MinLevel = 27, MaxLevel = 35, Max = 4, Interval = 150 },
-	[8] = { Chances = { Comum = 46, Raro = 35, Epico = 16.5, Lendario = 2.5 }, MinLevel = 32, MaxLevel = 40, Max = 4, Interval = 150 },
-	[9] = { Chances = { Comum = 43, Raro = 36, Epico = 18, Lendario = 3 }, MinLevel = 36, MaxLevel = 45, Max = 5, Interval = 120 },
-	[10] = { Chances = { Comum = 40, Raro = 37, Epico = 19, Lendario = 4 }, MinLevel = 40, MaxLevel = 50, Max = 5, Interval = 120 },
+	[1] = { Chances = { Comum = 80, Raro = 18, Epico = 2, Lendario = 0 }, MinLevel = 3, MaxLevel = 8, Max = 3, Interval = 90 },
+	[2] = { Chances = { Comum = 75, Raro = 22, Epico = 3, Lendario = 0 }, MinLevel = 6, MaxLevel = 12, Max = 3, Interval = 90 },
+	[3] = { Chances = { Comum = 70, Raro = 25, Epico = 5, Lendario = 0 }, MinLevel = 10, MaxLevel = 16, Max = 3, Interval = 85 },
+	[4] = { Chances = { Comum = 65, Raro = 28, Epico = 6.5, Lendario = 0.5 }, MinLevel = 14, MaxLevel = 20, Max = 4, Interval = 85 },
+	[5] = { Chances = { Comum = 60, Raro = 30, Epico = 9, Lendario = 1 }, MinLevel = 18, MaxLevel = 25, Max = 4, Interval = 80 },
+	[6] = { Chances = { Comum = 55, Raro = 32, Epico = 11.5, Lendario = 1.5 }, MinLevel = 22, MaxLevel = 30, Max = 4, Interval = 80 },
+	[7] = { Chances = { Comum = 50, Raro = 34, Epico = 14, Lendario = 2 }, MinLevel = 27, MaxLevel = 35, Max = 5, Interval = 70 },
+	[8] = { Chances = { Comum = 46, Raro = 35, Epico = 16.5, Lendario = 2.5 }, MinLevel = 32, MaxLevel = 40, Max = 5, Interval = 70 },
+	[9] = { Chances = { Comum = 43, Raro = 36, Epico = 18, Lendario = 3 }, MinLevel = 36, MaxLevel = 45, Max = 5, Interval = 60 },
+	[10] = { Chances = { Comum = 40, Raro = 37, Epico = 19, Lendario = 4 }, MinLevel = 40, MaxLevel = 50, Max = 5, Interval = 60 },
 }
 Refuge.MaxLevel = 10
 
--- Melhoria para o nivel N: gemas + todos os requisitos
+-- Melhoria para o nivel N: gemas (dificeis/valiosas!) + requisitos (aceita Torre 1x1 ou 2x2 e Insignias de Ginasio)
 -- Tipos: TowerWin (Mode), WildDefeated (Count), Captures (Count), CharLevel (Count, Level),
---        InfinitoFloor (Floor), Stars (Count, Stars), LegendaryLevel (Level)
+--        InfinitoFloor (Floor), Stars (Count, Stars), LegendaryLevel (Level), GymBadges (Count)
 Refuge.Upgrades = {
 	[2] = { Gems = 50, Req = { { Kind = "TowerWin", Mode = "Facil" }, { Kind = "WildDefeated", Count = 10 } } },
-	[3] = { Gems = 100, Req = { { Kind = "CharLevel", Count = 3, Level = 10 }, { Kind = "Captures", Count = 5 } } },
+	[3] = { Gems = 100, Req = { { Kind = "CharLevel", Count = 3, Level = 10 }, { Kind = "Captures", Count = 5 }, { Kind = "GymBadges", Count = 1 } } },
 	[4] = { Gems = 200, Req = { { Kind = "TowerWin", Mode = "Medio" }, { Kind = "WildDefeated", Count = 40 } } },
-	[5] = { Gems = 350, Req = { { Kind = "CharLevel", Count = 3, Level = 20 }, { Kind = "Captures", Count = 15 } } },
+	[5] = { Gems = 350, Req = { { Kind = "CharLevel", Count = 3, Level = 20 }, { Kind = "Captures", Count = 15 }, { Kind = "GymBadges", Count = 2 } } },
 	[6] = { Gems = 500, Req = { { Kind = "TowerWin", Mode = "Dificil" }, { Kind = "WildDefeated", Count = 100 } } },
-	[7] = { Gems = 750, Req = { { Kind = "InfinitoFloor", Floor = 10 }, { Kind = "CharLevel", Count = 6, Level = 25 } } },
+	[7] = { Gems = 750, Req = { { Kind = "InfinitoFloor", Floor = 10 }, { Kind = "CharLevel", Count = 6, Level = 25 }, { Kind = "GymBadges", Count = 3 } } },
 	[8] = { Gems = 1000, Req = { { Kind = "InfinitoFloor", Floor = 20 }, { Kind = "Stars", Count = 1, Stars = 3 } } },
 	[9] = { Gems = 1500, Req = { { Kind = "InfinitoFloor", Floor = 30 }, { Kind = "CharLevel", Count = 6, Level = 40 }, { Kind = "Captures", Count = 80 } } },
 	[10] = { Gems = 2000, Req = { { Kind = "InfinitoFloor", Floor = 50 }, { Kind = "LegendaryLevel", Level = 50 }, { Kind = "Captures", Count = 150 } } },
@@ -41,7 +41,7 @@ local MODE_NAME = { Facil = "F\u{e1}cil", Medio = "M\u{e9}dio", Dificil = "Dif\u
 -- Texto do requisito
 function Refuge.ReqText(req): string
 	if req.Kind == "TowerWin" then
-		return "Vencer a torre " .. (MODE_NAME[req.Mode] or req.Mode)
+		return "Vencer a torre " .. (MODE_NAME[req.Mode] or req.Mode) .. " (1x1 ou 2x2)"
 	elseif req.Kind == "WildDefeated" then
 		return "Derrotar " .. req.Count .. " selvagens"
 	elseif req.Kind == "Captures" then
@@ -49,11 +49,13 @@ function Refuge.ReqText(req): string
 	elseif req.Kind == "CharLevel" then
 		return req.Count .. " personagens no n\u{ed}vel " .. req.Level
 	elseif req.Kind == "InfinitoFloor" then
-		return "Andar " .. req.Floor .. " do Infinito"
+		return "Andar " .. req.Floor .. " do Infinito (1x1 ou 2x2)"
 	elseif req.Kind == "Stars" then
 		return req.Count .. " personagem com " .. req.Stars .. " estrelas"
 	elseif req.Kind == "LegendaryLevel" then
 		return "1 Lend\u{e1}rio no n\u{ed}vel " .. req.Level
+	elseif req.Kind == "GymBadges" then
+		return "Conquistar " .. req.Count .. " Ins\u{ed}gnia" .. (if req.Count == 1 then "" else "s")
 	end
 	return tostring(req.Kind)
 end
@@ -82,8 +84,8 @@ function Refuge.DropPool(level: number)
 	return pool
 end
 
--- Gold por selvagem derrotado (GDD nao define o valor; registrado em PROGRESSO.md)
-Refuge.GoldPerLevel = 5
+-- Gold por selvagem derrotado (rebalanceado para progressao agil de Gold)
+Refuge.GoldPerLevel = 12
 
 -- Modelo da Forja por nivel (muda nos niveis 4, 7 e 10)
 function Refuge.ForgeModel(level: number): string

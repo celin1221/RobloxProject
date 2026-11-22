@@ -33,6 +33,12 @@ T.Palette = {
 	onDark = Color3.fromRGB(255, 255, 255),
 }
 T.Types = {
+	Espadachim = Color3.fromRGB(235, 78, 86),
+	Lutador = Color3.fromRGB(248, 138, 42),
+	Mago = Color3.fromRGB(152, 82, 245),
+	Atirador = Color3.fromRGB(48, 186, 128),
+	Universal = Color3.fromRGB(155, 162, 185),
+	-- fallback de cores antigas caso alguma UI/log antigo referencie
 	Fogo = Color3.fromRGB(255, 106, 61),
 	Agua = Color3.fromRGB(61, 165, 255),
 	Natureza = Color3.fromRGB(76, 203, 90),

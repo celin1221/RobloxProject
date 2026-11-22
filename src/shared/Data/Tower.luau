@@ -20,20 +20,20 @@ Tower.Order = { "Facil", "Medio", "Dificil", "Infinito" }
 Tower.Modes = {
 	Facil = {
 		Name = "F\u{e1}cil", Battles = 3, TeamSize = 2, MinLevel = 5, MaxLevel = 10, AI = "Facil",
-		Reward = { Gold = 150, Items = {} },
+		Reward = { Gold = 300, Items = { "DoceComum" } },
 	},
 	Medio = {
 		Name = "M\u{e9}dio", Battles = 5, TeamSize = 4, MinLevel = 15, MaxLevel = 25, AI = "Medio",
-		Reward = { Gold = 500, Items = { "Superpocao" } },
+		Reward = { Gold = 1200, Items = { "Superpocao", "DoceRaro" } },
 	},
 	Dificil = {
 		Name = "Dif\u{ed}cil", Battles = 7, TeamSize = 6, MinLevel = 30, MaxLevel = 45, AI = "Dificil",
-		Reward = { Gold = 1500, Items = { "Hiperpocao", "Reviver" }, DailyGems = 5 },
+		Reward = { Gold = 3500, Items = { "Hiperpocao", "Reviver", "DoceEpico" }, DailyGems = 5 },
 	},
 	Infinito = {
 		Name = "Infinito", Battles = nil, TeamSize = 6, AI = "Dificil",
 		BaseLevel = 10, LevelPerFloor = 2,
-		GoldPerFloor = 100, BonusEvery = 5, BonusGold = 500,
+		GoldPerFloor = 250, BonusEvery = 5, BonusGold = 1200,
 		HealBetweenFloors = 0.30, -- recupera 30% do HP entre andares
 		BossEvery = 5, BossStatBonus = 0.20, -- chefe a cada 5 andares, atributos +20%
 		ScalingFromFloor = 20, ScalingPerFloor = 0.04, -- a partir do andar 20, +4% por andar

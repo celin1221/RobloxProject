@@ -882,13 +882,13 @@ rarityBtn = UI.button(filterRow, { Name = "RarityFilter", Text = "TODAS", Icon =
 		applyFilterChange()
 	end,
 })
-typeBtn = UI.button(filterRow, { Name = "TypeFilter", Text = "TODOS", Icon = "tipo_fogo", Layout = "row", Color = "teal", Size = UDim2.fromOffset(100, T.TouchMin), Role = "Small",
+typeBtn = UI.button(filterRow, { Name = "TypeFilter", Text = "CLASSE: TODAS", Icon = "classe_espadachim", Layout = "row", Color = "teal", Size = UDim2.fromOffset(100, T.TouchMin), Role = "Small",
 	OnClick = function()
 		local nextType = filterState.NextType()
 		local ti = UI.TypeIcon[nextType]
 		local icon = typeBtn.Face:FindFirstChild("Icon")
 		if icon then
-			UI.setIcon(icon, ti or "tipo_fogo")
+			UI.setIcon(icon, ti or "classe_espadachim")
 			icon.ImageTransparency = if ti then 0 else 0.5
 		end
 		applyFilterChange()

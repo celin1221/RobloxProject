@@ -140,7 +140,7 @@ local function activeNamesText(battle, side: string): string
 end
 
 local function playVictoryModels(session, winnerSide: string?)
-	if not winnerSide then
+	if winnerSide ~= "Player" and winnerSide ~= "Enemy" then
 		return
 	end
 	local battle = session.Battle
@@ -277,7 +277,7 @@ local function present(session, events)
 			end
 		elseif ev.Kind == "StatusDamage" and model then
 			CharacterLibrary.Play(model, "Hit")
-			ArenaManager.ImpactBurst(model, if ev.Status == "Burn" then TypeChart.Color.Fogo else Color3.fromRGB(160, 70, 200))
+			ArenaManager.ImpactBurst(model, if ev.Status == "Burn" then Color3.fromRGB(255, 110, 40) else Color3.fromRGB(160, 70, 200))
 		elseif ev.Kind == "Faint" and model then
 			model:SetAttribute("Fainted", true)
 			CharacterLibrary.Stop(model)
@@ -368,7 +368,7 @@ local function cleanup(session, returnPlayer: boolean)
 	if session.Opts and session.Opts.OnClosed then
 		task.spawn(session.Opts.OnClosed, session.Result or "Cancelled")
 	end
-	if session.Result == nil and hooks.OnCancelled then
+	if session.Result == nil and hooks.OnCancelled and not (session.Opts and session.Opts.NoWriteBack) then
 		local ok, err = pcall(hooks.OnCancelled, session.Player, session.Battle)
 		if not ok then
 			warn("[BattleService] OnCancelled: " .. tostring(err))
@@ -397,7 +397,7 @@ local function finish(session)
 		return
 	end
 	local result = if battle.Winner == "Player" then "Win" elseif battle.Winner == "Enemy" then "Lose" else "Fled"
-	if hooks.OnFinished then
+	if hooks.OnFinished and not (session.Opts and session.Opts.NoWriteBack) then
 		local ok, lines = pcall(hooks.OnFinished, session.Player, battle, result)
 		if not ok then
 			warn("[BattleService] OnFinished: " .. tostring(lines))
@@ -463,6 +463,7 @@ function BattleService.StartBattle(player: Player, opts): boolean
 		Enemy = { Team = opts.EnemyTeam or Config.EnemyTeam, AI = opts.EnemyAI or Config.EnemyAI },
 		Format = opts.Format,
 		Mode = opts.Mode or Config.Mode,
+		CanFlee = opts.CanFlee,
 		CaptureBlocked = opts.CaptureBlocked,
 		Bag = opts.Bag or (hooks.BagFor and hooks.BagFor(player)) or Config.StartingBag,
 	})

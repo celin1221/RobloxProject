@@ -61,7 +61,7 @@ function AlbumService.CheckRewards(data)
 		table.insert(lines, "\u{c1}lbum: " .. label .. " completo! +" .. Summon.AlbumReward.Gold .. " gold e +" .. Summon.AlbumReward.Gems .. " gemas.")
 	end
 	for typeId, list in pairs(byType) do
-		check("Tipo:" .. typeId, list, "tipo " .. ((TypeChart.DisplayName and TypeChart.DisplayName[typeId]) or typeId))
+		check("Classe:" .. typeId, list, "classe " .. ((TypeChart.DisplayName and TypeChart.DisplayName[typeId]) or typeId))
 	end
 	for rarity, list in pairs(byRarity) do
 		check("Raridade:" .. rarity, list, "raridade " .. (Summon.RarityName[rarity] or rarity))

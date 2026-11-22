@@ -140,6 +140,24 @@ function ProgressionService.ChooseStarter(player: Player, characterId): (boolean
 	end
 	ProgressionService.AddCharacter(player, characterId, Progression.StarterLevel, true)
 	data.StarterChosen = true
+	-- Kit inicial (gold + pocoes + selos, sem gemas) para evitar "vale seco" nos primeiros minutos
+	local kit = Progression.StarterKit
+	if kit then
+		if kit.Gold and kit.Gold > 0 then
+			data.Gold += kit.Gold
+		end
+		for itemId, qty in pairs(kit.Items or {}) do
+			if qty > 0 then
+				data.Bag[itemId] = math.min(99, (data.Bag[itemId] or 0) + qty)
+			end
+		end
+	end
+	-- Desbloqueia automaticamente o banner do anime do personagem inicial escolhido (Luffy/Naruto/Ichigo)
+	local def = Characters.Get(characterId)
+	if def and def.Anime and def.Anime ~= "Generico" then
+		data.UnlockedBanners = data.UnlockedBanners or {}
+		data.UnlockedBanners[def.Anime] = true
+	end
 	PlayerDataService.MarkChanged(player)
 	task.spawn(PlayerDataService.SaveNow, player) -- evento importante: salva ja
 	return true
@@ -252,8 +270,11 @@ local function autoHeal(player: Player, battle, lines)
 	table.insert(lines, "Cura Autom\u{e1}tica: time curado.")
 end
 
--- Fim da batalha: XP para quem entrou em campo, so na vitoria
+-- Fim da batalha: XP para quem entrou em campo, so na vitoria (Modo Treino nao altera perfil nem da XP)
 function ProgressionService.OnBattleFinished(player: Player, battle, result: string)
+	if battle and battle.Mode == "Practice" then
+		return {}
+	end
 	ProgressionService.WriteBack(player, battle)
 	PlayerDataService.MarkChanged(player)
 	for _, fn in ipairs(ProgressionService.Listeners) do
@@ -280,11 +301,32 @@ function ProgressionService.OnBattleFinished(player: Player, battle, result: str
 		xp = math.floor(xp * eventMult)
 		table.insert(lines, "Evento de fim de semana: " .. Retention.EventNames.Xp .. ".")
 	end
+	local benchXp = math.floor(xp * (Progression.BenchXpRatio or 0.40) + 0.5)
+	local benchLeveled = {}
+	local benchCount = 0
 	for _, b in ipairs(battle.Sides.Player.Team) do
-		if b.Participated and b.Uid then
-			for _, line in ipairs(ProgressionService.AddXp(player, b.Uid, xp)) do
-				table.insert(lines, line)
+		if b.Uid then
+			if b.Participated then
+				for _, line in ipairs(ProgressionService.AddXp(player, b.Uid, xp)) do
+					table.insert(lines, line)
+				end
+			elseif (b.Hp or 0) > 0 and benchXp > 0 then
+				local m = data.Collection[b.Uid]
+				if m and m.Level < Progression.MaxLevel then
+					benchCount += 1
+					local subLines = ProgressionService.AddXp(player, b.Uid, benchXp)
+					-- Mostra subidas de nivel/golpes novos do banco sem poluir com 5 linhas de "+X XP"
+					for i = 2, #subLines do
+						table.insert(benchLeveled, subLines[i])
+					end
+				end
 			end
+		end
+	end
+	if benchCount > 0 then
+		table.insert(lines, string.format("Banco vivo ganhou +%d XP compartilhado (%d).", benchXp, benchCount))
+		for _, line in ipairs(benchLeveled) do
+			table.insert(lines, line)
 		end
 	end
 	autoHeal(player, battle, lines)

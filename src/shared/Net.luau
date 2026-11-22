@@ -24,8 +24,8 @@ export type RemoteFunctionName =
 	"GetProfile"      -- Client -> Server: retorna snapshot do perfil salvo
 	| "ChooseStarter" -- Client -> Server: escolhe personagem inicial
 	| "SetActiveMoves"-- Client -> Server: define os 4 golpes ativos de um personagem
-	| "TowerStart"    -- Client -> Server: inicia corrida na Torre (Facil/Medio/Dificil/Infinito)
-	| "TowerBoard"    -- Client -> Server: consulta placar da Torre
+	| "TowerStart"    -- Client -> Server: inicia corrida na Torre (1x1/2x2), Ginasio de Anime ou Modo Treino
+	| "TowerBoard"    -- Client -> Server: consulta placar da Torre (format: "1x1" | "2x2") e status dos Ginasios
 	| "Summon"        -- Client -> Server: invoca 1, 3 ou 10 no Portal Comum/Premium com painel (bannerId)
 	| "SummonBanner"  -- Client -> Server: consulta destaque e elenco do painel (portalId, bannerId)
 	| "SellDuplicate" -- Client -> Server: vende personagem repetido por gold

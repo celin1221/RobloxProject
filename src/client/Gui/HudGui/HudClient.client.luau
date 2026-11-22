@@ -20,6 +20,7 @@ local Characters = require(Data:WaitForChild("Characters"))
 local Moves = require(Data:WaitForChild("Moves"))
 local TypeChart = require(Data:WaitForChild("TypeChart"))
 local Progression = require(Data:WaitForChild("Progression"))
+local StarterTrack = require(Data:WaitForChild("StarterTrack"))
 local UI = require(ReplicatedStorage:WaitForChild("UI"))
 local T = UI.Theme
 
@@ -49,6 +50,140 @@ local _, oreLabel = UI.pill(top, "ore", "ore", { Name = "Ore", Size = UDim2.from
 local topPad = Instance.new("UIPadding")
 topPad.PaddingLeft = UDim.new(0.02, 0)
 topPad.Parent = top
+
+-- Taxa de gold ao vivo da Base (+X/s logo abaixo da pilula de gold)
+local liveRateLabel = UI.text(hud, "", {
+	Name = "LiveGoldRate",
+	Size = UDim2.fromScale(0.20, 0.042),
+	Position = UDim2.fromScale(0.032, 0.142),
+	Role = "Small",
+	Color = "gold",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.55,
+	Visible = false,
+})
+
+local function formatRatePerSec(rate: number): string
+	if rate >= 10 then
+		return string.format("+%s/s", UI.fmt(math.floor(rate + 0.5)))
+	end
+	local s = string.format("%.1f", rate):gsub("%.0$", "")
+	return "+" .. s .. "/s"
+end
+
+local function syncLiveGoldRate()
+	local r = player:GetAttribute("LiveGoldRate")
+	if typeof(r) == "number" and r > 0 then
+		liveRateLabel.Text = formatRatePerSec(r)
+		liveRateLabel.Visible = true
+	else
+		liveRateLabel.Visible = false
+	end
+end
+player:GetAttributeChangedSignal("LiveGoldRate"):Connect(syncLiveGoldRate)
+syncLiveGoldRate()
+
+-- Card compacto da Trilha de Objetivos Iniciais (canto superior direito, abaixo das Configuracoes)
+local trackBtn, trackFace = UI.button(hud, {
+	Name = "StarterTrack",
+	Color = "panel",
+	Size = UDim2.fromScale(0.28, 0.175),
+	Position = UDim2.fromScale(0.985, 0.21),
+	AnchorPoint = Vector2.new(1, 0),
+	Corner = 0.16,
+	MaxSize = Vector2.new(275, 94),
+	Visible = false,
+	Sound = false,
+})
+local trackStroke = UI.stroke(trackFace, T.Palette.gold, 1.15)
+local trackHeader = UI.text(trackFace, "", {
+	Name = "Header",
+	Size = UDim2.fromScale(0.92, 0.28),
+	Position = UDim2.fromScale(0.04, 0.06),
+	Role = "Small",
+	Color = "gold",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.45,
+})
+local trackDesc = UI.text(trackFace, "", {
+	Name = "Desc",
+	Size = UDim2.fromScale(0.92, 0.34),
+	Position = UDim2.fromScale(0.04, 0.34),
+	Role = "Small",
+	Color = "onDark",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.4,
+})
+local trackFoot = UI.text(trackFace, "", {
+	Name = "Foot",
+	Size = UDim2.fromScale(0.92, 0.26),
+	Position = UDim2.fromScale(0.04, 0.70),
+	Role = "Small",
+	Color = "inkSoft",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.45,
+})
+local currentTrackStep = nil
+local currentTrackDone = false
+local claimingTrack = false
+
+local function refreshStarterTrack()
+	if not profile or not profile.StarterChosen then
+		trackBtn.Visible = false
+		currentTrackStep = nil
+		currentTrackDone = false
+		return
+	end
+	local step, have, need, done = StarterTrack.CurrentStep(profile)
+	if not step then
+		trackBtn.Visible = false
+		currentTrackStep = nil
+		currentTrackDone = false
+		return
+	end
+	currentTrackStep = step
+	currentTrackDone = done
+	trackBtn.Visible = true
+	trackHeader.Text = string.format("GUIA %d/%d \u{b7} %s", step.Index, #StarterTrack.Steps, step.Title)
+	trackDesc.Text = step.Desc
+	if done then
+		UI.paint(trackBtn, "green")
+		trackStroke.Color = T.Palette.gold
+		trackFoot.TextColor3 = T.Palette.gold
+		trackFoot.Text = "TOQUE PARA RESGATAR: " .. step.RewardText
+	else
+		UI.paint(trackBtn, "panel")
+		trackStroke.Color = T.Palette.blue
+		trackFoot.TextColor3 = T.Palette.inkSoft
+		trackFoot.Text = string.format("Progresso %d/%d \u{b7} %s", have, need, step.RewardText)
+	end
+end
+
+trackBtn.Activated:Connect(function()
+	if not currentTrackStep or claimingTrack then
+		return
+	end
+	if currentTrackDone then
+		claimingTrack = true
+		local ok, text = Remotes.Rewards:InvokeServer("StarterStep", currentTrackStep.Id)
+		claimingTrack = false
+		if ok then
+			UI.play("reward")
+			showToast(text)
+		else
+			UI.play("error")
+			if text and text ~= "" then
+				showToast(text)
+			end
+		end
+	elseif currentTrackStep.HintAction then
+		UI.play("click")
+		UI.open(currentTrackStep.HintAction)
+	else
+		UI.play("click")
+		showToast(currentTrackStep.Desc)
+	end
+end)
 
 --------------------------------------------------------------------
 -- Menu 3x2 (acima da zona do analogico)
@@ -151,13 +286,28 @@ local function buildStarterCards()
 	UI.clear(cards)
 	for i, id in ipairs(Characters.Starters()) do
 		local def = Characters.Get(id)
+		local animeInfo = def.Anime and Characters.Animes and Characters.Animes[def.Anime]
+		local animeName = (animeInfo and animeInfo.Name) or def.Anime or ""
 		local card, face = UI.panel(cards, { Name = "Card_" .. id, Size = UDim2.fromScale(0.31, 1), Color = "panelAlt", Corner = T.Corner.Card, Aspect = 0.72, LayoutOrder = i })
 		UI.stroke(face, typeColor(def.Type), 1.3)
-		UI.text(face, def.Name, { Name = "Name", Size = UDim2.fromScale(0.9, 0.12), Position = UDim2.fromScale(0.05, 0.04), Role = "Heading" })
-		UI.chip(face, UI.upper(TypeChart.DisplayName[def.Type] or def.Type), typeColor(def.Type), { Name = "Type", Size = UDim2.fromScale(0.5, 0.08), Position = UDim2.fromScale(0.25, 0.18) })
-		UI.text(face, def.Concept or "", { Name = "Concept", Size = UDim2.fromScale(0.88, 0.24), Position = UDim2.fromScale(0.06, 0.3), Role = "Small", Color = "inkSoft", StrokeMult = 0.4 })
+		UI.text(face, def.Name, { Name = "Name", Size = UDim2.fromScale(0.9, 0.11), Position = UDim2.fromScale(0.05, 0.03), Role = "Heading" })
+		UI.text(face, UI.upper(animeName), { Name = "Anime", Size = UDim2.fromScale(0.9, 0.07), Position = UDim2.fromScale(0.05, 0.145), Role = "Small", Color = "gold", StrokeMult = 0.4 })
+		local classRow = UI.frame(face, { Name = "ClassRow", Size = UDim2.fromScale(0.84, 0.10), Position = UDim2.fromScale(0.08, 0.23) })
+		local iconKey = UI.TypeIcon[def.Type]
+		if iconKey then
+			UI.icon(classRow, iconKey, { Name = "ClassIcon", Size = UDim2.fromScale(0.22, 0.92), Position = UDim2.fromScale(0.02, 0.04), AspectAxis = Enum.DominantAxis.Height })
+		end
+		UI.chip(classRow, UI.upper(TypeChart.DisplayName[def.Type] or def.Type), typeColor(def.Type), {
+			Name = "Type",
+			Size = UDim2.fromScale(if iconKey then 0.74 else 0.9, 0.86),
+			Position = UDim2.fromScale(if iconKey then 0.24 else 0.05, 0.07),
+		})
+		UI.text(face, def.Concept or "", { Name = "Concept", Size = UDim2.fromScale(0.88, 0.18), Position = UDim2.fromScale(0.06, 0.345), Role = "Small", Color = "inkSoft", StrokeMult = 0.4 })
 		local st = Characters.StatsAt(id, Progression.StarterLevel)
-		UI.text(face, string.format("HP %d  ATQ %d\nDEF %d  VEL %d", st.HP, st.Attack, st.Defense, st.Speed), { Name = "Stats", Size = UDim2.fromScale(0.88, 0.18), Position = UDim2.fromScale(0.06, 0.55), Role = "Small" })
+		UI.text(face, string.format("HP %d  ATQ %d\nDEF %d  VEL %d", st.HP, st.Attack, st.Defense, st.Speed), { Name = "Stats", Size = UDim2.fromScale(0.88, 0.16), Position = UDim2.fromScale(0.06, 0.53), Role = "Small" })
+		if animeName ~= "" then
+			UI.text(face, "Libera Banner " .. animeName, { Name = "BannerUnlock", Size = UDim2.fromScale(0.88, 0.075), Position = UDim2.fromScale(0.06, 0.70), Role = "Small", Color = "gold", StrokeMult = 0.4 })
+		end
 		UI.button(face, {
 			Name = "Choose_" .. id, Text = "ESCOLHER", Color = "green", Size = UDim2.fromScale(0.8, 0.14), Position = UDim2.fromScale(0.1, 0.8), Role = "Body",
 			Sound = "reward",
@@ -368,10 +518,11 @@ local function apply(p)
 		UI.countTo(goldLabel, p.Gold or 0)
 		UI.countTo(gemsLabel, p.Gems or 0)
 		UI.countTo(oreLabel, p.Ore or 0)
-		if (p.Gold or 0) > before then
+		if (p.Gold or 0) - before >= 25 then
 			UI.play("coin")
 		end
 	end
+	refreshStarterTrack()
 	if not p.StarterChosen then
 		if not starterWin.IsOpen() then
 			buildStarterCards()
@@ -391,6 +542,17 @@ local function apply(p)
 end
 
 Remotes:WaitForChild("ProfileUpdated").OnClientEvent:Connect(apply)
+-- Atualiza gold ao vivo a cada segundo enquanto a Base gera renda online
+player:GetAttributeChangedSignal("LiveGold"):Connect(function()
+	if first or not profile then
+		return
+	end
+	local live = player:GetAttribute("LiveGold")
+	if typeof(live) == "number" and live >= 0 then
+		profile.Gold = live
+		UI.countTo(goldLabel, live)
+	end
+end)
 task.spawn(function()
 	local ok, p = pcall(function()
 		return Remotes:WaitForChild("GetProfile"):InvokeServer()

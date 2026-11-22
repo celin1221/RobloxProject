@@ -71,7 +71,8 @@ function DamageCalc.Compute(attacker, defender, move, rng: Random, spreadMult: n
 	local sameType = move.Type == attacker.Type
 	local bonus = sameType and DamageCalc.SAME_TYPE_BONUS or 1
 	local spread = if typeof(spreadMult) == "number" then spreadMult else 1
-	local crit = rng:NextNumber() < DamageCalc.CRIT_CHANCE
+	local critChance = if typeof(move.CritChance) == "number" then move.CritChance else DamageCalc.CRIT_CHANCE
+	local crit = rng:NextNumber() < critChance
 	local luck = rng:NextNumber(DamageCalc.LUCK_MIN, DamageCalc.LUCK_MAX)
 
 	local base = DamageCalc.Base(
@@ -93,7 +94,8 @@ function DamageCalc.ExpectedDamage(attacker, defender, move, spreadMult: number?
 	local typeMult = TypeChart.Multiplier(move.Type, defender.Type)
 	local bonus = (move.Type == attacker.Type) and DamageCalc.SAME_TYPE_BONUS or 1
 	local spread = if typeof(spreadMult) == "number" then spreadMult else 1
-	local critAvg = 1 + DamageCalc.CRIT_CHANCE * (DamageCalc.CRIT_MULTIPLIER - 1)
+	local critChance = if typeof(move.CritChance) == "number" then move.CritChance else DamageCalc.CRIT_CHANCE
+	local critAvg = 1 + critChance * (DamageCalc.CRIT_MULTIPLIER - 1)
 	local luckAvg = (DamageCalc.LUCK_MIN + DamageCalc.LUCK_MAX) / 2
 	local hit = (move.Accuracy or 100) / 100
 	local base = DamageCalc.Base(

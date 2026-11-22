@@ -36,6 +36,7 @@ local Data = ReplicatedStorage:WaitForChild("Data")
 local Characters = require(Data:WaitForChild("Characters"))
 local Genetics = require(Data:WaitForChild("Genetics"))
 local Training = require(Data:WaitForChild("Training"))
+local PvPRank = require(Data:WaitForChild("PvPRank"))
 
 local PlayerDataService = {}
 local rng = Random.new()
@@ -79,6 +80,11 @@ local function defaultProfile()
 		Benefits = {}, -- [beneficio] = "Pass" (Game Pass, conferido a cada entrada) ou "Gems" (comprado com gemas)
 		Receipts = {}, -- [PurchaseId] = os.time(): compras em Robux ja entregues (ProcessReceipt nao entrega 2 vezes)
 		Tower = { Unlocked = "Facil", BestInfiniteFloor = 0, LastHardRewardDay = 0 },
+		Tower2x2 = { Unlocked = "Facil", BestInfiniteFloor = 0, LastHardRewardDay = 0 },
+		UnlockedBanners = {}, -- [animeId] = true (desbloqueado pelo inicial ou vencendo o Ginasio respectivo)
+		GymsCleared = {}, -- [gymId] = true (Insignias conquistadas nos Ginasios da Torre)
+		StarterTrack = { Claimed = {} }, -- trilha guiada inicial (7 passos)
+		PvP = PvPRank.DefaultState(), -- patente, ELO, vitorias 1x1/2x2 e bonus diario anti-farm
 		GemsSold = { Day = 0, Amount = 0 }, -- gemas vendidas no dia
 		-- retorno (secao 13): Daily = { {Id, Progress, Done} }, Weekly[id] = {Progress, Done}
 		Missions = { Day = 0, Daily = {}, AllDone = false, Week = 0, Weekly = {}, WeeklyDone = false },
@@ -87,7 +93,8 @@ local function defaultProfile()
 		Tickets = { Comum = 0, Premium = 0 }, -- invocacoes gratis (login, missoes, codigos)
 		Codes = {}, -- [codigo] = quando resgatou
 		Cosmetics = {}, -- InfinitoTop = { Season, Rank }
-		Season = { Id = "", Best = 0 }, -- temporada do Infinito (mes UTC); Last = resultado da anterior
+		Season = { Id = "", Best = 0 }, -- temporada do Infinito 1x1 (mes UTC); Last = resultado da anterior
+		Season2x2 = { Id = "", Best = 0 }, -- temporada do Infinito 2x2 (mes UTC)
 		SummonPity = { Comum = 0, Premium = 0 }, -- garantia de invocacao
 		Album = { Owned = {}, Claimed = {} }, -- [personagem] = { Variants = { Brilhante = true } }; premios ja pagos
 		-- base (secao 8): Active[uid] = "Walk" | "Mine"; vagas compradas; nivel mineracao; producao pendente; ultimo calculo
@@ -96,6 +103,7 @@ local function defaultProfile()
 			MiningSlots = 2,
 			MiningLevel = 1,
 			Pending = { Gold = 0, Ore = 0, Ores = { HP = 0, Attack = 0, Defense = 0, Speed = 0 } },
+			GoldCarry = 0,
 			MiningProgress = 0,
 			LastTick = 0,
 		},
@@ -160,6 +168,7 @@ local function sanitize(data)
 		data.Base.MiningSlots = math.clamp(math.max(2, cleanNumber(data.Base.MiningSlots, 6)), 2, 6)
 		data.Base.MiningLevel = math.clamp(math.max(1, cleanNumber(data.Base.MiningLevel, 10)), 1, 10)
 		data.Base.MiningProgress = if typeof(data.Base.MiningProgress) == "number" and data.Base.MiningProgress == data.Base.MiningProgress then math.max(0, data.Base.MiningProgress) else 0
+		data.Base.GoldCarry = if typeof(data.Base.GoldCarry) == "number" and data.Base.GoldCarry == data.Base.GoldCarry then math.clamp(data.Base.GoldCarry, 0, 1000) else 0
 		if typeof(data.Base.Pending) ~= "table" then
 			data.Base.Pending = { Gold = 0, Ore = 0, Ores = Training.ZeroOres() }
 		else
@@ -226,6 +235,44 @@ local function sanitize(data)
 					e.Genetics = Genetics.Roll(eDef and eDef.Rarity or e.Rarity or "Comum", rng)
 				end
 			end
+		end
+	end
+	if typeof(data.Tower2x2) ~= "table" then
+		data.Tower2x2 = { Unlocked = "Facil", BestInfiniteFloor = 0, LastHardRewardDay = 0 }
+	else
+		data.Tower2x2.BestInfiniteFloor = cleanNumber(data.Tower2x2.BestInfiniteFloor, 1e6)
+		data.Tower2x2.LastHardRewardDay = cleanNumber(data.Tower2x2.LastHardRewardDay, 1e6)
+	end
+	if typeof(data.Season2x2) ~= "table" then
+		data.Season2x2 = { Id = "", Best = 0 }
+	else
+		data.Season2x2.Best = cleanNumber(data.Season2x2.Best, 1e6)
+	end
+	if typeof(data.UnlockedBanners) ~= "table" then
+		data.UnlockedBanners = {}
+	end
+	if typeof(data.GymsCleared) ~= "table" then
+		data.GymsCleared = {}
+	end
+	if typeof(data.StarterTrack) ~= "table" then
+		data.StarterTrack = { Claimed = {} }
+	elseif typeof(data.StarterTrack.Claimed) ~= "table" then
+		data.StarterTrack.Claimed = {}
+	end
+	if typeof(data.PvP) ~= "table" then
+		data.PvP = PvPRank.DefaultState()
+	else
+		local p = data.PvP
+		p.Rating = math.clamp(cleanNumber(if typeof(p.Rating) == "number" then p.Rating else PvPRank.StartRating, PvPRank.MaxRating), PvPRank.MinRating, PvPRank.MaxRating)
+		p.BestRating = math.max(p.Rating, math.clamp(cleanNumber(if typeof(p.BestRating) == "number" then p.BestRating else p.Rating, PvPRank.MaxRating), PvPRank.MinRating, PvPRank.MaxRating))
+		p.Wins = cleanNumber(p.Wins, 1e6)
+		p.Losses = cleanNumber(p.Losses, 1e6)
+		p.Wins2x2 = cleanNumber(p.Wins2x2, 1e6)
+		p.Losses2x2 = cleanNumber(p.Losses2x2, 1e6)
+		p.DailyDay = cleanNumber(p.DailyDay, 1e6)
+		p.DailyRewards = cleanNumber(p.DailyRewards, PvPRank.DailyRewardCap)
+		if typeof(p.OpponentsToday) ~= "table" then
+			p.OpponentsToday = {}
 		end
 	end
 	return data

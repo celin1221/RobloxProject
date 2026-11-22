@@ -184,11 +184,11 @@ local function openBasePicker(targetState: string)
 		end,
 		FormatSelected = function(_uid, m, def)
 			local rar = def.Rarity
-			local gWalk = Base.GoldPerHour[rar] or 0
-			local gMine = math.floor(gWalk * Base.MiningGoldRatio + 0.5)
+			local gWalk = Base.MemberGoldPerSecond(m, rar, false)
+			local gMine = Base.MemberGoldPerSecond(m, rar, true)
 			local oMine = Base.OrePerHour[rar] or 0
-			local rate = if isMine then string.format("+%dg +%dm/h", gMine, oMine) else string.format("+%dg/h", gWalk)
-			return string.format("<b>%s</b> Nv.%d (%s · %s)", def.Name, m.Level or 1, Summon.RarityName and Summon.RarityName[rar] or rar, rate)
+			local rate = if isMine then string.format("+%.1fg/s +%dm/h", gMine, oMine) else string.format("+%.1fg/s", gWalk)
+			return string.format("<b>%s</b> Nv.%d (%s \u{b7} %s)", def.Name, m.Level or 1, Summon.RarityName and Summon.RarityName[rar] or rar, rate)
 		end,
 		GetBadge = function(uid, _m, _def, prof)
 			local capUid = prof.TrainingMachine and prof.TrainingMachine.Job and prof.TrainingMachine.Job.Uid
@@ -251,8 +251,10 @@ local function refreshNow()
 	local active, miners = counts()
 	local slots = Base.MiningSlots(profile)
 	local miningLv = Base.MiningLevelOf(profile)
-	local gold, ore = Base.Rates(profile, rarityOf)
-	goldRate.Text = UI.fmt(gold) .. "/h"
+	local gold, ore, goldPerSec = Base.Rates(profile, rarityOf)
+	local gps = goldPerSec or (gold / 3600)
+	local gpsStr = if gps >= 10 then UI.fmt(math.floor(gps + 0.5)) else (string.format("%.1f", gps):gsub("%.0$", ""))
+	goldRate.Text = "+" .. gpsStr .. "/s"
 	oreRate.Text = UI.fmt(ore) .. "/h"
 	slotLabel.Text = string.format("Ativos %d/%d \u{b7} Vagas %d/%d \u{b7} Min. Nv.%d/%d \u{b7} Dep. %s", active, Base.MaxActive, miners, slots, miningLv, Base.MaxMiningLevel, UI.fmt(profile.Ore or 0))
 
@@ -261,7 +263,11 @@ local function refreshNow()
 	for _, st in ipairs(Training.OreOrder) do
 		pendAttrSum += math.floor(pendOres[st] or 0)
 	end
-	pendingLabel.Text = string.format("Coletar: %s gold \u{b7} %s min \u{b7} %d min. atributo", UI.fmt(b.Pending.Gold), UI.fmt(b.Pending.Ore), pendAttrSum)
+	if (b.Pending.Gold or 0) >= 1 then
+		pendingLabel.Text = string.format("Online: +%s/s direto \u{b7} Coletar: %s gold (offline) \u{b7} %s min \u{b7} %d atrib.", gpsStr, UI.fmt(b.Pending.Gold), UI.fmt(b.Pending.Ore), pendAttrSum)
+	else
+		pendingLabel.Text = string.format("Gold cai direto (+%s/s) \u{b7} Coletar: %s min \u{b7} %d min. atributo", gpsStr, UI.fmt(b.Pending.Ore), pendAttrSum)
+	end
 
 	local slotCost = Base.NextSlotCost(profile)
 	UI.setText(upgradeButton, if slotCost then ("+VAGA: " .. UI.fmt(slotCost)) else "VAGAS M\u{c1}X")
@@ -384,11 +390,11 @@ local function refreshNow()
 					UI.stroke(face, if state == "Mine" then T.Palette.ore else T.Palette.gold, 1.2)
 				end
 				local rarity = def.Rarity
-				local gWalk = Base.GoldPerHour[rarity] or 0
-				local gMine = math.floor(gWalk * Base.MiningGoldRatio + 0.5)
+				local gWalk = Base.MemberGoldPerSecond(m, rarity, false)
+				local gMine = Base.MemberGoldPerSecond(m, rarity, true)
 				local oMine = Base.OrePerHour[rarity] or 0
 				UI.text(face, string.format("%s  Nv. %d", def.Name, m.Level), { Name = "Name", Size = UDim2.fromScale(0.34, 0.46), Position = UDim2.fromScale(0.02, 0.08), Role = "Body", AlignX = Enum.TextXAlignment.Left })
-				UI.text(face, string.format("%s \u{b7} Passeio %dg \u{b7} Mina %dg+%dm", Summon.RarityName and Summon.RarityName[rarity] or rarity, gWalk, gMine, oMine), { Name = "Rarity", Size = UDim2.fromScale(0.35, 0.34), Position = UDim2.fromScale(0.02, 0.58), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
+				UI.text(face, string.format("%s \u{b7} Passeio %.1fg/s \u{b7} Mina %.1fg/s+%dm/h", Summon.RarityName and Summon.RarityName[rarity] or rarity, gWalk, gMine, oMine), { Name = "Rarity", Size = UDim2.fromScale(0.35, 0.34), Position = UDim2.fromScale(0.02, 0.58), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
 				local chipText = if inCapsule then "C\u{c1}PSULA" elseif state then UI.upper(STATE_NAME[state]) else "FORA"
 				local chipColor = if inCapsule then "teal" elseif state == "Mine" then "ore" elseif state then "gold" else "slot"
 				UI.chip(face, chipText, chipColor, { Name = "State", Size = UDim2.fromScale(0.17, 0.46), Position = UDim2.fromScale(0.38, 0.27) })

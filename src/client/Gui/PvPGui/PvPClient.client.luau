@@ -15,8 +15,10 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local gui = script.Parent
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local PvPRank = require(ReplicatedStorage:WaitForChild("Data"):WaitForChild("PvPRank"))
 local UI = require(ReplicatedStorage:WaitForChild("UI"))
 local T = UI.Theme
+local myProfile = nil
 
 local PLAZA_HALF_X, PLAZA_HALF_Z = 130, 90
 local PROMPT_DISTANCE = 12
@@ -79,8 +81,8 @@ local function makeFormatOption(name: string, xScale: number, color: string, tit
 	return b
 end
 
-local btn2x2 = makeFormatOption("Format2x2", 0.05, "orange", "2x2 EM DUPLA", "2 ativos por lado (m\u{ed}n. 2 no time)")
-local btn1x1 = makeFormatOption("Format1x1", 0.52, "blue", "1x1 CL\u{c1}SSICO", "Duelo individual 1 contra 1")
+local btn2x2 = makeFormatOption("Format2x2", 0.05, "orange", "2x2 EM DUPLA", "+ELO \u{b7} +450g + Doce (3x/dia)")
+local btn1x1 = makeFormatOption("Format1x1", 0.52, "blue", "1x1 CL\u{c1}SSICO", "Duelo 1x1 \u{b7} +300g (3x/dia)")
 
 local pickTargetId: number? = nil
 
@@ -92,11 +94,31 @@ end
 local function openPicker(targetUserId: number, targetName: string)
 	pickTargetId = targetUserId
 	pickerTitle.Text = "Desafiar " .. targetName
+	local pvp = myProfile and myProfile.PvP
+	local rating = (pvp and pvp.Rating) or PvPRank.StartRating
+	local tier = PvPRank.TierFor(rating)
+	local dayNow = PvPRank.Day(os.time() + (ReplicatedStorage:GetAttribute("RetentionOffset") or 0))
+	local dailyDone = if pvp and pvp.DailyDay == dayNow then (pvp.DailyRewards or 0) else 0
+	pickerSub.Text = string.format("Patente %s (%d ELO) \u{b7} B\u{f4}nus hoje: %d/%d \u{b7} Nv. 50", tier.Name, rating, dailyDone, PvPRank.DailyRewardCap)
 	pickerBox.Visible = true
 	pickerScale.Scale = T.Motion.OpenFrom
 	TweenService:Create(pickerScale, TweenInfo.new(T.Motion.OpenTime, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	UI.play("open")
 end
+
+Remotes:WaitForChild("ProfileUpdated").OnClientEvent:Connect(function(p)
+	if typeof(p) == "table" then
+		myProfile = p
+	end
+end)
+task.spawn(function()
+	local ok, p = pcall(function()
+		return Remotes:WaitForChild("GetProfile"):InvokeServer()
+	end)
+	if ok and typeof(p) == "table" then
+		myProfile = p
+	end
+end)
 
 local function sendChallenge(fmt: string)
 	local uid = pickTargetId

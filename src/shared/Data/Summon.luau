@@ -56,27 +56,17 @@ Summon.Portals = {
 Summon.CurrencyName = { Gold = "gold", Gems = "gemas" }
 
 -- Paineis selecionaveis na estrela de invocacao (Anime filter + arte de painel)
-Summon.BannerOrder = { "Todos", "Naruto", "OnePiece" }
+Summon.BannerOrder = { "Todos", "OnePiece", "Naruto", "Bleach" }
 Summon.Banners = {
 	Todos = {
 		Id = "Todos",
-		Anime = nil, -- todos os personagens invocaveis de todos os animes
-		Name = "Todos os Animes",
+		Anime = nil, -- personagens invocaveis dos animes ja desbloqueados pelo jogador
+		Name = "Todos os Desbloqueados",
 		Short = "TODOS",
-		Subtitle = "Elenco Completo",
+		Subtitle = "Animes Desbloqueados",
 		ImageId = 80124787437807,
 		Accent = Color3.fromRGB(168, 85, 247),
 		Icon = "star",
-	},
-	Naruto = {
-		Id = "Naruto",
-		Anime = "Naruto",
-		Name = "Naruto",
-		Short = "NARUTO",
-		Subtitle = "Sakura · Shikamaru · Kakashi · Sasuke · Naruto · Sarutobi",
-		ImageId = 90282977605958,
-		Accent = Color3.fromRGB(255, 138, 40),
-		Icon = "portal",
 	},
 	OnePiece = {
 		Id = "OnePiece",
@@ -86,7 +76,27 @@ Summon.Banners = {
 		Subtitle = "Nami · Usopp · Zoro · Sanji · Luffy · Barba Branca",
 		ImageId = 88088550646321,
 		Accent = Color3.fromRGB(56, 178, 255),
-		Icon = "sword",
+		Icon = "insignia_onepiece",
+	},
+	Naruto = {
+		Id = "Naruto",
+		Anime = "Naruto",
+		Name = "Naruto",
+		Short = "NARUTO",
+		Subtitle = "Sakura · Shikamaru · Kakashi · Sasuke · Naruto · Sarutobi",
+		ImageId = 90282977605958,
+		Accent = Color3.fromRGB(255, 138, 40),
+		Icon = "insignia_naruto",
+	},
+	Bleach = {
+		Id = "Bleach",
+		Anime = "Bleach",
+		Name = "Bleach",
+		Short = "BLEACH",
+		Subtitle = "Chad · Uryu · Rukia · Renji · Ichigo · Byakuya",
+		ImageId = 77274797232236,
+		Accent = Color3.fromRGB(48, 212, 232),
+		Icon = "insignia_bleach",
 	},
 }
 

@@ -76,21 +76,33 @@ local function refugeData(data)
 end
 
 --------------------------------------------------------------------
--- Sorteio (raridade pela tabela da Forja, personagem do elenco, nivel na faixa)
+-- Sorteio (raridade pela tabela da Forja, respeitando banners desbloqueados)
 --------------------------------------------------------------------
-local byRarity = nil
-local function roster()
-	if not byRarity then
-		byRarity = {}
+local function rosterFor(unlockedBanners)
+	local byRarity = {}
+	local any = false
+	for id, def in pairs(Characters.List) do
+		if not def.Prototype then -- prototipos de teste nunca surgem no Refugio
+			local anime = def.Anime
+			local allowed = (not anime) or anime == "Generico" or (typeof(unlockedBanners) == "table" and unlockedBanners[anime] == true)
+			if allowed then
+				byRarity[def.Rarity] = byRarity[def.Rarity] or {}
+				table.insert(byRarity[def.Rarity], id)
+				any = true
+			end
+		end
+	end
+	if not any then
+		-- Fallback seguro caso perfil legado nao tenha nenhum anime desbloqueado
 		for id, def in pairs(Characters.List) do
-			if not def.Prototype then -- prototipos de teste nunca surgem no Refugio
+			if not def.Prototype and (not def.Anime or def.Anime == "Generico") then
 				byRarity[def.Rarity] = byRarity[def.Rarity] or {}
 				table.insert(byRarity[def.Rarity], id)
 			end
 		end
-		for _, list in pairs(byRarity) do
-			table.sort(list)
-		end
+	end
+	for _, list in pairs(byRarity) do
+		table.sort(list)
 	end
 	return byRarity
 end
@@ -108,20 +120,30 @@ function RefugeService.RollRarity(level: number, r: Random): string
 	return "Comum"
 end
 
--- Retorna { CharacterId, Level, Rarity (sorteada), Actual (raridade do personagem) }
-function RefugeService.Roll(level: number, r: Random?)
+-- Retorna { CharacterId, Level, Rarity (sorteada), Genetics }
+-- Respeita data.UnlockedBanners para nao vazar personagens de Ginasios ainda trancados!
+function RefugeService.Roll(level: number, r: Random?, unlockedBanners)
 	r = r or rng
 	local info = Refuge.Levels[level]
 	local rarity = RefugeService.RollRarity(level, r)
-	local lists = roster()
+	local lists = rosterFor(unlockedBanners)
 	local idx = table.find(Refuge.RarityOrder, rarity) or 1
 	local charId
-	-- sem personagem da raridade no elenco: vem da raridade abaixo mais proxima
+	-- sem personagem da raridade no pool liberado: cai para raridade abaixo mais proxima (ou sobe se so houver acima)
 	for i = idx, 1, -1 do
 		local list = lists[Refuge.RarityOrder[i]]
 		if list and #list > 0 then
 			charId = list[r:NextInteger(1, #list)]
 			break
+		end
+	end
+	if not charId then
+		for i = idx + 1, #Refuge.RarityOrder do
+			local list = lists[Refuge.RarityOrder[i]]
+			if list and #list > 0 then
+				charId = list[r:NextInteger(1, #list)]
+				break
+			end
 		end
 	end
 	local actualDef = charId and Characters.Get(charId)
@@ -141,8 +163,9 @@ local function accrue(data): number
 	local info = Refuge.Levels[r.Forja] or Refuge.Levels[1]
 	local t = now()
 	if (r.LastSpawn or 0) <= 0 or r.LastSpawn > t + 5 then
-		-- primeiro acesso (ou relogio de teste voltou): o primeiro selvagem ja esta la
-		r.LastSpawn = t - info.Interval
+		-- primeiro acesso: ja deixa 2 selvagens prontos para acao imediata no Refugio
+		local initialCount = math.min(2, info.Max)
+		r.LastSpawn = t - info.Interval * initialCount
 	end
 	if #r.Pending >= info.Max then
 		r.LastSpawn = t -- cheio: o contador fica parado no maximo
@@ -154,7 +177,7 @@ local function accrue(data): number
 	end
 	local add = math.min(n, info.Max - #r.Pending)
 	for _ = 1, add do
-		local roll = RefugeService.Roll(r.Forja)
+		local roll = RefugeService.Roll(r.Forja, nil, data.UnlockedBanners)
 		if roll.CharacterId then
 			table.insert(r.Pending, { Id = r.NextId, CharacterId = roll.CharacterId, Level = roll.Level, Rarity = roll.Rarity, Genetics = roll.Genetics })
 			r.NextId += 1
@@ -725,12 +748,16 @@ local function towerRank(mode: string): number
 	return table.find(Tower.Order, mode) or 0
 end
 
--- Progresso de um requisito: tem, precisa
+-- Progresso de um requisito: tem, precisa (aceita Torre 1x1 ou 2x2 + Insignias de Ginasio)
 function RefugeService.Progress(data, req): (number, number)
 	local r = refugeData(data)
 	if req.Kind == "TowerWin" then
-		-- vencer um modo libera o seguinte (Tower.Unlocked guarda o mais alto liberado)
-		local won = towerRank(data.Tower and data.Tower.Unlocked or "Facil") > towerRank(req.Mode)
+		-- vencer um modo (1x1 ou 2x2) libera o seguinte
+		local bestRank = math.max(
+			towerRank(data.Tower and data.Tower.Unlocked or "Facil"),
+			towerRank(data.Tower2x2 and data.Tower2x2.Unlocked or "Facil")
+		)
+		local won = bestRank > towerRank(req.Mode)
 		return if won then 1 else 0, 1
 	elseif req.Kind == "WildDefeated" then
 		return r.WildDefeated, req.Count
@@ -745,7 +772,11 @@ function RefugeService.Progress(data, req): (number, number)
 		end
 		return n, req.Count
 	elseif req.Kind == "InfinitoFloor" then
-		return (data.Tower and data.Tower.BestInfiniteFloor or 0), req.Floor
+		local bestFloor = math.max(
+			(data.Tower and data.Tower.BestInfiniteFloor) or 0,
+			(data.Tower2x2 and data.Tower2x2.BestInfiniteFloor) or 0
+		)
+		return bestFloor, req.Floor
 	elseif req.Kind == "Stars" then
 		local n = 0
 		for _, m in pairs(data.Collection) do
@@ -762,6 +793,14 @@ function RefugeService.Progress(data, req): (number, number)
 			end
 		end
 		return 0, 1
+	elseif req.Kind == "GymBadges" then
+		local n = 0
+		for _, cleared in pairs(data.GymsCleared or {}) do
+			if cleared == true then
+				n += 1
+			end
+		end
+		return n, req.Count
 	end
 	return 0, 1
 end

@@ -213,6 +213,9 @@ end
 
 function BattleEngine:ActiveAt(side: string, fieldSlot: number?)
 	local s = self.Sides[side]
+	if not s then
+		return nil
+	end
 	local idx = s.ActiveSlots[fieldSlot or 1]
 	return if idx then s.Team[idx] else nil
 end

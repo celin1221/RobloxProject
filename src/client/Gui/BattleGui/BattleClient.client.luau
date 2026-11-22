@@ -26,6 +26,7 @@ local SubmitAction = Remotes:WaitForChild("SubmitAction")
 local BattleUpdate = Remotes:WaitForChild("BattleUpdate")
 local BattleEnd = Remotes:WaitForChild("BattleEnd")
 local TypeChart = require(ReplicatedStorage:WaitForChild("Data"):WaitForChild("TypeChart"))
+local Moves = require(ReplicatedStorage.Data:WaitForChild("Moves"))
 local VfxController = require(ReplicatedStorage:WaitForChild("VfxController"))
 local UI = require(ReplicatedStorage:WaitForChild("UI"))
 local T = UI.Theme
@@ -645,17 +646,17 @@ function refreshMoves()
 	end
 end
 
-local function effectivenessBadge(move, target)
+local function effectivenessBadge(move, _target)
 	if move.Category ~= "Damage" then
 		return "STATUS", "blue"
 	end
-	local mult = TypeChart.Multiplier(move.Type, target.Type)
-	if mult > 1 then
-		return "2x SUPER!", "green"
-	elseif mult < 1 then
-		return "0.5x RESISTE", "red"
+	local def = move.Id and Moves.Get(move.Id)
+	if def and (def.CritChance or 0) >= 0.15 then
+		return "CR\u{cd}TICO+", "gold"
+	elseif def and def.Status then
+		return "EFEITO", "purple"
 	end
-	return "1x NORMAL", "slot"
+	return "ALVO \u{b7} ATQ", "orange"
 end
 
 -- Abre seletor de alvo para golpe de alvo unico no 2x2
@@ -797,8 +798,8 @@ local function refreshAll(instant: boolean?)
 	refreshActorPrompt()
 	UI.setText(fleeButton, if current.State.CanFlee then "FUGIR" else "DESISTIR")
 	UI.setIcon(fleeButton.Face.Icon, if current.State.CanFlee then "run" else "flag")
-	local pvp = current.State.Mode == "PvP"
-	UI.setDisabled(bagButton, pvp, "green")
+	local noItems = current.State.Mode == "PvP" or current.State.Mode == "Practice"
+	UI.setDisabled(bagButton, noItems, "green")
 end
 
 -- Numero flutuante sobre o personagem (dano, cura, erro)
@@ -988,6 +989,9 @@ bagButton.Activated:Connect(function()
 	if current and current.Awaiting then
 		if current.State.Mode == "PvP" then
 			log("Itens desativados no PvP.")
+			return
+		elseif current.State.Mode == "Practice" then
+			log("Itens desativados no Treino.")
 			return
 		end
 		refreshBag()

@@ -18,7 +18,17 @@ Progression.Genetics = Genetics
 Progression.MaxLevel = 50
 Progression.StarterLevel = 5
 Progression.XpPerEnemyLevel = 3
+Progression.BenchXpRatio = 0.40 -- 40% do XP da vitoria compartilhado com o banco vivo (facilita montar times 2x2)
 Progression.MaxActiveMoves = 4
+
+-- Kit inicial entregue ao escolher o 1o parceiro (sem gemas: gemas seguem raras)
+Progression.StarterKit = {
+	Gold = 600,
+	Items = {
+		Pocao = 3,
+		SeloContrato = 3,
+	},
+}
 
 function Progression.XpToNext(level: number): number
 	if level >= Progression.MaxLevel then

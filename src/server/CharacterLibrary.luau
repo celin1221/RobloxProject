@@ -79,6 +79,26 @@ function Characters.CloneSource(name: string): Model
 	if def and def.PlaceholderColors then
 		applyPlaceholderColors(model, def.PlaceholderColors)
 	end
+	-- Aplica animacoes padrao da classe (espada, punho, magia, disparo) nos modelos provisorios
+	if def then
+		local animFolder = model:FindFirstChild("Animations")
+		local movesMod = ReplicatedStorage:FindFirstChild("Data") and ReplicatedStorage.Data:FindFirstChild("Moves")
+		local Moves = movesMod and require(movesMod)
+		local classAnims = Moves and Moves.ClassDefaultAnimations and Moves.ClassDefaultAnimations[def.Type]
+		if animFolder and classAnims then
+			for key, animId in pairs(classAnims) do
+				local a = animFolder:FindFirstChild(key)
+				if not a then
+					a = Instance.new("Animation")
+					a.Name = key
+					a.Parent = animFolder
+				end
+				if a:IsA("Animation") then
+					a.AnimationId = "rbxassetid://" .. tostring(animId)
+				end
+			end
+		end
+	end
 	return model
 end
 

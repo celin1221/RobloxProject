@@ -16,6 +16,7 @@ local DataStoreService = game:GetService("DataStoreService")
 
 local Data = ReplicatedStorage:WaitForChild("Data")
 local Retention = require(Data:WaitForChild("Retention"))
+local StarterTrack = require(Data:WaitForChild("StarterTrack"))
 local Items = require(Data.Items)
 local Benefits = require(Data.Benefits)
 local Characters = require(Data.Characters)
@@ -53,11 +54,12 @@ local function premiumBlocked(player: Player): boolean
 	return player:GetAttribute("PaidRandomRestricted") ~= false
 end
 
-function RetentionService.SeasonStore(id: string)
-	if not storeCache[id] then
-		storeCache[id] = DataStoreService:GetOrderedDataStore(Retention.Season.StorePrefix .. id)
+function RetentionService.SeasonStore(id: string, format: string?)
+	local key = if format == "2x2" then ("2x2_" .. id) else id
+	if not storeCache[key] then
+		storeCache[key] = DataStoreService:GetOrderedDataStore(Retention.Season.StorePrefix .. key)
 	end
-	return storeCache[id]
+	return storeCache[key]
 end
 
 function RetentionService.CurrentSeason(): string
@@ -218,20 +220,34 @@ end
 -- Temporada: na virada do mes paga a faixa de gemas e marca a conferencia do top 100
 local function ensureSeason(player: Player, data): boolean
 	local cur = Retention.SeasonId(Clock.Now())
+	local changedAny = false
 	local s = data.Season
-	if s.Id == cur then
-		return false
+	if s.Id ~= cur then
+		if s.Id ~= "" and (s.Best or 0) > 0 then
+			local gems = Retention.SeasonGems(s.Best)
+			data.Gems += gems
+			s.Last = { Id = s.Id, Best = s.Best, Gems = gems }
+			s.PendingTop = s.Id
+			notify(player, string.format("Temporada 1x1 %s encerrada: andar %d, +%d gemas.", s.Id, s.Best, gems))
+		end
+		s.Id = cur
+		s.Best = 0
+		changedAny = true
 	end
-	if s.Id ~= "" and (s.Best or 0) > 0 then
-		local gems = Retention.SeasonGems(s.Best)
-		data.Gems += gems
-		s.Last = { Id = s.Id, Best = s.Best, Gems = gems }
-		s.PendingTop = s.Id
-		notify(player, string.format("Temporada %s encerrada: andar %d, +%d gemas.", s.Id, s.Best, gems))
+	data.Season2x2 = data.Season2x2 or { Id = "", Best = 0 }
+	local s2 = data.Season2x2
+	if s2.Id ~= cur then
+		if s2.Id ~= "" and (s2.Best or 0) > 0 then
+			local gems2 = Retention.SeasonGems(s2.Best)
+			data.Gems += gems2
+			s2.Last = { Id = s2.Id, Best = s2.Best, Gems = gems2 }
+			notify(player, string.format("Temporada 2x2 %s encerrada: andar %d, +%d gemas.", s2.Id, s2.Best, gems2))
+		end
+		s2.Id = cur
+		s2.Best = 0
+		changedAny = true
 	end
-	s.Id = cur
-	s.Best = 0
-	return true
+	return changedAny
 end
 
 local function applyCosmetics(player: Player, data)
@@ -275,19 +291,20 @@ local function checkTop(player: Player, data): boolean
 	return true
 end
 
--- Andar do Infinito vencido (TowerService). Retorna true se for recorde da temporada.
-function RetentionService.OnInfiniteFloor(player: Player, floor: number): boolean
+-- Andar do Infinito vencido (TowerService). format = "1x1" (padrao) ou "2x2". Retorna true se for recorde da temporada.
+function RetentionService.OnInfiniteFloor(player: Player, floor: number, format: string?): boolean
 	local data = PlayerDataService.Get(player)
 	if not data then
 		return false
 	end
 	ensureSeason(player, data)
-	local s = data.Season
+	local fmt = if format == "2x2" then "2x2" else "1x1"
+	local s = if fmt == "2x2" then data.Season2x2 else data.Season
 	if floor <= (s.Best or 0) then
 		return false
 	end
 	s.Best = floor
-	local store = RetentionService.SeasonStore(s.Id)
+	local store = RetentionService.SeasonStore(s.Id, fmt)
 	task.spawn(function()
 		local ok, err = pcall(store.UpdateAsync, store, tostring(player.UserId), function(old)
 			if typeof(old) == "number" and old >= floor then
@@ -296,7 +313,7 @@ function RetentionService.OnInfiniteFloor(player: Player, floor: number): boolea
 			return floor
 		end)
 		if not ok then
-			warn("[Retention] Falha ao enviar ao placar da temporada: " .. tostring(err))
+			warn("[Retention] Falha ao enviar ao placar da temporada (" .. fmt .. "): " .. tostring(err))
 		end
 	end)
 	return true
@@ -474,6 +491,37 @@ function RetentionService.Redeem(player: Player, text)
 	return true, "C\u{f3}digo " .. key .. ": " .. table.concat(lines, ", ") .. "."
 end
 
+-- Resgate de um passo da Trilha Inicial (valida progresso no servidor)
+function RetentionService.ClaimStarterStep(player: Player, stepId)
+	local data = PlayerDataService.Get(player)
+	if not data or not data.StarterChosen then
+		return false, "Escolha seu personagem inicial primeiro."
+	end
+	if typeof(stepId) ~= "string" then
+		return false, "Objetivo inv\u{e1}lido."
+	end
+	local step = StarterTrack.ById[stepId]
+	if not step then
+		return false, "Objetivo inv\u{e1}lido."
+	end
+	data.StarterTrack = data.StarterTrack or { Claimed = {} }
+	data.StarterTrack.Claimed = data.StarterTrack.Claimed or {}
+	if data.StarterTrack.Claimed[stepId] then
+		return false, "Objetivo j\u{e1} resgatado."
+	end
+	local _, _, done = StarterTrack.Progress(data, stepId)
+	if not done then
+		return false, "Objetivo ainda n\u{e3}o conclu\u{ed}do."
+	end
+	if step.Reward and step.Reward.Items and not itemsFit(data, step.Reward.Items) then
+		return false, "Mochila cheia: libere espa\u{e7}o antes de resgatar."
+	end
+	data.StarterTrack.Claimed[stepId] = true
+	local lines = grant(player, data, step.Reward or {})
+	changed(player, true)
+	return true, step.Title .. ": " .. table.concat(lines, ", ") .. "!"
+end
+
 --------------------------------------------------------------------
 -- Init
 --------------------------------------------------------------------
@@ -510,6 +558,8 @@ function RetentionService.Init()
 				return RetentionService.ClaimChest(player, arg)
 			elseif action == "Code" then
 				return RetentionService.Redeem(player, arg)
+			elseif action == "StarterStep" then
+				return RetentionService.ClaimStarterStep(player, arg)
 			end
 			return false, "A\u{e7}\u{e3}o inv\u{e1}lida."
 		end)

@@ -193,6 +193,15 @@ local ok, res = pcall(function()
     local BattleEngine = require(coreClone:WaitForChild("BattleEngine"))
     local DamageCalc = require(coreClone:WaitForChild("DamageCalc"))
     local Moves = require(dataClone:WaitForChild("Moves"))
+    local TypeChart = require(dataClone:WaitForChild("TypeChart"))
+    local Characters = require(dataClone:WaitForChild("Characters"))
+    local Gyms = require(dataClone:WaitForChild("Gyms"))
+    local Genetics = require(dataClone:WaitForChild("Genetics"))
+    local Progression = require(dataClone:WaitForChild("Progression"))
+    local Base = require(dataClone:WaitForChild("Base"))
+    local StarterTrack = require(dataClone:WaitForChild("StarterTrack"))
+    local PvPRank = require(dataClone:WaitForChild("PvPRank"))
+    local Refuge = require(dataClone:WaitForChild("Refuge"))
 
 -- Test 1: GDD Section 5 Damage Conference (Kaen Corte Flamejante on Raiko at Lv 10 = 12 to 14 non-crit)
 local b = BattleEngine.New({
@@ -348,7 +357,59 @@ while bDoubleRep.State ~= "Ended" and simTurns < 30 do
 end
 assert(bDoubleRep.State == "Ended", "Full 2x2 PvP simulation did not finish")
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns) & 2x2 Doubles (spread 0.75/1.0, redirect, 2v1 ClearSlot, double replace, PvP sim %d turns, Winner=%s)", b.Turn, simTurns, tostring(bDoubleRep.Winner))
+-- Test 6: Combat Classes (1x always, generic class kits), 3 Starters (Luffy/Naruto/Ichigo), Bleach Roster, Gyms & Practice 2x2
+for _, c1 in ipairs(TypeChart.Classes) do
+    for _, c2 in ipairs(TypeChart.Classes) do
+        assert(TypeChart.Multiplier(c1, c2) == 1, "Expected 1x class multiplier for " .. c1 .. " vs " .. c2)
+    end
+end
+local starters = Characters.Starters()
+assert(#starters == 3, "Expected 3 starters, got " .. tostring(#starters))
+local starterSet = {}
+for _, sid in ipairs(starters) do starterSet[sid] = true end
+assert(starterSet.Luffy and starterSet.Naruto and starterSet.Ichigo, "Expected Starters = Luffy, Naruto, Ichigo")
+for _, bid in ipairs({ "Chad", "Uryu", "Rukia", "Renji", "Ichigo", "Byakuya" }) do
+    local def = Characters.Get(bid)
+    assert(def and def.Anime == "Bleach", "Missing Bleach character " .. bid)
+    assert(def.Learnset and #def.Learnset >= 4, "Expected class kit learnset on " .. bid)
+end
+assert(#Gyms.Order == 3, "Expected 3 Gyms")
+for _, gid in ipairs(Gyms.Order) do
+    local g = Gyms.Get(gid)
+    assert(g and #g.Stages == 3, "Expected 3 stages in Gym " .. gid)
+    assert(#g.Stages[1].Team == 2 and #g.Stages[2].Team == 4 and #g.Stages[3].Team == 6, "Expected 2->4->6 stages in Gym " .. gid)
+    assert(Gyms.ForBanner(g.BannerId) == g, "Expected ForBanner mapping for " .. gid)
+end
+local bPractice = BattleEngine.New({
+    Player = { Team = { { CharacterId = "Ichigo", Level = 50 }, { CharacterId = "Luffy", Level = 50 } } },
+    Enemy = { Team = { { CharacterId = "Naruto", Level = 50 }, { CharacterId = "Byakuya", Level = 50 } }, AI = "Medio" },
+    Format = "2x2",
+    Mode = "Practice",
+    CanFlee = true,
+    Seed = 42,
+})
+bPractice:ResolveTurn({ Kind = "Flee" })
+assert(bPractice.State == "Ended" and bPractice.EndReason == "Fled", "Expected free flee in Practice 2x2 mode")
+
+-- Test 7: Progression Rebalance (Scaled NPC Genetics, StarterKit, Bench XP, Live Base Gold/s, StarterTrack, PvPRank, Refuge GymBadges)
+local gEasy, tEasy = Genetics.TowerEnemyPreset("Facil")
+local gInf, tInf = Genetics.TowerEnemyPreset("Infinito")
+assert(gEasy.HP == 25 and tEasy.HP == 0 and gInf.HP == 70 and tInf.HP == 100, "Expected scaled Tower presets")
+local gGym1, tGym1 = Genetics.GymEnemyPreset(1)
+assert(gGym1.HP == 35 and tGym1.HP == 15, "Expected Gym 1 preset 35/15")
+assert(Progression.StarterKit and Progression.StarterKit.Gold == 600 and Progression.BenchXpRatio == 0.40, "Expected StarterKit & BenchXpRatio")
+local gps1 = Base.MemberGoldPerSecond({ Level = 1, Stars = 0 }, "Epico", false)
+local gps50 = Base.MemberGoldPerSecond({ Level = 50, Stars = 2 }, "Epico", false)
+assert(gps1 == 1.0 and gps50 > gps1 * 3.5, "Expected Base Gold/s scaling with Level & Stars")
+assert(#StarterTrack.Steps == 7, "Expected 7 StarterTrack steps")
+local st0, h0, n0, d0 = StarterTrack.CurrentStep({ StarterTrack = { Claimed = {} }, Base = { Active = {} } })
+assert(st0 and st0.Id == "BaseActive" and h0 == 0 and n0 == 1 and not d0, "Expected first StarterTrack step BaseActive")
+local gain2x2, loss2x2 = PvPRank.Delta(1000, 1000, "2x2")
+local gain1x1, _ = PvPRank.Delta(1000, 1000, "1x1")
+assert(gain2x2 > gain1x1 and loss2x2 >= 6 and PvPRank.TierFor(1250).Id == "Ouro", "Expected PvPRank 2x2 Elo & Tiers")
+assert(Refuge.Upgrades[3].Gems == 100 and Refuge.Levels[1].Interval == 90, "Expected hard Forge gems & agile Lv1 Refuge")
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), Classes/Gyms/Practice + Progression Rebalance (Live Gold/s, StarterTrack 7, PvP Elo, Scaled NPCs)", b.Turn, simTurns)
 end)
 sandbox:Destroy()
 assert(ok, res)

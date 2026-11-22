@@ -25,6 +25,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Data = ReplicatedStorage:WaitForChild("Data")
 local Characters = require(Data:WaitForChild("Characters"))
 local Summon = require(Data:WaitForChild("Summon"))
+local Gyms = require(Data:WaitForChild("Gyms"))
 local TypeChart = require(Data:WaitForChild("TypeChart"))
 local Benefits = require(Data:WaitForChild("Benefits"))
 local StageThemes = require(Data:WaitForChild("SummonStageThemes"))
@@ -355,43 +356,92 @@ do
 end
 
 -- === 2. TRILHO LATERAL ESQUERDO: SELECAO DE BANNER POR ANIME (estilo Anime Vanguards) ===
-local leftRail, leftRailStroke = makeGlassCard(bannerHud, "BannerRail", UDim2.fromScale(0.168, 0.61), UDim2.fromScale(0.018, 0.145), Vector2.zero, 16, 25)
+local leftRail, leftRailStroke = makeGlassCard(bannerHud, "BannerRail", UDim2.fromScale(0.168, 0.68), UDim2.fromScale(0.018, 0.132), Vector2.zero, 16, 25)
 UI.text(leftRail, "BANNERS", {
 	Name = "Header",
-	Size = UDim2.fromScale(0.9, 0.08),
-	Position = UDim2.fromScale(0.05, 0.025),
+	Size = UDim2.fromScale(0.9, 0.075),
+	Position = UDim2.fromScale(0.05, 0.022),
 	Role = "Small",
 	Color = "gold",
 	AlignX = Enum.TextXAlignment.Left,
 	StrokeMult = 0.45,
 	ZIndex = 26,
 })
-local bannersList = UI.frame(leftRail, { Name = "BannersList", Size = UDim2.fromScale(0.90, 0.86), Position = UDim2.fromScale(0.05, 0.115), ZIndex = 26 })
+local bannersList = Instance.new("ScrollingFrame")
+bannersList.Name = "BannersList"
+bannersList.Size = UDim2.fromScale(0.90, 0.875)
+bannersList.Position = UDim2.fromScale(0.05, 0.105)
+bannersList.BackgroundTransparency = 1
+bannersList.BorderSizePixel = 0
+bannersList.CanvasSize = UDim2.new(0, 0, 0, 0)
+bannersList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+bannersList.ScrollBarThickness = 3
+bannersList.ScrollBarImageColor3 = Color3.fromRGB(160, 148, 220)
+bannersList.ScrollingDirection = Enum.ScrollingDirection.Y
+bannersList.ZIndex = 26
+bannersList.Parent = leftRail
 do
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 2)
+	pad.PaddingBottom = UDim.new(0, 4)
+	pad.PaddingLeft = UDim.new(0, 2)
+	pad.PaddingRight = UDim.new(0, 4)
+	pad.Parent = bannersList
+
 	local vl = Instance.new("UIListLayout")
 	vl.FillDirection = Enum.FillDirection.Vertical
 	vl.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	vl.VerticalAlignment = Enum.VerticalAlignment.Top
-	vl.Padding = UDim.new(0.032, 0)
+	vl.Padding = UDim.new(0, 6)
 	vl.SortOrder = Enum.SortOrder.LayoutOrder
 	vl.Parent = bannersList
 end
 
 local bannerButtons = {}
-local bannerCount = math.max(1, #Summon.BannerOrder)
-local bannerBtnH = math.min(0.30, (1 - 0.032 * math.max(0, bannerCount - 1)) / bannerCount)
+local function fitBannerButtons()
+	local w = bannersList.AbsoluteSize.X - 10
+	if w <= 1 then
+		return
+	end
+	local h = math.max(44, math.floor(w / 2.38 + 0.5))
+	for _, entry in pairs(bannerButtons) do
+		entry.Button.Size = UDim2.new(1, 0, 0, h)
+	end
+end
+bannersList:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitBannerButtons)
+
+local function isBannerUnlocked(bannerId: string): boolean
+	local gym = Gyms.ForBanner(bannerId)
+	if not gym then
+		return true
+	end
+	return profile ~= nil and profile.UnlockedBanners ~= nil and profile.UnlockedBanners[gym.Anime] == true
+end
+
+local function lockedBannerReason(bannerId: string): string?
+	local gym = Gyms.ForBanner(bannerId)
+	if not gym or isBannerUnlocked(bannerId) then
+		return nil
+	end
+	return string.format("Banner trancado! Ven\u{e7}a o %s na Torre para desbloquear.", gym.Name)
+end
 
 local function updateBannerSelection()
 	for id, entry in pairs(bannerButtons) do
 		local isSel = id == selectedBannerId
+		local unlocked = isBannerUnlocked(id)
 		local accent = entry.Config.Accent or T.Palette.gold
-		entry.Stroke.Color = if isSel then accent:Lerp(Color3.new(1, 1, 1), 0.35) else Color3.fromRGB(64, 52, 112)
+		entry.Stroke.Color = if isSel
+			then (if unlocked then accent:Lerp(Color3.new(1, 1, 1), 0.35) else T.Palette.red)
+			else Color3.fromRGB(64, 52, 112)
 		entry.Stroke.Thickness = if isSel then 3 else 1.5
 		entry.Scale.Scale = if isSel then 1.02 else 0.97
-		entry.ActiveTag.Visible = isSel
+		entry.ActiveTag.Visible = isSel and unlocked
+		entry.LockedTag.Visible = not unlocked
+		entry.Artwork.ImageColor3 = if unlocked then Color3.new(1, 1, 1) else Color3.fromRGB(130, 125, 148)
 		entry.ShadeGrad.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, if isSel then 0.22 else 0.48),
-			NumberSequenceKeypoint.new(0.55, if isSel then 0.36 else 0.62),
+			NumberSequenceKeypoint.new(0, if not unlocked then 0.25 elseif isSel then 0.22 else 0.48),
+			NumberSequenceKeypoint.new(0.55, if not unlocked then 0.42 elseif isSel then 0.36 else 0.62),
 			NumberSequenceKeypoint.new(1, 0.12),
 		})
 	end
@@ -432,14 +482,14 @@ for idx, bannerId in ipairs(Summon.BannerOrder) do
 	btn.AutoButtonColor = false
 	btn.BackgroundColor3 = Color3.fromRGB(22, 16, 48)
 	btn.BorderSizePixel = 0
-	btn.Size = UDim2.fromScale(1, bannerBtnH)
+	btn.Size = UDim2.new(1, 0, 0, 68)
 	btn.ClipsDescendants = true
 	btn.LayoutOrder = idx
 	btn.ZIndex = 27
 	btn.Parent = bannersList
 
 	local minTouch = Instance.new("UISizeConstraint")
-	minTouch.MinSize = Vector2.new(44, 52)
+	minTouch.MinSize = Vector2.new(44, 44)
 	minTouch.Parent = btn
 
 	local bCorner = Instance.new("UICorner")
@@ -493,6 +543,20 @@ for idx, bannerId in ipairs(Summon.BannerOrder) do
 	})
 	UI.text(activeFace, "\u{2605} ATIVO", { Name = "Label", Size = UDim2.fromScale(0.92, 0.8), Position = UDim2.fromScale(0.04, 0.1), Role = "Small", StrokeMult = 0.45, ZIndex = 31 })
 
+	local lockedPill, lockedFace = UI.panel(btn, {
+		Name = "LockedTag",
+		Size = UDim2.fromScale(0.68, 0.29),
+		Position = UDim2.fromScale(0.95, 0.08),
+		AnchorPoint = Vector2.new(1, 0),
+		Color = "red",
+		Corner = T.Corner.Pill,
+		Shadow = false,
+		Visible = false,
+		ZIndex = 30,
+	})
+	UI.icon(lockedFace, "lock", { Name = "Icon", Size = UDim2.fromScale(0.22, 0.78), Position = UDim2.fromScale(0.06, 0.11), DominantAxis = Enum.DominantAxis.Height, ZIndex = 31 })
+	UI.text(lockedFace, "TRANCADO", { Name = "Label", Size = UDim2.fromScale(0.68, 0.8), Position = UDim2.fromScale(0.28, 0.1), Role = "Small", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45, ZIndex = 31 })
+
 	local titleRow = UI.frame(btn, { Name = "BottomRow", Size = UDim2.fromScale(0.92, 0.38), Position = UDim2.fromScale(0.04, 0.58), ZIndex = 30 })
 	UI.icon(titleRow, cfg.Icon or "star", { Name = "Icon", Size = UDim2.fromScale(0.22, 0.88), Position = UDim2.fromScale(0, 0.06), DominantAxis = Enum.DominantAxis.Height, ZIndex = 31 })
 	UI.text(titleRow, UI.upper(cfg.Short or cfg.Name), { Name = "Name", Size = UDim2.fromScale(0.75, 0.9), Position = UDim2.fromScale(0.24, 0.05), Role = "Small", AlignX = Enum.TextXAlignment.Left, ZIndex = 31 })
@@ -516,12 +580,16 @@ for idx, bannerId in ipairs(Summon.BannerOrder) do
 	bannerButtons[bannerId] = {
 		Button = btn,
 		Config = cfg,
+		Artwork = art,
 		Stroke = bStroke,
 		Scale = bScale,
 		ActiveTag = activePill,
+		LockedTag = lockedPill,
 		ShadeGrad = shadeGrad,
 	}
 end
+fitBannerButtons()
+task.defer(fitBannerButtons)
 updateBannerSelection()
 
 -- === 3. PAINEL LATERAL DIREITO COMPACTO: CHANCES + DESTAQUE SEMANAL + TICKETS ===
@@ -803,6 +871,34 @@ local three = summonButton("Summon3", 0.345, 0.31, "purple", false)
 three.Visible = false
 local ten = summonButton("Summon10", 0.515, 0.485, "lendario", true)
 
+local lockedDock, lockedDockFace = UI.panel(actionsRow, {
+	Name = "LockedBannerDock",
+	Size = UDim2.fromScale(1, 1),
+	Color = "slot",
+	Corner = 0.24,
+	Shadow = false,
+	Visible = false,
+	ZIndex = 30,
+})
+UI.stroke(lockedDockFace, T.Palette.red, 1.2)
+UI.icon(lockedDockFace, "lock", {
+	Name = "LockIcon",
+	Size = UDim2.fromScale(0.09, 0.72),
+	Position = UDim2.fromScale(0.03, 0.5),
+	AnchorPoint = Vector2.new(0, 0.5),
+	DominantAxis = Enum.DominantAxis.Height,
+	ZIndex = 31,
+})
+local lockedDockText = UI.text(lockedDockFace, "", {
+	Name = "Label",
+	Size = UDim2.fromScale(0.84, 0.84),
+	Position = UDim2.fromScale(0.13, 0.08),
+	Role = "Body",
+	Color = "gold",
+	AlignX = Enum.TextXAlignment.Left,
+	ZIndex = 31,
+})
+
 local function setSummonButton(b, title, cost, icon, free)
 	local face = b.Face
 	face.Title.Text = title
@@ -868,25 +964,38 @@ refreshMain = function()
 	freeHolder.Visible = free > 0
 	freeLabel.Text = free .. " gr\u{e1}tis"
 
-	-- Botoes de invocacao
+	-- Botoes de invocacao (ou aviso de banner trancado pelo Ginasio)
+	local lockReason = lockedBannerReason(selectedBannerId)
 	local quick = Benefits.Has(profile, "InvocacaoRapida")
-	three.Visible = quick
-	if quick then
-		one.Size = UDim2.fromScale(0.315, 1)
-		one.Position = UDim2.fromScale(0, 0)
-		three.Size = UDim2.fromScale(0.315, 1)
-		three.Position = UDim2.fromScale(0.342, 0)
-		ten.Size = UDim2.fromScale(0.315, 1)
-		ten.Position = UDim2.fromScale(0.685, 0)
+	if lockReason then
+		one.Visible = false
+		three.Visible = false
+		ten.Visible = false
+		lockedDock.Visible = true
+		lockedDockText.Text = lockReason
 	else
-		one.Size = UDim2.fromScale(0.485, 1)
-		one.Position = UDim2.fromScale(0, 0)
-		ten.Size = UDim2.fromScale(0.485, 1)
-		ten.Position = UDim2.fromScale(0.515, 0)
+		lockedDock.Visible = false
+		one.Visible = true
+		ten.Visible = true
+		three.Visible = quick
+		if quick then
+			one.Size = UDim2.fromScale(0.315, 1)
+			one.Position = UDim2.fromScale(0, 0)
+			three.Size = UDim2.fromScale(0.315, 1)
+			three.Position = UDim2.fromScale(0.342, 0)
+			ten.Size = UDim2.fromScale(0.315, 1)
+			ten.Position = UDim2.fromScale(0.685, 0)
+		else
+			one.Size = UDim2.fromScale(0.485, 1)
+			one.Position = UDim2.fromScale(0, 0)
+			ten.Size = UDim2.fromScale(0.485, 1)
+			ten.Position = UDim2.fromScale(0.515, 0)
+		end
+		setSummonButton(one, "INVOCAR 1", portal.Cost, icon, free > 0)
+		setSummonButton(three, "INVOCAR " .. Benefits.QuickSummonCount, portal.Cost * Benefits.QuickSummonCount, icon, false)
+		setSummonButton(ten, "INVOCAR 10", portal.Cost10, icon, false)
 	end
-	setSummonButton(one, "INVOCAR 1", portal.Cost, icon, free > 0)
-	setSummonButton(three, "INVOCAR " .. Benefits.QuickSummonCount, portal.Cost * Benefits.QuickSummonCount, icon, false)
-	setSummonButton(ten, "INVOCAR 10", portal.Cost10, icon, false)
+	updateBannerSelection()
 
 	-- Placas dos 3 personagens em destaque
 	refreshSlotNameplates()
@@ -1489,6 +1598,13 @@ local function doSummon(count)
 	if busy then
 		return
 	end
+	local lockReason = lockedBannerReason(selectedBannerId)
+	if lockReason then
+		msg.Text = lockReason
+		bannerMsg.Text = lockReason
+		UI.play("error")
+		return
+	end
 	busy = true
 	msg.Text = ""
 	bannerMsg.Text = ""
@@ -1588,7 +1704,7 @@ refreshAlbum = function()
 		return h
 	end
 	header("Pr\u{ea}mio por grupo: " .. Summon.AlbumReward.Gold .. " gold + " .. Summon.AlbumReward.Gems .. " gemas")
-	header("TIPOS")
+	header("CLASSES")
 	local types = {}
 	for t in pairs(byType) do
 		table.insert(types, t)
@@ -1596,7 +1712,7 @@ refreshAlbum = function()
 	table.sort(types)
 	for _, t in ipairs(types) do
 		local v = byType[t]
-		goalRow(string.format("%s  %d/%d", typeName(t), v[1], v[2]), T.Types[t], claimed["Tipo:" .. t])
+		goalRow(string.format("%s  %d/%d", typeName(t), v[1], v[2]), T.Types[t], claimed["Classe:" .. t])
 	end
 	header("RARIDADES")
 	for _, r in ipairs(Summon.RarityOrder) do
@@ -1694,6 +1810,7 @@ local function apply(p)
 		return
 	end
 	profile = p
+	updateBannerSelection()
 	if win.IsOpen() then
 		if currentTab == "Dupes" then
 			refreshDupes()

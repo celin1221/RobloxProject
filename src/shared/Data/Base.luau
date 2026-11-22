@@ -20,10 +20,14 @@ Base.OrePerGem = 100
 Base.DailyGemCap = 50
 Base.OreMax = 10000
 
--- Por hora, pela raridade (tabela da secao 8)
-Base.GoldPerHour = { Comum = 20, Raro = 30, Epico = 45, Lendario = 70 }
+-- Producao base de gold por segundo (ao vivo enquanto online!) e minerio por hora.
+-- Gold escala com nivel (+4%/nv) e estrelas (+15%/estrela); gemas continuam raras via minerio.
+Base.GoldPerSecond = { Comum = 0.40, Raro = 0.65, Epico = 1.00, Lendario = 1.60 }
+Base.GoldPerHour = { Comum = 1440, Raro = 2340, Epico = 3600, Lendario = 5760 }
+Base.LevelGoldBonus = 0.04 -- +4% de gold por nivel acima do 1 (Nv. 50 = 2.96x)
+Base.StarGoldBonus = 0.15 -- +15% de gold por estrela (5 estrelas = 1.75x)
 Base.OrePerHour = { Comum = 10, Raro = 18, Epico = 30, Lendario = 50 }
-Base.MiningGoldRatio = 0.50 -- mineracao tambem fornece 50% do Gold/h alem dos minerios
+Base.MiningGoldRatio = 0.50 -- mineracao tambem fornece 50% do Gold/s alem dos minerios
 
 Base.States = { Walk = "Passeando", Mine = "Minerando" }
 
@@ -108,9 +112,21 @@ function Base.MinerPower(data, rarityOf): number
 	return power
 end
 
--- Producao por hora do perfil: gold (passeando + minerando) e minerio bruto (minerando)
+-- Gold/s individual de um personagem (considera raridade, nivel, estrelas e modo Passeando/Minerando)
+function Base.MemberGoldPerSecond(member, rarity: string?, isMining: boolean?): number
+	local base = (rarity and Base.GoldPerSecond[rarity]) or Base.GoldPerSecond.Comum
+	local lvl = math.max(1, (member and member.Level) or 1)
+	local stars = math.max(0, (member and member.Stars) or 0)
+	local mult = (1 + (lvl - 1) * Base.LevelGoldBonus) * (1 + stars * Base.StarGoldBonus)
+	if isMining then
+		mult *= Base.MiningGoldRatio
+	end
+	return base * mult
+end
+
+-- Producao do perfil: gold/h, minerio bruto/h e gold/s ao vivo
 function Base.Rates(data, rarityOf)
-	local gold, ore = 0, 0
+	local goldPerSec, ore = 0, 0
 	local goldMult = 1
 	if data.Benefits then
 		if data.Benefits.GoldEmDobro then
@@ -124,15 +140,14 @@ function Base.Rates(data, rarityOf)
 		local m = data.Collection[uid]
 		local rarity = m and rarityOf(m.CharacterId)
 		if rarity then
-			if state == "Mine" then
+			local isMine = state == "Mine"
+			if isMine then
 				ore += Base.OrePerHour[rarity] or 0
-				gold += (Base.GoldPerHour[rarity] or 0) * Base.MiningGoldRatio * goldMult
-			else
-				gold += (Base.GoldPerHour[rarity] or 0) * goldMult
 			end
+			goldPerSec += Base.MemberGoldPerSecond(m, rarity, isMine) * goldMult
 		end
 	end
-	return gold, ore
+	return goldPerSec * 3600, ore, goldPerSec
 end
 
 -- Participacao relativa (%) entre os minerios desbloqueados no nivel de mineracao atual

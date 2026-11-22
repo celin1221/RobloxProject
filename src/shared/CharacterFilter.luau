@@ -13,7 +13,7 @@ local CharacterFilter = {}
 
 CharacterFilter.RarityOrder = { Comum = 1, Raro = 2, Epico = 3, Lendario = 4 }
 CharacterFilter.Rarities = { "Todas", "Comum", "Raro", "Epico", "Lendario" }
-CharacterFilter.Types = { "Todos", "Fogo", "Agua", "Natureza", "Raio", "Luz", "Trevas" }
+CharacterFilter.Types = { "Todos", "Espadachim", "Lutador", "Mago", "Atirador" }
 CharacterFilter.Sorts = { "Raridade", "Geral", "HP", "Attack", "Defense", "Speed", "Nivel", "Recente" }
 
 local animes = { "Todos" }
@@ -24,7 +24,7 @@ CharacterFilter.Animes = animes
 
 local labels = {
 	Todas = "TODAS", Comum = "COMUM", Raro = "RARO", Epico = "\u{c9}PICO", Lendario = "LEND\u{c1}RIO",
-	Todos = "TODOS", Fogo = "FOGO", Agua = "\u{c1}GUA", Natureza = "NATUREZA", Raio = "RAIO", Luz = "LUZ", Trevas = "TREVAS",
+	Todos = "CLASSE: TODAS", Espadachim = "ESPADACHIM", Lutador = "LUTADOR", Mago = "MAGO", Atirador = "ATIRADOR",
 	Raridade = "RARIDADE", Nivel = "N\u{cd}VEL", Recente = "RECENTE",
 	Geral = "STATUS GERAL", HP = "STATUS: HP", Attack = "STATUS: ATQ", Defense = "STATUS: DEF", Speed = "STATUS: VEL",
 	Time = "ORD: TIME",

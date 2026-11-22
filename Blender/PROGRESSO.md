@@ -866,3 +866,86 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 **Pendências**
 - Testar o fluxo de desafio PvP 2x2 entre **2 clientes reais** (Local Server com 2 jogadores no Studio ou 2 contas) para validar em tempo real o convite ponta-a-ponta e a câmera espelhada do Jogador B.
 - Opcional (caso o usuário queira depois): adicionar modo de treino solo 2x2 ou Torre 2x2 usando o mesmo `BattleService.StartBattle(..., { Format = "2x2" })`, e futuros golpes táticos exclusivos de dupla (ex.: *Proteção*, *Ajudar Aliado*, *Vento em Cauda*).
+
+
+## Classes de Combate, Ginásios de Anime (Banners Trancados + Insígnias), Torre 2x2 e Modo Treino (21/11/2026)
+
+**Feito**
+- **8 Artes Visuais Personalizadas (geradas, recortadas em RGBA limpo, enviadas e liberadas via Open Cloud para `Universe 10777011549` e `User 5565234433`):**
+  - Selos de Classe (`Blender/UI/icones/`, 256×256 RGBA): `classe_espadachim.png` (`107664037444284`), `classe_lutador.png` (`116069555686683`), `classe_mago.png` (`139698755747879`), `classe_atirador.png` (`123518987490984`).
+  - Insígnias dos Ginásios (`Blender/UI/icones/`, 256×256 RGBA): `insignia_naruto.png` (`78965692677391`), `insignia_onepiece.png` (`112911216601734`), `insignia_bleach.png` (`102949134179674`).
+  - Banner Bleach (`Blender/UI/banners/banner_bleach.png`, 800×350): `77274797232236`.
+- **Camada 1 (`Data` / `Shared`):**
+  - `src/shared/Data/TypeChart.luau`: migrado de tipos elementais estilo Pokémon para **Classes de Combate** (`Espadachim`, `Lutador`, `Mago`, `Atirador`, extensível + `Universal`), sem multiplicador de vantagem/desvantagem (`Multiplier` sempre `1x`, mantendo afinidade STAB `1.5x` e identidade de golpes/animações por classe).
+  - `src/shared/Data/Moves.luau`: adicionados 16 golpes genéricos de classe (`Moves.ClassDefaults`, 4 por classe), animações padrão por classe (`Moves.ClassDefaultAnimations`), helper `Moves.ClassKit(classId, signatureMoveId)` e suporte opcional a `CritChance`; todos os golpes existentes tiveram `.Type` migrado preservando os IDs originais.
+  - `src/shared/Data/Characters.luau`: adicionado o anime **Bleach** com 6 personagens (`Chad`, `Uryu`, `Rukia`, `Renji`, `Ichigo`, `Byakuya`) herdando kits genéricos via `Moves.ClassKit`; todos os personagens migrados para as 4 Classes; iniciais atualizados exclusivamente para **`Luffy`, `Naruto` e `Ichigo`**.
+  - `src/shared/Data/Gyms.luau` (**NOVO**): 3 Ginásios de Anime (`Naruto` — *Ginásio de Konoha*, `OnePiece` — *Ginásio da Grand Line*, `Bleach` — *Ginásio da Soul Society*), cada um com mini-trilha de 3 lutas (`2 → 4 → 6` personagens, `Facil → Medio → Dificil`), metadados da Insígnia, prêmios de 1ª vitória/revanche e mapeamento `Gyms.ForBanner`.
+  - `src/shared/Data/Summon.luau` & `SummonStageThemes.luau`: adicionado banner `Bleach` (e palco 3D temático da Soul Society com `Byakuya`, `Ichigo` e `Renji`) e ícones de insígnia nos banners.
+  - `src/shared/UI.luau`, `UITheme.luau`, `CharacterFilter.luau`, `TeamCards.luau`, `Net.luau`: registrados os 8 novos ativos, paleta/ícones das 4 Classes e filtro `"CLASSE: TODAS"`.
+- **Camada 2 (`Core`):**
+  - `src/shared/Core/DamageCalc.luau`: suporte a `move.CritChance` em `Compute` e `ExpectedDamage`.
+  - `src/shared/Core/BattleEngine.luau`: guarda defensiva em `ActiveAt` quando `side` não existe na tabela `Sides` (ex.: `"None"` ao fugir).
+- **Camada 3 (`Server`):**
+  - `src/server/Data/PlayerDataService.luau`: adicionados `Tower2x2`, `Season2x2`, `UnlockedBanners` e `GymsCleared` no perfil padrão e na sanitização (preservando personagens já obtidos em perfis antigos).
+  - `src/server/Data/ProgressionService.luau`: `ChooseStarter` desbloqueia automaticamente o banner do anime do inicial escolhido (deixando o Ginásio livre para conquistar a Insígnia + prêmio); `OnBattleFinished` ignora escrita no perfil quando `battle.Mode == "Practice"`.
+  - `src/server/Data/RetentionService.luau` & `AlbumService.luau`: placar de temporada do Infinito separado para `1x1` e `2x2` (`SeasonStore(..., format)`) e grupos do Álbum migrados para `"Classe:"`.
+  - `src/server/Battle/BattleService.luau`: suporte a `opts.NoWriteBack` e `opts.CanFlee`, cor neutra de queimadura no `ImpactBurst`, e correção crítica em `playVictoryModels` (ignorar `winnerSide == "None"` ao fugir para nunca travar antes do `cleanup` de retorno à praça).
+  - `src/server/CharacterLibrary.luau`: modelos provisórios (`CloneSource`) vinculam automaticamente `Moves.ClassDefaultAnimations[def.Type]`.
+  - `src/server/Economy/SummonService.luau`: validação autoritativa `IsBannerUnlocked(data, bannerId)` bloqueando banners de anime antes de vencer o respectivo Ginásio, e banner `"Todos"` sorteando exclusivamente personagens de animes já desbloqueados (com fallback para `Generico`).
+  - `src/server/Tower/TowerService.luau`: unifica **Torre 1x1 e Torre 2x2** (progresso e placares independentes), **Ginásios de Anime** (mini-trilha de 3 lutas em 1x1 ou 2x2 concedendo Insígnia, desbloqueio do banner e recompensa) e **Modo Treino** (1x1 ou 2x2, IA Fácil/Médio/Difícil, Nível 50 igualado ou Nível Real, cópia limpa do time sem gasto de HP/PP/itens nem alteração no perfil).
+- **Camada 4 (`Client`):**
+  - `src/client/Gui/TowerGui/TowerClient.client.luau`: janela reorganizada em 3 abas (`TORRE` com seletor `1x1`/`2x2` + placar separado, `GINÁSIOS` com Porta-Insígnias + seletor `1x1`/`2x2` + 3 cards de Ginásio, `TREINO` com simulador configurável e barra `INICIAR TREINO` fixada no rodapé).
+  - `src/client/Gui/SummonGui/SummonClient.client.luau`: trilho esquerdo com rolagem responsiva para 4+ banners, selo `TRANCADO` e prévia 3D livre dos banners bloqueados com aviso do Ginásio necessário no lugar dos botões de invocação; aba Álbum atualizada para `CLASSES`.
+  - `src/client/Gui/HudGui/HudClient.client.luau`: cartões de seleção inicial (`Luffy`, `Naruto`, `Ichigo`) exibindo Anime, Classe com ícone e aviso `"Libera Banner <Anime>"`.
+  - `src/client/Gui/BattleGui/BattleClient.client.luau`: seletor de alvo 2x2 atualizado para selos de classe/tática (`ALVO · ATQ`, `CRÍTICO+`, `EFEITO`, `STATUS`) e `MOCHILA` desativada também no Modo Treino.
+  - `src/client/Gui/EquipeGui/EquipeClient.client.luau`: botão de filtro atualizado para `CLASSE: TODAS` com ícone de classe.
+
+**Testado (Edit Mode + Play Mode + Capturas Visuais + Auditoria UI, 21/11/2026)**
+- `python scripts/sync_studio.py status`: `All 87 scripts in src/ are 100% in sync with Roblox Studio.`
+- `python scripts/sync_studio.py test`: `PASS: 1x1 GDD [12..14] (7 turns), 2x2 Doubles (sim 8 turns), Classes 1x + Kits + Bleach (6) + 3 Starters + 3 Gyms + Practice 2x2`.
+- **Play Mode ao vivo:**
+  - `ContentProvider:PreloadAsync`: 8/8 novos ativos com `Success` (e `GET /assets/v1/assets/{id}` `Approved` + `Use` para `Universe 10777011549` e `User 5565234433`).
+  - `TowerGui`: capturas das 3 abas (`TORRE`, `GINÁSIOS` com Porta-Insígnias e 3 Ginásios, `TREINO` com barra `INICIAR TREINO` fixada) e `_UITestKit.audit()` com `0` problemas nas 12 combinações (`3 abas × Desktop / 667x375 / 932x430 / 1024x768`).
+  - `Modo Treino 2x2`: batalha iniciada com times igualados em Nv. 50, selos de classe (`ESPADACHIM`/`LUTADOR`), `MOCHILA` desativada, seletor de alvo (`ALVO · ATQ`), fuga livre (`FUGIR`) retornando limpo à praça sem erro de console e sem alterar Gold/HP/XP do perfil salvo.
+  - `Ginásio de Konoha (2x2)`: Etapa 1 iniciada via botão `DESAFIAR` com `Shikamaru` (Nv. 12 `MAGO`) e `Sakura` (Nv. 12 `LUTADOR`), `MOCHILA` ativa e `DESISTIR`.
+  - `SummonGui`: todos os 4 banners (`TODOS`, `ONE PIECE`, `NARUTO`, `BLEACH`) encaixados no trilho, selo `TRANCADO`, palco 3D do Bleach (`Byakuya`, `Ichigo`, `Renji`), bloqueio client + server (`Banner trancado! Vença o Ginásio da Soul Society na Torre para desbloquear.`) e Álbum com `CLASSES`.
+- Place salvo no Roblox Studio na **versão 278** (`TeamCreate`).
+
+**Pendências**
+- Substituir futuramente os modelos provisórios dos 6 personagens de Bleach (`Chad`, `Uryu`, `Rukia`, `Renji`, `Ichigo`, `Byakuya`) por modelos 3D dedicados no Blender conforme o ritmo de produção.
+- Gravar animações dedicadas por arma/classe (ex.: corte de espada, rajada de arco/disparo, conjuração de mago) e preencher seus AssetIds em `Moves.ClassDefaultAnimations` em `src/shared/Data/Moves.luau`.
+- Atualizar `Blender/GDD.md` se desejar formalizar a seção de Classes/Ginásios/Treino no documento de design; `git push` pendente (incluindo commit anterior `931dad7` e estas alterações quando o usuário solicitar commit/push).
+
+
+## Rebalanceamento Completo da Progressão, Gold Ao Vivo por Segundo, Trilha Inicial e Ranking PvP 2x2 (22/11/2026)
+
+**Feito**
+- **1. Fechamento de Vazamento de Banners Trancados:**
+  - `src/server/World/RefugeService.luau`: `RefugeService.Roll` agora filtra selvagens por `data.UnlockedBanners` (sempre permitindo `Generico`), impedindo capturar personagens de Ginásios ainda trancados; no 1º acesso à caverna, já surgem 2 selvagens imediatos.
+  - `src/server/Tower/TowerService.luau`: `BossDrop` do Infinito respeita `data.UnlockedBanners` (se o chefe for de anime ainda trancado, entrega `+300 gold` bônus + dica do Ginásio necessário).
+- **2. Curva Justa de NPCs (Fim do Paredão `+58%` no Início):**
+  - `src/shared/Data/Genetics.luau` e `src/server/Tower/TowerService.luau`: `Genetics.TowerEnemyPreset(modeId)` escalado (`Facil = 25/0` `1.10x`, `Medio = 45/35` `1.285x`, `Dificil = 60/75` `1.465x`, `Infinito = 70/100` `1.58x`) e `Genetics.GymEnemyPreset(tier)` (`Konoha 35/15`, `Grand Line 50/45`, `Soul Society 65/75`).
+- **3. Gold da Base Ao Vivo (A Cada 1 Segundo Online) + Economia Rebalanceada (Mantendo Gemas Raras):**
+  - `src/shared/Data/Base.luau`: nova taxa `Base.GoldPerSecond` (`Comum 0.40/s`, `Raro 0.65/s`, `Epico 1.00/s`, `Lendario 1.60/s`) escalando `+4%/nível` e `+15%/estrela` (`Base.MemberGoldPerSecond`); minério/gemas (`OrePerHour`, `OrePerGem = 100`, `DailyGemCap = 50`) preservados para manter gemas difíceis e valiosas.
+  - `src/server/Economy/BaseService.luau`: loop `LIVE_TICK = 1s` credita Gold fracionário (`Base.GoldCarry`) direto em `data.Gold` enquanto online e publica atributos leves `LiveGold` / `LiveGoldRate`; ganhos offline (até 8h) e minérios continuam em `Pending` para coleta.
+  - `src/client/Gui/HudGui/HudClient.client.luau` e `BaseUiClient.client.luau`: contador de Gold no HUD sobe ao vivo todo segundo com indicador `+X/s` logo abaixo da pílula; `BaseGui` exibe taxas individuais em `g/s` e produção online direta.
+  - `src/shared/Data/Tower.luau` e `Gyms.luau`: Gold da Torre e Ginásios rebalanceado (`Fácil 300g + Doce Comum`, `Médio 1.200g + Superpoção + Doce Raro`, `Difícil 3.500g + Hiperpoção + Reviver + Doce Épico + 5 gemas/dia`, `Infinito 250g/andar + 1.200g/5 andares`; Ginásios `1.000/1.800/2.800g` + Doces + `3/3/4 gemas` enxutas na 1ª vitória).
+- **4. Primeiros 15 Minutos + XP Compartilhado + Forja Integrada ao 2x2 e Insígnias:**
+  - `src/shared/Data/Progression.luau` e `src/server/Data/ProgressionService.luau`: `StarterKit` (`600 gold`, `3x Poção`, `3x Selo de Contrato`, sem gemas) ao escolher o inicial + `BenchXpRatio = 0.40` (40% do XP compartilhado para o banco vivo).
+  - `src/shared/Data/Refuge.luau` e `src/server/World/RefugeService.luau`: intervalos iniciais do Refúgio reduzidos (`240s → 90s`, `Max = 3`, `GoldPerLevel = 12`), requisitos da Forja aceitando Torre `1x1` OU `2x2` + `GymBadges` (`1`, `2`, `3` Insígnias nos Nvs. 3, 5 e 7), mantendo intactos os custos exigentes de Gemas (`50 → 2.000`).
+- **5. Trilha de Objetivos Iniciais (`StarterTrack`, 7 Passos no HUD):**
+  - `src/shared/Data/StarterTrack.luau` (**NOVO**), `src/server/Data/RetentionService.luau` (`ClaimStarterStep` via `Remotes.Rewards`), `src/server/Data/PlayerDataService.luau` e `src/client/Gui/HudGui/HudClient.client.luau`: card compacto no canto superior direito guiando do passo `1/7` (*Ative sua Base*) ao `7/7` (*1ª Insígnia de Ginásio*), com resgate em 1 toque e desaparecimento automático ao concluir.
+- **6. Progressão Competitiva no PvP 2x2 (Ranking ELO, Patentes e Bônus Diário Anti-Farm):**
+  - `src/shared/Data/PvPRank.luau` (**NOVO**), `src/server/Battle/PvPService.luau`, `src/client/Gui/PvPGui/PvPClient.client.luau` e `src/client/Gui/TowerGui/TowerClient.client.luau`: 6 patentes (`Bronze` → `Lenda`), ELO com peso maior no `2x2` (`K=32` vs `K=24`), bônus diário em Gold/Doce (`3 vitórias/dia`: `+450g + Doce Comum` no 2x2, `+300g` no 1x1, `+100g` participação) com trava anti-farm de 1 partida ranqueada/premiada por oponente ao dia, placar global `PvPRank_v1` e aba `PVP` integrada no placar da Torre.
+
+**Testado (Edit Mode + Play Mode ao vivo + Auditoria UI, 22/11/2026)**
+- `python scripts/sync_studio.py status`: `All 89 scripts in src/ are 100% in sync with Roblox Studio.`
+- `python scripts/sync_studio.py test`: `PASS: 1x1 GDD [12..14] (7 turns), 2x2 Doubles (8 turns), Classes/Gyms/Practice + Progression Rebalance (Live Gold/s, StarterTrack 7, PvP Elo, Scaled NPCs)`.
+- **Play Mode ao vivo:**
+  - `LiveGold` medido subindo ao vivo na carteira (`990819 → 990831`, `+12` em `3.5s` a `+4.1/s` com evento 2x Gold), badge `+4.1/s` renderizando limpo abaixo da pílula de Gold.
+  - Card `GUIA 1/7 · Ative sua Base` visível e funcional: resgate via servidor confirmou `+300 gold` e avançou para `GUIA 2/7 · 1ª Invocação`.
+  - Selos das 4 Classes (`classe_espadachim`, `classe_lutador`, `classe_mago`, `classe_atirador`) renderizados nítidos na `TeamBar` (`IsLoaded=true`).
+  - `BaseGui` exibindo `+2/s` (base), taxas individuais em `g/s` e `Online: +2/s direto`.
+  - `TowerGui` exibindo novas recompensas (`300 gold, Doce Comum`, `1200 gold, Superpoção, Doce Raro`) e aba `PVP` no placar (`Ranking PvP · Bronze (1000 ELO)` + `Bônus hoje: 0/3`).
+  - `_UITestKit.audit()` limpo (`0` problemas reais em `HudGui` e `TowerGui` × `Desktop / 667x375 / 932x430 / 1024x768`) e `get_console_output` 100% limpo (zero erros/avisos).
+- Place salvo no Roblox Studio na **versão 282** (`TeamCreate`).

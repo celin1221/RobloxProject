@@ -226,8 +226,8 @@ function TeamCards.new(parent: Instance, p)
 	lvlLim.Parent = lvlText
 	lvlText.Parent = lvl
 
-	-- tipo (canto de cima a direita)
-	local typeIcon = UI.icon(root, "tipo_fogo", { Name = "Type", Size = UDim2.fromScale(0.28, 0.28), Position = UDim2.fromScale(0.99, 0.01), AnchorPoint = Vector2.new(1, 0), ZIndex = z + 4 })
+	-- classe (canto de cima a direita)
+	local typeIcon = UI.icon(root, "classe_espadachim", { Name = "Type", Size = UDim2.fromScale(0.28, 0.28), Position = UDim2.fromScale(0.99, 0.01), AnchorPoint = Vector2.new(1, 0), ZIndex = z + 4 })
 
 	-- estrelas: selo pequeno (estrela + numero) embaixo do icone do tipo
 	local stars = Instance.new("Frame")

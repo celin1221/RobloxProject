@@ -33,7 +33,8 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local BaseService = {}
 
-local TICK = 10 -- segundos entre calculos com o jogador online
+local LIVE_TICK = 1 -- segundos entre creditos ao vivo de gold com o jogador online
+local SYNC_EVERY = 10 -- segundos entre replicacoes completas de perfil para minerios pendentes
 local WALK_SPEED = 6
 local BASE_NPC_GROUP = "BaseNPC"
 local clockOffset = 0 -- so testes no Studio
@@ -156,14 +157,19 @@ local function rollMiningCycles(data, cycles: number)
 	end
 end
 
--- Soma a producao desde o ultimo calculo. offline = jogador estava fora (limite de 8 horas).
-local function accrue(data, offline: boolean)
+-- Soma a producao desde o ultimo calculo.
+-- offline = true (ate 8h fora): gold e minerios acumulam em Pending para coletar.
+-- liveOnline = true (jogador online): gold cai direto na carteira a cada segundo!
+local function accrue(data, offline: boolean, liveOnline: boolean?)
 	local b = data.Base
 	local t = now()
+	local goldMult = Retention.GoldMultiplier(Clock.Now())
+	local goldRate, oreRate, goldPerSec = Base.Rates(data, rarityOf)
+	local liveRate = (goldPerSec or (goldRate / 3600)) * goldMult
 	-- sem marca ainda, ou marca no futuro (relogio adiantado em teste): recomeca a contar agora
 	if (b.LastTick or 0) <= 0 or b.LastTick > t then
 		b.LastTick = t
-		return 0, 0, 0
+		return 0, 0, 0, liveRate
 	end
 	if typeof(b.Pending.Ores) ~= "table" then
 		b.Pending.Ores = Training.ZeroOres()
@@ -172,11 +178,20 @@ local function accrue(data, offline: boolean)
 	if offline then
 		dt = math.min(dt, Base.OfflineCapHours * 3600)
 	end
-	local goldRate, oreRate = Base.Rates(data, rarityOf)
 	-- fim de semana com 2x gold (secao 13): vale para a producao do periodo
-	local gold = goldRate * dt / 3600 * Retention.GoldMultiplier(Clock.Now())
+	local gold = goldRate * dt / 3600 * goldMult
 	local ore = oreRate * dt / 3600
-	b.Pending.Gold += gold
+	local credited = 0
+	if liveOnline and not offline then
+		b.GoldCarry = (b.GoldCarry or 0) + gold
+		credited = math.floor(b.GoldCarry)
+		if credited >= 1 then
+			data.Gold += credited
+			b.GoldCarry -= credited
+		end
+	else
+		b.Pending.Gold += gold
+	end
 	b.Pending.Ore += ore
 
 	local minerPower = Base.MinerPower(data, rarityOf)
@@ -190,9 +205,15 @@ local function accrue(data, offline: boolean)
 	end
 
 	b.LastTick = t
-	return gold, ore, dt
+	return (if liveOnline and not offline then credited else gold), ore, dt, liveRate
 end
 BaseService.Accrue = accrue
+
+local function syncLiveRateAttr(player: Player, data)
+	local goldRate, _, goldPerSec = Base.Rates(data, rarityOf)
+	local liveRate = (goldPerSec or (goldRate / 3600)) * Retention.GoldMultiplier(Clock.Now())
+	player:SetAttribute("LiveGoldRate", math.floor(liveRate * 100 + 0.5) / 100)
+end
 
 --------------------------------------------------------------------
 -- Personagens na base
@@ -579,7 +600,7 @@ function BaseService.SetState(player: Player, uid, state)
 	if state ~= "None" and uid == trainingUidOf(data) then
 		return false, "Personagem est\u{e1} na M\u{e1}quina de Treinamento."
 	end
-	accrue(data, false) -- fecha a conta com as taxas antigas
+	accrue(data, false, true) -- fecha a conta com as taxas antigas
 	sanitizeBase(data) -- tira da base quem foi vendido ou fundido (nao ocupa vaga)
 	local b = data.Base
 	local current = b.Active[uid]
@@ -602,6 +623,7 @@ function BaseService.SetState(player: Player, uid, state)
 		b.Active[uid] = state
 	end
 	syncNPCs(player)
+	syncLiveRateAttr(player, data)
 	changed(player, true)
 	return true
 end
@@ -611,7 +633,7 @@ function BaseService.Collect(player: Player)
 	if not data then
 		return false, "Dados ainda carregando."
 	end
-	accrue(data, false)
+	accrue(data, false, true)
 	local p = data.Base.Pending
 	local gold = math.floor(p.Gold)
 	local ore = math.floor(p.Ore)
@@ -646,9 +668,19 @@ function BaseService.Collect(player: Player)
 	data.Ore += oreTaken
 	p.Gold -= gold
 	p.Ore -= oreTaken
+	if gold > 0 then
+		player:SetAttribute("LiveGold", data.Gold)
+	end
 	changed(player, true)
 	RetentionService.Track(player, "Collect", 1)
-	local text = "Coletou " .. fmt(gold) .. " gold e " .. fmt(oreTaken) .. " min."
+	local parts = {}
+	if gold > 0 then
+		table.insert(parts, fmt(gold) .. " gold")
+	end
+	if oreTaken > 0 then
+		table.insert(parts, fmt(oreTaken) .. " min.")
+	end
+	local text = if #parts > 0 then ("Coletou " .. table.concat(parts, " e ")) else "Coletou min\u{e9}rios de atributo"
 	if anyAttr then
 		text ..= " (" .. table.concat(attrSummary, ", ") .. ")"
 	end
@@ -809,6 +841,8 @@ local function onLoaded(player: Player)
 	sanitizeBase(data)
 	local gold, ore, dt = accrue(data, true) -- tempo fora, ate 8 horas
 	syncNPCs(player)
+	syncLiveRateAttr(player, data)
+	player:SetAttribute("LiveGold", data.Gold)
 	PlayerDataService.MarkChanged(player)
 	if dt >= 60 and (gold >= 1 or ore >= 1) then
 		task.delay(4, function()
@@ -849,16 +883,19 @@ function BaseService.Init()
 	Players.PlayerRemoving:Connect(function(player)
 		local data = PlayerDataService.Get(player)
 		if data then
-			accrue(data, false)
+			accrue(data, false, true)
 		end
 		releasePlot(player)
 		busy[player] = nil
 	end)
 
-	-- producao com o jogador online
+	-- producao com o jogador online: gold cai direto na carteira a cada 1s; perfil completo a cada 10s
 	task.spawn(function()
+		local step = 0
 		while true do
-			task.wait(TICK)
+			task.wait(LIVE_TICK)
+			step += 1
+			local fullSync = (step % SYNC_EVERY) == 0
 			for _, player in ipairs(Players:GetPlayers()) do
 				local data = PlayerDataService.Get(player)
 				if data then
@@ -873,8 +910,15 @@ function BaseService.Init()
 					if gone then
 						syncNPCs(player)
 					end
-					accrue(data, false)
-					if next(data.Base.Active) then
+					local credited, _, _, liveRate = accrue(data, false, true)
+					local roundedRate = math.floor((liveRate or 0) * 100 + 0.5) / 100
+					if player:GetAttribute("LiveGoldRate") ~= roundedRate then
+						player:SetAttribute("LiveGoldRate", roundedRate)
+					end
+					if credited >= 1 then
+						player:SetAttribute("LiveGold", data.Gold)
+					end
+					if fullSync and next(data.Base.Active) then
 						PlayerDataService.MarkChanged(player)
 					end
 				end

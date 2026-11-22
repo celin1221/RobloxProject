@@ -8,6 +8,9 @@
 	multiplicado pelo multiplicador da raridade.
 ]]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Moves = require(script.Parent:WaitForChild("Moves"))
+
 local Characters = {}
 
 Characters.MaxLevel = 50
@@ -20,12 +23,13 @@ Characters.DefaultAnimations = {
 
 Characters.Growth = { HP = 3, Attack = 1, Defense = 1, Speed = 1 }
 
--- Categorizacao por anime (tag de codigo usada em Mochila, Equipe, Torre, etc.; nao exibida em cartas)
-Characters.AnimeOrder = { "OnePiece", "Naruto", "DragonBall", "JujutsuKaisen", "Generico" }
+-- Categorizacao por anime (tag de codigo usada em Mochila, Equipe, Torre, Ginasios e Banners)
+Characters.AnimeOrder = { "OnePiece", "Naruto", "Bleach", "DragonBall", "JujutsuKaisen", "Generico" }
 Characters.Animes = {
 	Naruto = { Id = "Naruto", Name = "Naruto", Short = "NARUTO" },
-	DragonBall = { Id = "DragonBall", Name = "Dragon Ball", Short = "DRAGON BALL" },
 	OnePiece = { Id = "OnePiece", Name = "One Piece", Short = "ONE PIECE" },
+	Bleach = { Id = "Bleach", Name = "Bleach", Short = "BLEACH" },
+	DragonBall = { Id = "DragonBall", Name = "Dragon Ball", Short = "DRAGON BALL" },
 	JujutsuKaisen = { Id = "JujutsuKaisen", Name = "Jujutsu Kaisen", Short = "JUJUTSU" },
 	Generico = { Id = "Generico", Name = "Gen\u{e9}rico", Short = "GEN\u{c9}RICO", Generic = true },
 }
@@ -61,22 +65,21 @@ Characters.List = {
 		Name = "Kaen",
 		ModelName = "Kaen",
 		Anime = "Generico",
-		Type = "Fogo",
+		Type = "Espadachim",
 		Rarity = "Comum",
 		Concept = "Espadachim jovem e impulsivo",
 		BaseLevel = 10,
 		BaseStats = { HP = 62, Attack = 24, Defense = 18, Speed = 22 },
 		Moves = { "CorteFlamejante", "Investida", "BrasaViva", "PosturaDeCombate" },
-		Starter = true,
 		Learnset = { { Level = 1, Move = "Investida" }, { Level = 1, Move = "BrasaViva" }, { Level = 5, Move = "PosturaDeCombate" }, { Level = 10, Move = "CorteFlamejante" } },
 	},
 	Raiko = {
 		Name = "Raiko",
 		ModelName = "Raiko",
 		Anime = "Generico",
-		Type = "Raio",
+		Type = "Lutador",
 		Rarity = "Comum",
-		Concept = "Lutador de rua calmo e rápido",
+		Concept = "Lutador de rua calmo e r\u{e1}pido",
 		BaseLevel = 10,
 		BaseStats = { HP = 66, Attack = 22, Defense = 20, Speed = 20 },
 		Moves = { "Descarga", "SocoDireto", "PunhoDeMare", "Estatica" },
@@ -86,13 +89,12 @@ Characters.List = {
 		Name = "Yomogi",
 		ModelName = "Yomogi",
 		Anime = "Generico",
-		Type = "Natureza",
+		Type = "Mago",
 		Rarity = "Comum",
 		Concept = "Meio-fera da floresta, instintivo e protetor",
 		BaseLevel = 10,
 		BaseStats = { HP = 64, Attack = 21, Defense = 23, Speed = 19 },
 		Moves = { "GaiolaDeEspinhos", "Arranhao", "SementeToxica", "CascaDeCarvalho" },
-		Starter = true,
 		Learnset = { { Level = 1, Move = "Arranhao" }, { Level = 1, Move = "SementeToxica" }, { Level = 5, Move = "CascaDeCarvalho" }, { Level = 10, Move = "GaiolaDeEspinhos" } },
 		-- Animacoes publicadas (copias em ServerStorage/Characters/Yomogi/Animations)
 		Animations = {
@@ -110,9 +112,9 @@ Characters.List = {
 		Name = "Setero",
 		ModelName = "Setero",
 		Anime = "JujutsuKaisen",
-		Type = "Luz",
+		Type = "Mago",
 		Rarity = "Lendario",
-		Concept = "Feiticeiro lendário de luz, gravidade e vazio",
+		Concept = "Feiticeiro lend\u{e1}rio de luz, gravidade e vazio",
 		BaseLevel = 10,
 		BaseStats = { HP = 66, Attack = 24, Defense = 21, Speed = 23 },
 		Moves = { "TudoRoxo", "Atracao", "SocoDireto", "PosturaDeCombate" },
@@ -137,9 +139,9 @@ Characters.List = {
 		Name = "San",
 		ModelName = "San",
 		Anime = "DragonBall",
-		Type = "Luz",
+		Type = "Lutador",
 		Rarity = "Lendario",
-		Concept = "Artista marcial lendário que canaliza o Ki e a energia vital celeste",
+		Concept = "Artista marcial lend\u{e1}rio que canaliza o Ki e a energia vital celeste",
 		BaseLevel = 10,
 		BaseStats = { HP = 68, Attack = 25, Defense = 20, Speed = 22 },
 		Moves = { "Kamehameha", "GenkiDama", "ComboMarcial", "CargaDeKi" },
@@ -165,9 +167,9 @@ Characters.List = {
 		Name = "Barba Branca",
 		ModelName = "BarbaBranca",
 		Anime = "OnePiece",
-		Type = "Agua",
+		Type = "Espadachim",
 		Rarity = "Lendario",
-		Concept = "Colosso lendário dos mares capaz de rachar o próprio ar e erguer maremotos",
+		Concept = "Colosso lend\u{e1}rio dos mares capaz de rachar o pr\u{f3}prio ar com sua bisento",
 		BaseLevel = 10,
 		BaseStats = { HP = 76, Attack = 27, Defense = 22, Speed = 15 },
 		Moves = { "SocoSismico", "CeuETerra", "CorteMurakumo", "HakiDoConquistador" },
@@ -193,23 +195,24 @@ Characters.List = {
 		Name = "Luffy",
 		ModelName = "Luffy",
 		Anime = "OnePiece",
-		Type = "Fogo",
+		Type = "Lutador",
 		Rarity = "Epico",
-		Concept = "Capitão pirata de borracha com chapéu de palha (em desenvolvimento)",
+		Starter = true,
+		Concept = "Capit\u{e3}o pirata de borracha com combos velozes e golpes de impacto",
 		BaseLevel = 10,
 		BaseStats = { HP = 68, Attack = 25, Defense = 20, Speed = 23 },
-		Moves = { "ComboMarcial", "SocoDireto", "Investida", "PosturaDeCombate" },
+		Moves = { "ComboMarcial", "SocoDireto", "QuebraGuarda", "PosturaDeCombate" },
 		Learnset = {
-			{ Level = 1, Move = "ComboMarcial" },
 			{ Level = 1, Move = "SocoDireto" },
-			{ Level = 1, Move = "Investida" },
+			{ Level = 1, Move = "ComboMarcial" },
 			{ Level = 5, Move = "PosturaDeCombate" },
+			{ Level = 10, Move = "QuebraGuarda" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			ComboMarcial = 135688782086034, SocoDireto = 135688782086034,
-			Investida = 135688782086034, PosturaDeCombate = 94954698224565,
+			QuebraGuarda = 111193439375608, PosturaDeCombate = 94954698224565,
 			Attack = 135688782086034, Special = 111193439375608,
 		},
 		Variants = Variants,
@@ -220,22 +223,22 @@ Characters.List = {
 		Name = "Nami",
 		ModelName = "Nami",
 		Anime = "OnePiece",
-		Type = "Raio",
+		Type = "Mago",
 		Rarity = "Comum",
-		Concept = "Navegadora astuta especialista em tempestades e raios (em desenvolvimento)",
+		Concept = "Navegadora astuta especialista em tempestades e golpes em \u{e1}rea",
 		BaseLevel = 10,
 		BaseStats = { HP = 60, Attack = 23, Defense = 18, Speed = 25 },
-		Moves = { "Descarga", "Estatica", "SocoDireto", "PosturaDeCombate" },
+		Moves = { "EsferaArcana", "Descarga", "SeloParalisante", "OndaArcana" },
 		Learnset = {
+			{ Level = 1, Move = "EsferaArcana" },
 			{ Level = 1, Move = "Descarga" },
-			{ Level = 1, Move = "SocoDireto" },
-			{ Level = 1, Move = "Estatica" },
-			{ Level = 5, Move = "PosturaDeCombate" },
+			{ Level = 5, Move = "SeloParalisante" },
+			{ Level = 10, Move = "OndaArcana" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
-			Attack = 135688782086034, Special = 105158348948965,
+			Attack = 133310018588724, Special = 105158348948965,
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(255, 215, 95), Secondary = Color3.fromRGB(80, 200, 255) },
@@ -245,22 +248,22 @@ Characters.List = {
 		Name = "Usopp",
 		ModelName = "Usopp",
 		Anime = "OnePiece",
-		Type = "Natureza",
+		Type = "Atirador",
 		Rarity = "Comum",
-		Concept = "Atirador engenhoso de sementes explosivas e armadilhas (em desenvolvimento)",
+		Concept = "Atirador engenhoso de disparos certeiros e sementes explosivas",
 		BaseLevel = 10,
 		BaseStats = { HP = 62, Attack = 22, Defense = 19, Speed = 24 },
-		Moves = { "SementeToxica", "Arranhao", "Investida", "CascaDeCarvalho" },
+		Moves = { "DisparoPreciso", "SementeToxica", "MiraFirme", "ChuvaDeProjeteis" },
 		Learnset = {
+			{ Level = 1, Move = "DisparoPreciso" },
 			{ Level = 1, Move = "SementeToxica" },
-			{ Level = 1, Move = "Investida" },
-			{ Level = 1, Move = "Arranhao" },
-			{ Level = 5, Move = "CascaDeCarvalho" },
+			{ Level = 5, Move = "MiraFirme" },
+			{ Level = 10, Move = "ChuvaDeProjeteis" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
-			Attack = 135688782086034, Special = 105158348948965,
+			Attack = 105789525703577, Special = 105789525703577,
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(245, 210, 80), Secondary = Color3.fromRGB(95, 220, 120) },
@@ -270,17 +273,17 @@ Characters.List = {
 		Name = "Zoro",
 		ModelName = "Zoro",
 		Anime = "OnePiece",
-		Type = "Trevas",
+		Type = "Espadachim",
 		Rarity = "Raro",
-		Concept = "Espadachim implacável do estilo três espadas (em desenvolvimento)",
+		Concept = "Espadachim implac\u{e1}vel do estilo tr\u{ea}s espadas",
 		BaseLevel = 10,
 		BaseStats = { HP = 66, Attack = 26, Defense = 21, Speed = 20 },
-		Moves = { "CorteMurakumo", "ComboMarcial", "SocoDireto", "PosturaDeCombate" },
+		Moves = { "CorteBasico", "CorteMurakumo", "PosturaDaLamina", "CorteCruzado" },
 		Learnset = {
+			{ Level = 1, Move = "CorteBasico" },
 			{ Level = 1, Move = "CorteMurakumo" },
-			{ Level = 1, Move = "ComboMarcial" },
-			{ Level = 1, Move = "SocoDireto" },
-			{ Level = 5, Move = "PosturaDeCombate" },
+			{ Level = 5, Move = "PosturaDaLamina" },
+			{ Level = 10, Move = "CorteCruzado" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
@@ -296,17 +299,17 @@ Characters.List = {
 		Name = "Sanji",
 		ModelName = "Sanji",
 		Anime = "OnePiece",
-		Type = "Fogo",
+		Type = "Lutador",
 		Rarity = "Raro",
-		Concept = "Cozinheiro combatente especialista em chutes flamejantes velozes (em desenvolvimento)",
+		Concept = "Cozinheiro combatente especialista em chutes r\u{e1}pidos e precisos",
 		BaseLevel = 10,
 		BaseStats = { HP = 65, Attack = 25, Defense = 19, Speed = 24 },
-		Moves = { "CorteFlamejante", "BrasaViva", "ComboMarcial", "PosturaDeCombate" },
+		Moves = { "SocoDireto", "ComboMarcial", "PosturaDeCombate", "QuebraGuarda" },
 		Learnset = {
-			{ Level = 1, Move = "CorteFlamejante" },
-			{ Level = 1, Move = "BrasaViva" },
+			{ Level = 1, Move = "SocoDireto" },
 			{ Level = 1, Move = "ComboMarcial" },
 			{ Level = 5, Move = "PosturaDeCombate" },
+			{ Level = 10, Move = "QuebraGuarda" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
@@ -319,27 +322,27 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 
-	-- Anime: Naruto (sem modelo 3D proprio ainda; usa rigor provisorio colorido e ataques padrao ate os modelos entrarem)
+	-- Anime: Naruto
 	Sakura = {
 		Name = "Sakura",
 		ModelName = "Sakura",
 		Anime = "Naruto",
-		Type = "Natureza",
+		Type = "Lutador",
 		Rarity = "Comum",
-		Concept = "Kunoichi ágil de golpes físicos diretos e boa resistência (modelo provisório)",
+		Concept = "Kunoichi \u{e1}gil de golpes f\u{ed}sicos diretos e quebra-guarda",
 		BaseLevel = 10,
 		BaseStats = { HP = 64, Attack = 23, Defense = 20, Speed = 21 },
-		Moves = { "SocoDireto", "Investida", "Arranhao", "CascaDeCarvalho" },
+		Moves = { "SocoDireto", "ComboMarcial", "PosturaDeCombate", "QuebraGuarda" },
 		Learnset = {
 			{ Level = 1, Move = "SocoDireto" },
-			{ Level = 1, Move = "Investida" },
-			{ Level = 5, Move = "Arranhao" },
-			{ Level = 10, Move = "CascaDeCarvalho" },
+			{ Level = 1, Move = "ComboMarcial" },
+			{ Level = 5, Move = "PosturaDeCombate" },
+			{ Level = 10, Move = "QuebraGuarda" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
-			Attack = 135688782086034, Special = 105158348948965,
+			Attack = 135688782086034, Special = 111193439375608,
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(255, 175, 210), Secondary = Color3.fromRGB(115, 235, 155) },
@@ -354,22 +357,22 @@ Characters.List = {
 		Name = "Shikamaru",
 		ModelName = "Shikamaru",
 		Anime = "Naruto",
-		Type = "Trevas",
+		Type = "Mago",
 		Rarity = "Comum",
-		Concept = "Estrategista tático veloz de combate versátil (modelo provisório)",
+		Concept = "Estrategista t\u{e1}tico especialista em controle e paralisia de sombras",
 		BaseLevel = 10,
 		BaseStats = { HP = 61, Attack = 21, Defense = 21, Speed = 24 },
-		Moves = { "Investida", "SocoDireto", "SementeToxica", "PosturaDeCombate" },
+		Moves = { "EsferaArcana", "ChamaMistica", "SeloParalisante", "OndaArcana" },
 		Learnset = {
-			{ Level = 1, Move = "Investida" },
-			{ Level = 1, Move = "SocoDireto" },
-			{ Level = 5, Move = "PosturaDeCombate" },
-			{ Level = 10, Move = "SementeToxica" },
+			{ Level = 1, Move = "EsferaArcana" },
+			{ Level = 1, Move = "ChamaMistica" },
+			{ Level = 5, Move = "SeloParalisante" },
+			{ Level = 10, Move = "OndaArcana" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
-			Attack = 135688782086034, Special = 105158348948965,
+			Attack = 133310018588724, Special = 105158348948965,
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(110, 88, 168), Secondary = Color3.fromRGB(145, 220, 120) },
@@ -384,22 +387,22 @@ Characters.List = {
 		Name = "Kakashi",
 		ModelName = "Kakashi",
 		Anime = "Naruto",
-		Type = "Raio",
+		Type = "Mago",
 		Rarity = "Raro",
-		Concept = "Jounin veterano de reflexos rápidos e golpes elétricos (modelo provisório)",
+		Concept = "Jounin veterano de reflexos r\u{e1}pidos e jutsus em \u{e1}rea",
 		BaseLevel = 10,
 		BaseStats = { HP = 65, Attack = 25, Defense = 20, Speed = 25 },
-		Moves = { "Descarga", "Estatica", "SocoDireto", "PosturaDeCombate" },
+		Moves = { "EsferaArcana", "Descarga", "SeloParalisante", "OndaArcana" },
 		Learnset = {
+			{ Level = 1, Move = "EsferaArcana" },
 			{ Level = 1, Move = "Descarga" },
-			{ Level = 1, Move = "SocoDireto" },
-			{ Level = 1, Move = "Estatica" },
-			{ Level = 5, Move = "PosturaDeCombate" },
+			{ Level = 5, Move = "SeloParalisante" },
+			{ Level = 10, Move = "OndaArcana" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
-			Attack = 135688782086034, Special = 105158348948965,
+			Attack = 133310018588724, Special = 105158348948965,
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(220, 232, 248), Secondary = Color3.fromRGB(70, 200, 255) },
@@ -414,22 +417,22 @@ Characters.List = {
 		Name = "Sasuke",
 		ModelName = "Sasuke",
 		Anime = "Naruto",
-		Type = "Fogo",
+		Type = "Espadachim",
 		Rarity = "Raro",
-		Concept = "Lutador disciplinado especialista em ataques precisos e chamas (modelo provisório)",
+		Concept = "Espadachim disciplinado especialista em cortes r\u{e1}pidos e precisos",
 		BaseLevel = 10,
 		BaseStats = { HP = 64, Attack = 26, Defense = 19, Speed = 24 },
-		Moves = { "CorteFlamejante", "BrasaViva", "Investida", "PosturaDeCombate" },
+		Moves = { "CorteBasico", "CorteFlamejante", "PosturaDaLamina", "CorteCruzado" },
 		Learnset = {
+			{ Level = 1, Move = "CorteBasico" },
 			{ Level = 1, Move = "CorteFlamejante" },
-			{ Level = 1, Move = "Investida" },
-			{ Level = 1, Move = "BrasaViva" },
-			{ Level = 5, Move = "PosturaDeCombate" },
+			{ Level = 5, Move = "PosturaDaLamina" },
+			{ Level = 10, Move = "CorteCruzado" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
-			Attack = 135688782086034, Special = 105158348948965,
+			Attack = 136035334634731, Special = 136035334634731,
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(80, 74, 148), Secondary = Color3.fromRGB(240, 120, 255) },
@@ -444,22 +447,24 @@ Characters.List = {
 		Name = "Naruto",
 		ModelName = "Naruto",
 		Anime = "Naruto",
-		Type = "Luz",
+		Type = "Lutador",
 		Rarity = "Epico",
-		Concept = "Shinobi determinado com vigor elevado e ataques diretos intensos (modelo provisório)",
+		Starter = true,
+		Concept = "Shinobi determinado com vigor elevado e combos diretos intensos",
 		BaseLevel = 10,
 		BaseStats = { HP = 70, Attack = 25, Defense = 21, Speed = 24 },
-		Moves = { "SocoDireto", "Investida", "Arranhao", "PosturaDeCombate" },
+		Moves = { "SocoDireto", "ComboMarcial", "PosturaDeCombate", "QuebraGuarda" },
 		Learnset = {
 			{ Level = 1, Move = "SocoDireto" },
-			{ Level = 1, Move = "Investida" },
-			{ Level = 1, Move = "Arranhao" },
+			{ Level = 1, Move = "ComboMarcial" },
 			{ Level = 5, Move = "PosturaDeCombate" },
+			{ Level = 10, Move = "QuebraGuarda" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
-			Attack = 135688782086034, Special = 105158348948965,
+			ComboMarcial = 135688782086034,
+			Attack = 135688782086034, Special = 111193439375608,
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(255, 224, 90), Secondary = Color3.fromRGB(255, 135, 35) },
@@ -474,22 +479,22 @@ Characters.List = {
 		Name = "Sarutobi",
 		ModelName = "Sarutobi",
 		Anime = "Naruto",
-		Type = "Fogo",
+		Type = "Mago",
 		Rarity = "Lendario",
-		Concept = "Mestre lendário equilibrado especialista em chamas e combate direto (modelo provisório)",
+		Concept = "Mestre lend\u{e1}rio de todos os jutsus elementais de Konoha",
 		BaseLevel = 10,
 		BaseStats = { HP = 72, Attack = 26, Defense = 24, Speed = 21 },
-		Moves = { "CorteFlamejante", "BrasaViva", "SocoDireto", "PosturaDeCombate" },
+		Moves = { "EsferaArcana", "ChamaMistica", "SeloParalisante", "OndaArcana" },
 		Learnset = {
-			{ Level = 1, Move = "CorteFlamejante" },
-			{ Level = 1, Move = "BrasaViva" },
-			{ Level = 1, Move = "SocoDireto" },
-			{ Level = 5, Move = "PosturaDeCombate" },
+			{ Level = 1, Move = "EsferaArcana" },
+			{ Level = 1, Move = "ChamaMistica" },
+			{ Level = 5, Move = "SeloParalisante" },
+			{ Level = 10, Move = "OndaArcana" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
-			Attack = 135688782086034, Special = 105158348948965,
+			Attack = 133310018588724, Special = 105158348948965,
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(255, 210, 75), Secondary = Color3.fromRGB(190, 42, 42) },
@@ -500,29 +505,180 @@ Characters.List = {
 			Legs = Color3.fromRGB(48, 38, 42),
 		},
 	},
+
+	-- Anime: Bleach (modelos provisorios coloridos ate os modelos 3D finais entrarem)
+	Chad = {
+		Name = "Chad",
+		ModelName = "Chad",
+		Anime = "Bleach",
+		Type = "Lutador",
+		Rarity = "Comum",
+		Concept = "Lutador resistente com golpes pesados de bra\u{e7}o blindado",
+		BaseLevel = 10,
+		BaseStats = { HP = 69, Attack = 24, Defense = 23, Speed = 17 },
+		Animations = {
+			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Victory = 107803042519026, Mine = 88262424470805,
+			ComboMarcial = 135688782086034, Attack = 135688782086034, Special = 111193439375608,
+		},
+		Variants = Variants,
+		ShinyPalette = { Primary = Color3.fromRGB(215, 70, 60), Secondary = Color3.fromRGB(245, 210, 120) },
+		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
+		PlaceholderColors = {
+			Torso = Color3.fromRGB(122, 74, 48),
+			Accent = Color3.fromRGB(198, 48, 52),
+			Legs = Color3.fromRGB(36, 36, 44),
+		},
+	},
+	Uryu = {
+		Name = "Uryu",
+		ModelName = "Uryu",
+		Anime = "Bleach",
+		Type = "Atirador",
+		Rarity = "Comum",
+		Concept = "Arqueiro Quincy de flechas espirituais certeiras e r\u{e1}pidas",
+		BaseLevel = 10,
+		BaseStats = { HP = 61, Attack = 24, Defense = 18, Speed = 25 },
+		Animations = {
+			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Victory = 107803042519026, Mine = 88262424470805,
+			Attack = 105789525703577, Special = 105789525703577,
+		},
+		Variants = Variants,
+		ShinyPalette = { Primary = Color3.fromRGB(130, 225, 255), Secondary = Color3.fromRGB(250, 252, 255) },
+		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
+		PlaceholderColors = {
+			Torso = Color3.fromRGB(232, 238, 248),
+			Accent = Color3.fromRGB(58, 172, 245),
+			Legs = Color3.fromRGB(38, 54, 92),
+		},
+	},
+	Rukia = {
+		Name = "Rukia",
+		ModelName = "Rukia",
+		Anime = "Bleach",
+		Type = "Mago",
+		Rarity = "Raro",
+		Concept = "Shinigami especialista em Kido glacial e controle de campo",
+		BaseLevel = 10,
+		BaseStats = { HP = 64, Attack = 24, Defense = 21, Speed = 23 },
+		Animations = {
+			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Victory = 107803042519026, Mine = 88262424470805,
+			Attack = 133310018588724, Special = 105158348948965,
+		},
+		Variants = Variants,
+		ShinyPalette = { Primary = Color3.fromRGB(175, 238, 255), Secondary = Color3.fromRGB(245, 250, 255) },
+		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
+		PlaceholderColors = {
+			Torso = Color3.fromRGB(30, 32, 44),
+			Accent = Color3.fromRGB(145, 228, 255),
+			Legs = Color3.fromRGB(22, 24, 34),
+		},
+	},
+	Renji = {
+		Name = "Renji",
+		ModelName = "Renji",
+		Anime = "Bleach",
+		Type = "Espadachim",
+		Rarity = "Raro",
+		Concept = "Tenente impetuoso que domina cortes amplos de longo alcance",
+		BaseLevel = 10,
+		BaseStats = { HP = 67, Attack = 26, Defense = 20, Speed = 21 },
+		Animations = {
+			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Victory = 107803042519026, Mine = 88262424470805,
+			Attack = 136035334634731, Special = 136035334634731,
+		},
+		Variants = Variants,
+		ShinyPalette = { Primary = Color3.fromRGB(240, 68, 86), Secondary = Color3.fromRGB(255, 212, 92) },
+		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
+		PlaceholderColors = {
+			Torso = Color3.fromRGB(36, 32, 42),
+			Accent = Color3.fromRGB(218, 52, 64),
+			Legs = Color3.fromRGB(28, 26, 34),
+		},
+	},
+	Ichigo = {
+		Name = "Ichigo",
+		ModelName = "Ichigo",
+		Anime = "Bleach",
+		Type = "Espadachim",
+		Rarity = "Epico",
+		Starter = true,
+		Concept = "Shinigami substituto veloz com cortes espirituais devastadores",
+		BaseLevel = 10,
+		BaseStats = { HP = 67, Attack = 26, Defense = 19, Speed = 25 },
+		Animations = {
+			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Victory = 107803042519026, Mine = 88262424470805,
+			Attack = 136035334634731, Special = 136035334634731,
+		},
+		Variants = Variants,
+		ShinyPalette = { Primary = Color3.fromRGB(255, 145, 42), Secondary = Color3.fromRGB(70, 218, 255) },
+		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
+		PlaceholderColors = {
+			Torso = Color3.fromRGB(26, 26, 34),
+			Accent = Color3.fromRGB(248, 128, 36),
+			Legs = Color3.fromRGB(20, 20, 28),
+		},
+	},
+	Byakuya = {
+		Name = "Byakuya",
+		ModelName = "Byakuya",
+		Anime = "Bleach",
+		Type = "Espadachim",
+		Rarity = "Lendario",
+		Concept = "Capit\u{e3}o nobre da Soul Society mestre em tempestades de l\u{e2}minas",
+		BaseLevel = 10,
+		BaseStats = { HP = 70, Attack = 27, Defense = 23, Speed = 24 },
+		Animations = {
+			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Victory = 107803042519026, Mine = 88262424470805,
+			Attack = 136035334634731, Special = 136035334634731,
+		},
+		Variants = Variants,
+		ShinyPalette = { Primary = Color3.fromRGB(255, 165, 208), Secondary = Color3.fromRGB(242, 246, 255) },
+		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
+		PlaceholderColors = {
+			Torso = Color3.fromRGB(242, 244, 252),
+			Accent = Color3.fromRGB(242, 138, 184),
+			Legs = Color3.fromRGB(32, 32, 46),
+		},
+	},
 }
 
 --[[
 	PROTOTIPOS DE TESTE (17/11/2026): um por raridade, so para testar a barra e a tela de Equipe.
 	Prototype = true: nunca saem na invocacao, no Refugio, na torre nem no album; entram so pela ponte de teste.
-	Remover quando o usuario pedir (dados aqui + modelos em ServerStorage/Characters/Proto*).
 ]]
 Characters.List.ProtoRaro = {
-	Name = "Nami", ModelName = "ProtoRaro", Anime = "Generico", Type = "Agua", Rarity = "Raro", Prototype = true,
+	Name = "ProtoAtirador", ModelName = "ProtoRaro", Anime = "Generico", Type = "Atirador", Rarity = "Raro", Prototype = true,
 	Concept = "Modelo provis\u{f3}rio de teste", BaseLevel = 10,
 	BaseStats = { HP = 64, Attack = 22, Defense = 21, Speed = 21 },
-	Moves = { "PunhoDeMare", "SocoDireto", "Investida", "PosturaDeCombate" },
 }
 Characters.List.ProtoEpico = {
-	Name = "Yoru", ModelName = "ProtoEpico", Anime = "Generico", Type = "Trevas", Rarity = "Epico", Prototype = true,
+	Name = "Yoru", ModelName = "ProtoEpico", Anime = "Generico", Type = "Mago", Rarity = "Epico", Prototype = true,
 	Concept = "Modelo provis\u{f3}rio de teste", BaseLevel = 10,
 	BaseStats = { HP = 64, Attack = 23, Defense = 20, Speed = 21 },
-	Moves = { "Arranhao", "SementeToxica", "Investida", "PosturaDeCombate" },
 }
 
 for id, def in pairs(Characters.List) do
 	def.Id = id
 	def.Anime = def.Anime or "Generico"
+	-- Herda automaticamente o kit generico de golpes da classe quando o personagem nao define Learnset proprio
+	if not def.Learnset then
+		def.Learnset = Moves.ClassKit(def.Type, def.SignatureMove)
+	end
+	if not def.Moves then
+		local list = {}
+		for _, entry in ipairs(def.Learnset) do
+			if not table.find(list, entry.Move) then
+				table.insert(list, entry.Move)
+			end
+		end
+		def.Moves = list
+	end
 end
 
 function Characters.Get(id: string)
@@ -570,7 +726,7 @@ function Characters.DefaultActive(id: string, level: number): { string }
 	return active
 end
 
--- Personagens iniciais (GDD secao 7: 1 entre 3 comuns de Fogo, Agua e Natureza)
+-- Personagens iniciais: Luffy (One Piece), Naruto (Naruto) e Ichigo (Bleach)
 function Characters.Starters(): { string }
 	local list = {}
 	for id, def in pairs(Characters.List) do
@@ -578,9 +734,9 @@ function Characters.Starters(): { string }
 			table.insert(list, id)
 		end
 	end
-	local order = { Fogo = 1, Agua = 2, Natureza = 3 }
+	local order = { Luffy = 1, Naruto = 2, Ichigo = 3 }
 	table.sort(list, function(a, b)
-		return (order[Characters.List[a].Type] or 9) < (order[Characters.List[b].Type] or 9)
+		return (order[a] or 9) < (order[b] or 9)
 	end)
 	return list
 end
