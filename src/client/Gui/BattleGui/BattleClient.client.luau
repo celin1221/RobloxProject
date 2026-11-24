@@ -27,6 +27,7 @@ local BattleUpdate = Remotes:WaitForChild("BattleUpdate")
 local BattleEnd = Remotes:WaitForChild("BattleEnd")
 local TypeChart = require(ReplicatedStorage:WaitForChild("Data"):WaitForChild("TypeChart"))
 local Moves = require(ReplicatedStorage.Data:WaitForChild("Moves"))
+local DamageCalc = require(ReplicatedStorage:WaitForChild("Core"):WaitForChild("DamageCalc"))
 local VfxController = require(ReplicatedStorage:WaitForChild("VfxController"))
 local UI = require(ReplicatedStorage:WaitForChild("UI"))
 local T = UI.Theme
@@ -51,6 +52,25 @@ local STATUS_BADGE = {
 	Freeze = { "CON", Color3.fromRGB(80, 190, 240) },
 }
 
+local STAT_ORDER = { "Attack", "Defense", "Speed", "Accuracy" }
+local STAT_SHORT = {
+	Attack = "ATQ",
+	Defense = "DEF",
+	Speed = "VEL",
+	Accuracy = "PRE",
+}
+
+local function formatStageText(stat: string, stage: number): string
+	local short = STAT_SHORT[stat] or stat
+	if stage == 0 then
+		return short .. " 0%"
+	end
+	local mult = DamageCalc.StageMultiplier(stage)
+	local pct = math.floor((mult - 1) * 100 + (if mult >= 1 then 0.5 else -0.5))
+	local sign = if pct > 0 then "+" else ""
+	return string.format("%s %s%d%%", short, sign, pct)
+end
+
 local function typeColor(t)
 	return T.Types[t] or TypeChart.Color[t] or T.Palette.grey
 end
@@ -62,8 +82,8 @@ local canvas = UI.screen(gui)
 gui.DisplayOrder = 10
 local root = UI.frame(canvas, { Name = "Root", Visible = false })
 
--- Cartao de vida (suporta 1 ou 2 cartoes por lado)
-local function makeCard(name, anchor, position)
+-- Cartao de vida (suporta 1 ou 2 cartoes por lado) + faixa de alteracoes de atributo (buff/debuff)
+local function makeCard(name, anchor, position, stagesBelow: boolean?)
 	local holder, face = UI.panel(root, {
 		Name = name, Size = UDim2.fromScale(0.29, 0.2), Position = position, AnchorPoint = anchor,
 		Color = "panel", Corner = T.Corner.Card, Aspect = 2.7, MaxSize = Vector2.new(380, 141),
@@ -90,22 +110,60 @@ local function makeCard(name, anchor, position)
 	pl.SortOrder = Enum.SortOrder.LayoutOrder
 	pl.Parent = pips
 	local hpText = UI.text(face, "", { Name = "HpText", Size = UDim2.fromScale(0.34, 0.24), Position = UDim2.fromScale(0.44, 0.7), Role = "Small", AlignX = Enum.TextXAlignment.Right })
+
+	-- Faixa externa de alteracoes de atributo (ATQ/DEF/VEL/PRE): acima nos cartoes do jogador, abaixo nos inimigos
+	local stagesBar = UI.frame(holder, {
+		Name = "StagesBar",
+		Size = UDim2.fromScale(1, 0.25),
+		Position = if stagesBelow then UDim2.fromScale(0, 1.07) else UDim2.fromScale(0, -0.07),
+		AnchorPoint = if stagesBelow then Vector2.new(0, 0) else Vector2.new(0, 1),
+		Visible = false,
+		ZIndex = holder.ZIndex + 2,
+	})
+	local sl = Instance.new("UIListLayout")
+	sl.FillDirection = Enum.FillDirection.Horizontal
+	sl.HorizontalAlignment = if stagesBelow then Enum.HorizontalAlignment.Right else Enum.HorizontalAlignment.Left
+	sl.VerticalAlignment = if stagesBelow then Enum.VerticalAlignment.Top else Enum.VerticalAlignment.Bottom
+	sl.Padding = UDim.new(0.02, 0)
+	sl.SortOrder = Enum.SortOrder.LayoutOrder
+	sl.Parent = stagesBar
+
+	local stageChips = {}
+	for idx, statKey in ipairs(STAT_ORDER) do
+		local chip = UI.chip(stagesBar, "", "green", {
+			Name = "Stage_" .. statKey,
+			Size = UDim2.fromScale(0.31, 1),
+			LayoutOrder = idx,
+			Visible = false,
+			ZIndex = holder.ZIndex + 3,
+		})
+		local lbl = chip.Face.Label
+		lbl.TextWrapped = false
+		lbl.Size = UDim2.fromScale(0.90, 0.82)
+		lbl.Position = UDim2.fromScale(0.05, 0.09)
+		local popScale = Instance.new("UIScale")
+		popScale.Name = "PopScale"
+		popScale.Parent = chip
+		stageChips[statKey] = chip
+	end
+
 	return {
 		Frame = holder, Face = face, Scale = scale,
 		BorderStroke = borderStroke, DefaultStrokeColor = defaultStrokeColor, DefaultStrokeThick = defaultStrokeThick,
 		Title = title, Level = level, Type = typeChip, Status = status, Bar = bar, HpText = hpText, Pips = pips,
+		StagesBar = stagesBar, StageChips = stageChips, HasStages = false,
 	}
 end
 
 local enemyCards = {
-	makeCard("EnemyCard1", Vector2.new(1, 0), UDim2.fromScale(0.985, 0.015)),
-	makeCard("EnemyCard2", Vector2.new(1, 0), UDim2.fromScale(0.945, 0.015)),
+	makeCard("EnemyCard1", Vector2.new(1, 0), UDim2.fromScale(0.985, 0.015), true),
+	makeCard("EnemyCard2", Vector2.new(1, 0), UDim2.fromScale(0.945, 0.015), true),
 }
 enemyCards[2].Frame.Visible = false
 
 local playerCards = {
-	makeCard("PlayerCard1", Vector2.new(0, 1), UDim2.fromScale(0.015, 0.975)),
-	makeCard("PlayerCard2", Vector2.new(0, 1), UDim2.fromScale(0.28, 0.975)),
+	makeCard("PlayerCard1", Vector2.new(0, 1), UDim2.fromScale(0.015, 0.975), false),
+	makeCard("PlayerCard2", Vector2.new(0, 1), UDim2.fromScale(0.28, 0.975), false),
 }
 playerCards[2].Frame.Visible = false
 
@@ -341,6 +399,20 @@ local function updateCardHighlights()
 	end
 end
 
+-- Desloca EnemyCard1 no 2x2 para abrir espaco limpo quando EnemyCard2 tiver badges de atributo ativos
+local function updateEnemyCardsStack(instant: boolean?)
+	if not isDouble() then
+		return
+	end
+	local y = if enemyCards[2].Frame.Visible and enemyCards[2].HasStages then 0.238 else 0.184
+	local targetPos = UDim2.fromScale(0.985, y)
+	if instant then
+		enemyCards[1].Frame.Position = targetPos
+	elseif enemyCards[1].Frame.Position ~= targetPos then
+		TweenService:Create(enemyCards[1].Frame, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = targetPos }):Play()
+	end
+end
+
 -- Ajusta tamanho/posicao dos cartoes e log para 1x1 vs 2x2 (sem sobreposicao em nenhuma tela)
 local function applyFormatLayout(double: boolean)
 	local logMax = logHolder:FindFirstChildOfClass("UISizeConstraint")
@@ -354,7 +426,7 @@ local function applyFormatLayout(double: boolean)
 		enemyCards[2].Frame.Size = UDim2.fromScale(0.26, 0.15)
 		enemyCards[2].Frame.Position = UDim2.fromScale(0.945, 0.015)
 		enemyCards[1].Frame.Size = UDim2.fromScale(0.26, 0.15)
-		enemyCards[1].Frame.Position = UDim2.fromScale(0.985, 0.178)
+		enemyCards[1].Frame.Position = UDim2.fromScale(0.985, if enemyCards[2].HasStages then 0.238 else 0.184)
 		-- Jogador lado a lado embaixo a esquerda: Slot 1 (esquerda 3D), Slot 2 (direita 3D)
 		playerCards[1].Frame.Size = UDim2.fromScale(0.255, 0.16)
 		playerCards[1].Frame.Position = UDim2.fromScale(0.015, 0.975)
@@ -461,6 +533,43 @@ local function setStatus(card, status: string?)
 	end
 end
 
+-- Atualiza a faixa de alteracoes de atributos (buffs verdes / debuffs vermelhos) no cartao do lutador
+local function setStages(card, stages: { [string]: number }?, highlightStat: string?, instant: boolean?)
+	local activeCount = 0
+	if stages then
+		for _, statKey in ipairs(STAT_ORDER) do
+			if (stages[statKey] or 0) ~= 0 then
+				activeCount += 1
+			end
+		end
+	end
+	card.HasStages = activeCount > 0
+	card.StagesBar.Visible = activeCount > 0
+	local chipW = if activeCount >= 4 then 0.235 else 0.31
+	for _, statKey in ipairs(STAT_ORDER) do
+		local chip = card.StageChips[statKey]
+		local st = if stages then (stages[statKey] or 0) else 0
+		if st ~= 0 then
+			chip.Visible = true
+			chip.Size = UDim2.fromScale(chipW, 1)
+			chip.Face.Label.Text = formatStageText(statKey, st)
+			UI.paint(chip, if st > 0 then "green" else "red")
+			if highlightStat == statKey then
+				local pop = chip:FindFirstChild("PopScale")
+				if pop and pop:IsA("UIScale") then
+					pop.Scale = 1.28
+					TweenService:Create(pop, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+				end
+			end
+		else
+			chip.Visible = false
+		end
+	end
+	if card == enemyCards[2] then
+		updateEnemyCardsStack(instant)
+	end
+end
+
 -- Bolinhas do time: verde = de pe, vermelho = desmaiado
 local function setPips(card, sideState)
 	UI.clear(card.Pips)
@@ -485,6 +594,7 @@ local function refreshSide(side: string, instant: boolean?)
 			UI.paint(card.Type, typeColor(m.Type))
 			setHp(card, m.Hp, m.MaxHp, instant)
 			setStatus(card, m.Status)
+			setStages(card, m.Stages, nil, instant)
 			if not pipsShown then
 				card.Pips.Visible = true
 				setPips(card, sideState)
@@ -493,6 +603,8 @@ local function refreshSide(side: string, instant: boolean?)
 				card.Pips.Visible = false
 				UI.clear(card.Pips)
 			end
+		else
+			setStages(card, nil, nil, instant)
 		end
 	end
 end
@@ -1355,9 +1467,21 @@ BattleUpdate.OnClientEvent:Connect(function(battleId, data)
 		elseif ev.Kind == "StatusCured" then
 			patchActive(side, fs, { Status = nil })
 			setStatus(cardFor(side, fs), nil)
+		elseif ev.Kind == "StatStage" then
+			local m = memberAt(current.State[side], fs)
+			local prev = 0
+			if m then
+				m.Stages = m.Stages or {}
+				prev = m.Stages[ev.Stat] or 0
+				m.Stages[ev.Stat] = ev.Stage
+				setStages(cardFor(side, fs), m.Stages, ev.Stat, false)
+			end
+			local popCol = if ev.Stage > prev then T.Palette.hpHigh elseif ev.Stage < prev then T.Palette.hpLow else T.Palette.onDark
+			popNumber(model, formatStageText(ev.Stat, ev.Stage), popCol)
 		elseif ev.Kind == "Faint" then
-			patchActive(side, fs, { Hp = 0, Status = nil, Fainted = true })
+			patchActive(side, fs, { Hp = 0, Status = nil, Stages = {}, Fainted = true })
 			setStatus(cardFor(side, fs), nil)
+			setStages(cardFor(side, fs), nil, nil, true)
 			refreshSide(side, true)
 		elseif ev.Kind == "ClearSlot" then
 			local sideState = current.State[side]

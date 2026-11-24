@@ -1118,3 +1118,17 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - Validado ao vivo em batalha 2x2 (`Byakuya + San` vs `Uryu + Ichigo`): os 4 lutadores ficam centralizados cada um no seu próprio escudo/altar com zero sobreposição e alternância limpa `1x1 ↔ 2x2`.
 - `python scripts/sync_studio.py status` (`100% in sync`) e `python scripts/sync_studio.py test` (`PASS`).
 - Place salvo no Roblox Studio na **versão 314** (`TeamCreate`).
+
+
+## Indicadores de Alteração de Atributos na HUD de Batalha (`BattleClient`) (24/11/2026)
+
+**Feito**
+- Adicionada faixa `StagesBar` em todos os cartões de batalha (`PlayerCard1/2` acima do cartão; `EnemyCard1/2` abaixo do cartão) em `src/client/Gui/BattleGui/BattleClient.client.luau`:
+  - Exibe pílulas coloridas por atributo alterado (`ATQ`, `DEF`, `VEL`, `PRE`) usando `DamageCalc.StageMultiplier` para mostrar o valor exato em porcentagem (**verde** para aumentos como `ATQ +50%`, `ATQ +100%`; **vermelho** para reduções como `DEF -33%`, `DEF -50%`), sem emojis/símbolos Unicode (`Midnight-Blue Anime`).
+  - No modo `2x2`, quando `EnemyCard2` tem atributos alterados, `EnemyCard1` desliza suavemente para baixo (`Y = 0.238`) evitando qualquer sobreposição com `EnemyCard2` ou com o chip `ActorChip` abaixo.
+  - Adicionado tratamento em tempo real do evento `StatStage` em `BattleUpdate.OnClientEvent`: atualiza a pílula na hora com animação de `PopScale` (`1.28 → 1.0`), exibe texto flutuante 3D (`popNumber`) sobre o personagem e limpa os badges automaticamente ao trocar ou desmaiar.
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- Validado ao vivo em batalha 2x2 real com `Postura da Lâmina` (`ATQ +50%` → empilhado `ATQ +100%`) e `Carga de Ki` (`ATQ +50%` → `ATQ +100%`), além de stress test visual simultâneo com 1, 2, 3 e 4 badges verdes/vermelhos nos 4 cartões sem cortes nem sobreposições (`0` erros de script).
+- `python scripts/sync_studio.py status` (`100% in sync`) e `python scripts/sync_studio.py test` (`PASS`).
+- Place salvo no Roblox Studio na **versão 315** (`TeamCreate`).
