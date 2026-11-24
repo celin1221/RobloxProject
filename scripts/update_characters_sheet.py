@@ -6,12 +6,12 @@ Le diretamente a fonte da verdade em:
   - src/shared/Data/Moves.luau
   - src/server_storage/Codes.luau
 
-E grava a planilha formatada com 3 abas (Personagens, Golpes, Resumo) em:
+E grava a planilha formatada com 4 abas (Personagens, Ataques, Golpes, Resumo) em:
   - Blender/Planilha_Personagens.xlsx
   - Planilha_Personagens.xlsx (copia sincronizada na raiz do repositorio)
 
 REGRA DO PROJETO: Sempre executar `python scripts/update_characters_sheet.py` apos adicionar
-ou modificar personagens/golpes em src/shared/Data/Characters.luau ou Moves.luau.
+ou modificar personagens ou ataques/golpes em src/shared/Data/Characters.luau ou Moves.luau.
 """
 
 from __future__ import annotations
@@ -293,6 +293,81 @@ TARGET_DISPLAY = {
     "AllAllies": "Aliados",
     "Self": "Próprio",
 }
+CATEGORY_DISPLAY = {
+    "Damage": "Dano",
+    "Status": "Status",
+}
+STATUS_DISPLAY = {
+    "Burn": "Queimadura",
+    "Poison": "Veneno",
+    "Paralysis": "Paralisia",
+    "Sleep": "Sono",
+    "Freeze": "Congelamento",
+}
+STAT_DISPLAY = {
+    "Attack": "Ataque",
+    "Defense": "Defesa",
+    "Speed": "Velocidade",
+    "Accuracy": "Precisão",
+}
+CLASS_ORDER = {
+    "Espadachim": 1,
+    "Lutador": 2,
+    "Mago": 3,
+    "Atirador": 4,
+    "Universal": 5,
+}
+ORIGIN_ORDER = {
+    "Genérico de Classe": 1,
+    "Assinatura": 2,
+    "Exclusivo": 3,
+    "Clássico": 4,
+    "Reserva (Sem PP)": 5,
+}
+
+
+def stage_pct_str(stages: int) -> str:
+    mult = (1.0 + 0.5 * stages) if stages >= 0 else (2.0 / (2.0 - stages))
+    pct = int(round((mult - 1.0) * 100))
+    return f"{pct:+d}%"
+
+
+def parse_effect_desc(body: str) -> str:
+    m_eff = re.search(r"Effect\s*=\s*\{", body)
+    if not m_eff:
+        return "Nenhum"
+    eff_block, _ = extract_braced_block(body, m_eff.end() - 1)
+    kind_m = re.search(r'Kind\s*=\s*"([^"]+)"', eff_block)
+    chance_m = re.search(r"Chance\s*=\s*(\d+)", eff_block)
+    tgt_m = re.search(r'Target\s*=\s*"([^"]+)"', eff_block)
+    chance = int(chance_m.group(1)) if chance_m else 100
+    tgt = "no Próprio" if (tgt_m and tgt_m.group(1) == "Self") else "no Alvo"
+    kind = kind_m.group(1) if kind_m else ""
+
+    if kind == "Status":
+        st_m = re.search(r'Status\s*=\s*"([^"]+)"', eff_block)
+        st_name = STATUS_DISPLAY.get(st_m.group(1), st_m.group(1)) if st_m else "Status"
+        return f"Status: {st_name} {tgt} ({chance}%)"
+    if kind == "StatStage":
+        stat_m = re.search(r'Stat\s*=\s*"([^"]+)"', eff_block)
+        stg_m = re.search(r"Stages\s*=\s*(-?\d+)", eff_block)
+        stat_name = STAT_DISPLAY.get(stat_m.group(1), stat_m.group(1)) if stat_m else "Atributo"
+        stages = int(stg_m.group(1)) if stg_m else 1
+        tag = "Buff" if stages > 0 else "Debuff"
+        return f"{tag}: {stages:+d} {stat_name} ({stage_pct_str(stages)}) {tgt} ({chance}%)"
+    return eff_block.strip()
+
+
+def parse_timing_desc(body: str) -> str:
+    m_tim = re.search(r"Timing\s*=\s*\{", body)
+    if not m_tim:
+        return "-"
+    tim_block, _ = extract_braced_block(body, m_tim.end() - 1)
+    parts = []
+    for key in ("Charge", "Release", "Impact", "Length"):
+        km = re.search(rf"{key}\s*=\s*([0-9.]+)", tim_block)
+        parts.append(f"{float(km.group(1)):.2f}s" if km else "-")
+    return " / ".join(parts)
 
 
 def decode_luau_str(raw: str) -> str:
@@ -364,14 +439,18 @@ def parse_moves() -> tuple[dict[str, dict[str, Any]], dict[str, list[str]]]:
         pow_m = re.search(r"Power\s*=\s*(\d+)", body)
         acc_m = re.search(r"Accuracy\s*=\s*(\d+|nil)", body)
         pp_m = re.search(r"PP\s*=\s*(\d+)", body)
+        crit_m = re.search(r"CritChance\s*=\s*([0-9.]+)", body)
         body_no_effect = re.sub(r"Effect\s*=\s*\{[^}]*\}", "", body)
         target_m = re.search(r'Target\s*=\s*"([^"]+)"', body_no_effect)
         sig = bool(re.search(r"Signature\s*=\s*true", body))
         cutin = bool(re.search(r"CutIn\s*=\s*true", body))
-        has_anim = bool(re.search(r'Anim\s*=\s*"[^"]+"', body))
-        has_vfx = bool(re.search(r'Vfx\s*=\s*"[^"]+"', body))
+        hidden = bool(re.search(r"Hidden\s*=\s*true", body))
+        anim_m = re.search(r'Anim\s*=\s*"([^"]+)"', body)
+        vfx_m = re.search(r'Vfx\s*=\s*"([^"]+)"', body)
         generic = bool(re.search(r"Generic\s*=\s*true", body))
 
+        has_anim = anim_m is not None
+        has_vfx = vfx_m is not None
         cat = cat_m.group(1) if cat_m else "Damage"
         if target_m:
             target = target_m.group(1)
@@ -386,6 +465,30 @@ def parse_moves() -> tuple[dict[str, dict[str, Any]], dict[str, list[str]]]:
         else:
             acc_val = "Nunca erra"
 
+        crit_chance = float(crit_m.group(1)) if crit_m else 0.0625
+        effect_desc = parse_effect_desc(body)
+        timing_desc = parse_timing_desc(body)
+
+        if hidden:
+            origin = "Reserva (Sem PP)"
+        elif generic:
+            origin = "Genérico de Classe"
+        elif sig:
+            origin = "Assinatura"
+        elif has_anim or has_vfx or cutin:
+            origin = "Exclusivo"
+        else:
+            origin = "Clássico"
+
+        if hidden:
+            dev_status = "Fallback (Sem PP)"
+        elif has_anim and has_vfx:
+            dev_status = "Implementado (100%)"
+        elif has_anim or has_vfx:
+            dev_status = "Parcial"
+        else:
+            dev_status = "Pendente (Anim/VFX)"
+
         moves[mid] = {
             "Id": mid,
             "Name": decode_luau_str(name_m.group(1)) if name_m else mid,
@@ -394,9 +497,17 @@ def parse_moves() -> tuple[dict[str, dict[str, Any]], dict[str, list[str]]]:
             "Power": int(pow_m.group(1)) if pow_m else "-",
             "Accuracy": acc_val,
             "PP": int(pp_m.group(1)) if pp_m else 0,
+            "CritChance": crit_chance,
             "Target": target,
+            "EffectDesc": effect_desc,
+            "TimingDesc": timing_desc,
+            "Origin": origin,
+            "DevStatus": dev_status,
             "Signature": sig,
             "CutIn": cutin,
+            "Hidden": hidden,
+            "AnimName": anim_m.group(1) if anim_m else "",
+            "VfxName": vfx_m.group(1) if vfx_m else "",
             "HasAnim": has_anim,
             "HasVfx": has_vfx,
             "Generic": generic,
@@ -705,7 +816,157 @@ def build_workbook(
     ws.auto_filter.ref = f"A1:U{len(chars) + 1}"
 
     # -----------------------------------------------------------------
-    # ABA 2: Golpes (todos os personagens ativos)
+    # ABA 2: Ataques (Catálogo completo e único de todos os ataques do jogo)
+    # -----------------------------------------------------------------
+    ws_a = wb.create_sheet("Ataques")
+    ws_a.freeze_panes = "C2"
+
+    # Mapeia quais personagens ativos usam cada ataque
+    users_by_move: dict[str, list[str]] = {}
+    for ch in chars:
+        if ch["Prototype"]:
+            continue
+        for mid in ch["MoveIds"]:
+            users_by_move.setdefault(mid, []).append(ch["Name"])
+
+    sorted_moves = sorted(
+        moves.values(),
+        key=lambda mv: (
+            ORIGIN_ORDER.get(mv["Origin"], 99),
+            CLASS_ORDER.get(mv["Type"], 99),
+            mv["Name"].lower(),
+        ),
+    )
+
+    a_headers = [
+        "ID",
+        "Nome do Ataque",
+        "Origem",
+        "Classe",
+        "Categoria",
+        "Poder",
+        "Precisão",
+        "PP",
+        "Crítico",
+        "Alvo (2x2)",
+        "Efeito / Status / Buff",
+        "Assinatura?",
+        "Cut-In?",
+        "Animação 3D",
+        "VFX 3D",
+        "Status de Dev",
+        "Timing (C / R / I / Total)",
+        "Qtd. Usuários",
+        "Personagens que Usam",
+    ]
+    ws_a.append(a_headers)
+    ws_a.row_dimensions[1].height = 26
+    for c_idx in range(1, len(a_headers) + 1):
+        cell = ws_a.cell(1, c_idx)
+        cell.fill = HEADER_FILL
+        cell.font = HEADER_FONT
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = CELL_BORDER
+
+    ORIGIN_FILL = {
+        "Genérico de Classe": BLUE,
+        "Assinatura": GOLD,
+        "Exclusivo": TEAL,
+        "Clássico": SLATE,
+        "Reserva (Sem PP)": GRAY,
+    }
+    DEV_MOVE_FILL = {
+        "Implementado (100%)": GREEN,
+        "Parcial": YELLOW,
+        "Pendente (Anim/VFX)": ORANGE,
+        "Fallback (Sem PP)": SLATE,
+    }
+
+    for r_idx, mv in enumerate(sorted_moves, start=2):
+        users = users_by_move.get(mv["Id"], [])
+        if mv["Hidden"]:
+            users_str = "Todos (fallback sem PP)"
+        elif users:
+            users_str = ", ".join(users)
+        else:
+            users_str = "Nenhum (não atribuído)"
+
+        cat_pt = CATEGORY_DISPLAY.get(mv["Category"], mv["Category"])
+        acc_display = f"{mv['Accuracy']}%" if isinstance(mv["Accuracy"], int) else mv["Accuracy"]
+        anim_display = f"Sim ({mv['AnimName']})" if mv["HasAnim"] else ("Não (Fallback)" if mv["Hidden"] else "Não (Padrão Classe)")
+        vfx_display = f"Sim ({mv['VfxName']})" if mv["HasVfx"] else "Não"
+
+        ws_a.append(
+            [
+                mv["Id"],
+                mv["Name"],
+                mv["Origin"],
+                mv["Type"],
+                cat_pt,
+                mv["Power"],
+                acc_display,
+                mv["PP"],
+                mv["CritChance"],
+                TARGET_DISPLAY.get(mv["Target"], mv["Target"]),
+                mv["EffectDesc"],
+                "Sim" if mv["Signature"] else "Não",
+                "Sim" if mv["CutIn"] else "Não",
+                anim_display,
+                vfx_display,
+                mv["DevStatus"],
+                mv["TimingDesc"],
+                len(users),
+                users_str,
+            ]
+        )
+        ws_a.row_dimensions[r_idx].height = 22
+        for c_idx in range(1, len(a_headers) + 1):
+            cell = ws_a.cell(r_idx, c_idx)
+            cell.border = CELL_BORDER
+            cell.font = BOLD_FONT if c_idx in (1, 2) else BASE_FONT
+            cell.alignment = Alignment(
+                horizontal="left" if c_idx in (1, 2, 11, 14, 15, 19) else "center",
+                vertical="center",
+                wrap_text=(c_idx in (11, 19)),
+            )
+
+        ws_a.cell(r_idx, 9).number_format = "0.00%"
+        if mv["CritChance"] > 0.0625:
+            ws_a.cell(r_idx, 9).fill = GOLD
+            ws_a.cell(r_idx, 9).font = BOLD_FONT
+        if mv["Origin"] in ORIGIN_FILL:
+            ws_a.cell(r_idx, 3).fill = ORIGIN_FILL[mv["Origin"]]
+        if mv["Type"] in CLASS_FILL:
+            ws_a.cell(r_idx, 4).fill = CLASS_FILL[mv["Type"]]
+        ws_a.cell(r_idx, 5).fill = RED if cat_pt == "Dano" else BLUE
+        if mv["EffectDesc"].startswith("Buff:"):
+            ws_a.cell(r_idx, 11).fill = GREEN
+        elif mv["EffectDesc"].startswith("Debuff:"):
+            ws_a.cell(r_idx, 11).fill = RED
+        elif mv["EffectDesc"].startswith("Status:"):
+            ws_a.cell(r_idx, 11).fill = PURPLE
+        if mv["Signature"]:
+            ws_a.cell(r_idx, 12).fill = GOLD
+            ws_a.cell(r_idx, 12).font = BOLD_FONT
+        if mv["CutIn"]:
+            ws_a.cell(r_idx, 13).fill = PURPLE
+            ws_a.cell(r_idx, 13).font = BOLD_FONT
+        ws_a.cell(r_idx, 14).fill = GREEN if mv["HasAnim"] else (SLATE if mv["Hidden"] else RED)
+        ws_a.cell(r_idx, 15).fill = GREEN if mv["HasVfx"] else (SLATE if mv["Hidden"] else RED)
+        if mv["DevStatus"] in DEV_MOVE_FILL:
+            ws_a.cell(r_idx, 16).fill = DEV_MOVE_FILL[mv["DevStatus"]]
+
+    col_widths_a = {
+        "A": 23, "B": 26, "C": 20, "D": 13, "E": 11, "F": 9, "G": 13, "H": 7,
+        "I": 11, "J": 16, "K": 36, "L": 12, "M": 10, "N": 24, "O": 24, "P": 21,
+        "Q": 26, "R": 14, "S": 44,
+    }
+    for col, w in col_widths_a.items():
+        ws_a.column_dimensions[col].width = w
+    ws_a.auto_filter.ref = f"A1:S{len(sorted_moves) + 1}"
+
+    # -----------------------------------------------------------------
+    # ABA 3: Golpes (vinculo Personagem x Golpe de todos os personagens ativos)
     # -----------------------------------------------------------------
     ws_m = wb.create_sheet("Golpes")
     ws_m.freeze_panes = "D2"
@@ -720,6 +981,8 @@ def build_workbook(
         "Poder",
         "Precisão",
         "PP",
+        "Crítico",
+        "Efeito / Status / Buff",
         "Kit Genérico?",
         "Assinatura?",
         "Cut-In?",
@@ -752,11 +1015,13 @@ def build_workbook(
                     mv["Id"],
                     mv["Name"],
                     mv["Type"],
-                    mv["Category"],
+                    CATEGORY_DISPLAY.get(mv["Category"], mv["Category"]),
                     TARGET_DISPLAY.get(mv["Target"], mv["Target"]),
                     mv["Power"],
                     mv["Accuracy"],
                     mv["PP"],
+                    mv["CritChance"],
+                    mv["EffectDesc"],
                     "Sim" if mv["Generic"] else "Não",
                     "Sim" if mv["Signature"] else "Não",
                     "Sim" if mv["CutIn"] else "Não",
@@ -770,39 +1035,47 @@ def build_workbook(
                 cell.border = CELL_BORDER
                 cell.font = BOLD_FONT if c_idx in (1, 4) else BASE_FONT
                 cell.alignment = Alignment(
-                    horizontal="left" if c_idx in (1, 3, 4) else "center",
+                    horizontal="left" if c_idx in (1, 3, 4, 12) else "center",
                     vertical="center",
                 )
+            ws_m.cell(m_row, 11).number_format = "0.00%"
             if anime_name in ANIME_FILL:
                 ws_m.cell(m_row, 2).fill = ANIME_FILL[anime_name]
             if mv["Type"] in CLASS_FILL:
                 ws_m.cell(m_row, 5).fill = CLASS_FILL[mv["Type"]]
             if mv["Signature"]:
-                ws_m.cell(m_row, 12).fill = GOLD
-                ws_m.cell(m_row, 12).font = BOLD_FONT
+                ws_m.cell(m_row, 14).fill = GOLD
+                ws_m.cell(m_row, 14).font = BOLD_FONT
             if mv["CutIn"]:
-                ws_m.cell(m_row, 13).fill = PURPLE
-                ws_m.cell(m_row, 13).font = BOLD_FONT
-            ws_m.cell(m_row, 14).fill = GREEN if mv["HasAnim"] else RED
-            ws_m.cell(m_row, 15).fill = GREEN if mv["HasVfx"] else RED
+                ws_m.cell(m_row, 15).fill = PURPLE
+                ws_m.cell(m_row, 15).font = BOLD_FONT
+            ws_m.cell(m_row, 16).fill = GREEN if mv["HasAnim"] else RED
+            ws_m.cell(m_row, 17).fill = GREEN if mv["HasVfx"] else RED
 
     col_widths_m = {
         "A": 15, "B": 16, "C": 21, "D": 26, "E": 13, "F": 11, "G": 15,
-        "H": 9, "I": 12, "J": 7, "K": 13, "L": 13, "M": 10, "N": 11, "O": 11,
+        "H": 9, "I": 12, "J": 7, "K": 11, "L": 34, "M": 13, "N": 13, "O": 10, "P": 11, "Q": 11,
     }
     for col, w in col_widths_m.items():
         ws_m.column_dimensions[col].width = w
-    ws_m.auto_filter.ref = f"A1:O{m_row}"
+    ws_m.auto_filter.ref = f"A1:Q{m_row}"
 
     # -----------------------------------------------------------------
-    # ABA 3: Resumo (formulas dinamicas sobre a aba Personagens)
+    # ABA 4: Resumo (formulas dinamicas sobre Personagens e Ataques)
     # -----------------------------------------------------------------
     ws_r = wb.create_sheet("Resumo")
     last_p = len(chars) + 1
+    last_a = len(sorted_moves) + 1
     p_anime = f"Personagens!$C$2:$C${last_p}"
     p_stage = f"Personagens!$D$2:$D${last_p}"
     p_rar = f"Personagens!$E$2:$E${last_p}"
     p_cls = f"Personagens!$F$2:$F${last_p}"
+    a_origin = f"Ataques!$C$2:$C${last_a}"
+    a_cls = f"Ataques!$D$2:$D${last_a}"
+    a_cat = f"Ataques!$E$2:$E${last_a}"
+    a_sig = f"Ataques!$L$2:$L${last_a}"
+    a_cutin = f"Ataques!$M$2:$M${last_a}"
+    a_dev = f"Ataques!$P$2:$P${last_a}"
 
     def add_summary_table(start_row: int, title: str, col_label: str, items: list[str], col_ref: str, exclude_test: bool = True) -> int:
         ws_r.merge_cells(start_row=start_row, start_column=1, end_row=start_row, end_column=3)
@@ -914,7 +1187,7 @@ def build_workbook(
         p_cls,
         exclude_test=True,
     )
-    add_summary_table(
+    next_row = add_summary_table(
         next_row,
         "POR ESTÁGIO DE DESENVOLVIMENTO (Todos)",
         "Estágio",
@@ -923,9 +1196,107 @@ def build_workbook(
         exclude_test=False,
     )
 
+    # Bloco dinamico de Resumo dos Ataques (colunas E:G ao lado dos personagens)
+    ws_r.merge_cells("E1:G1")
+    ka = ws_r["E1"]
+    ka.value = "RESUMO DE ATAQUES — RobloxProjetoX"
+    ka.fill = TITLE_FILL
+    ka.font = TITLE_FONT
+    ka.alignment = Alignment(horizontal="left", vertical="center")
+
+    for offset, h in enumerate(["Métrica", "Valor", "Observação"]):
+        c = ws_r.cell(2, 5 + offset, h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="center" if offset == 1 else "left", vertical="center")
+        c.border = CELL_BORDER
+
+    attack_kpis = [
+        ("Total de Ataques no Jogo", f"=COUNTA(Ataques!$A$2:$A${last_a})", "Todos os ataques de Moves.luau"),
+        ("Ataques Implementados (100%)", f'=COUNTIF({a_dev},"Implementado (100%)")', "Com Animação 3D e VFX próprios"),
+        ("Ataques Pendentes (Anim/VFX)", f'=COUNTIF({a_dev},"Pendente (Anim/VFX)")', "Usam animação padrão da classe"),
+        ("Técnicas Assinatura", f'=COUNTIF({a_sig},"Sim")', "Golpes assinatura exclusivos"),
+        ("Ataques com Cut-In", f'=COUNTIF({a_cutin},"Sim")', "Possuem cena cinematográfica"),
+        ("Ataques de Dano vs Status", f'=COUNTIF({a_cat},"Dano")&" Dano / "&COUNTIF({a_cat},"Status")&" Status"', "Distribuição de categorias"),
+    ]
+    for idx, (label, formula, obs) in enumerate(attack_kpis, start=3):
+        ws_r.cell(idx, 5, label)
+        ws_r.cell(idx, 6, formula)
+        ws_r.cell(idx, 7, obs)
+        for ci in (5, 6, 7):
+            c = ws_r.cell(idx, ci)
+            c.border = CELL_BORDER
+            c.font = BOLD_FONT if ci in (5, 6) else BASE_FONT
+            c.alignment = Alignment(horizontal="center" if ci == 6 else "left", vertical="center")
+
+    def add_attack_summary_table(start_row: int, title: str, col_label: str, items: list[str], col_ref: str) -> int:
+        ws_r.merge_cells(start_row=start_row, start_column=5, end_row=start_row, end_column=7)
+        tcell = ws_r.cell(start_row, 5, title)
+        tcell.fill = TITLE_FILL
+        tcell.font = TITLE_FONT
+        tcell.alignment = Alignment(horizontal="left", vertical="center")
+        r = start_row + 1
+        for offset, h in enumerate([col_label, "Quantidade", "% do Total"]):
+            c = ws_r.cell(r, 5 + offset, h)
+            c.fill = HEADER_FILL
+            c.font = HEADER_FONT
+            c.alignment = Alignment(horizontal="center" if offset > 0 else "left", vertical="center")
+            c.border = CELL_BORDER
+        first_data = r + 1
+        for item in items:
+            r += 1
+            ws_r.cell(r, 5, item)
+            ws_r.cell(r, 6, f'=COUNTIF({col_ref},"{item}")')
+            ws_r.cell(r, 7, f"=IF($F$3>0,F{r}/$F$3,0)")
+            ws_r.cell(r, 7).number_format = "0.0%"
+            for ci in (5, 6, 7):
+                c = ws_r.cell(r, ci)
+                c.border = CELL_BORDER
+                c.font = BASE_FONT
+                c.alignment = Alignment(horizontal="left" if ci == 5 else "center", vertical="center")
+        r += 1
+        ws_r.cell(r, 5, "TOTAL")
+        ws_r.cell(r, 6, f"=SUM(F{first_data}:F{r-1})")
+        ws_r.cell(r, 7, f"=SUM(G{first_data}:G{r-1})")
+        ws_r.cell(r, 7).number_format = "0.0%"
+        for ci in (5, 6, 7):
+            c = ws_r.cell(r, ci)
+            c.border = CELL_BORDER
+            c.font = BOLD_FONT
+            c.fill = SLATE
+            c.alignment = Alignment(horizontal="left" if ci == 5 else "center", vertical="center")
+        return r + 2
+
+    a_row = 10
+    a_row = add_attack_summary_table(
+        a_row,
+        "ATAQUES POR ORIGEM",
+        "Origem",
+        ["Genérico de Classe", "Assinatura", "Exclusivo", "Clássico", "Reserva (Sem PP)"],
+        a_origin,
+    )
+    a_row = add_attack_summary_table(
+        a_row,
+        "ATAQUES POR CLASSE",
+        "Classe",
+        ["Espadachim", "Lutador", "Mago", "Atirador", "Universal"],
+        a_cls,
+    )
+    add_attack_summary_table(
+        a_row,
+        "ATAQUES POR STATUS DE DEV",
+        "Status",
+        ["Implementado (100%)", "Parcial", "Pendente (Anim/VFX)", "Fallback (Sem PP)"],
+        a_dev,
+    )
+
     ws_r.column_dimensions["A"].width = 34
     ws_r.column_dimensions["B"].width = 14
     ws_r.column_dimensions["C"].width = 44
+    ws_r.column_dimensions["D"].width = 4
+    ws_r.column_dimensions["E"].width = 32
+    ws_r.column_dimensions["F"].width = 16
+    ws_r.column_dimensions["G"].width = 38
 
     return wb
 
@@ -944,7 +1315,8 @@ def main() -> None:
     protos = [c for c in chars if c["Prototype"]]
     print(
         f"Planilha atualizada com sucesso: {len(active)} personagens ativos + {len(protos)} prototipos "
-        f"(total {len(chars)} linhas) | {wb['Golpes'].max_row - 1} golpes registrados."
+        f"(total {len(chars)} linhas) | {wb['Ataques'].max_row - 1} ataques unicos | "
+        f"{wb['Golpes'].max_row - 1} vinculos personagem x golpe."
     )
     print(f"  - {OUT_BLENDER}")
     print(f"  - {OUT_ROOT}")

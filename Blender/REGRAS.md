@@ -23,7 +23,7 @@ Valem para todo chat que trabalhar neste jogo. Ler antes de qualquer tarefa.
 - Todo cálculo de batalha, economia, sorteio e recompensa roda no servidor, com validação de tudo que vem do cliente.
 - Efeitos visuais e animações rodam só no cliente.
 - Personagens, golpes e itens são definidos só em tabelas de dados (ReplicatedStorage/Data). Adicionar personagem não altera o BattleService.
-- **Planilha de Personagens obrigatória:** Sempre que adicionar ou alterar um personagem/golpe no jogo (`src/shared/Data/Characters.luau` / `Moves.luau`), atualizar a planilha rodando `python scripts/update_characters_sheet.py` (sincroniza `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx`).
+- **Planilha de Personagens e Ataques obrigatória:** Sempre que adicionar, remover ou alterar qualquer personagem ou ataque/golpe no jogo (`src/shared/Data/Characters.luau` / `Moves.luau`), atualizar todas as tabelas (`Personagens`, `Ataques`, `Golpes` e `Resumo`) rodando `python scripts/update_characters_sheet.py` (sincroniza `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx`).
 - Scripts referenciam personagens pelo nome, para o modelo poder ser trocado.
 - Personagens sempre originais. Nunca criar personagem ou técnica de anime existente, nem versão reconhecível com nome trocado.
 - Para criar personagem, usar a skill `personagem-anime-roblox`.

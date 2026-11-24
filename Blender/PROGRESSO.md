@@ -1147,3 +1147,14 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - Validados ao vivo no Play Mode: HUD 2x2 com `PlayerTeamPips` e `EnemyTeamPips` verticais fora dos cartões sem sobreposição, e execução completa dos VFX de `GenkiDama`, `CeuETerra` e `SenbonzakuraKageyoshi` com `0` erros e `0` cilindros residuais.
 - `python scripts/sync_studio.py status` (`100% in sync`) e `python scripts/sync_studio.py test` (`PASS`).
 - Place salvo no Roblox Studio na **versão 316** (`TeamCreate`).
+
+
+## Nova Aba Completa de Ataques na Planilha + Regra Permanente Reforçada (24/11/2026)
+
+**Feito**
+- Expandido `scripts/update_characters_sheet.py` para gerar **4 abas** em `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx`:
+  - **`Personagens`** (23 ativos + 2 protótipos),
+  - **`Ataques`** (nova tabela catálogo única com **todos os ataques** de `src/shared/Data/Moves.luau`: ID, Nome, Origem, Classe, Categoria, Poder, Precisão, PP, Crítico, Alvo 2x2, Efeito/Buff/Status detalhado, Assinatura, Cut-In, Animação 3D, VFX 3D, Status de Dev, Timing `C/R/I/Total`, Qtd. Usuários e lista de Personagens que usam),
+  - **`Golpes`** (vínculo `Personagem × Golpe` enriquecido com Crítico e Efeito),
+  - **`Resumo`** (KPIs e tabelas dinâmicas de **Personagens** e de **Ataques** lado a lado).
+- Regra permanente atualizada em `AGENTS.md` e `Blender/REGRAS.md` garantindo atualização obrigatória de todas as abas (`Personagens`, `Ataques`, `Golpes`, `Resumo`) sempre que personagens ou ataques forem criados/modificados.
