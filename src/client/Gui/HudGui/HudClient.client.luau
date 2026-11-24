@@ -227,7 +227,7 @@ local function layoutRightStack()
 	end
 	local topY = math.floor(h * 0.03)
 	local gearH = math.max(T.TouchMin, math.floor(settingsButton.AbsoluteSize.Y))
-	trackBtn.Position = UDim2.new(0.985, 0, 0, topY + gearH + 8)
+	trackBtn.Position = UDim2.new(0.985, 0, 0, topY + gearH + 16)
 end
 hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutRightStack)
 settingsButton:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutRightStack)

@@ -210,6 +210,10 @@ local function strokePx(h, mult)
 	return math.max(1, math.floor(T.StrokeFor(h) * (mult or 1) + 0.5))
 end
 
+local function shadowPxFor(h: number): number
+	return math.clamp(math.floor(h * 0.0065 + 0.5), 2, 6)
+end
+
 local function applyMetrics(c)
 	local reg = canvases[c]
 	if not reg then
@@ -234,7 +238,7 @@ local function applyMetrics(c)
 	end
 	for sh in pairs(reg.Shadows) do
 		if sh.Parent then
-			sh.Position = UDim2.new(0, 0, 0, math.max(2, math.floor(h * 0.011 + 0.5)))
+			sh.Position = UDim2.new(0, 0, 0, shadowPxFor(h))
 		else
 			reg.Shadows[sh] = nil
 		end
@@ -255,7 +259,7 @@ local function register(obj, kind, key, value)
 				key.MaxTextSize = math.clamp(math.floor(h * r.Scale + 0.5), r.Min, r.Max)
 				key.MinTextSize = math.min(r.Min, key.MaxTextSize)
 			else
-				key.Position = UDim2.new(0, 0, 0, math.max(2, math.floor(h * 0.011 + 0.5)))
+				key.Position = UDim2.new(0, 0, 0, shadowPxFor(h))
 			end
 			return true
 		end
@@ -528,7 +532,7 @@ function UI.panel(parent, p)
 		sh.BorderSizePixel = 0
 		sh.ZIndex = holder.ZIndex
 		corner(sh, r)
-		UI.stroke(sh)
+		UI.stroke(sh, nil, p.StrokeMult or 1)
 		sh.Parent = holder
 		register(sh, "Shadows", sh, true)
 	end
@@ -544,7 +548,7 @@ function UI.panel(parent, p)
 	g.Name = "Fill"
 	g.Parent = face
 	if p.Stroke ~= false then
-		UI.stroke(face, p.StrokeColor)
+		UI.stroke(face, p.StrokeColor, p.StrokeMult)
 	end
 	if p.Sheen ~= false then
 		local isDarkSlot = (p.Color == "slot" or p.Color == "track")
@@ -858,7 +862,7 @@ function UI.scroll(parent, p)
 	s.ScrollingDirection = Enum.ScrollingDirection.Y
 	setCommon(s, p, parent)
 
-	local topPx, botPx, leftPx, rightPx = 4, 8, 4, 10
+	local topPx, botPx, leftPx, rightPx = 8, 12, 8, 16
 	local pad = Instance.new("UIPadding")
 	pad.PaddingTop = UDim.new(0, topPx)
 	pad.PaddingBottom = UDim.new(0, botPx)
@@ -867,7 +871,8 @@ function UI.scroll(parent, p)
 	pad.Parent = s
 
 	local cols, aspect = p.Columns, p.CellAspect or 1
-	local gap = if p.Gap ~= nil then p.Gap else 0.02
+	local gap = if p.Gap ~= nil then p.Gap else 0.025
+	local isFlat = p.Flat == true
 	local layout: UIGridStyleLayout
 	if cols then
 		local g = Instance.new("UIGridLayout")
@@ -877,22 +882,24 @@ function UI.scroll(parent, p)
 		layout = g
 	else
 		local l = Instance.new("UIListLayout")
-		l.Padding = UDim.new(0, if gap <= 0 then 0 else 6)
+		l.Padding = UDim.new(0, if gap <= 0 then 0 else 10)
 		l.SortOrder = Enum.SortOrder.LayoutOrder
 		l.HorizontalAlignment = Enum.HorizontalAlignment.Center
 		l.Parent = s
 		layout = l
 	end
 
-	-- canvas = conteudo + margens em pixels + sombra do ultimo item (o ultimo sempre aparece inteiro)
+	-- canvas = conteudo + margens em pixels + sombra/borda do ultimo item (o ultimo sempre aparece inteiro)
 	local function fitCanvas()
 		local sc = ancestorScale(s)
 		if sc < 0.05 then
 			return
 		end
 		local contentY = layout.AbsoluteContentSize.Y / sc
-		local shadowPx = math.max(2, math.floor(UI.height(s) * 0.011 + 0.5))
-		local h = math.ceil(contentY + topPx + botPx + shadowPx + 8)
+		local ch = UI.height(s)
+		local sh = shadowPxFor(ch)
+		local st = strokePx(ch, 1)
+		local h = math.ceil(contentY + topPx + botPx + sh + st + 4)
 		if s.CanvasSize.Y.Scale ~= 0 or s.CanvasSize.Y.Offset ~= h then
 			s.CanvasSize = UDim2.fromOffset(0, h)
 		end
@@ -908,50 +915,56 @@ function UI.scroll(parent, p)
 		if w <= 1 or h <= 1 then
 			return
 		end
-		topPx = math.clamp(math.floor(h * 0.015 + 0.5), 3, 10)
-		botPx = math.clamp(math.floor(h * 0.03 + 0.5), 6, 16)
-		leftPx = math.clamp(math.floor(w * 0.012 + 0.5), 3, 12)
-		rightPx = math.clamp(math.floor(w * 0.03 + 0.5), 8, 20)
+		local ch = UI.height(s)
+		local st = strokePx(ch, 1)
+		local sh = shadowPxFor(ch)
+		topPx = math.clamp(math.floor(h * 0.02 + 0.5), st + 4, 14)
+		botPx = math.clamp(math.floor(h * 0.03 + 0.5), sh + st + 6, 20)
+		leftPx = math.clamp(math.floor(w * 0.02 + 0.5), st + 4, 16)
+		rightPx = math.clamp(math.floor(w * 0.03 + 0.5), st + s.ScrollBarThickness + 6, 24)
 		pad.PaddingTop = UDim.new(0, topPx)
 		pad.PaddingBottom = UDim.new(0, botPx)
 		pad.PaddingLeft = UDim.new(0, leftPx)
 		pad.PaddingRight = UDim.new(0, rightPx)
 
+		local innerW = w - leftPx - rightPx
 		if cols then
 			local g = layout :: UIGridLayout
-			local inner = w - leftPx - rightPx - s.ScrollBarThickness
-			if inner > 0 then
-				local gapPx = math.floor(inner * gap)
-				local cw = math.max(1, math.floor((inner - gapPx * (cols - 1)) / cols))
-				local ch = math.max(1, math.floor(cw / aspect))
-				if g.CellPadding.X.Offset ~= gapPx or g.CellPadding.Y.Offset ~= gapPx then
-					g.CellPadding = UDim2.fromOffset(gapPx, gapPx)
+			if innerW > 0 then
+				local minGapX = st * 2 + 4
+				local maxGapX = math.max(minGapX, math.floor(innerW * 0.08))
+				local gapX = math.clamp(math.floor(innerW * math.max(gap, 0.028) + 0.5), minGapX, maxGapX)
+				local gapY = if isFlat then gapX else math.max(gapX, sh + st * 2 + 4)
+				local cw = math.max(1, math.floor((innerW - gapX * (cols - 1)) / cols))
+				local cellH = math.max(1, math.floor(cw / aspect))
+				if g.CellPadding.X.Offset ~= gapX or g.CellPadding.Y.Offset ~= gapY then
+					g.CellPadding = UDim2.fromOffset(gapX, gapY)
 				end
-				if g.CellSize.X.Offset ~= cw or g.CellSize.Y.Offset ~= ch then
-					g.CellSize = UDim2.fromOffset(cw, ch)
+				if g.CellSize.X.Offset ~= cw or g.CellSize.Y.Offset ~= cellH then
+					g.CellSize = UDim2.fromOffset(cw, cellH)
 				end
 			end
 		else
 			local l = layout :: UIListLayout
+			local minGap = if gap <= 0 then 0 elseif isFlat then (st * 2 + 3) else (sh + st * 2 + 3)
 			local gapPx = if gap <= 0
 				then 0
-				else math.clamp(math.floor(math.max(h * gap, UI.height(s) * (gap * 0.55)) + 0.5), 4, 14)
+				else math.clamp(math.floor(math.max(h * gap, ch * (gap * 0.55), minGap) + 0.5), minGap, math.max(minGap, 22))
 			if l.Padding.Scale ~= 0 or l.Padding.Offset ~= gapPx then
 				l.Padding = UDim.new(0, gapPx)
 			end
 			-- Atualiza altura de todas as linhas (inclusive fora da area visivel, onde AbsoluteSize pode ser adiado)
-			local innerW = w - leftPx - rightPx - s.ScrollBarThickness
 			if innerW > 1 then
-				for _, ch in ipairs(s:GetChildren()) do
-					if ch:IsA("GuiObject") then
-						local a = ch:GetAttribute("_RowAspect")
+				for _, child in ipairs(s:GetChildren()) do
+					if child:IsA("GuiObject") then
+						local a = child:GetAttribute("_RowAspect")
 						if typeof(a) == "number" and a > 0 then
-							local rmax = ch:GetAttribute("_RowMax")
-							local cw = math.max(0, innerW * ch.Size.X.Scale + ch.Size.X.Offset)
+							local rmax = child:GetAttribute("_RowMax")
+							local cw = math.max(0, innerW * child.Size.X.Scale + child.Size.X.Offset)
 							if cw > 1 then
 								local rh = math.min(if typeof(rmax) == "number" then rmax else math.huge, math.floor(cw / a + 0.5))
-								if ch.Size.Y.Offset ~= rh then
-									ch.Size = UDim2.new(ch.Size.X.Scale, ch.Size.X.Offset, 0, rh)
+								if child.Size.Y.Offset ~= rh then
+									child.Size = UDim2.new(child.Size.X.Scale, child.Size.X.Offset, 0, rh)
 								end
 							end
 						end
@@ -1146,7 +1159,7 @@ function UI.tabs(parent, list, p, onSelect)
 	-- altura das abas: no minimo o toque (44 px), no maximo 50 px (nao crescem no tablet)
 	UI.clampHeight(bar, T.TouchMin, p.MaxHeight or 50)
 	local n = #list
-	local gap = 0.02
+	local gap = if n <= 3 then 0.028 else 0.02
 	local w = math.min(p.MaxWidth or 0.3, (1 - gap * (n - 1)) / n)
 	local buttons = {}
 	local current
@@ -1368,19 +1381,36 @@ end
 
 -- Ocupa o espaco entre a borda de baixo de 'topObj' e a de cima de 'bottomObj' (irmaos, mesmo pai).
 -- Usado para listas abaixo das abas: as abas tem altura limitada e a lista acompanha.
+-- Desconta automaticamente sombra + contorno de 'topObj'/'bottomObj' para nada encostar ou cortar.
+local function hasShadowChild(inst: Instance?): boolean
+	if not inst then
+		return false
+	end
+	return inst:FindFirstChild("Shadow", true) ~= nil
+end
+
 function UI.fillBetween(obj, topObj, bottomObj, gapPx)
-	gapPx = gapPx or 6
+	local baseGap = gapPx or 8
 	local parent = obj.Parent
 	local pending = false
 	local function fit()
 		pending = false
+		local sc = ancestorScale(parent)
+		if sc < 0.05 then
+			return
+		end
 		local pTop, pH = parent.AbsolutePosition.Y, parent.AbsoluteSize.Y
 		if pH <= 0 then
 			return
 		end
+		local ch = UI.height(parent)
+		local st = strokePx(ch, 1)
+		local sh = shadowPxFor(ch)
+		local topExtra = if topObj and hasShadowChild(topObj) then (sh + st) elseif topObj then math.floor(st * 0.6) else 0
+		local botExtra = if bottomObj then math.floor(st * 0.6) else 0
 		-- tudo em fracao da altura do pai: nao muda com o UIScale das animacoes de abrir
-		local y0 = if topObj then topObj.AbsolutePosition.Y + topObj.AbsoluteSize.Y - pTop + gapPx else 0
-		local y1 = if bottomObj then bottomObj.AbsolutePosition.Y - pTop - gapPx else pH
+		local y0 = if topObj then topObj.AbsolutePosition.Y + topObj.AbsoluteSize.Y - pTop + (baseGap + topExtra) * sc else 0
+		local y1 = if bottomObj then bottomObj.AbsolutePosition.Y - pTop - (baseGap + botExtra) * sc else pH
 		obj.Position = UDim2.new(obj.Position.X.Scale, obj.Position.X.Offset, y0 / pH, 0)
 		obj.Size = UDim2.new(obj.Size.X.Scale, obj.Size.X.Offset, math.max(0, y1 - y0) / pH, 0)
 	end

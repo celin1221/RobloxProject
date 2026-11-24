@@ -206,9 +206,10 @@ local list = UI.scroll(body, {
 	Name = "RewardList",
 	Size = UDim2.fromScale(1, 0.70),
 	Position = UDim2.fromScale(0, 0.22),
-	Gap = 0.014,
+	Gap = 0.024,
+	Flat = true,
 })
-UI.fillBetween(list, summary, msg, 6)
+UI.fillBetween(list, summary, msg, 8)
 
 local function showMsg(ok: boolean, text: string?)
 	msg.TextColor3 = if ok then T.Palette.gold else T.Palette.hpLow
@@ -288,26 +289,23 @@ local function rebuildRows(acc: any)
 			elseif isEpic then "panelAlt"
 			else "slot"
 
+		local rowStroke = if ready then T.Palette.gold elseif isLeg then T.Palette.gold elseif isEpic then T.Palette.epico else nil
+		local rowStrokeMult = if ready then 0.95 elseif isLeg then 0.9 elseif isEpic then 0.85 else 0.75
 		local row, face = UI.row(list, {
 			Name = "Lv" .. lv,
-			Size = UDim2.fromScale(0.985, 0),
-			Aspect = 7.4,
-			RowMax = 80,
+			Size = UDim2.fromScale(1, 0),
+			Aspect = 7.6,
+			RowMax = 76,
 			Color = rowColor,
-			Corner = 0.24,
-			Shadow = ready or isLeg,
+			Corner = 0.2,
+			Shadow = false,
+			StrokeColor = rowStroke,
+			StrokeMult = rowStrokeMult,
 			LayoutOrder = lv,
 		})
 
-		if ready then
-			UI.stroke(face, T.Palette.gold, 1.25)
-			if isLeg or isEpic then
-				UI.shine(row)
-			end
-		elseif isLeg then
-			UI.stroke(face, T.Palette.gold, 1.0)
-		elseif isEpic then
-			UI.stroke(face, T.Palette.epico, 0.95)
+		if ready and (isLeg or isEpic) then
+			UI.shine(row)
 		end
 
 		-- Badge do nivel

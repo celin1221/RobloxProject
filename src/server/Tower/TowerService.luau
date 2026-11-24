@@ -478,7 +478,7 @@ local function onBattleEnd(player: Player, run, battle, result: string)
 				if not bannerOpen then
 					local reqGym = Gyms.ByAnime(bossAnime)
 					data.Gold += 300
-					table.insert(lines, string.format("Chefe %s deixou +300 gold b\u{f4}nus! (Venza o %s para recrutar.)", boss.Name, reqGym and reqGym.Name or "Gin\u{e1}sio"))
+					table.insert(lines, string.format("Chefe %s deixou +300 gold b\u{f4}nus! (Ven\u{e7}a o %s para recrutar.)", boss.Name, reqGym and reqGym.Name or "Gin\u{e1}sio"))
 				elseif Benefits.CollectionCount(data) >= Benefits.CollectionMax(data) then
 					table.insert(lines, "O chefe " .. boss.Name .. " queria se juntar, mas o dep\u{f3}sito de personagens est\u{e1} cheio (" .. Benefits.CollectionMax(data) .. ").")
 				else

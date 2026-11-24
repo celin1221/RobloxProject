@@ -147,7 +147,7 @@ local selectTab, tabButtons = UI.tabs(body, {
 	msg.Text = ""
 	render()
 end)
-UI.fillBetween(content, body:FindFirstChild("Tabs"), msg, 6)
+UI.fillBetween(content, body:FindFirstChild("Tabs"), msg, 8)
 
 local function ask(action, arg)
 	local ok, text = Remotes.Rewards:InvokeServer(action, arg)
@@ -230,7 +230,7 @@ end
 
 -- Missoes
 local function missionRow(list, order, text, progress, goal, reward, done)
-	local row, face = UI.panel(list, { Name = "M" .. order, Size = UDim2.fromScale(0.98, 0), Aspect = 9.5, Color = if done then "green" else "panelAlt", Corner = 0.3, LayoutOrder = order })
+	local row, face = UI.panel(list, { Name = "M" .. order, Size = UDim2.fromScale(1, 0), Aspect = 9.5, RowMax = 68, Color = if done then "green" else "panelAlt", Corner = 0.22, Shadow = false, StrokeMult = 0.8, LayoutOrder = order })
 	UI.text(face, text, { Name = "Text", Size = UDim2.fromScale(0.56, 0.46), Position = UDim2.fromScale(0.03, 0.08), Role = "Small", AlignX = Enum.TextXAlignment.Left })
 	if reward ~= "" then
 		UI.text(face, reward, { Name = "Reward", Size = UDim2.fromScale(0.56, 0.34), Position = UDim2.fromScale(0.03, 0.58), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.5 })
@@ -255,7 +255,7 @@ local function header(list, order, text, timerFn)
 end
 
 local function renderMissions()
-	local list = UI.scroll(content, { Name = "List", Size = UDim2.fromScale(1, 1), Gap = 0.012 })
+	local list = UI.scroll(content, { Name = "List", Size = UDim2.fromScale(1, 1), Gap = 0.022, Flat = true })
 	local m = profile.Missions or {}
 	local today = Retention.Day(now())
 	local week = Retention.Week(now())

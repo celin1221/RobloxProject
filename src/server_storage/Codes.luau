@@ -40,6 +40,66 @@ return {
 		Repeatable = true,
 	},
 
+	-- Codigos de Dev — Tag: Naruto (Repeatable = true)
+	SAKURA = { Character = "Sakura", Level = 10, Repeatable = true },
+	DEVSAKURA = { Character = "Sakura", Level = 10, Repeatable = true },
+
+	SHIKAMARU = { Character = "Shikamaru", Level = 10, Repeatable = true },
+	DEVSHIKAMARU = { Character = "Shikamaru", Level = 10, Repeatable = true },
+
+	KAKASHI = { Character = "Kakashi", Level = 10, Repeatable = true },
+	DEVKAKASHI = { Character = "Kakashi", Level = 10, Repeatable = true },
+
+	SASUKE = { Character = "Sasuke", Level = 10, Repeatable = true },
+	DEVSASUKE = { Character = "Sasuke", Level = 10, Repeatable = true },
+
+	NARUTO = { Character = "Naruto", Level = 10, Repeatable = true },
+	DEVNARUTO = { Character = "Naruto", Level = 10, Repeatable = true },
+
+	SARUTOBI = { Character = "Sarutobi", Level = 10, Repeatable = true },
+	DEVSARUTOBI = { Character = "Sarutobi", Level = 10, Repeatable = true },
+
+	KONOHA = {
+		Characters = { "Sakura", "Shikamaru", "Kakashi", "Sasuke", "Naruto", "Sarutobi" },
+		Level = 10,
+		Repeatable = true,
+	},
+	DEVKONOHA = {
+		Characters = { "Sakura", "Shikamaru", "Kakashi", "Sasuke", "Naruto", "Sarutobi" },
+		Level = 10,
+		Repeatable = true,
+	},
+
+	-- Codigos de Dev — Tag: Bleach (Repeatable = true)
+	CHAD = { Character = "Chad", Level = 10, Repeatable = true },
+	DEVCHAD = { Character = "Chad", Level = 10, Repeatable = true },
+
+	URYU = { Character = "Uryu", Level = 10, Repeatable = true },
+	DEVURYU = { Character = "Uryu", Level = 10, Repeatable = true },
+
+	RUKIA = { Character = "Rukia", Level = 10, Repeatable = true },
+	DEVRUKIA = { Character = "Rukia", Level = 10, Repeatable = true },
+
+	RENJI = { Character = "Renji", Level = 10, Repeatable = true },
+	DEVRENJI = { Character = "Renji", Level = 10, Repeatable = true },
+
+	ICHIGO = { Character = "Ichigo", Level = 10, Repeatable = true },
+	DEVICHIGO = { Character = "Ichigo", Level = 10, Repeatable = true },
+
+	BYAKUYA = { Character = "Byakuya", Level = 10, Repeatable = true },
+	DEVBYAKUYA = { Character = "Byakuya", Level = 10, Repeatable = true },
+
+	BLEACH = {
+		Characters = { "Chad", "Uryu", "Rukia", "Renji", "Ichigo", "Byakuya" },
+		Level = 10,
+		Repeatable = true,
+	},
+	DEVBLEACH = {
+		Characters = { "Chad", "Uryu", "Rukia", "Renji", "Ichigo", "Byakuya" },
+		Level = 10,
+		Repeatable = true,
+	},
+
 	-- Outros personagens (Repeatable = true)
 	SAN = { Character = "San", Level = 10, Repeatable = true },
 	GOKU = { Character = "San", Level = 10, Repeatable = true },
@@ -60,7 +120,12 @@ return {
 
 	-- Codigo de Dev para receber todos os personagens principais de uma vez
 	DEVALL = {
-		Characters = { "Nami", "Usopp", "Zoro", "Sanji", "Luffy", "BarbaBranca", "San", "Setero", "Kaen", "Raiko", "Yomogi" },
+		Characters = {
+			"Nami", "Usopp", "Zoro", "Sanji", "Luffy", "BarbaBranca",
+			"Sakura", "Shikamaru", "Kakashi", "Sasuke", "Naruto", "Sarutobi",
+			"Chad", "Uryu", "Rukia", "Renji", "Ichigo", "Byakuya",
+			"San", "Setero", "Kaen", "Raiko", "Yomogi",
+		},
 		Level = 10,
 		Repeatable = true,
 	},

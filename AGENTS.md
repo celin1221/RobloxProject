@@ -25,9 +25,12 @@ Este arquivo é lido automaticamente por qualquer Agente de IA que trabalhe nest
      1. Executar `git pull --rebase origin main`.
      2. Editar o arquivo `.luau` em `src/`.
      3. Executar `python scripts/sync_studio.py push` para enviar ao Roblox Studio.
-     4. Executar `python scripts/sync_studio.py status` (deve reportar `All 92 scripts in src/ are 100% in sync`).
+     4. Executar `python scripts/sync_studio.py status` (deve reportar `100% in sync`).
      5. Executar `python scripts/sync_studio.py test` para rodar a suíte de validação rápida no Studio.
      6. Executar `git add`, `git commit` e `git push origin main`.
+5. **Planilha de Personagens Sempre Atualizada (`Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx`):**
+   * **OBRIGATÓRIO:** Sempre que um personagem for **adicionado, removido ou alterado** (atributos, classe, raridade, anime, golpes, modelo 3D, animações, VFX, variante brilhante ou código Dev), atualizar `DEV_META` (se aplicável) em `scripts/update_characters_sheet.py` e executar `python scripts/update_characters_sheet.py`.
+   * O script sincroniza automaticamente `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` a partir de `src/shared/Data/Characters.luau`, `src/shared/Data/Moves.luau` e `src/server_storage/Codes.luau`.
 
 ---
 
@@ -53,9 +56,11 @@ Cada subagente ou tarefa deve respeitar o isolamento de camadas:
   * Versão instalada: **Blender 5.3.0** (`D:\Blender\blender.exe`).
   * Usado em modo headless (`--background --python ...`) pelas skills `roblox-3d-model`, `roblox-animation` e `roblox-vfx`.
 * **Sincronizador Oficial do Projeto (`scripts/sync_studio.py`):**
-  * `python scripts/sync_studio.py status` — Verifica se todos os 92 scripts de `src/` estão idênticos ao Studio.
+  * `python scripts/sync_studio.py status` — Verifica se todos os scripts de `src/` estão idênticos ao Studio.
   * `python scripts/sync_studio.py push` — Atualiza o Studio com as mudanças feitas em `src/`.
   * `python scripts/sync_studio.py test` — Executa os testes de validação do GDD (fórmula de dano, 1x1, 2x2, Classes, Ginásios, Treino, Progressão e `AccountLevel`).
+* **Gerador da Planilha de Personagens (`scripts/update_characters_sheet.py`):**
+  * `python scripts/update_characters_sheet.py` — Atualiza `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` (abas `Personagens`, `Golpes` e `Resumo`) sempre que personagens/golpes forem adicionados ou alterados no jogo.
 
 ---
 

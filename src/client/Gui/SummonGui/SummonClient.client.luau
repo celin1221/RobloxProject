@@ -31,6 +31,7 @@ local Benefits = require(Data:WaitForChild("Benefits"))
 local StageThemes = require(Data:WaitForChild("SummonStageThemes"))
 local BannerStage = require(ReplicatedStorage:WaitForChild("SummonBannerStage"))
 local UI = require(ReplicatedStorage:WaitForChild("UI"))
+local TeamCards = require(ReplicatedStorage:WaitForChild("TeamCards"))
 local T = UI.Theme
 local player = Players.LocalPlayer
 
@@ -79,7 +80,7 @@ gui.DisplayOrder = 9
 local bannerHud: Frame
 local nameplateConn: RBXScriptConnection? = nil
 local currentTab = "Portal"
-local refreshMain, refreshAlbum, refreshDupes, refreshSlotNameplates, startNameplateSync
+local refreshMain, refreshAlbum, refreshDupes, releaseAllAlbumCards, refreshSlotNameplates, startNameplateSync
 
 local function stopNameplateSync()
 	if nameplateConn then
@@ -122,6 +123,9 @@ local win = UI.window(canvas, {
 	Aspect = 1.95,
 	OnClose = function()
 		stopNameplateSync()
+		if releaseAllAlbumCards then
+			releaseAllAlbumCards()
+		end
 		if bannerHud then
 			bannerHud.Visible = false
 		end
@@ -157,15 +161,22 @@ local function syncPortalStageMode()
 	end
 end
 
+local walletHolder, walletLabel = UI.pill(body, "coin", "gold", { Name = "Wallet", Size = UDim2.fromScale(0.3, 0.095), Position = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(1, 0), Aspect = 3.2, MaxSize = Vector2.new(math.huge, 46) })
+local msg = UI.text(body, "", { Name = "Message", Size = UDim2.fromScale(1, 0.055), Position = UDim2.fromScale(0, 0.945), Role = "Small", Color = "hpLow" })
+
 local selectTab
 selectTab = UI.tabs(body, {
 	{ Id = "Portal", Text = "PORTAL" },
 	{ Id = "Album", Text = "\u{c1}LBUM" },
 	{ Id = "Dupes", Text = "REPETIDOS" },
-}, { Size = UDim2.fromScale(0.6, 0.095), MaxWidth = 0.32 }, function(id)
+}, { Size = UDim2.fromScale(0.6, 0.095), MaxWidth = 0.315 }, function(id)
 	currentTab = id
+	msg.Text = ""
 	for name, f in pairs(pages) do
 		f.Visible = name == id
+	end
+	if id ~= "Album" and releaseAllAlbumCards then
+		releaseAllAlbumCards()
 	end
 	syncPortalStageMode()
 	refreshMain()
@@ -176,12 +187,9 @@ selectTab = UI.tabs(body, {
 	end
 end)
 
-local walletHolder, walletLabel = UI.pill(body, "coin", "gold", { Name = "Wallet", Size = UDim2.fromScale(0.3, 0.095), Position = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(1, 0), Aspect = 3.2, MaxSize = Vector2.new(math.huge, 46) })
-local msg = UI.text(body, "", { Name = "Message", Size = UDim2.fromScale(1, 0.055), Position = UDim2.fromScale(0, 0.945), Role = "Small", Color = "hpLow" })
-
 local function page(name)
 	local f = UI.frame(body, { Name = name, Size = UDim2.fromScale(1, 0.78), Position = UDim2.fromScale(0, 0.16), Visible = name == "Portal" })
-	UI.fillBetween(f, body:FindFirstChild("Tabs"), msg, 5)
+	UI.fillBetween(f, body:FindFirstChild("Tabs"), msg, 8)
 	pages[name] = f
 	return f
 end
@@ -1775,17 +1783,152 @@ three.Activated:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- Aba Album
+-- Aba Album (cartoes 3D iguais aos da Equipe + silhueta/sombra para nao obtidos)
 --------------------------------------------------------------------
 local albumPage = page("Album")
-local albumGrid = UI.scroll(albumPage, { Name = "Grid", Size = UDim2.fromScale(0.62, 1), Columns = 3, CellAspect = 0.95 })
-local goals, goalsFace = UI.panel(albumPage, { Name = "Goals", Size = UDim2.fromScale(0.36, 1), Position = UDim2.fromScale(0.64, 0), Color = "slot", Corner = 0.06, Shadow = false })
-local goalsList = UI.scroll(goalsFace, { Name = "List", Size = UDim2.fromScale(0.94, 0.94), Position = UDim2.fromScale(0.03, 0.03), Gap = 0.015 })
+local albumGrid = Instance.new("ScrollingFrame")
+albumGrid.Name = "Grid"
+albumGrid.Size = UDim2.fromScale(0.64, 1)
+albumGrid.Position = UDim2.fromScale(0, 0)
+albumGrid.BackgroundTransparency = 1
+albumGrid.BorderSizePixel = 0
+albumGrid.ScrollBarThickness = 6
+albumGrid.ScrollBarImageColor3 = Color3.fromRGB(200, 190, 255)
+albumGrid.ScrollingDirection = Enum.ScrollingDirection.Y
+albumGrid.CanvasSize = UDim2.new()
+albumGrid.Parent = albumPage
+
+local goals, goalsFace = UI.panel(albumPage, { Name = "Goals", Size = UDim2.fromScale(0.34, 1), Position = UDim2.fromScale(0.66, 0), Color = "slot", Corner = 0.06, Shadow = false, StrokeMult = 0.8 })
+local goalsList = UI.scroll(goalsFace, { Name = "List", Size = UDim2.fromScale(0.96, 0.96), Position = UDim2.fromScale(0.02, 0.02), Gap = 0.022, Flat = true })
+
+local albumIds: { string } = {}
+local albumActive: { [string]: any } = {}
+local albumFree: { any } = {}
+
+local function releaseAlbumCard(id: string)
+	local c = albumActive[id]
+	if c then
+		albumActive[id] = nil
+		c.Clear()
+		c.Root.Visible = false
+		table.insert(albumFree, c)
+	end
+end
+
+releaseAllAlbumCards = function()
+	for id in pairs(albumActive) do
+		releaseAlbumCard(id)
+	end
+end
+
+local function onAlbumCardClick(charId: string)
+	local def = Characters.Get(charId)
+	if not def then
+		return
+	end
+	local owned = profile and profile.Album and profile.Album.Owned or {}
+	local entry = owned[charId]
+	UI.play("click")
+	if entry then
+		local variants = {}
+		for vName, ok in pairs(entry.Variants or {}) do
+			if ok then
+				table.insert(variants, vName)
+			end
+		end
+		table.sort(variants)
+		local extra = if #variants > 0 then (" \u{b7} " .. table.concat(variants, ", ")) else ""
+		msg.TextColor3 = T.Palette.gold
+		msg.Text = string.format("%s \u{b7} %s \u{b7} %s \u{b7} %s%s", def.Name, Characters.AnimeDisplay(def.Anime), typeName(def.Type), Summon.RarityName[def.Rarity] or def.Rarity, extra)
+	else
+		msg.TextColor3 = T.Palette.inkSoft
+		msg.Text = string.format("??? \u{b7} Classe: %s \u{b7} Raridade: %s \u{b7} Invoque ou capture para desbloquear!", typeName(def.Type), Summon.RarityName[def.Rarity] or def.Rarity)
+	end
+end
+
+local function updateAlbumGrid(force: boolean?)
+	if not win.IsOpen() or currentTab ~= "Album" or not profile then
+		return
+	end
+	local rawW, rawH = UI.unscaledSize(albumGrid)
+	local W, H = math.floor(rawW + 0.5), math.floor(rawH + 0.5)
+	if W < 20 or H < 20 then
+		return
+	end
+	local padX = 8
+	local padY = 8
+	local gw = math.max(120, W - albumGrid.ScrollBarThickness - padX * 2 - 4)
+	local cols = if gw >= 520 then 4 else 3
+	local gapX = math.clamp(math.floor(gw * 0.025 + 0.5), 8, 14)
+	local gapY = gapX + 8
+	local cell = math.max(64, math.floor((gw - gapX * (cols - 1)) / cols))
+	local stepX = cell + gapX
+	local stepY = cell + gapY
+	local rows = math.ceil(#albumIds / cols)
+	local canvasH = math.max(0, padY + rows * stepY - gapY + padY + 12)
+	if albumGrid.CanvasSize.Y.Offset ~= canvasH then
+		albumGrid.CanvasSize = UDim2.fromOffset(0, canvasH)
+	end
+
+	local y0 = albumGrid.CanvasPosition.Y
+	-- virtualiza apenas as linhas visiveis (mantem ViewportFrames 3D leves e sempre nitidos)
+	local first = math.max(0, math.floor((y0 - padY) / stepY))
+	local last = math.max(first, math.floor((y0 + math.max(1, H) - padY) / stepY))
+	local want: { [string]: number } = {}
+	for r = first, last do
+		for c = 0, cols - 1 do
+			local idx = r * cols + c + 1
+			local id = albumIds[idx]
+			if id then
+				want[id] = idx
+			end
+		end
+	end
+
+	for id in pairs(albumActive) do
+		if not want[id] then
+			releaseAlbumCard(id)
+		end
+	end
+
+	local owned = profile.Album and profile.Album.Owned or {}
+	for id, idx in pairs(want) do
+		local card = albumActive[id]
+		local entry = owned[id]
+		if not card then
+			card = table.remove(albumFree)
+			if not card then
+				card = TeamCards.new(albumGrid, { Name = "Entry", ZIndex = 3 })
+				card.Root.Activated:Connect(function()
+					if card.Uid then
+						onAlbumCardClick(card.Uid)
+					end
+				end)
+			end
+			albumActive[id] = card
+			card.Root.Visible = true
+			card.SetAlbum(id, { Owned = entry ~= nil, Variants = entry and entry.Variants })
+		elseif force then
+			card.SetAlbum(id, { Owned = entry ~= nil, Variants = entry and entry.Variants })
+		end
+		card.Root.Name = "Entry_" .. id
+		local i0 = idx - 1
+		card.Root.Size = UDim2.fromOffset(cell, cell)
+		card.Root.Position = UDim2.fromOffset(padX + (i0 % cols) * stepX, padY + (i0 // cols) * stepY)
+	end
+end
+
+albumGrid:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+	updateAlbumGrid(false)
+end)
+albumGrid:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+	updateAlbumGrid(true)
+end)
 
 refreshAlbum = function()
-	UI.clear(albumGrid)
 	UI.clear(goalsList)
 	if not profile then
+		releaseAllAlbumCards()
 		return
 	end
 	local owned = profile.Album and profile.Album.Owned or {}
@@ -1804,48 +1947,43 @@ refreshAlbum = function()
 		end
 		return a < b
 	end)
+	albumIds = ids
+
+	local totalOwned = 0
 	local byType, byRarity = {}, {}
-	for i, id in ipairs(ids) do
+	for _, id in ipairs(ids) do
 		local def = Characters.List[id]
 		byType[def.Type] = byType[def.Type] or { 0, 0 }
 		byRarity[def.Rarity] = byRarity[def.Rarity] or { 0, 0 }
 		byType[def.Type][2] += 1
 		byRarity[def.Rarity][2] += 1
-		local has = owned[id] ~= nil
-		if has then
+		if owned[id] ~= nil then
+			totalOwned += 1
 			byType[def.Type][1] += 1
 			byRarity[def.Rarity][1] += 1
 		end
-		local cell, face = UI.panel(albumGrid, { Name = "Entry_" .. id, Color = if has then rarityColor(def.Rarity) else "slot", Corner = T.Corner.Card, LayoutOrder = i })
-		UI.text(face, if has then def.Name else "???", { Name = "Name", Size = UDim2.fromScale(0.9, 0.26), Position = UDim2.fromScale(0.05, 0.08), Role = "Body", Color = if has then "onDark" else "inkSoft" })
-		UI.chip(face, UI.upper(typeName(def.Type)), if has then (T.Types[def.Type] or T.Palette.grey) else "grey", { Name = "Type", Size = UDim2.fromScale(0.7, 0.18), Position = UDim2.fromScale(0.15, 0.42) })
-		local variants = {}
-		for v in pairs(has and owned[id].Variants or {}) do
-			table.insert(variants, v)
-		end
-		if has then
-			if #variants > 0 then
-				UI.icon(face, "sparkle", { Name = "ShinyIcon", Size = UDim2.fromScale(0.18, 0.18), Position = UDim2.fromScale(0.82, 0.06), ZIndex = 4 })
-			end
-			UI.text(face, table.concat(variants, " "), { Name = "Variants", Size = UDim2.fromScale(0.9, 0.2), Position = UDim2.fromScale(0.05, 0.72), Role = "Small", Color = "gold" })
-		else
-			UI.icon(face, "lock", { Name = "Lock", Size = UDim2.fromScale(0.24, 0.24), Position = UDim2.fromScale(0.5, 0.78), AnchorPoint = Vector2.new(0.5, 0.5) })
-		end
 	end
+
+	updateAlbumGrid(true)
+	task.defer(function()
+		updateAlbumGrid(true)
+	end)
+
 	local order = 0
 	local function goalRow(text, color, done)
 		order += 1
-		local row, f = UI.panel(goalsList, { Name = "Goal" .. order, Size = UDim2.fromScale(1, 0), Aspect = 5, Color = color or "panelAlt", Corner = T.Corner.Pill, Shadow = false, LayoutOrder = order })
-		UI.text(f, text, { Name = "Text", Size = UDim2.fromScale(0.9, 0.7), Position = UDim2.fromScale(0.05, 0.15), Role = "Small", AlignX = Enum.TextXAlignment.Left })
+		local row, f = UI.panel(goalsList, { Name = "Goal" .. order, Size = UDim2.fromScale(1, 0), Aspect = 5.4, RowMax = 44, Color = color or "panelAlt", Corner = T.Corner.Pill, Shadow = false, StrokeMult = 0.7, LayoutOrder = order })
+		UI.text(f, text, { Name = "Text", Size = UDim2.fromScale(0.86, 0.72), Position = UDim2.fromScale(0.06, 0.14), Role = "Small", AlignX = Enum.TextXAlignment.Left })
 		if done then
-			UI.icon(row, "tick", { Size = UDim2.fromScale(0.2, 0.9), Position = UDim2.fromScale(0.97, 0.5), AnchorPoint = Vector2.new(1, 0.5), ZIndex = 3 })
+			UI.icon(row, "tick", { Size = UDim2.fromScale(0.18, 0.84), Position = UDim2.fromScale(0.96, 0.5), AnchorPoint = Vector2.new(1, 0.5), ZIndex = 3 })
 		end
 	end
-	local function header(text)
+	local function header(text, col)
 		order += 1
-		local h = UI.text(goalsList, text, { Name = "H" .. order, Size = UDim2.fromScale(1, 0), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, LayoutOrder = order, Aspect = 7 })
+		local h = UI.text(goalsList, text, { Name = "H" .. order, Size = UDim2.fromScale(1, 0), Role = "Small", Color = col or "inkSoft", AlignX = Enum.TextXAlignment.Left, LayoutOrder = order, Aspect = 8.5, RowMax = 28 })
 		return h
 	end
+	header(string.format("COLE\u{c7}\u{c3}O: %d/%d", totalOwned, #ids), "gold")
 	header("Pr\u{ea}mio por grupo: " .. Summon.AlbumReward.Gold .. " gold + " .. Summon.AlbumReward.Gems .. " gemas")
 	header("CLASSES")
 	local types = {}
@@ -1872,8 +2010,8 @@ end
 -- Aba Repetidos: fusao (3 iguais = +1 estrela) e venda
 --------------------------------------------------------------------
 local dupPage = page("Dupes")
-UI.text(dupPage, string.format("%d c\u{f3}pias iguais viram +1 estrela (at\u{e9} %d, +%d%% de atributos cada). C\u{f3}pias no time n\u{e3}o s\u{e3}o usadas.", Summon.Stars.CopiesPerStar, Summon.Stars.Max, Summon.Stars.BonusPerStar * 100), { Name = "Help", Size = UDim2.fromScale(1, 0.1), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
-local dupList = UI.scroll(dupPage, { Name = "List", Size = UDim2.fromScale(1, 0.88), Position = UDim2.fromScale(0, 0.12) })
+UI.text(dupPage, string.format("%d c\u{f3}pias iguais viram +1 estrela (at\u{e9} %d, +%d%% de atributos cada). C\u{f3}pias no time n\u{e3}o s\u{e3}o usadas.", Summon.Stars.CopiesPerStar, Summon.Stars.Max, Summon.Stars.BonusPerStar * 100), { Name = "Help", Size = UDim2.fromScale(1, 0.08), Position = UDim2.fromScale(0, 0), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
+local dupList = UI.scroll(dupPage, { Name = "List", Size = UDim2.fromScale(1, 0.90), Position = UDim2.fromScale(0, 0.10), Gap = 0.028, Flat = true })
 
 refreshDupes = function()
 	if not profile then
@@ -1904,11 +2042,21 @@ refreshDupes = function()
 			local g = groups[id]
 			local def = Characters.Get(id)
 			if def then
-				local row, face = UI.panel(dupList, { Name = "Row_" .. id, Size = UDim2.fromScale(0.98, 0), Aspect = 7.5, RowMax = 68, Color = "panelAlt", Corner = 0.24, LayoutOrder = i })
-				UI.stroke(face, rarityColor(def.Rarity), 1.2)
-				UI.text(face, string.format("%s  x%d", def.Name, g.Count), { Name = "Name", Size = UDim2.fromScale(0.28, 0.46), Position = UDim2.fromScale(0.03, 0.08), Role = "Body", AlignX = Enum.TextXAlignment.Left })
+				local rCol = rarityColor(def.Rarity)
+				local row, face = UI.panel(dupList, { Name = "Row_" .. id, Size = UDim2.fromScale(1, 0), Aspect = 8.4, RowMax = 74, Color = "panelAlt", Corner = 0.18, Shadow = false, StrokeColor = rCol, StrokeMult = 0.85, LayoutOrder = i })
+				local accent = Instance.new("Frame")
+				accent.Name = "Accent"
+				accent.Size = UDim2.new(0, 5, 0.68, 0)
+				accent.Position = UDim2.new(0, 8, 0.5, 0)
+				accent.AnchorPoint = Vector2.new(0, 0.5)
+				accent.BackgroundColor3 = rCol
+				accent.BorderSizePixel = 0
+				accent.Parent = face
+				UI.corner(accent, 0.5)
+
+				UI.text(face, string.format("%s  x%d", def.Name, g.Count), { Name = "Name", Size = UDim2.fromScale(0.28, 0.44), Position = UDim2.fromScale(0.04, 0.10), Role = "Body", AlignX = Enum.TextXAlignment.Left })
 				if g.Stars > 0 then
-					local starsRow = UI.frame(face, { Name = "StarsRow", Size = UDim2.fromScale(0.16, 0.36), Position = UDim2.fromScale(0.31, 0.13) })
+					local starsRow = UI.frame(face, { Name = "StarsRow", Size = UDim2.fromScale(0.16, 0.36), Position = UDim2.fromScale(0.325, 0.14) })
 					for sIdx = 1, math.min(5, g.Stars) do
 						UI.icon(starsRow, "star", {
 							Name = "S" .. sIdx,
@@ -1918,7 +2066,7 @@ refreshDupes = function()
 						})
 					end
 				end
-				UI.text(face, string.format("%s \u{b7} %d no time", Summon.RarityName[def.Rarity], g.InTeam), { Name = "Info", Size = UDim2.fromScale(0.44, 0.3), Position = UDim2.fromScale(0.03, 0.6), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
+				UI.text(face, string.format("%s \u{b7} %d no time", Summon.RarityName[def.Rarity], g.InTeam), { Name = "Info", Size = UDim2.fromScale(0.44, 0.30), Position = UDim2.fromScale(0.04, 0.58), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
 				local canFuse = g.Count >= Summon.Stars.CopiesPerStar
 				local canSell = g.Count >= 2
 				UI.button(face, {
@@ -1927,8 +2075,9 @@ refreshDupes = function()
 					Icon = "star",
 					Layout = "row",
 					Color = if canFuse then "purple" else "grey",
-					Size = UDim2.fromScale(0.24, 0.74),
-					Position = UDim2.fromScale(0.48, 0.13),
+					Size = UDim2.fromScale(0.225, 0.66),
+					Position = UDim2.fromScale(0.505, 0.5),
+					AnchorPoint = Vector2.new(0, 0.5),
 					Role = "Small",
 					Sound = false,
 					OnClick = function()
@@ -1941,8 +2090,9 @@ refreshDupes = function()
 				local sell, sface = UI.button(face, {
 					Name = "Sell_" .. id,
 					Color = if canSell then "green" else "grey",
-					Size = UDim2.fromScale(0.24, 0.74),
-					Position = UDim2.fromScale(0.74, 0.13),
+					Size = UDim2.fromScale(0.225, 0.66),
+					Position = UDim2.fromScale(0.75, 0.5),
+					AnchorPoint = Vector2.new(0, 0.5),
 					Sound = false,
 					OnClick = function()
 						local ok, text = Remotes.SellDuplicate:InvokeServer(id)
@@ -1951,8 +2101,8 @@ refreshDupes = function()
 						UI.play(if ok then "purchase" else "error")
 					end,
 				})
-				UI.icon(sface, "coin", { Size = UDim2.fromScale(0.3, 0.8), Position = UDim2.fromScale(0.05, 0.1) })
-				UI.text(sface, "+" .. UI.fmt(Summon.SellPrice[def.Rarity]), { Name = "Price", Size = UDim2.fromScale(0.6, 0.7), Position = UDim2.fromScale(0.36, 0.15), Role = "Small", AlignX = Enum.TextXAlignment.Left })
+				UI.icon(sface, "coin", { Size = UDim2.fromScale(0.28, 0.78), Position = UDim2.fromScale(0.06, 0.5), AnchorPoint = Vector2.new(0, 0.5) })
+				UI.text(sface, "+" .. UI.fmt(Summon.SellPrice[def.Rarity]), { Name = "Price", Size = UDim2.fromScale(0.6, 0.72), Position = UDim2.fromScale(0.36, 0.14), Role = "Small", AlignX = Enum.TextXAlignment.Left })
 			end
 		end
 	end)
@@ -2073,6 +2223,9 @@ UI.onBattle(function(inBattle)
 		stopShowcaseSfx()
 		stopCardSpins()
 		stopNameplateSync()
+		if releaseAllAlbumCards then
+			releaseAllAlbumCards()
+		end
 		showcase.Visible = false
 		BannerStage.Close()
 		win.Close(true)

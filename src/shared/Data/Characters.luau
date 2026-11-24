@@ -342,16 +342,12 @@ Characters.List = {
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
+			ComboMarcial = 135688782086034,
 			Attack = 135688782086034, Special = 111193439375608,
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(255, 175, 210), Secondary = Color3.fromRGB(115, 235, 155) },
-		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
-		PlaceholderColors = {
-			Torso = Color3.fromRGB(224, 62, 112),
-			Accent = Color3.fromRGB(245, 165, 195),
-			Legs = Color3.fromRGB(48, 36, 56),
-		},
+		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Shikamaru = {
 		Name = "Shikamaru",
@@ -376,12 +372,7 @@ Characters.List = {
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(110, 88, 168), Secondary = Color3.fromRGB(145, 220, 120) },
-		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
-		PlaceholderColors = {
-			Torso = Color3.fromRGB(58, 72, 54),
-			Accent = Color3.fromRGB(42, 46, 52),
-			Legs = Color3.fromRGB(34, 38, 46),
-		},
+		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Kakashi = {
 		Name = "Kakashi",
@@ -406,12 +397,7 @@ Characters.List = {
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(220, 232, 248), Secondary = Color3.fromRGB(70, 200, 255) },
-		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
-		PlaceholderColors = {
-			Torso = Color3.fromRGB(44, 68, 56),
-			Accent = Color3.fromRGB(185, 198, 214),
-			Legs = Color3.fromRGB(32, 42, 68),
-		},
+		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Sasuke = {
 		Name = "Sasuke",
@@ -436,12 +422,7 @@ Characters.List = {
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(80, 74, 148), Secondary = Color3.fromRGB(240, 120, 255) },
-		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
-		PlaceholderColors = {
-			Torso = Color3.fromRGB(44, 54, 118),
-			Accent = Color3.fromRGB(145, 130, 185),
-			Legs = Color3.fromRGB(28, 30, 52),
-		},
+		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Naruto = {
 		Name = "Naruto",
@@ -468,12 +449,7 @@ Characters.List = {
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(255, 224, 90), Secondary = Color3.fromRGB(255, 135, 35) },
-		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
-		PlaceholderColors = {
-			Torso = Color3.fromRGB(245, 122, 32),
-			Accent = Color3.fromRGB(36, 42, 58),
-			Legs = Color3.fromRGB(228, 108, 28),
-		},
+		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Sarutobi = {
 		Name = "Sarutobi",
@@ -498,15 +474,10 @@ Characters.List = {
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(255, 210, 75), Secondary = Color3.fromRGB(190, 42, 42) },
-		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
-		PlaceholderColors = {
-			Torso = Color3.fromRGB(168, 34, 40),
-			Accent = Color3.fromRGB(242, 200, 74),
-			Legs = Color3.fromRGB(48, 38, 42),
-		},
+		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 
-	-- Anime: Bleach (modelos provisorios coloridos ate os modelos 3D finais entrarem)
+	-- Anime: Bleach
 	Chad = {
 		Name = "Chad",
 		ModelName = "Chad",
@@ -523,12 +494,7 @@ Characters.List = {
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(215, 70, 60), Secondary = Color3.fromRGB(245, 210, 120) },
-		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
-		PlaceholderColors = {
-			Torso = Color3.fromRGB(122, 74, 48),
-			Accent = Color3.fromRGB(198, 48, 52),
-			Legs = Color3.fromRGB(36, 36, 44),
-		},
+		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Uryu = {
 		Name = "Uryu",
@@ -546,12 +512,7 @@ Characters.List = {
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(130, 225, 255), Secondary = Color3.fromRGB(250, 252, 255) },
-		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
-		PlaceholderColors = {
-			Torso = Color3.fromRGB(232, 238, 248),
-			Accent = Color3.fromRGB(58, 172, 245),
-			Legs = Color3.fromRGB(38, 54, 92),
-		},
+		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Rukia = {
 		Name = "Rukia",
@@ -569,12 +530,7 @@ Characters.List = {
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(175, 238, 255), Secondary = Color3.fromRGB(245, 250, 255) },
-		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
-		PlaceholderColors = {
-			Torso = Color3.fromRGB(30, 32, 44),
-			Accent = Color3.fromRGB(145, 228, 255),
-			Legs = Color3.fromRGB(22, 24, 34),
-		},
+		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Renji = {
 		Name = "Renji",
@@ -592,12 +548,7 @@ Characters.List = {
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(240, 68, 86), Secondary = Color3.fromRGB(255, 212, 92) },
-		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
-		PlaceholderColors = {
-			Torso = Color3.fromRGB(36, 32, 42),
-			Accent = Color3.fromRGB(218, 52, 64),
-			Legs = Color3.fromRGB(28, 26, 34),
-		},
+		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Ichigo = {
 		Name = "Ichigo",
@@ -616,12 +567,7 @@ Characters.List = {
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(255, 145, 42), Secondary = Color3.fromRGB(70, 218, 255) },
-		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
-		PlaceholderColors = {
-			Torso = Color3.fromRGB(26, 26, 34),
-			Accent = Color3.fromRGB(248, 128, 36),
-			Legs = Color3.fromRGB(20, 20, 28),
-		},
+		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Byakuya = {
 		Name = "Byakuya",
@@ -646,12 +592,7 @@ Characters.List = {
 		},
 		Variants = Variants,
 		ShinyPalette = { Primary = Color3.fromRGB(255, 165, 208), Secondary = Color3.fromRGB(242, 246, 255) },
-		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
-		PlaceholderColors = {
-			Torso = Color3.fromRGB(242, 244, 252),
-			Accent = Color3.fromRGB(242, 138, 184),
-			Legs = Color3.fromRGB(32, 32, 46),
-		},
+		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 }
 

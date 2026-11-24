@@ -205,28 +205,42 @@ def auto_split_single_mesh(body_obj, max_tris: int):
 
     # 3. Detecta dimensões anatômicas a partir da nuvem de vértices
     verts = [v.co for v in body_obj.data.vertices]
-    # Largura do tronco/pernas medida na faixa inferior [6%..22%] usando min(lado +X, lado -X)
-    # para ser 100% imune a bolsas/acessórios na cintura de um dos lados (ex: Usopp)
-    pos_xs = [v.x for v in verts if 0.06 * h_total <= v.z <= 0.22 * h_total and v.x > 0]
-    neg_xs = [-v.x for v in verts if 0.06 * h_total <= v.z <= 0.22 * h_total and v.x < 0]
-    w_pos = percentile(pos_xs, 0.98) if pos_xs else 0.17 * h_total
-    w_neg = percentile(neg_xs, 0.98) if neg_xs else 0.17 * h_total
-    w_core = min(w_pos, w_neg)
+    # Largura do tronco/pernas medida em duas faixas: canelas [6%..22%] e cintura/peito baixo [40%..52%],
+    # usando min(+X, -X) e min(canelas, tronco) para ser imune tanto a bolsas laterais (Usopp)
+    # quanto a casacos/haoris abertos na barra (Byakuya)
+    pos_low = [v.x for v in verts if 0.06 * h_total <= v.z <= 0.22 * h_total and v.x > 0]
+    neg_low = [-v.x for v in verts if 0.06 * h_total <= v.z <= 0.22 * h_total and v.x < 0]
+    pos_mid = [v.x for v in verts if 0.40 * h_total <= v.z <= 0.52 * h_total and v.x > 0]
+    neg_mid = [-v.x for v in verts if 0.40 * h_total <= v.z <= 0.52 * h_total and v.x < 0]
+    w_low = min(
+        percentile(pos_low, 0.98) if pos_low else 0.17 * h_total,
+        percentile(neg_low, 0.98) if neg_low else 0.17 * h_total,
+    )
+    w_mid = min(
+        percentile(pos_mid, 0.98) if pos_mid else 0.17 * h_total,
+        percentile(neg_mid, 0.98) if neg_mid else 0.17 * h_total,
+    )
+    w_core = min(w_low, w_mid)
     x_shoulder = w_core * 1.02
 
-    # Faixa vertical dos braços em T-Pose medida na ponta externa dos braços (|X| > 1.90 * w_core)
-    # para ignorar bolsas laterais na cintura (ex: Usopp) e sem teto de 0.72*H
-    arm_zs = [v.z for v in verts if abs(v.x) > 1.90 * w_core]
-    if not arm_zs:
-        arm_zs = [v.z for v in verts if abs(v.x) > 1.65 * w_core]
-    if not arm_zs:
-        arm_zs = [v.z for v in verts if abs(v.x) > 1.35 * w_core]
-    z_arm_min = min(arm_zs) - 0.008 * h_total
-    z_arm_max = max(arm_zs)
+    # Faixa vertical dos braços em T-Pose medida nas pontas externas (|X| > 1.90 * w_core)
+    # Usa min(topo braço esq, topo braço dir) para ignorar espinhos/armadura em um só braço (ex: Chad)
+    l_arm_zs = [v.z for v in verts if v.x > 1.90 * w_core]
+    r_arm_zs = [v.z for v in verts if v.x < -1.90 * w_core]
+    if not l_arm_zs:
+        l_arm_zs = [v.z for v in verts if v.x > 1.50 * w_core]
+    if not r_arm_zs:
+        r_arm_zs = [v.z for v in verts if v.x < -1.50 * w_core]
+    arm_zs = l_arm_zs + r_arm_zs
+    z_arm_max_l = max(l_arm_zs) if l_arm_zs else 0.70 * h_total
+    z_arm_max_r = max(r_arm_zs) if r_arm_zs else 0.70 * h_total
+    z_arm_max = min(z_arm_max_l, z_arm_max_r)
+    # Espessura máxima de um braço blocky em T-Pose é ~0.195*H (ignora fitas soltas penduradas sob o braço, ex: Sarutobi)
+    z_arm_min = max(min(arm_zs) - 0.008 * h_total, z_arm_max - 0.195 * h_total)
     z_neck = z_arm_max + 0.004 * h_total
     z_hip = z_neck * 0.492
 
-    print(f"Anatomia detectada: H={h_total:.4f}, W_core={w_core:.4f} (+X={w_pos:.4f}, -X={w_neg:.4f}), X_shoulder=±{x_shoulder:.4f}, Z_arm=[{z_arm_min:.4f},{z_arm_max:.4f}], Z_hip={z_hip:.4f}, Z_neck={z_neck:.4f}")
+    print(f"Anatomia detectada: H={h_total:.4f}, W_core={w_core:.4f} (low={w_low:.4f}, mid={w_mid:.4f}), X_shoulder=±{x_shoulder:.4f}, Z_arm=[{z_arm_min:.4f},{z_arm_max:.4f}] (L={z_arm_max_l:.4f}, R={z_arm_max_r:.4f}), Z_hip={z_hip:.4f}, Z_neck={z_neck:.4f}")
 
     # 4. Passa planos de corte matemáticos (bisect_plane) para criar arestas retas perfeitas nas juntas
     bm = bmesh.new()
@@ -266,6 +280,14 @@ def auto_split_single_mesh(body_obj, max_tris: int):
     bmesh.ops.bisect_plane(bm, geom=geom_legs_verts + geom_legs_edges + geom_legs, dist=0.00001 * h_total,
                            plane_co=Vector((0, 0, 0)), plane_no=Vector((1, 0, 0)))
 
+    # Plano 6 (se necessário): corta abaixo de z_arm_min nos braços (para separar/descartar fitas soltas sob braços T-pose como Sarutobi)
+    geom_under_arm = [f for f in bm.faces if any(abs(v.co.x) > x_shoulder * 1.10 and v.co.z <= z_arm_min + 0.02 * h_total for v in f.verts)]
+    if geom_under_arm:
+        gua_edges = list({e for f in geom_under_arm for e in f.edges})
+        gua_verts = list({v for f in geom_under_arm for v in f.verts})
+        bmesh.ops.bisect_plane(bm, geom=gua_verts + gua_edges + geom_under_arm, dist=0.00001 * h_total,
+                               plane_co=Vector((0, 0, z_arm_min)), plane_no=Vector((0, 0, 1)))
+
     bmesh.ops.triangulate(bm, faces=bm.faces)
     uv_src = bm.loops.layers.uv.active
     mats = list(body_obj.data.materials)
@@ -277,13 +299,16 @@ def auto_split_single_mesh(body_obj, max_tris: int):
 
     for f in bm.faces:
         c = f.calc_center_median()
-        if c.z >= z_neck and abs(c.x) < x_shoulder * 1.55:
+        if c.z >= z_neck and (abs(c.x) < x_shoulder or (c.z >= z_neck + 0.065 * h_total and abs(c.x) < x_shoulder * 1.45)):
             pname = "Head"
         elif c.x >= x_shoulder and c.z >= z_arm_min:
             pname = "LeftArm"
         elif c.x <= -x_shoulder and c.z >= z_arm_min:
             pname = "RightArm"
-        elif c.z >= z_hip or (abs(c.x) > x_shoulder * 1.05 and c.z >= z_hip * 0.55):
+        elif abs(c.x) > x_shoulder * 1.65 and c.z < z_arm_min:
+            # Descarta apenas pontas soltas de fitas flutuando longe sob os braços em T-Pose (ex: Sarutobi)
+            continue
+        elif c.z >= z_hip or (abs(c.x) > x_shoulder * 1.05 and c.z >= z_hip * 0.55 and abs(c.x) <= x_shoulder * 1.65):
             pname = "Torso"
         elif c.x >= 0:
             pname = "LeftLeg"
@@ -304,9 +329,45 @@ def auto_split_single_mesh(body_obj, max_tris: int):
     bm.free()
     bpy.data.objects.remove(body_obj, do_unlink=True)
 
+    # Limpa fragmentos desconectados espúrios (fitas flutuando atrás dos braços em Sarutobi, poeira de corte na Head)
     for pname in part_names:
         p_bm = part_bms[pname]
         bmesh.ops.remove_doubles(p_bm, verts=p_bm.verts, dist=0.00002 * h_total)
+        visited = set()
+        comps = []
+        for f in p_bm.faces:
+            if f in visited:
+                continue
+            q = [f]
+            visited.add(f)
+            comp = []
+            while q:
+                cur = q.pop()
+                comp.append(cur)
+                for e in cur.edges:
+                    for nf in e.link_faces:
+                        if nf not in visited:
+                            visited.add(nf)
+                            q.append(nf)
+            comps.append(comp)
+        if len(comps) > 1:
+            comps.sort(key=len, reverse=True)
+            main_n = len(comps[0])
+            to_delete = []
+            for comp in comps[1:]:
+                ratio = len(comp) / float(main_n)
+                if pname in ("LeftArm", "RightArm") and ratio < 0.25:
+                    to_delete.extend(comp)
+                elif pname == "Head" and ratio < 0.02:
+                    to_delete.extend(comp)
+                elif pname == "Torso" and ratio < 0.15:
+                    max_abs_x = max(abs(v.co.x) for f in comp for v in f.verts)
+                    if max_abs_x > x_shoulder * 1.12:
+                        to_delete.extend(comp)
+            if to_delete:
+                bmesh.ops.delete(p_bm, geom=to_delete, context='FACES')
+                print(f"Limpeza '{pname}': removidos {len(to_delete)} tris de fragmentos soltos.")
+
         mesh_data = bpy.data.meshes.new(pname)
         for m in mats:
             mesh_data.materials.append(m)
@@ -526,6 +587,7 @@ def render_previews(ref_dir: str, char_name: str):
 
     for vname, loc, rot in [
         ("preview_front", (0.0, -0.45, 0.032), (math.radians(90), 0, 0)),
+        ("preview_back", (0.0, 0.45, 0.032), (math.radians(90), 0, math.radians(180))),
         ("preview_34", (0.28, -0.45, 0.032), (math.radians(90), 0, math.radians(32))),
     ]:
         cam_obj.location = loc
@@ -535,6 +597,28 @@ def render_previews(ref_dir: str, char_name: str):
         bpy.context.scene.render.filepath = out_png
         bpy.ops.render.render(write_still=True)
         print(f"Preview salvo em: {out_png}")
+
+    # Also render a slightly exploded front & back view so neck/hair/shoulder cuts are 100% inspectable
+    offsets = {
+        'Head': Vector((0, 0, 0.007)),
+        'LeftArm': Vector((0.006, 0, 0)),
+        'RightArm': Vector((-0.006, 0, 0)),
+        'LeftLeg': Vector((0.002, 0, -0.005)),
+        'RightLeg': Vector((-0.002, 0, -0.005)),
+    }
+    for name, off in offsets.items():
+        if name in bpy.data.objects:
+            bpy.data.objects[name].location = off
+    for vname, loc, rot in [
+        ("preview_exploded_front", (0.0, -0.45, 0.032), (math.radians(90), 0, 0)),
+        ("preview_exploded_back", (0.0, 0.45, 0.032), (math.radians(90), 0, math.radians(180))),
+    ]:
+        cam_obj.location = loc
+        cam_obj.rotation_euler = rot
+        sun_obj.rotation_euler = rot
+        out_png = os.path.join(ref_dir, f"{char_name}_{vname}.png")
+        bpy.context.scene.render.filepath = out_png
+        bpy.ops.render.render(write_still=True)
 
 
 def main():

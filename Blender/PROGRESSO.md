@@ -986,6 +986,53 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - Place salvo no Roblox Studio na **versão 287** (`TeamCreate`).
 
 
+## Respiro Global das HUDs, Novo Estilo de Cards, Álbum 3D com Silhuetas e Correção "Vença" (22/11/2026)
+
+**Feito**
+- **1. Respiro sistêmico no kit de UI e eliminação de cortes/colisões (`src/shared/UI.luau`):**
+  - Sombra dos painéis/botões afinada (`shadowPxFor`: `2..6 px` conforme a altura da tela) para remover blocos pesados que colidiam com elementos abaixo.
+  - `UI.panel` agora aceita `StrokeMult` (eliminando `UIStroke` duplicado em cards com borda colorida).
+  - `UI.scroll` recalculado com margens seguras (`leftPx`/`topPx >= stroke + 4`, `rightPx >= stroke + ScrollBarThickness + 6`, `botPx >= shadow + stroke + 6`) e espaçamentos `gapX`/`gapY` (modo `Flat` opcional para listas limpas) — corrigindo o corte lateral em `Mochila > Itens` e a colisão de sombras/bordas em todas as listas e grades.
+  - `UI.fillBetween` agora compensa automaticamente sombra + contorno de abas/cabeçalhos (incluindo escala `UIScale` durante animação de abertura) e `UI.tabs` ganhou maior folga horizontal quando há até 3 abas.
+- **2. Novo visual de cards limpos e espaçamento nas HUDs:**
+  - `src/client/Gui/TowerGui/TowerClient.client.luau`: abas `TORRE`, `GINÁSIOS` e `TREINO` com cards planos de contorno único, barra vertical de destaque por modo, separação limpa entre abas/seletores `1x1`/`2x2` e botões centralizados com folga interna.
+  - `src/client/Gui/BagGui/BagClient.client.luau`: folga segura abaixo das abas `ITENS`/`PERSONAGENS` e dos filtros, grade `ITENS` sem corte na borda esquerda e com destaque dourado no item selecionado, e lista `PERSONAGENS` com linhas espaçadas.
+  - `src/client/Gui/SummonGui/SummonClient.client.luau`: aba `REPETIDOS` com respiro abaixo das abas, cards com barra lateral de raridade + contorno único e botões `FUNDIR +1`/vender centralizados verticalmente com folga.
+  - `src/client/Gui/BaseGui/BaseUiClient.client.luau`, `src/client/Gui/RewardsGui/RewardsClient.client.luau`, `src/client/Gui/ShopGui/ShopClient.client.luau` e `src/client/Gui/LevelRewardsGui/LevelRewardsClient.client.luau`: padronização dos cards de lista (contorno único, `Shadow = false`, `Flat = true` e botões centralizados).
+- **3. Álbum com retratos 3D dos personagens + silhueta/sombra para não obtidos:**
+  - `src/shared/TeamCards.luau`: adicionado `card.SetAlbum(charId, opts)` com o mesmo visual de cartões 3D da `Equipe`. Personagens ainda não obtidos exibem a **silhueta/sombra 3D escura** (`ViewportFrame` com `ImageColor3 = (0,0,0)` e `ImageTransparency = 0.14` sobre fundo azul-noturno contrastante), nome `???`, ícone de cadeado no canto superior esquerdo e ícone de classe suavizado.
+  - `src/client/Gui/SummonGui/SummonClient.client.luau`: aba `ÁLBUM` convertida para grade virtualizada de `TeamCards` (3–4 colunas responsivas, pool reutilizável e liberação automática dos `ViewportFrame`s ao trocar de aba/fechar) e contador `COLEÇÃO: X/23`.
+- **4. Correção de português `"Venza"` → `"Vença"`:**
+  - Corrigidas todas as 3 ocorrências no projeto: `src/shared/Data/StarterTrack.luau` (passos 5/7 e 7/7) e `src/server/Tower/TowerService.luau` (mensagem de chefe da Torre).
+
+**Testado (Edit Mode + Play Mode ao vivo + Auditoria Multi-Dispositivo, 22/11/2026)**
+- Auditoria `_UITestKit.audit()` passou **44/44 combinações** (`Desktop`, `667x375`, `932x430`, `1024x768`) e `get_console_output` sem erros de jogo. Place salvo na **versão 290** (`TeamCreate`).
+
+
+## Atualização da Planilha de Personagens + Regra Permanente (23/11/2026)
+
+**Feito**
+- Criado o gerador automático `scripts/update_characters_sheet.py`, que lê diretamente `src/shared/Data/Characters.luau`, `src/shared/Data/Moves.luau` e `src/server_storage/Codes.luau`.
+- Atualizadas de forma idêntica `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` com **3 abas** (`Personagens`, `Golpes`, `Resumo`).
+- Regra permanente registrada em `AGENTS.md` e `Blender/REGRAS.md` obrigando a rodar `python scripts/update_characters_sheet.py` sempre que personagens forem adicionados ou alterados.
+
+
+## Implementação dos 12 Modelos 3D de Bleach e Naruto + Auras Lendárias (Byakuya e Sarutobi) (23/11/2026)
+
+**Feito**
+- **1. Processamento 3D Automático (`scripts/auto_rig_tripo.py`) com Proteção para Cabelos, Faixas e Ombreiras:**
+  - Processados todos os **12 personagens** (com texturas embutidas `.fbm` dos `.zip` originais do Tripo, caps fechados e malha double-sided sólida) e enviados ao Roblox via Open Cloud:
+    - **Bleach (6):** `Ichigo` (`95123860255731`), `Rukia` (`79398104974321`), `Uryu` (`118195426363266`), `Renji` (`134772458566956`), `Chad` (`122224205258720`), `Byakuya` (`126112514814264`).
+    - **Naruto (6):** `Kakashi` (`117912890574491`), `Naruto` (`101443069651309`), `Sakura` (`89672702033715`), `Sasuke` (`139821214576744`), `Shikamaru` (`104194114824445`), `Sarutobi` (`84615025884468`).
+- **2. Montagem R6-on-R15 em `ServerStorage/Characters`:**
+  - Todos os 12 modelos montados sobre o esqueleto R15 invisível padrão (`FloorDelta = 3.1897`, rotação normalizada para `-Z`, `TextureID` nativo preservado nos 6 `*_Mesh`, pasta `Animations` sincronizada com animações base + classe).
+- **3. Dados, Códigos Dev e Replicação de Auras Atualizados:**
+  - `src/client/PlayerScripts/CharacterAuraClient.client.luau`: adicionada escuta `folder.DescendantAdded` com re-escaneamento incremental (`populateEntry`).
+  - `src/shared/Data/Characters.luau`: atualizado `KeepTextureParts = { "Head", "Head_Mesh" }` e removidos os blocos `PlaceholderColors` de todos os 12 personagens de Bleach e Naruto.
+  - `src/server_storage/Codes.luau`: adicionados códigos Dev repetíveis individuais para todos os 12 personagens, lotes `KONOHA`/`DEVKONOHA` e `BLEACH`/`DEVBLEACH`, e `DEVALL` atualizado para todos os 23 personagens.
+- Place salvo no Roblox Studio na **versão 297** (`TeamCreate`).
+
+
 ## Reformulação Completa da UI (Midnight-Blue Anime), Barra de Nível Embaixo da TeamBar e Bônus Minimalista (23/11/2026)
 
 **Feito**
@@ -1019,7 +1066,27 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - **4. Arena Carmesim Escuro (`workspace.Arenas/Arena01..10` & `src/server_storage/_ConstrutorArenasSukuna.luau`):**
   - Escurecido o espelho d'água (`InfiniteMirrorWater` `#440A10`, `PinkWaterRipples` `#76161E`), panorama de nuvens (`#94262C`), reflexos e VFX ambiente de rosa brilhante para **vermelho carmesim escuro**, reduzindo `SkyIllum` (`2.15 → 0.90`), `WaterPinkFill` (`1.15 → 0.42`) e `CenterBattleLight` (`1.75 → 1.15`).
 - **5. Regras Permanentes Atualizadas (`AGENTS.md` & `Blender/REGRAS.md`):**
-  - Registradas permanentemente as regras de `git pull` prévio, auras minimalistas (sem círculos no chão) e os 2 ataques básicos compartilhados de Espadachim.
+  - Registradas permanentemente as regras de `git pull` prévio, auras minimalistas (sem círculos no chão), os 2 ataques básicos compartilhados de Espadachim e atualização obrigatória da planilha de personagens.
 
 **Testado (Play Mode ao vivo + Capturas Visuais)**
 - Validados ao vivo na `Arena01`: aura minimalista, cabelo traseiro sem fresta branca, nova Arena vermelho carmesim escuro e todos os 4 golpes (`CorteBasico` no Ichigo; `CorteCruzado`, `Senbonzakura` e `SenbonzakuraKageyoshi` no Byakuya) com **0 erros no console**. Place salvo na **versão 307** (`TeamCreate`).
+
+
+## Ajuste de Opacidade das Auras + Aura Rosa Suave no Byakuya (24/11/2026)
+
+**Feito**
+- **1. Byakuya (`ServerStorage/Characters/Byakuya/AuraVfx`):**
+  - Mantidas intactas as pétalas (`SenbonzakuraPetals`), brilhos metálicos (`SilverBladeGlints`) e luz suave (`AuraLight`).
+  - Adicionados `SakuraAuraVeil` (`rbxassetid://104537118545021`, `Grid4x4 OneShot`, `Transparency` `0.70..0.82`, `Rate = 18`, `ZOffset = -0.35`, rosa-sakura suave) e `SakuraBackMist` (`rbxassetid://83184852649242`, `Transparency` `0.86`, `Rate = 3`, `ZOffset = -0.70`) para dar um detalhe espiritual rosa de opacidade bem baixa por trás das pétalas sem poluir a silhueta.
+  - Contorno `AnimeOutline3D` suavizado (`FillTransparency = 0.97`, `OutlineTransparency = 0.62`).
+- **2. Redução de Opacidade em Todas as Outras Auras (`BarbaBranca`, `San`, `Sarutobi`, `Setero`):**
+  - Reduzida a opacidade e o brilho de todas as camadas (`ParticleEmitter` de chamas/energia para transparência `0.71..0.85`, faíscas/raios/estilhaços para `0.58..0.76`, `Beam` helicoidais para `0.66..0.95`, `SurfaceGui` de halos traseiros para `ImageTransparency 0.69..0.73`, orbes neon de `Sarutobi`/`Setero` para `Transparency = 0.46` e trilhas para `0.62+`, `PointLight` para `Brightness <= 0.88`, `AnimeOutline3D` para `FillTransparency = 0.975` / `OutlineTransparency = 0.66`, além de `BarbaBranca.UpperTorso.YonkoPresence`).
+  - Removidos os discos/vórtices de chão remanescentes em `San` e `Sarutobi` (`GroundGlow`, `GroundVortexOuter`, `GroundVortexInner`, `GroundShockAnchor`), garantindo **zero círculos no chão** em 100% dos personagens (conforme `AGENTS.md` §4.5).
+- **3. Respeito à Transparência Base do Contorno (`src/client/PlayerScripts/CharacterAuraClient.client.luau`):**
+  - Adicionado `baseOutlineT` em `AuraEntry` para pulsar o `AnimeOutline3D.OutlineTransparency` suavemente a partir do valor configurado em cada personagem (`math.clamp(entry.baseOutlineT + 0.10 * (1 - energy), 0, 0.96)`), eliminando a sobrescrita fixa em `0.36`.
+
+**Testado (Play Mode ao vivo + Capturas Visuais + Suíte GDD)**
+- Validados visualmente ao vivo no Play Mode todos os 5 personagens (`Byakuya`, `BarbaBranca`, `San`, `Sarutobi`, `Setero`), com **0 erros no console**.
+- `python scripts/sync_studio.py status` → `All 93 scripts in src/ are 100% in sync with Roblox Studio.`
+- `python scripts/sync_studio.py test` → `PASS`.
+- Place salvo no Roblox Studio na **versão 312** (`TeamCreate`).

@@ -33,17 +33,17 @@ local win = UI.window(canvas, { Name = "BagWindow", Title = "MOCHILA", Icon = "b
 local body = win.Body
 
 local itemsView = UI.frame(body, { Name = "ItemsView" })
-local slotsLabel = UI.text(itemsView, "", { Name = "Slots", Size = UDim2.fromScale(0.46, 0.09), Position = UDim2.fromScale(0, 0), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
-local itemsList = UI.scroll(itemsView, { Name = "Items", Size = UDim2.fromScale(0.48, 0.89), Position = UDim2.fromScale(0, 0.11), Columns = 2, CellAspect = 1.25 })
-local side, sideFace = UI.panel(itemsView, { Name = "Side", Size = UDim2.fromScale(0.5, 1), Position = UDim2.fromScale(0.5, 0), Color = "slot", Corner = 0.06, Shadow = false })
-local targetTitle = UI.text(sideFace, "", { Name = "TargetTitle", Size = UDim2.fromScale(0.92, 0.13), Position = UDim2.fromScale(0.04, 0.03), Role = "Body", AlignX = Enum.TextXAlignment.Left })
-local targets = UI.scroll(sideFace, { Name = "Targets", Size = UDim2.fromScale(0.96, 0.82), Position = UDim2.fromScale(0.02, 0.17) })
+local slotsLabel = UI.text(itemsView, "", { Name = "Slots", Size = UDim2.fromScale(0.48, 0.075), Position = UDim2.fromScale(0, 0), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
+local itemsList = UI.scroll(itemsView, { Name = "Items", Size = UDim2.fromScale(0.48, 0.90), Position = UDim2.fromScale(0, 0.095), Columns = 2, CellAspect = 1.22, Gap = 0.036, Flat = true })
+local side, sideFace = UI.panel(itemsView, { Name = "Side", Size = UDim2.fromScale(0.5, 1), Position = UDim2.fromScale(0.5, 0), Color = "slot", Corner = 0.06, Shadow = false, StrokeMult = 0.8 })
+local targetTitle = UI.text(sideFace, "", { Name = "TargetTitle", Size = UDim2.fromScale(0.92, 0.12), Position = UDim2.fromScale(0.04, 0.03), Role = "Body", AlignX = Enum.TextXAlignment.Left })
+local targets = UI.scroll(sideFace, { Name = "Targets", Size = UDim2.fromScale(0.96, 0.82), Position = UDim2.fromScale(0.02, 0.16), Gap = 0.024 })
 
 local charsView = UI.frame(body, { Name = "CharsView", Visible = false })
 local charFilterRow = UI.frame(charsView, { Name = "Filters" })
 local filterState = CharacterFilter.CreateState()
 local charCount = UI.text(charFilterRow, "", { Name = "Count", Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Right, StrokeMult = 0.4 })
-local charsList = UI.scroll(charsView, { Name = "Characters", Gap = 0.015 })
+local charsList = UI.scroll(charsView, { Name = "Characters", Gap = 0.024, Flat = true })
 
 local msg = UI.text(body, "", { Name = "Message", Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 1, -20), Role = "Small", Color = "gold" })
 
@@ -63,7 +63,8 @@ local function layoutViews()
 	if W < 10 or H < 10 then
 		return
 	end
-	local topOffset = T.TouchMin + 6
+	local tabClear = math.clamp(math.floor(UI.height(body) * 0.018 + 0.5), 11, 18)
+	local topOffset = T.TouchMin + tabClear
 	local msgH = 20
 	local contentH = math.max(T.TouchMin, H - topOffset - msgH - 4)
 	itemsView.Position = UDim2.fromOffset(0, topOffset)
@@ -72,9 +73,10 @@ local function layoutViews()
 	charsView.Size = UDim2.fromOffset(W, contentH)
 
 	local twoRows = W < 820
-	local g = math.max(4, math.floor(W * 0.01))
+	local g = math.max(8, math.floor(W * 0.014))
 	local bh = T.TouchMin
-	local fh = if twoRows then (bh * 2 + 4) else bh
+	local rowGap = 10
+	local fh = if twoRows then (bh * 2 + rowGap) else bh
 	charFilterRow.Position = UDim2.fromOffset(0, 0)
 	charFilterRow.Size = UDim2.fromOffset(W, fh)
 
@@ -93,7 +95,7 @@ local function layoutViews()
 			local wR = math.floor(avail * 0.21)
 			local wT = math.floor(avail * 0.21)
 			local wS = avail - wA - wR - wT
-			local y2 = bh + 4
+			local y2 = bh + rowGap
 			animeBtn.Size = UDim2.fromOffset(wA, bh)
 			animeBtn.Position = UDim2.fromOffset(0, y2)
 			rarityBtn.Size = UDim2.fromOffset(wR, bh)
@@ -132,7 +134,7 @@ local function layoutViews()
 		end
 	end
 
-	local ly = fh + 6
+	local ly = fh + tabClear
 	charsList.Position = UDim2.fromOffset(0, ly)
 	charsList.Size = UDim2.fromOffset(W, math.max(T.TouchMin, contentH - ly))
 end
@@ -167,7 +169,7 @@ local function refreshCharacters()
 				local genAvg = math.floor(Genetics.Average(m.Genetics) + 0.5)
 				local trnAvg = math.floor(Genetics.Average(m.Training) + 0.5)
 				local btn, face = UI.button(charsList, {
-					Name = "Char_" .. uid, Color = "panelAlt", Size = UDim2.fromScale(0.98, 0), Aspect = 10.5, RowMax = 62, LayoutOrder = i, Corner = 0.22,
+					Name = "Char_" .. uid, Color = "panelAlt", Size = UDim2.fromScale(1, 0), Aspect = 10.5, RowMax = 64, LayoutOrder = i, Corner = 0.2, Shadow = false, StrokeMult = 0.8,
 					OnClick = function()
 						UI.open("CharacterDetail", uid)
 					end,
@@ -444,8 +446,9 @@ refresh = function()
 		if n > 0 then
 			any = true
 			local item = Items.Get(id)
+			local isSelected = selected == id
 			local b, face = UI.button(itemsList, {
-				Name = "Item_" .. id, Color = if selected == id then "blue" else "panelAlt", LayoutOrder = item.Order or 99, Corner = 0.18,
+				Name = "Item_" .. id, Color = if isSelected then "blue" else "panelAlt", LayoutOrder = item.Order or 99, Corner = 0.16, Shadow = false, StrokeColor = if isSelected then T.Palette.gold else nil, StrokeMult = 0.85,
 				OnClick = function()
 					if selected ~= id then
 						targets.CanvasPosition = Vector2.zero
@@ -455,10 +458,10 @@ refresh = function()
 					refresh()
 				end,
 			})
-			UI.text(face, "x" .. n, { Name = "Count", Size = UDim2.fromScale(0.44, 0.17), Position = UDim2.fromScale(0.94, 0.04), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right })
-			UI.icon(face, ITEM_ICON[id] or "bag", { Name = "Icon", Size = UDim2.fromScale(0.32, 0.32), Position = UDim2.fromScale(0.5, 0.22), AnchorPoint = Vector2.new(0.5, 0) })
+			UI.text(face, "x" .. n, { Name = "Count", Size = UDim2.fromScale(0.44, 0.17), Position = UDim2.fromScale(0.93, 0.05), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right })
+			UI.icon(face, ITEM_ICON[id] or "bag", { Name = "Icon", Size = UDim2.fromScale(0.32, 0.32), Position = UDim2.fromScale(0.5, 0.21), AnchorPoint = Vector2.new(0.5, 0) })
 			UI.text(face, item.Name, { Name = "ItemName", Size = UDim2.fromScale(0.9, 0.2), Position = UDim2.fromScale(0.05, 0.56), Role = "Small" })
-			UI.text(face, if item.OutsideBattle or item.TeamUse then (item.Short or item.Description or "") else "S\u{f3} em batalha", { Name = "Desc", Size = UDim2.fromScale(0.9, 0.16), Position = UDim2.fromScale(0.05, 0.78), Role = "Small", Color = "inkSoft", StrokeMult = 0.4 })
+			UI.text(face, if item.OutsideBattle or item.TeamUse then (item.Short or item.Description or "") else "S\u{f3} em batalha", { Name = "Desc", Size = UDim2.fromScale(0.9, 0.16), Position = UDim2.fromScale(0.05, 0.77), Role = "Small", Color = "inkSoft", StrokeMult = 0.4 })
 		end
 	end
 	if not any then

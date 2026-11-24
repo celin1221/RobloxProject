@@ -29,6 +29,16 @@ local RARITY_INNER = {
 local EMPTY_INNER_TOP = Color3.fromRGB(36, 44, 96)
 local EMPTY_INNER_BOT = Color3.fromRGB(16, 20, 48)
 local EMPTY = Color3.fromRGB(52, 60, 108)
+local RARITY_SHORT = {
+	Comum = "COMUM",
+	Raro = "RARO",
+	Epico = "\u{c9}PICO",
+	Lendario = "LEND\u{c1}RIO",
+}
+local LOCKED_BORDER_TOP = Color3.fromRGB(76, 94, 168)
+local LOCKED_BORDER_BOT = Color3.fromRGB(32, 40, 84)
+local LOCKED_INNER_TOP = Color3.fromRGB(68, 84, 152)
+local LOCKED_INNER_BOT = Color3.fromRGB(28, 36, 82)
 
 local function previews()
 	return ReplicatedStorage:FindFirstChild("CharacterPreviews")
@@ -308,8 +318,9 @@ function TeamCards.new(parent: Instance, p)
 	corner(dim, 0.18)
 	dim.Parent = inner
 
-	-- brilhos (Brilhante e Lendario)
+	-- brilhos (Brilhante e Lendario) e cadeado (Album nao obtido)
 	local sparkle = UI.icon(root, "sparkle", { Name = "Sparkle", Size = UDim2.fromScale(0.26, 0.26), Position = UDim2.fromScale(0.03, 0.29), ZIndex = z + 6, Visible = false })
+	local lockIcon = UI.icon(root, "lock", { Name = "Lock", Size = UDim2.fromScale(0.24, 0.24), Position = UDim2.fromScale(0.05, 0.05), ZIndex = z + 6, Visible = false })
 
 	local select = Instance.new("UIStroke")
 	select.Name = "Selected"
@@ -351,6 +362,11 @@ function TeamCards.new(parent: Instance, p)
 		badge.Visible = false
 		dim.Visible = false
 		sparkle.Visible = false
+		lockIcon.Visible = false
+		lvlText.TextColor3 = T.Palette.onDark
+		typeIcon.ImageTransparency = 0
+		typeIcon.ImageColor3 = Color3.new(1, 1, 1)
+		glow.Transparency = 0.35
 		card.Uid = nil
 		card.Member = nil
 	end
@@ -380,8 +396,10 @@ function TeamCards.new(parent: Instance, p)
 		shadow.BackgroundTransparency = 0
 		inner.BackgroundTransparency = 0
 		glow.Enabled = true
+		glow.Transparency = 0.35
 		glow.Color = (RARITY_TOP[def.Rarity] or rc):Lerp(Color3.new(1, 1, 1), 0.4)
 		plus.Visible = false
+		lockIcon.Visible = false
 		fade.Visible = true
 		nameText.Visible = true
 		nameText.Text = def.Name
@@ -389,9 +407,12 @@ function TeamCards.new(parent: Instance, p)
 		nameGrad.Color = ColorSequence.new(Color3.new(1, 1, 1), light:Lerp(Color3.new(1, 1, 1), 0.25))
 		nameStroke.Thickness = math.clamp(math.floor(root.AbsoluteSize.Y / 40 + 0.5), 1, 3)
 		lvl.Visible = true
+		lvlText.TextColor3 = T.Palette.onDark
 		lvlText.Text = "Nv " .. tostring(m.Level or 1)
 		local ti = UI.TypeIcon[def.Type]
 		typeIcon.Visible = ti ~= nil
+		typeIcon.ImageTransparency = 0
+		typeIcon.ImageColor3 = Color3.new(1, 1, 1)
 		if ti then
 			UI.setIcon(typeIcon, ti)
 		end
@@ -431,6 +452,130 @@ function TeamCards.new(parent: Instance, p)
 			local src = folder and folder:FindFirstChild(def.ModelName)
 			if src then
 				local v = recreateView()
+				currentKey = key
+				model = src:Clone()
+				model.Parent = v
+				framing = frameModel(v, model)
+				card.SetAngle(0)
+			else
+				destroyView()
+			end
+		end
+	end
+
+	-- Modo Album: mostra o personagem 3D (mesmo estilo da Equipe) quando obtido,
+	-- ou a sombra/silhueta 3D dele quando ainda nao foi obtido.
+	function card.SetAlbum(charId: string, opts: { Owned: boolean, Variants: { [string]: boolean }? }?)
+		local def = Characters.Get(charId)
+		if not def then
+			card.Clear()
+			return
+		end
+		local has = opts ~= nil and opts.Owned == true
+		local variants = if has and opts and opts.Variants then opts.Variants else nil
+		local hasAnyVariant = false
+		local hasShiny = false
+		if variants then
+			for vName, ok in pairs(variants) do
+				if ok then
+					hasAnyVariant = true
+					if vName == "Brilhante" then
+						hasShiny = true
+					end
+				end
+			end
+		end
+
+		card.Uid = charId
+		card.Member = nil
+		local rc = T.Rarity[def.Rarity] or T.Palette.comum
+		local ri = RARITY_INNER[def.Rarity]
+		local light = RARITY_TOP[def.Rarity] or rc
+
+		border.BackgroundTransparency = 0
+		shadow.BackgroundTransparency = 0
+		inner.BackgroundTransparency = 0
+		plus.Visible = false
+		stars.Visible = false
+		hp.Visible = false
+		badge.Visible = false
+		dim.Visible = false
+		fade.Visible = true
+		nameText.Visible = true
+		nameStroke.Thickness = math.clamp(math.floor(root.AbsoluteSize.Y / 40 + 0.5), 1, 3)
+
+		local ti = UI.TypeIcon[def.Type]
+		typeIcon.Visible = ti ~= nil
+		if ti then
+			UI.setIcon(typeIcon, ti)
+		end
+
+		if has then
+			fill.Color = ColorSequence.new(light, rc:Lerp(Color3.new(0, 0, 0), 0.28))
+			innerFill.Color = ColorSequence.new(
+				ri and ri[1] or rc:Lerp(Color3.new(1, 1, 1), 0.16),
+				ri and ri[2] or rc:Lerp(Color3.fromRGB(16, 12, 34), 0.48)
+			)
+			shadow.BackgroundColor3 = rc:Lerp(Color3.fromRGB(10, 10, 60), 0.62)
+			glow.Enabled = true
+			glow.Transparency = 0.35
+			glow.Color = light:Lerp(Color3.new(1, 1, 1), 0.4)
+			nameText.Text = def.Name
+			nameGrad.Color = ColorSequence.new(Color3.new(1, 1, 1), light:Lerp(Color3.new(1, 1, 1), 0.25))
+			lvl.Visible = true
+			lvlText.TextColor3 = light
+			lvlText.Text = RARITY_SHORT[def.Rarity] or def.Rarity
+			lockIcon.Visible = false
+			typeIcon.ImageTransparency = 0
+			typeIcon.ImageColor3 = Color3.new(1, 1, 1)
+			sparkle.Visible = hasAnyVariant
+			local wantShine = def.Rarity == "Lendario" or hasShiny
+			if wantShine and not shine then
+				shine = UI.shine(border, if hasShiny then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(255, 240, 170))
+				shine.ZIndex = z + 3
+			elseif not wantShine and shine then
+				shine:Destroy()
+				shine = nil
+			end
+		else
+			fill.Color = ColorSequence.new(LOCKED_BORDER_TOP, LOCKED_BORDER_BOT)
+			innerFill.Color = ColorSequence.new(LOCKED_INNER_TOP, LOCKED_INNER_BOT)
+			shadow.BackgroundColor3 = Color3.fromRGB(20, 16, 46)
+			glow.Enabled = true
+			glow.Transparency = 0.55
+			glow.Color = rc:Lerp(Color3.fromRGB(115, 106, 175), 0.5)
+			nameText.Text = "???"
+			nameGrad.Color = ColorSequence.new(Color3.fromRGB(220, 214, 248), Color3.fromRGB(154, 146, 200))
+			lvl.Visible = false
+			lockIcon.Visible = true
+			typeIcon.ImageTransparency = 0.45
+			typeIcon.ImageColor3 = Color3.fromRGB(210, 204, 242)
+			sparkle.Visible = false
+			if shine then
+				shine:Destroy()
+				shine = nil
+			end
+		end
+
+		local key = "ALBUM|" .. def.ModelName .. "|" .. (if has then "1" else "0")
+		if key ~= currentKey or not model or not view then
+			if model then
+				model:Destroy()
+				model = nil
+			end
+			framing = nil
+			currentKey = nil
+			local folder = previews()
+			local src = folder and (folder:FindFirstChild(def.ModelName) or folder:FindFirstChild("Kaen"))
+			if src then
+				local v = recreateView()
+				if not has then
+					-- Silhueta escura limpa (sombra do personagem) sobre o fundo roxo do cartao
+					v.ImageColor3 = Color3.new(0, 0, 0)
+					v.ImageTransparency = 0.14
+					v.Ambient = Color3.fromRGB(255, 255, 255)
+					v.LightColor = Color3.fromRGB(0, 0, 0)
+				end
 				currentKey = key
 				model = src:Clone()
 				model.Parent = v

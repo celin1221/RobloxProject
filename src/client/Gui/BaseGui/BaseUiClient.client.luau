@@ -57,7 +57,7 @@ end
 -- Barra inferior de acoes (5 botoes com area >= 44 px garantida)
 local bar = UI.frame(body, { Name = "Actions", Size = UDim2.fromScale(1, 0.12), Position = UDim2.fromScale(0, 1), AnchorPoint = Vector2.new(0, 1) })
 UI.clampHeight(bar, T.TouchMin, 50)
-local list = UI.scroll(body, { Name = "List", Size = UDim2.fromScale(1, 0.4), Position = UDim2.fromScale(0, 0.38) })
+local list = UI.scroll(body, { Name = "List", Size = UDim2.fromScale(1, 0.4), Position = UDim2.fromScale(0, 0.38), Gap = 0.025, Flat = true })
 
 local function layoutBody()
 	local W, H = UI.unscaledSize(body)
@@ -69,7 +69,7 @@ local function layoutBody()
 	local _, oh = UI.unscaledSize(oreStrip)
 	local _, bh = UI.unscaledSize(bar)
 	ih, oh, bh = math.floor(ih + 0.5), math.floor(oh + 0.5), math.floor(bh + 0.5)
-	local gap = 5
+	local gap = 8
 	oreStrip.Position = UDim2.fromOffset(0, ih + gap)
 	local ly = ih + oh + gap * 2
 	list.Position = UDim2.fromOffset(0, ly)
@@ -383,23 +383,19 @@ local function refreshNow()
 			if def then
 				local inCapsule = uid == capsuleUid
 				local state = b.Active[uid]
-				local row, face = UI.panel(list, { Name = "Row_" .. uid, Size = UDim2.fromScale(0.98, 0), Aspect = 9, RowMax = 64, Color = "panelAlt", Corner = 0.3, LayoutOrder = i })
-				if inCapsule then
-					UI.stroke(face, T.Palette.teal, 1.3)
-				elseif state then
-					UI.stroke(face, if state == "Mine" then T.Palette.ore else T.Palette.gold, 1.2)
-				end
+				local rowStroke = if inCapsule then T.Palette.teal elseif state == "Mine" then T.Palette.ore elseif state then T.Palette.gold else nil
+				local row, face = UI.panel(list, { Name = "Row_" .. uid, Size = UDim2.fromScale(1, 0), Aspect = 8.6, RowMax = 72, Color = "panelAlt", Corner = 0.2, Shadow = false, StrokeColor = rowStroke, StrokeMult = 0.85, LayoutOrder = i })
 				local rarity = def.Rarity
 				local gWalk = Base.MemberGoldPerSecond(m, rarity, false)
 				local gMine = Base.MemberGoldPerSecond(m, rarity, true)
 				local oMine = Base.OrePerHour[rarity] or 0
-				UI.text(face, string.format("%s  Nv. %d", def.Name, m.Level), { Name = "Name", Size = UDim2.fromScale(0.34, 0.46), Position = UDim2.fromScale(0.02, 0.08), Role = "Body", AlignX = Enum.TextXAlignment.Left })
-				UI.text(face, string.format("%s \u{b7} Passeio %.1fg/s \u{b7} Mina %.1fg/s+%dm/h", Summon.RarityName and Summon.RarityName[rarity] or rarity, gWalk, gMine, oMine), { Name = "Rarity", Size = UDim2.fromScale(0.35, 0.34), Position = UDim2.fromScale(0.02, 0.58), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
+				UI.text(face, string.format("%s  Nv. %d", def.Name, m.Level), { Name = "Name", Size = UDim2.fromScale(0.34, 0.44), Position = UDim2.fromScale(0.025, 0.09), Role = "Body", AlignX = Enum.TextXAlignment.Left })
+				UI.text(face, string.format("%s \u{b7} Passeio %.1fg/s \u{b7} Mina %.1fg/s+%dm/h", Summon.RarityName and Summon.RarityName[rarity] or rarity, gWalk, gMine, oMine), { Name = "Rarity", Size = UDim2.fromScale(0.35, 0.34), Position = UDim2.fromScale(0.025, 0.56), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
 				local chipText = if inCapsule then "C\u{c1}PSULA" elseif state then UI.upper(STATE_NAME[state]) else "FORA"
 				local chipColor = if inCapsule then "teal" elseif state == "Mine" then "ore" elseif state then "gold" else "slot"
-				UI.chip(face, chipText, chipColor, { Name = "State", Size = UDim2.fromScale(0.17, 0.46), Position = UDim2.fromScale(0.38, 0.27) })
+				UI.chip(face, chipText, chipColor, { Name = "State", Size = UDim2.fromScale(0.17, 0.46), Position = UDim2.fromScale(0.38, 0.5), AnchorPoint = Vector2.new(0, 0.5) })
 				local function act(name, text, color, x, target, enabled)
-					UI.button(face, { Name = name, Text = text, Color = if enabled then color else "grey", Size = UDim2.fromScale(0.135, 0.76), Position = UDim2.fromScale(x, 0.12), Role = "Small",
+					UI.button(face, { Name = name, Text = text, Color = if enabled then color else "grey", Size = UDim2.fromScale(0.135, 0.68), Position = UDim2.fromScale(x, 0.5), AnchorPoint = Vector2.new(0, 0.5), Role = "Small",
 						OnClick = function()
 							if enabled then
 								setState(uid, target)

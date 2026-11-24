@@ -1,0 +1,954 @@
+"""
+update_characters_sheet.py — Gera/atualiza automaticamente a Planilha de Personagens do RobloxProjetoX.
+
+Le diretamente a fonte da verdade em:
+  - src/shared/Data/Characters.luau
+  - src/shared/Data/Moves.luau
+  - src/server_storage/Codes.luau
+
+E grava a planilha formatada com 3 abas (Personagens, Golpes, Resumo) em:
+  - Blender/Planilha_Personagens.xlsx
+  - Planilha_Personagens.xlsx (copia sincronizada na raiz do repositorio)
+
+REGRA DO PROJETO: Sempre executar `python scripts/update_characters_sheet.py` apos adicionar
+ou modificar personagens/golpes em src/shared/Data/Characters.luau ou Moves.luau.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import shutil
+from pathlib import Path
+from typing import Any
+
+import openpyxl
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+
+ROOT = Path(__file__).resolve().parent.parent
+CHARACTERS_LUAU = ROOT / "src" / "shared" / "Data" / "Characters.luau"
+MOVES_LUAU = ROOT / "src" / "shared" / "Data" / "Moves.luau"
+CODES_LUAU = ROOT / "src" / "server_storage" / "Codes.luau"
+OUT_BLENDER = ROOT / "Blender" / "Planilha_Personagens.xlsx"
+OUT_ROOT = ROOT / "Planilha_Personagens.xlsx"
+
+# Metadados de producao (rig, estagio de arte 3D, notas).
+# Qualquer personagem novo adicionado em Characters.luau aparece automaticamente mesmo sem entrada aqui.
+DEV_META: dict[str, dict[str, str]] = {
+    "Kaen": {
+        "Stage": "Protótipo Base",
+        "HasModel": "Sim",
+        "Rig": "R15 Padrão",
+        "Anim": "Não (Base)",
+        "VfxCutIn": "Não / Não",
+        "Shiny": "Sem Preset",
+        "Notes": "Personagem base genérico; golpes sem Anim/VFX/Assinatura dedicados",
+    },
+    "Raiko": {
+        "Stage": "Protótipo Base",
+        "HasModel": "Sim",
+        "Rig": "R15 + Acessórios",
+        "Anim": "Não (Base)",
+        "VfxCutIn": "Não / Não",
+        "Shiny": "Sem Preset",
+        "Notes": "Personagem base genérico; golpes sem Anim/VFX/Assinatura dedicados",
+    },
+    "Yomogi": {
+        "Stage": "Concluído (100%)",
+        "HasModel": "Sim",
+        "Rig": "R15 + Acessórios",
+        "Anim": "Sim (10 anims)",
+        "VfxCutIn": "VFX Sim / Cut-In Não",
+        "Shiny": "Sim (Paleta Outono)",
+        "Notes": "Pronto; 4 golpes exclusivos completos com animações e VFX",
+    },
+    "Setero": {
+        "Stage": "Concluído (100%)",
+        "HasModel": "Sim",
+        "Rig": "R15 Skinned (Mixamo)",
+        "Anim": "Sim (9 anims)",
+        "VfxCutIn": "Sim / Sim (Tudo Roxo)",
+        "Shiny": "Sim (Tex Platina)",
+        "Notes": "2 golpes exclusivos (Atração, Tudo Roxo com Cut-In) + 2 base",
+    },
+    "San": {
+        "Stage": "Concluído (100%)",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Tripo v2)",
+        "Anim": "Sim (4 golpes + base)",
+        "VfxCutIn": "Sim / Sim (2 Cut-Ins)",
+        "Shiny": "Sim (Tex Dourada)",
+        "Notes": "4 golpes exclusivos completos (Kamehameha, Genki Dama, Combo Marcial, Carga de Ki)",
+    },
+    "BarbaBranca": {
+        "Stage": "Concluído (100%)",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Tripo + Capa/Bisento)",
+        "Anim": "Sim (4 golpes + base)",
+        "VfxCutIn": "Sim / Sim (2 Cut-Ins)",
+        "Shiny": "Sim (Paleta + Aura)",
+        "Notes": "Líder do Ginásio da Grand Line; modelo Tripo com Capa + Bisento e 4 golpes completos",
+    },
+    "Luffy": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Inicial de One Piece; faltam golpes exclusivos, animações próprias, VFX e Cut-In",
+    },
+    "Zoro": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo + 3 Katanas)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Modelo 3D com 3 katanas e bandana; faltam golpes exclusivos, animações próprias e VFX",
+    },
+    "Sanji": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Modelo 3D pronto; faltam golpes exclusivos (chutes), animações próprias e VFX",
+    },
+    "Nami": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo + Clima-Tact)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Modelo 3D com Clima-Tact; faltam golpes exclusivos, animações próprias e VFX",
+    },
+    "Usopp": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo + Estilingue)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Modelo 3D com estilingue; faltam golpes exclusivos, animações próprias e VFX",
+    },
+    "Sakura": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Modelo 3D pronto (Naruto); faltam golpes exclusivos, animações próprias e VFX",
+    },
+    "Shikamaru": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Modelo 3D pronto (Naruto); faltam golpes exclusivos, animações próprias e VFX",
+    },
+    "Kakashi": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Modelo 3D pronto (Naruto); faltam golpes exclusivos, animações próprias e VFX",
+    },
+    "Sasuke": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Modelo 3D pronto (Naruto); faltam golpes exclusivos, animações próprias e VFX",
+    },
+    "Naruto": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Inicial de Naruto com modelo 3D pronto; faltam golpes exclusivos, animações próprias, VFX e Cut-In",
+    },
+    "Sarutobi": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo + Aura Hokage 5 Elementos)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Aura Sim / Golpes Pendentes",
+        "Shiny": "Sim (Paleta + Aura)",
+        "Notes": "Líder do Ginásio de Konoha com modelo 3D + Aura Lendária (Vontade do Fogo & 5 Orbes Elementais); faltam golpes exclusivos, animações e Cut-In",
+    },
+    "Chad": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Modelo 3D pronto (Bleach, braço blindado); faltam golpes exclusivos, animações próprias e VFX",
+    },
+    "Uryu": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Modelo 3D pronto (Bleach); faltam golpes exclusivos, animações próprias e VFX",
+    },
+    "Rukia": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Modelo 3D pronto (Bleach); faltam golpes exclusivos, animações próprias e VFX",
+    },
+    "Renji": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Modelo 3D pronto (Bleach); faltam golpes exclusivos, animações próprias e VFX",
+    },
+    "Ichigo": {
+        "Stage": "Em Andamento",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo)",
+        "Anim": "Não (Provisórias)",
+        "VfxCutIn": "Pendente",
+        "Shiny": "Sim (Paleta)",
+        "Notes": "Inicial de Bleach com modelo 3D pronto; faltam golpes exclusivos, animações próprias, VFX e Cut-In",
+    },
+    "Byakuya": {
+        "Stage": "Concluído (100%)",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo + Aura Minimalista Senbonzakura)",
+        "Anim": "Sim (CombatAnimator 60 FPS + 4 golpes)",
+        "VfxCutIn": "Sim / Sim (2 Cut-Ins)",
+        "Shiny": "Sim (Paleta + Aura)",
+        "Notes": "Líder do Ginásio da Soul Society; aura minimalista, cabelo corrigido, CorteBasico/CorteCruzado + Senbonzakura (Shikai) e SenbonzakuraKageyoshi (Bankai)",
+    },
+    "ProtoRaro": {
+        "Stage": "Teste (Remover)",
+        "HasModel": "Sim",
+        "Rig": "R15 + Acessórios",
+        "Anim": "Não",
+        "VfxCutIn": "Não / Não",
+        "Shiny": "Não",
+        "Notes": "Prototype = true (apenas teste de Equipe; remover antes de publicar)",
+    },
+    "ProtoEpico": {
+        "Stage": "Teste (Remover)",
+        "HasModel": "Sim",
+        "Rig": "R15 + Acessórios",
+        "Anim": "Não",
+        "VfxCutIn": "Não / Não",
+        "Shiny": "Não",
+        "Notes": "Prototype = true (apenas teste de Equipe; remover antes de publicar)",
+    },
+}
+
+ANIME_DISPLAY = {
+    "OnePiece": "One Piece",
+    "Naruto": "Naruto",
+    "Bleach": "Bleach",
+    "DragonBall": "Dragon Ball",
+    "JujutsuKaisen": "Jujutsu Kaisen",
+    "Generico": "Genérico",
+}
+ANIME_ORDER = {
+    "OnePiece": 1,
+    "Naruto": 2,
+    "Bleach": 3,
+    "DragonBall": 4,
+    "JujutsuKaisen": 5,
+    "Generico": 6,
+}
+RARITY_DISPLAY = {
+    "Comum": "Comum",
+    "Raro": "Raro",
+    "Epico": "Épico",
+    "Lendario": "Lendário",
+}
+RARITY_ORDER = {"Comum": 1, "Raro": 2, "Epico": 3, "Lendario": 4}
+TARGET_DISPLAY = {
+    "Single": "1 Alvo",
+    "AllEnemies": "Todos Inimigos",
+    "AllOthers": "Todos Outros",
+    "AllAllies": "Aliados",
+    "Self": "Próprio",
+}
+
+
+def decode_luau_str(raw: str) -> str:
+    return re.sub(r"\\u\{([0-9a-fA-F]+)\}", lambda m: chr(int(m.group(1), 16)), raw)
+
+
+def extract_braced_block(text: str, open_brace_idx: int) -> tuple[str, int]:
+    depth = 0
+    in_str = False
+    escape = False
+    i = open_brace_idx
+    while i < len(text):
+        ch = text[i]
+        if in_str:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_str = False
+        else:
+            if ch == '"':
+                in_str = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    return text[open_brace_idx + 1 : i], i + 1
+        i += 1
+    raise ValueError("Unmatched '{' in Luau source")
+
+
+def parse_top_level_entries(block: str) -> list[tuple[str, str]]:
+    entries: list[tuple[str, str]] = []
+    i = 0
+    n = len(block)
+    while i < n:
+        # Skip whitespace and comments
+        if block[i : i + 2] == "--":
+            nl = block.find("\n", i)
+            i = n if nl == -1 else nl + 1
+            continue
+        m = re.match(r"([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\{", block[i:])
+        if m:
+            key = m.group(1)
+            brace_idx = i + m.end() - 1
+            inner, end_idx = extract_braced_block(block, brace_idx)
+            entries.append((key, inner))
+            i = end_idx
+            continue
+        i += 1
+    return entries
+
+
+def parse_moves() -> tuple[dict[str, dict[str, Any]], dict[str, list[str]]]:
+    src = MOVES_LUAU.read_text(encoding="utf-8")
+
+    # Moves.List
+    m_list = re.search(r"Moves\.List\s*=\s*\{", src)
+    assert m_list, "Moves.List nao encontrado"
+    list_block, _ = extract_braced_block(src, m_list.end() - 1)
+
+    moves: dict[str, dict[str, Any]] = {}
+    for mid, body in parse_top_level_entries(list_block):
+        name_m = re.search(r'Name\s*=\s*"([^"]+)"', body)
+        type_m = re.search(r'Type\s*=\s*"([^"]+)"', body)
+        cat_m = re.search(r'Category\s*=\s*"([^"]+)"', body)
+        pow_m = re.search(r"Power\s*=\s*(\d+)", body)
+        acc_m = re.search(r"Accuracy\s*=\s*(\d+|nil)", body)
+        pp_m = re.search(r"PP\s*=\s*(\d+)", body)
+        body_no_effect = re.sub(r"Effect\s*=\s*\{[^}]*\}", "", body)
+        target_m = re.search(r'Target\s*=\s*"([^"]+)"', body_no_effect)
+        sig = bool(re.search(r"Signature\s*=\s*true", body))
+        cutin = bool(re.search(r"CutIn\s*=\s*true", body))
+        has_anim = bool(re.search(r'Anim\s*=\s*"[^"]+"', body))
+        has_vfx = bool(re.search(r'Vfx\s*=\s*"[^"]+"', body))
+        generic = bool(re.search(r"Generic\s*=\s*true", body))
+
+        cat = cat_m.group(1) if cat_m else "Damage"
+        if target_m:
+            target = target_m.group(1)
+        elif cat == "Status" and re.search(r'Effect\s*=\s*\{[^}]*Target\s*=\s*"Self"', body):
+            target = "Self"
+        else:
+            target = "Single"
+
+        acc_val: Any
+        if acc_m and acc_m.group(1) != "nil":
+            acc_val = int(acc_m.group(1))
+        else:
+            acc_val = "Nunca erra"
+
+        moves[mid] = {
+            "Id": mid,
+            "Name": decode_luau_str(name_m.group(1)) if name_m else mid,
+            "Type": type_m.group(1) if type_m else "Universal",
+            "Category": cat,
+            "Power": int(pow_m.group(1)) if pow_m else "-",
+            "Accuracy": acc_val,
+            "PP": int(pp_m.group(1)) if pp_m else 0,
+            "Target": target,
+            "Signature": sig,
+            "CutIn": cutin,
+            "HasAnim": has_anim,
+            "HasVfx": has_vfx,
+            "Generic": generic,
+        }
+
+    # Moves.ClassDefaults
+    m_def = re.search(r"Moves\.ClassDefaults\s*=\s*\{", src)
+    assert m_def, "Moves.ClassDefaults nao encontrado"
+    def_block, _ = extract_braced_block(src, m_def.end() - 1)
+    class_defaults: dict[str, list[str]] = {}
+    for cls_id, body in parse_top_level_entries(def_block):
+        class_defaults[cls_id] = re.findall(r'Move\s*=\s*"([^"]+)"', body)
+
+    return moves, class_defaults
+
+
+def parse_codes() -> dict[str, list[str]]:
+    src = CODES_LUAU.read_text(encoding="utf-8")
+    m_ret = re.search(r"return\s*\{", src)
+    assert m_ret, "return table nao encontrado em Codes.luau"
+    block, _ = extract_braced_block(src, m_ret.end() - 1)
+    by_char: dict[str, list[str]] = {}
+    for code, body in parse_top_level_entries(block):
+        single = re.search(r'Character\s*=\s*"([^"]+)"', body)
+        if single:
+            by_char.setdefault(single.group(1), []).append(code)
+    return by_char
+
+
+def parse_characters(class_defaults: dict[str, list[str]]) -> list[dict[str, Any]]:
+    src = CHARACTERS_LUAU.read_text(encoding="utf-8")
+    m_list = re.search(r"Characters\.List\s*=\s*\{", src)
+    assert m_list, "Characters.List nao encontrado"
+    list_block, after_list = extract_braced_block(src, m_list.end() - 1)
+
+    raw_entries = parse_top_level_entries(list_block)
+    # Also capture Characters.List.<Id> = { ... } (ProtoRaro, ProtoEpico, etc.)
+    tail = src[after_list:]
+    for m_extra in re.finditer(r"Characters\.List\.([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\{", tail):
+        cid = m_extra.group(1)
+        inner, _ = extract_braced_block(tail, m_extra.end() - 1)
+        raw_entries.append((cid, inner))
+
+    chars: list[dict[str, Any]] = []
+    for cid, body in raw_entries:
+        name_m = re.search(r'Name\s*=\s*"([^"]+)"', body)
+        anime_m = re.search(r'Anime\s*=\s*"([^"]+)"', body)
+        type_m = re.search(r'Type\s*=\s*"([^"]+)"', body)
+        rar_m = re.search(r'Rarity\s*=\s*"([^"]+)"', body)
+        starter = bool(re.search(r"Starter\s*=\s*true", body))
+        proto = bool(re.search(r"Prototype\s*=\s*true", body))
+        has_placeholder = bool(re.search(r"PlaceholderColors\s*=\s*\{", body))
+        has_shiny_palette = bool(re.search(r"ShinyPalette\s*=\s*\{", body))
+        stats_m = re.search(
+            r"BaseStats\s*=\s*\{\s*HP\s*=\s*(\d+)\s*,\s*Attack\s*=\s*(\d+)\s*,\s*Defense\s*=\s*(\d+)\s*,\s*Speed\s*=\s*(\d+)",
+            body,
+        )
+        hp, atk, df, spd = (int(stats_m.group(i)) for i in range(1, 5)) if stats_m else (0, 0, 0, 0)
+
+        moves_m = re.search(r"Moves\s*=\s*\{([^}]*)\}", body)
+        cls_id = type_m.group(1) if type_m else "Lutador"
+        if moves_m:
+            move_ids = re.findall(r'"([^"]+)"', moves_m.group(1))
+            uses_class_kit = False
+        else:
+            move_ids = list(class_defaults.get(cls_id, class_defaults["Lutador"]))
+            uses_class_kit = True
+
+        chars.append(
+            {
+                "Id": cid,
+                "Name": decode_luau_str(name_m.group(1)) if name_m else cid,
+                "Anime": anime_m.group(1) if anime_m else "Generico",
+                "Class": cls_id,
+                "Rarity": rar_m.group(1) if rar_m else "Comum",
+                "Starter": starter,
+                "Prototype": proto,
+                "HasPlaceholder": has_placeholder,
+                "HasShinyPalette": has_shiny_palette,
+                "HP": hp,
+                "ATK": atk,
+                "DEF": df,
+                "SPD": spd,
+                "MoveIds": move_ids,
+                "UsesClassKit": uses_class_kit,
+            }
+        )
+
+    chars.sort(
+        key=lambda c: (
+            1 if c["Prototype"] else 0,
+            ANIME_ORDER.get(c["Anime"], 99),
+            RARITY_ORDER.get(c["Rarity"], 99),
+            c["Name"].lower(),
+        )
+    )
+    return chars
+
+
+def build_workbook(
+    chars: list[dict[str, Any]],
+    moves: dict[str, dict[str, Any]],
+    codes_by_char: dict[str, list[str]],
+) -> openpyxl.Workbook:
+    wb = openpyxl.Workbook()
+
+    # Palette (matching original spreadsheet design + Combat Classes)
+    HEADER_FILL = PatternFill("solid", fgColor="1E293B")
+    HEADER_FONT = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    TITLE_FILL = PatternFill("solid", fgColor="0F172A")
+    TITLE_FONT = Font(name="Calibri", size=12, bold=True, color="FFFFFF")
+    BASE_FONT = Font(name="Calibri", size=10)
+    BOLD_FONT = Font(name="Calibri", size=10, bold=True)
+    THIN_SIDE = Side(border_style="thin", color="CBD5E1")
+    CELL_BORDER = Border(left=THIN_SIDE, right=THIN_SIDE, top=THIN_SIDE, bottom=THIN_SIDE)
+
+    GREEN = PatternFill("solid", fgColor="DCFCE7")
+    YELLOW = PatternFill("solid", fgColor="FEF9C3")
+    ORANGE = PatternFill("solid", fgColor="FFEDD5")
+    RED = PatternFill("solid", fgColor="FEE2E2")
+    SLATE = PatternFill("solid", fgColor="F1F5F9")
+    BLUE = PatternFill("solid", fgColor="DBEAFE")
+    PURPLE = PatternFill("solid", fgColor="F3E8FF")
+    GOLD = PatternFill("solid", fgColor="FEF3C7")
+    GRAY = PatternFill("solid", fgColor="E2E8F0")
+    TEAL = PatternFill("solid", fgColor="CCFBF1")
+
+    STAGE_FILL = {
+        "Concluído (100%)": GREEN,
+        "Em Andamento": ORANGE,
+        "Modelo Provisório": YELLOW,
+        "Protótipo Base": SLATE,
+        "Teste (Remover)": RED,
+    }
+    RARITY_FILL = {
+        "Comum": GRAY,
+        "Raro": BLUE,
+        "Épico": PURPLE,
+        "Lendário": GOLD,
+    }
+    CLASS_FILL = {
+        "Espadachim": RED,
+        "Lutador": ORANGE,
+        "Mago": PURPLE,
+        "Atirador": GREEN,
+        "Universal": GRAY,
+    }
+    ANIME_FILL = {
+        "One Piece": BLUE,
+        "Naruto": ORANGE,
+        "Bleach": TEAL,
+        "Dragon Ball": GOLD,
+        "Jujutsu Kaisen": PURPLE,
+        "Genérico": SLATE,
+    }
+
+    # -----------------------------------------------------------------
+    # ABA 1: Personagens
+    # -----------------------------------------------------------------
+    ws = wb.active
+    ws.title = "Personagens"
+    ws.freeze_panes = "D2"
+
+    headers = [
+        "ID",
+        "Nome",
+        "Tag (Anime)",
+        "Estágio de Dev",
+        "Raridade",
+        "Classe",
+        "Starter",
+        "Modelo 3D",
+        "Rig / Origem",
+        "HP",
+        "ATK",
+        "DEF",
+        "SPD",
+        "Total Stats",
+        "Ataque Assinatura",
+        "Poder Assinatura",
+        "Animação Personalizada",
+        "VFX / Cut-In",
+        "Variante Brilhante",
+        "Código Dev",
+        "Pendências / Observações",
+    ]
+    ws.append(headers)
+    ws.row_dimensions[1].height = 26
+    for col_idx in range(1, len(headers) + 1):
+        cell = ws.cell(1, col_idx)
+        cell.fill = HEADER_FILL
+        cell.font = HEADER_FONT
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = CELL_BORDER
+
+    for r_idx, ch in enumerate(chars, start=2):
+        cid = ch["Id"]
+        meta = DEV_META.get(cid, {})
+        stage = meta.get(
+            "Stage",
+            "Teste (Remover)"
+            if ch["Prototype"]
+            else ("Modelo Provisório" if ch["HasPlaceholder"] else "Em Andamento"),
+        )
+        has_model = meta.get("HasModel", "Provisório" if ch["HasPlaceholder"] else "Sim")
+        rig = meta.get(
+            "Rig",
+            "R15 Provisório (PlaceholderColors)" if ch["HasPlaceholder"] else "R15 / Tripo",
+        )
+        anim = meta.get("Anim", "Não (Provisórias)")
+        vfx_cutin = meta.get("VfxCutIn", "Pendente")
+        shiny = meta.get("Shiny", "Sim (Paleta)" if ch["HasShinyPalette"] else "Sem Preset")
+        notes = meta.get("Notes", "Atualizado automaticamente de Characters.luau")
+
+        # Signature move lookup
+        sig_name = "Pendente"
+        sig_power: Any = "-"
+        if ch["Prototype"]:
+            sig_name = "Nenhum"
+        else:
+            sig_moves = [moves[mid] for mid in ch["MoveIds"] if mid in moves and moves[mid]["Signature"]]
+            if sig_moves:
+                sig_name = sig_moves[0]["Name"]
+                sig_power = sig_moves[0]["Power"]
+            elif cid in ("Kaen", "Raiko") and ch["MoveIds"]:
+                first_m = moves.get(ch["MoveIds"][0])
+                if first_m:
+                    sig_name = f"Nenhum ({first_m['Name']})"
+                    sig_power = first_m["Power"]
+
+        codes = codes_by_char.get(cid, [])
+        code_str = " / ".join(codes) if codes else "-"
+
+        anime_name = ANIME_DISPLAY.get(ch["Anime"], ch["Anime"])
+        rarity_name = RARITY_DISPLAY.get(ch["Rarity"], ch["Rarity"])
+
+        row_vals = [
+            cid,
+            ch["Name"],
+            anime_name,
+            stage,
+            rarity_name,
+            ch["Class"],
+            "Sim" if ch["Starter"] else "Não",
+            has_model,
+            rig,
+            ch["HP"],
+            ch["ATK"],
+            ch["DEF"],
+            ch["SPD"],
+            f"=SUM(J{r_idx}:M{r_idx})",
+            sig_name,
+            sig_power,
+            anim,
+            vfx_cutin,
+            shiny,
+            code_str,
+            notes,
+        ]
+        ws.append(row_vals)
+        ws.row_dimensions[r_idx].height = 22
+
+        for c_idx in range(1, len(headers) + 1):
+            cell = ws.cell(r_idx, c_idx)
+            cell.border = CELL_BORDER
+            cell.font = BOLD_FONT if c_idx in (1, 2, 14) else BASE_FONT
+            if c_idx in (1, 2, 9, 15, 20, 21):
+                cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=(c_idx == 21))
+            else:
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        # Color badges
+        if anime_name in ANIME_FILL:
+            ws.cell(r_idx, 3).fill = ANIME_FILL[anime_name]
+        if stage in STAGE_FILL:
+            ws.cell(r_idx, 4).fill = STAGE_FILL[stage]
+        if rarity_name in RARITY_FILL:
+            ws.cell(r_idx, 5).fill = RARITY_FILL[rarity_name]
+        if ch["Class"] in CLASS_FILL:
+            ws.cell(r_idx, 6).fill = CLASS_FILL[ch["Class"]]
+        if ch["Starter"]:
+            ws.cell(r_idx, 7).fill = GREEN
+            ws.cell(r_idx, 7).font = BOLD_FONT
+        ws.cell(r_idx, 8).fill = GREEN if has_model == "Sim" else YELLOW
+        ws.cell(r_idx, 17).fill = GREEN if anim.startswith("Sim") else RED
+        if vfx_cutin.startswith("Sim"):
+            ws.cell(r_idx, 18).fill = GREEN
+        elif "VFX Sim" in vfx_cutin or "Aura Sim" in vfx_cutin:
+            ws.cell(r_idx, 18).fill = YELLOW
+        else:
+            ws.cell(r_idx, 18).fill = RED
+        if shiny.startswith("Sim"):
+            ws.cell(r_idx, 19).fill = GREEN
+        elif shiny.startswith("Parcial"):
+            ws.cell(r_idx, 19).fill = YELLOW
+        else:
+            ws.cell(r_idx, 19).fill = RED
+
+    col_widths_p = {
+        "A": 14, "B": 16, "C": 16, "D": 19, "E": 12, "F": 13, "G": 9,
+        "H": 12, "I": 34, "J": 7, "K": 7, "L": 7, "M": 7, "N": 12,
+        "O": 25, "P": 16, "Q": 22, "R": 22, "S": 20, "T": 24, "U": 52,
+    }
+    for col, w in col_widths_p.items():
+        ws.column_dimensions[col].width = w
+    ws.auto_filter.ref = f"A1:U{len(chars) + 1}"
+
+    # -----------------------------------------------------------------
+    # ABA 2: Golpes (todos os personagens ativos)
+    # -----------------------------------------------------------------
+    ws_m = wb.create_sheet("Golpes")
+    ws_m.freeze_panes = "D2"
+    m_headers = [
+        "Personagem",
+        "Tag (Anime)",
+        "ID do Golpe",
+        "Nome",
+        "Classe",
+        "Categoria",
+        "Alvo (2x2)",
+        "Poder",
+        "Precisão",
+        "PP",
+        "Kit Genérico?",
+        "Assinatura?",
+        "Cut-In?",
+        "Tem Anim?",
+        "Tem VFX?",
+    ]
+    ws_m.append(m_headers)
+    ws_m.row_dimensions[1].height = 25
+    for c_idx in range(1, len(m_headers) + 1):
+        cell = ws_m.cell(1, c_idx)
+        cell.fill = HEADER_FILL
+        cell.font = HEADER_FONT
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = CELL_BORDER
+
+    m_row = 1
+    for ch in chars:
+        if ch["Prototype"]:
+            continue
+        anime_name = ANIME_DISPLAY.get(ch["Anime"], ch["Anime"])
+        for mid in ch["MoveIds"]:
+            mv = moves.get(mid)
+            if not mv:
+                continue
+            m_row += 1
+            ws_m.append(
+                [
+                    ch["Name"],
+                    anime_name,
+                    mv["Id"],
+                    mv["Name"],
+                    mv["Type"],
+                    mv["Category"],
+                    TARGET_DISPLAY.get(mv["Target"], mv["Target"]),
+                    mv["Power"],
+                    mv["Accuracy"],
+                    mv["PP"],
+                    "Sim" if mv["Generic"] else "Não",
+                    "Sim" if mv["Signature"] else "Não",
+                    "Sim" if mv["CutIn"] else "Não",
+                    "Sim" if mv["HasAnim"] else "Não",
+                    "Sim" if mv["HasVfx"] else "Não",
+                ]
+            )
+            ws_m.row_dimensions[m_row].height = 20
+            for c_idx in range(1, len(m_headers) + 1):
+                cell = ws_m.cell(m_row, c_idx)
+                cell.border = CELL_BORDER
+                cell.font = BOLD_FONT if c_idx in (1, 4) else BASE_FONT
+                cell.alignment = Alignment(
+                    horizontal="left" if c_idx in (1, 3, 4) else "center",
+                    vertical="center",
+                )
+            if anime_name in ANIME_FILL:
+                ws_m.cell(m_row, 2).fill = ANIME_FILL[anime_name]
+            if mv["Type"] in CLASS_FILL:
+                ws_m.cell(m_row, 5).fill = CLASS_FILL[mv["Type"]]
+            if mv["Signature"]:
+                ws_m.cell(m_row, 12).fill = GOLD
+                ws_m.cell(m_row, 12).font = BOLD_FONT
+            if mv["CutIn"]:
+                ws_m.cell(m_row, 13).fill = PURPLE
+                ws_m.cell(m_row, 13).font = BOLD_FONT
+            ws_m.cell(m_row, 14).fill = GREEN if mv["HasAnim"] else RED
+            ws_m.cell(m_row, 15).fill = GREEN if mv["HasVfx"] else RED
+
+    col_widths_m = {
+        "A": 15, "B": 16, "C": 21, "D": 26, "E": 13, "F": 11, "G": 15,
+        "H": 9, "I": 12, "J": 7, "K": 13, "L": 13, "M": 10, "N": 11, "O": 11,
+    }
+    for col, w in col_widths_m.items():
+        ws_m.column_dimensions[col].width = w
+    ws_m.auto_filter.ref = f"A1:O{m_row}"
+
+    # -----------------------------------------------------------------
+    # ABA 3: Resumo (formulas dinamicas sobre a aba Personagens)
+    # -----------------------------------------------------------------
+    ws_r = wb.create_sheet("Resumo")
+    last_p = len(chars) + 1
+    p_anime = f"Personagens!$C$2:$C${last_p}"
+    p_stage = f"Personagens!$D$2:$D${last_p}"
+    p_rar = f"Personagens!$E$2:$E${last_p}"
+    p_cls = f"Personagens!$F$2:$F${last_p}"
+
+    def add_summary_table(start_row: int, title: str, col_label: str, items: list[str], col_ref: str, exclude_test: bool = True) -> int:
+        ws_r.merge_cells(start_row=start_row, start_column=1, end_row=start_row, end_column=3)
+        tcell = ws_r.cell(start_row, 1, title)
+        tcell.fill = TITLE_FILL
+        tcell.font = TITLE_FONT
+        tcell.alignment = Alignment(horizontal="left", vertical="center")
+        ws_r.row_dimensions[start_row].height = 24
+
+        r = start_row + 1
+        pct_header = "% do Elenco Ativo" if exclude_test else "% do Total"
+        denom_cell = "$B$3" if exclude_test else "$B$5"
+        for ci, h in enumerate([col_label, "Quantidade", pct_header], start=1):
+            c = ws_r.cell(r, ci, h)
+            c.fill = HEADER_FILL
+            c.font = HEADER_FONT
+            c.alignment = Alignment(horizontal="center" if ci > 1 else "left", vertical="center")
+            c.border = CELL_BORDER
+        ws_r.row_dimensions[r].height = 22
+
+        first_data = r + 1
+        for item in items:
+            r += 1
+            ws_r.cell(r, 1, item)
+            if exclude_test:
+                ws_r.cell(r, 2, f'=COUNTIFS({col_ref},"{item}",{p_stage},"<>Teste (Remover)")')
+            else:
+                ws_r.cell(r, 2, f'=COUNTIF({col_ref},"{item}")')
+            ws_r.cell(r, 3, f'=IF({denom_cell}>0,B{r}/{denom_cell},0)')
+            ws_r.cell(r, 3).number_format = "0.0%"
+            for ci in range(1, 4):
+                c = ws_r.cell(r, ci)
+                c.border = CELL_BORDER
+                c.font = BASE_FONT
+                c.alignment = Alignment(horizontal="left" if ci == 1 else "center", vertical="center")
+            ws_r.row_dimensions[r].height = 20
+
+        r += 1
+        ws_r.cell(r, 1, "TOTAL")
+        ws_r.cell(r, 2, f"=SUM(B{first_data}:B{r-1})")
+        ws_r.cell(r, 3, f"=SUM(C{first_data}:C{r-1})")
+        ws_r.cell(r, 3).number_format = "0.0%"
+        for ci in range(1, 4):
+            c = ws_r.cell(r, ci)
+            c.border = CELL_BORDER
+            c.font = BOLD_FONT
+            c.fill = SLATE
+            c.alignment = Alignment(horizontal="left" if ci == 1 else "center", vertical="center")
+        ws_r.row_dimensions[r].height = 22
+        return r + 2
+
+    # Top KPI block
+    ws_r.merge_cells("A1:C1")
+    k = ws_r["A1"]
+    k.value = "RESUMO DO ELENCO — RobloxProjetoX"
+    k.fill = TITLE_FILL
+    k.font = TITLE_FONT
+    k.alignment = Alignment(horizontal="left", vertical="center")
+    ws_r.row_dimensions[1].height = 26
+
+    for ci, h in enumerate(["Métrica", "Valor", "Observação"], start=1):
+        c = ws_r.cell(2, ci, h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="center" if ci == 2 else "left", vertical="center")
+        c.border = CELL_BORDER
+
+    kpis = [
+        ("Personagens Ativos no Jogo", f'=COUNTIF({p_stage},"<>Teste (Remover)")', "Exclui protótipos de teste (Prototype = true)"),
+        ("Protótipos de Teste", f'=COUNTIF({p_stage},"Teste (Remover)")', "Remover antes da publicação"),
+        ("Total de Linhas na Planilha", f"=COUNTA(Personagens!$A$2:$A${last_p})", "Ativos + Protótipos"),
+        ("Personagens Concluídos (100%)", f'=COUNTIF({p_stage},"Concluído (100%)")', "Modelo 3D + Animações + VFX completos"),
+        ("Com Modelo 3D Real no Jogo", f'=COUNTIFS(Personagens!$H$2:$H${last_p},"Sim",{p_stage},"<>Teste (Remover)")', "Prontos em ServerStorage/Characters"),
+        ("Aguardando Modelo 3D (Provisório)", f'=COUNTIF(Personagens!$H$2:$H${last_p},"Provisório")', "Usando PlaceholderColors temporário"),
+    ]
+    for idx, (label, formula, obs) in enumerate(kpis, start=3):
+        ws_r.cell(idx, 1, label)
+        ws_r.cell(idx, 2, formula)
+        ws_r.cell(idx, 3, obs)
+        for ci in range(1, 4):
+            c = ws_r.cell(idx, ci)
+            c.border = CELL_BORDER
+            c.font = BOLD_FONT if ci in (1, 2) else BASE_FONT
+            c.alignment = Alignment(horizontal="center" if ci == 2 else "left", vertical="center")
+        ws_r.row_dimensions[idx].height = 20
+
+    next_row = 10
+    next_row = add_summary_table(
+        next_row,
+        "POR ANIME (Elenco Ativo)",
+        "Anime",
+        ["One Piece", "Naruto", "Bleach", "Dragon Ball", "Jujutsu Kaisen", "Genérico"],
+        p_anime,
+        exclude_test=True,
+    )
+    next_row = add_summary_table(
+        next_row,
+        "POR RARIDADE (Elenco Ativo)",
+        "Raridade",
+        ["Comum", "Raro", "Épico", "Lendário"],
+        p_rar,
+        exclude_test=True,
+    )
+    next_row = add_summary_table(
+        next_row,
+        "POR CLASSE DE COMBATE (Elenco Ativo)",
+        "Classe",
+        ["Espadachim", "Lutador", "Mago", "Atirador"],
+        p_cls,
+        exclude_test=True,
+    )
+    add_summary_table(
+        next_row,
+        "POR ESTÁGIO DE DESENVOLVIMENTO (Todos)",
+        "Estágio",
+        ["Concluído (100%)", "Em Andamento", "Modelo Provisório", "Protótipo Base", "Teste (Remover)"],
+        p_stage,
+        exclude_test=False,
+    )
+
+    ws_r.column_dimensions["A"].width = 34
+    ws_r.column_dimensions["B"].width = 14
+    ws_r.column_dimensions["C"].width = 44
+
+    return wb
+
+
+def main() -> None:
+    moves, class_defaults = parse_moves()
+    codes_by_char = parse_codes()
+    chars = parse_characters(class_defaults)
+    wb = build_workbook(chars, moves, codes_by_char)
+
+    OUT_BLENDER.parent.mkdir(parents=True, exist_ok=True)
+    wb.save(OUT_BLENDER)
+    shutil.copy2(OUT_BLENDER, OUT_ROOT)
+
+    active = [c for c in chars if not c["Prototype"]]
+    protos = [c for c in chars if c["Prototype"]]
+    print(
+        f"Planilha atualizada com sucesso: {len(active)} personagens ativos + {len(protos)} prototipos "
+        f"(total {len(chars)} linhas) | {wb['Golpes'].max_row - 1} golpes registrados."
+    )
+    print(f"  - {OUT_BLENDER}")
+    print(f"  - {OUT_ROOT}")
+
+
+if __name__ == "__main__":
+    main()

@@ -121,7 +121,7 @@ local refreshTowerView
 local selectTowerFormat = UI.tabs(leftCol, {
 	{ Id = "1x1", Text = "1x1 CL\u{c1}SSICO" },
 	{ Id = "2x2", Text = "2x2 EM DUPLA" },
-}, { Size = UDim2.fromScale(1, 0.14), MaxHeight = 46, MaxWidth = 0.49, ActiveColor = "orange" }, function(id)
+}, { Size = UDim2.fromScale(1, 0.14), MaxHeight = 44, MaxWidth = 0.486, ActiveColor = "orange" }, function(id)
 	towerFormat = id
 	msg.Text = ""
 	if refreshTowerView then
@@ -133,44 +133,57 @@ local selectTowerFormat = UI.tabs(leftCol, {
 end)
 local towerFmtBar = leftCol:FindFirstChild("Tabs")
 
-local modesScroll = UI.scroll(leftCol, { Name = "Modes", Size = UDim2.fromScale(1, 0.82), Gap = 0.02 })
-UI.fillBetween(modesScroll, towerFmtBar, nil, 6)
+local modesScroll = UI.scroll(leftCol, { Name = "Modes", Size = UDim2.fromScale(1, 0.82), Gap = 0.03, Flat = true })
+UI.fillBetween(modesScroll, towerFmtBar, nil, 8)
 
 local modeRows = {}
 for i, id in ipairs(Tower.Order) do
 	local m = Tower.Modes[id]
+	local modeColor = select(2, UI.pair(MODE_COLOR[id]))
 	local row, face = UI.panel(modesScroll, {
 		Name = "Row_" .. id,
 		Size = UDim2.fromScale(1, 0),
-		Aspect = 5.4,
-		RowMax = 88,
+		Aspect = 7.0,
+		RowMax = 68,
 		Color = "panelAlt",
-		Corner = 0.2,
+		Corner = 0.18,
+		Shadow = false,
+		StrokeColor = modeColor,
+		StrokeMult = 0.8,
 		LayoutOrder = i,
 	})
-	UI.stroke(face, UI.pair(MODE_COLOR[id]), 1.2)
+	local accent = Instance.new("Frame")
+	accent.Name = "Accent"
+	accent.Size = UDim2.new(0, 5, 0.7, 0)
+	accent.Position = UDim2.new(0, 8, 0.5, 0)
+	accent.AnchorPoint = Vector2.new(0, 0.5)
+	accent.BackgroundColor3 = modeColor
+	accent.BorderSizePixel = 0
+	accent.Parent = face
+	UI.corner(accent, 0.5)
+
 	UI.text(face, UI.upper(m.Name), {
 		Name = "Name",
-		Size = UDim2.fromScale(0.55, 0.34),
-		Position = UDim2.fromScale(0.03, 0.06),
+		Size = UDim2.fromScale(0.56, 0.32),
+		Position = UDim2.fromScale(0.045, 0.08),
 		Role = "Heading",
-		Color = select(2, UI.pair(MODE_COLOR[id])),
+		Color = modeColor,
 		AlignX = Enum.TextXAlignment.Left,
 	})
 	local infoLabel = UI.text(face, "", {
 		Name = "Info",
-		Size = UDim2.fromScale(0.69, 0.25),
-		Position = UDim2.fromScale(0.03, 0.42),
+		Size = UDim2.fromScale(0.66, 0.24),
+		Position = UDim2.fromScale(0.045, 0.42),
 		Role = "Small",
 		Color = "inkSoft",
 		AlignX = Enum.TextXAlignment.Left,
 		StrokeMult = 0.4,
 	})
-	UI.icon(face, "trophy", { Size = UDim2.fromScale(0.04, 0.25), Position = UDim2.fromScale(0.03, 0.70) })
+	UI.icon(face, "trophy", { Size = UDim2.fromScale(0.038, 0.24), Position = UDim2.fromScale(0.045, 0.70) })
 	UI.text(face, rewardText(m), {
 		Name = "Reward",
-		Size = UDim2.fromScale(0.64, 0.24),
-		Position = UDim2.fromScale(0.08, 0.71),
+		Size = UDim2.fromScale(0.61, 0.23),
+		Position = UDim2.fromScale(0.095, 0.71),
 		Role = "Small",
 		Color = "gold",
 		AlignX = Enum.TextXAlignment.Left,
@@ -180,8 +193,8 @@ for i, id in ipairs(Tower.Order) do
 		Name = "Enter_" .. id,
 		Text = "ENTRAR",
 		Color = MODE_COLOR[id],
-		Size = UDim2.fromScale(0.22, 0.68),
-		Position = UDim2.fromScale(0.97, 0.5),
+		Size = UDim2.fromScale(0.22, 0.64),
+		Position = UDim2.fromScale(0.975, 0.5),
 		AnchorPoint = Vector2.new(1, 0.5),
 		Role = "Body",
 		OnClick = function()
@@ -234,7 +247,7 @@ local bestLabel = UI.text(boardFace, "", {
 	AlignX = Enum.TextXAlignment.Left,
 	StrokeMult = 0.4,
 })
-local listBox = UI.scroll(boardFace, { Name = "List", Size = UDim2.fromScale(0.94, 0.48), Position = UDim2.fromScale(0.03, 0.48), Gap = 0.015 })
+local listBox = UI.scroll(boardFace, { Name = "List", Size = UDim2.fromScale(0.94, 0.48), Position = UDim2.fromScale(0.03, 0.48), Gap = 0.025, Flat = true })
 
 local function renderBoard()
 	UI.clear(listBox)
@@ -308,7 +321,7 @@ local selectBoardScope = UI.tabs(boardFace, {
 	{ Id = "Server", Text = "SERV." },
 	{ Id = "Global", Text = "GLOBAL" },
 	{ Id = "PvP", Text = "PVP" },
-}, { Size = UDim2.fromScale(0.92, 0.16), Position = UDim2.fromScale(0.04, 0.27), MaxHeight = 44, MaxWidth = 0.32, ActiveColor = "purple" }, function(id)
+}, { Size = UDim2.fromScale(0.92, 0.16), Position = UDim2.fromScale(0.04, 0.295), MaxHeight = 44, MaxWidth = 0.315, ActiveColor = "purple" }, function(id)
 	boardScope = id
 	if id == "PvP" and fetchBoard then
 		fetchBoard("PvP")
@@ -319,7 +332,7 @@ local selectBoardScope = UI.tabs(boardFace, {
 		renderBoard()
 	end
 end)
-UI.fillBetween(listBox, boardFace:FindFirstChild("Tabs"), nil, 6)
+UI.fillBetween(listBox, boardFace:FindFirstChild("Tabs"), nil, 8)
 
 refreshTowerView = function()
 	local slot = nil
@@ -461,22 +474,25 @@ for idx, gymId in ipairs(Gyms.Order) do
 	badgeSlots[gymId] = { Frame = slot, Stroke = stroke, Icon = img, Lock = lock, Tick = tick, Gym = gym }
 end
 
-local gymsScroll = UI.scroll(ginasiosPage, { Name = "GymsList", Size = UDim2.fromScale(1, 0.8), Gap = 0.025 })
-UI.fillBetween(gymsScroll, gymTopBar, nil, 6)
+local gymsScroll = UI.scroll(ginasiosPage, { Name = "GymsList", Size = UDim2.fromScale(1, 0.8), Gap = 0.032, Flat = true })
+UI.fillBetween(gymsScroll, gymTopBar, nil, 8)
 
 local gymCards = {}
 for idx, gymId in ipairs(Gyms.Order) do
 	local gym = Gyms.List[gymId]
+	local gymColor = gym.Accent or select(2, UI.pair(gym.Color))
 	local card, face = UI.panel(gymsScroll, {
 		Name = "Gym_" .. gymId,
 		Size = UDim2.fromScale(1, 0),
-		Aspect = 5.4,
-		RowMax = 104,
+		Aspect = 6.8,
+		RowMax = 84,
 		Color = "panelAlt",
 		Corner = 0.18,
+		Shadow = false,
+		StrokeColor = gymColor,
+		StrokeMult = 0.85,
 		LayoutOrder = idx,
 	})
-	UI.stroke(face, gym.Accent or UI.pair(gym.Color), 1.3)
 
 	-- Emblema da insignia a esquerda
 	local emblem, emblemFace = UI.panel(face, {
@@ -619,27 +635,29 @@ local startRow, startRowFace = UI.panel(treinoPage, {
 	Color = "slot",
 	Corner = 0.22,
 	Shadow = false,
+	StrokeMult = 0.8,
 })
-UI.clampHeight(startRow, 48, 60)
+UI.clampHeight(startRow, 52, 64)
 
-local treinoScroll = UI.scroll(treinoPage, { Name = "TreinoScroll", Size = UDim2.fromScale(1, 0.78), Gap = 0.02 })
-UI.fillBetween(treinoScroll, nil, startRow, 6)
+local treinoScroll = UI.scroll(treinoPage, { Name = "TreinoScroll", Size = UDim2.fromScale(1, 0.78), Gap = 0.036, Flat = true })
+UI.fillBetween(treinoScroll, nil, startRow, 10)
 
 do
 	local _, f = UI.panel(treinoScroll, {
 		Name = "TreinoInfo",
 		Size = UDim2.fromScale(1, 0),
-		Aspect = 13.5,
-		RowMax = 44,
+		Aspect = 16,
+		RowMax = 38,
 		Color = "slot",
 		Corner = 0.24,
 		Shadow = false,
+		StrokeMult = 0.75,
 		LayoutOrder = 1,
 	})
 	UI.text(f, "Simulador livre: entra com HP e PP cheios, sem gastar itens e sem alterar seu time salvo. Ideal para testar combos 1x1 e 2x2!", {
 		Name = "Desc",
-		Size = UDim2.fromScale(0.96, 0.84),
-		Position = UDim2.fromScale(0.02, 0.08),
+		Size = UDim2.fromScale(0.95, 0.82),
+		Position = UDim2.fromScale(0.025, 0.09),
 		Role = "Small",
 		Color = "inkSoft",
 		StrokeMult = 0.4,
@@ -660,25 +678,33 @@ local function makeOptionRow(order: number, label: string, choices: { { Id: stri
 	local _, f = UI.panel(treinoScroll, {
 		Name = "Opt_" .. order,
 		Size = UDim2.fromScale(1, 0),
-		Aspect = 8.5,
-		RowMax = 60,
+		Aspect = 9.5,
+		RowMax = 64,
 		Color = "panelAlt",
-		Corner = 0.22,
+		Corner = 0.2,
+		Shadow = false,
+		StrokeMult = 0.75,
 		LayoutOrder = order,
 	})
 	UI.text(f, label, {
 		Name = "Label",
-		Size = UDim2.fromScale(0.24, 0.72),
-		Position = UDim2.fromScale(0.03, 0.14),
+		Size = UDim2.fromScale(0.23, 0.56),
+		Position = UDim2.fromScale(0.03, 0.5),
+		AnchorPoint = Vector2.new(0, 0.5),
 		Role = "Body",
 		Color = "gold",
 		AlignX = Enum.TextXAlignment.Left,
 	})
-	local wrap = UI.frame(f, { Name = "Choices", Size = UDim2.fromScale(0.70, 0.88), Position = UDim2.fromScale(0.28, 0.06) })
-	local maxW = math.min(0.48, (1 - 0.02 * (#choices - 1)) / #choices)
+	local wrap = UI.frame(f, {
+		Name = "Choices",
+		Size = UDim2.fromScale(0.705, 0.68),
+		Position = UDim2.fromScale(0.27, 0.5),
+		AnchorPoint = Vector2.new(0, 0.5),
+	})
+	local maxW = math.min(0.48, (1 - 0.028 * (#choices - 1)) / #choices)
 	local sel = UI.tabs(wrap, choices, {
 		Size = UDim2.fromScale(1, 1),
-		MaxHeight = 46,
+		MaxHeight = 44,
 		MaxWidth = maxW,
 		ActiveColor = activeColor,
 	}, function(id)
@@ -725,7 +751,7 @@ do
 		Icon = "sword",
 		Layout = "row",
 		Color = "green",
-		Size = UDim2.fromScale(0.32, 0.82),
+		Size = UDim2.fromScale(0.32, 0.74),
 		Position = UDim2.fromScale(0.98, 0.5),
 		AnchorPoint = Vector2.new(1, 0.5),
 		Role = "Body",
@@ -768,7 +794,7 @@ local selectMainTab = UI.tabs(body, {
 		updatePracticeSummary()
 	end
 end)
-UI.fillBetween(content, body:FindFirstChild("Tabs"), msg, 6)
+UI.fillBetween(content, body:FindFirstChild("Tabs"), msg, 8)
 
 -- Inicializacao dos seletores internos
 selectTowerFormat("1x1")

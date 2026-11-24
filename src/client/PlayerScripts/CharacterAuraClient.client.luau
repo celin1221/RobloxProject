@@ -58,11 +58,14 @@ type AuraEntry = {
 	baseLightBr: number,
 	ringGuis: { RingGuiEntry },
 	outline: Highlight?,
+	baseOutlineT: number,
 	fxToggle: { Instance },
 	visibleParts: { BasePart },
 	culled: boolean,
 	seed: number,
 	lastVariant: string?,
+	descConn: RBXScriptConnection?,
+	refreshQueued: boolean,
 }
 
 local entries: { [Instance]: AuraEntry } = {}
@@ -139,6 +142,127 @@ local function applyVariantTint(entry: AuraEntry, variant: string?, t: number)
 	end
 end
 
+local function populateEntry(entry: AuraEntry)
+	local folder = entry.folder
+	if not folder.Parent or not folder:IsDescendantOf(workspace) then
+		return
+	end
+	local model = entry.model or folder:FindFirstAncestorOfClass("Model")
+	entry.model = model
+	if not entry.root or not entry.root.Parent then
+		entry.root = model and (model.PrimaryPart or model:FindFirstChild("HumanoidRootPart") :: BasePart?) or nil
+	end
+
+	local existingSpinners: { [BasePart]: Spinner } = {}
+	for _, sp in ipairs(entry.spinners) do
+		existingSpinners[sp.part] = sp
+	end
+	local existingFx: { [Instance]: boolean } = {}
+	for _, inst in ipairs(entry.fxToggle) do
+		existingFx[inst] = true
+	end
+	local existingVis: { [BasePart]: boolean } = {}
+	for _, p in ipairs(entry.visibleParts) do
+		existingVis[p] = true
+	end
+	local existingGuis: { [SurfaceGui]: boolean } = {}
+	for _, rg in ipairs(entry.ringGuis) do
+		existingGuis[rg.gui] = true
+	end
+
+	for _, d in ipairs(folder:GetDescendants()) do
+		if d:IsA("BasePart") then
+			if d.Transparency < 0.99 and not existingVis[d] then
+				existingVis[d] = true
+				table.insert(entry.visibleParts, d)
+			end
+			local spd = d:GetAttribute("SpinSpeed")
+			if typeof(spd) == "number" and spd ~= 0 then
+				local weld = d:FindFirstChild("AuraWeld")
+				local w = if weld and weld:IsA("Weld") then weld else nil
+				local prev = existingSpinners[d]
+				if not prev then
+					local basePos = if w then w.C0.Position else d.Position
+					local baseRot = if w then (w.C0 - w.C0.Position) else (d.CFrame - d.CFrame.Position)
+					local axisAttr = d:GetAttribute("SpinAxis")
+					local bobAttr = d:GetAttribute("BobAmp")
+					local bobAmp = if typeof(bobAttr) == "number"
+						then bobAttr
+						elseif d.Name == "RibbonCarrier" then 0.16
+						elseif d.Name == "OrbitOrbsCarrier" then 0.14
+						else 0
+					local sp: Spinner = {
+						part = d,
+						weld = w,
+						speed = spd,
+						axis = if typeof(axisAttr) == "string" then axisAttr else "Y",
+						basePos = basePos,
+						baseRot = baseRot,
+						bobAmp = bobAmp,
+						angle = 0,
+					}
+					existingSpinners[d] = sp
+					table.insert(entry.spinners, sp)
+				elseif not prev.weld and w then
+					prev.weld = w
+					prev.basePos = w.C0.Position
+					prev.baseRot = w.C0 - w.C0.Position
+				end
+			end
+		elseif d:IsA("PointLight") then
+			if not entry.light then
+				entry.light = d
+				entry.baseLightBr = d.Brightness
+			end
+			if not existingFx[d] then
+				existingFx[d] = true
+				table.insert(entry.fxToggle, d)
+			end
+		elseif d:IsA("ParticleEmitter") or d:IsA("Beam") or d:IsA("Trail") or d:IsA("BillboardGui") then
+			if not existingFx[d] then
+				existingFx[d] = true
+				table.insert(entry.fxToggle, d)
+			end
+		elseif d:IsA("SurfaceGui") then
+			if not existingGuis[d] then
+				existingGuis[d] = true
+				local img = d:FindFirstChildOfClass("ImageLabel")
+				table.insert(entry.ringGuis, {
+					gui = d,
+					img = img,
+					baseBr = d.Brightness,
+					isOuter = d.Parent ~= nil and (d.Parent.Name:find("Outer") ~= nil or d.Parent.Name == "GroundGlow"),
+				})
+			end
+			if not existingFx[d] then
+				existingFx[d] = true
+				table.insert(entry.fxToggle, d)
+			end
+		end
+	end
+
+	-- Tambem inclui eventuais emissores extras de aura no corpo do personagem (ex.: BarbaBranca.UpperTorso.YonkoPresence)
+	if model then
+		local yonko = model:FindFirstChild("YonkoPresence", true)
+		if yonko and yonko:IsA("ParticleEmitter") and not yonko:IsDescendantOf(folder) and not existingFx[yonko] then
+			existingFx[yonko] = true
+			table.insert(entry.fxToggle, yonko)
+		end
+		if not entry.outline or not entry.outline.Parent then
+			local outline = model:FindFirstChild("AnimeOutline3D")
+			if outline and outline:IsA("Highlight") then
+				entry.outline = outline
+				entry.baseOutlineT = outline.OutlineTransparency
+			end
+		end
+	end
+
+	if entry.culled or not aurasEnabled() then
+		entry.culled = false
+		setFxEnabled(entry, false)
+	end
+end
+
 local function register(folder: Instance)
 	if entries[folder] or not folder:IsDescendantOf(workspace) then
 		return
@@ -146,85 +270,40 @@ local function register(folder: Instance)
 	local model = folder:FindFirstAncestorOfClass("Model")
 	local root = model and (model.PrimaryPart or model:FindFirstChild("HumanoidRootPart") :: BasePart?) or nil
 
-	local spinners: { Spinner } = {}
-	local ringGuis: { RingGuiEntry } = {}
-	local fxToggle: { Instance } = {}
-	local visibleParts: { BasePart } = {}
-	local light: PointLight? = nil
-
-	for _, d in ipairs(folder:GetDescendants()) do
-		if d:IsA("BasePart") then
-			if d.Transparency < 0.99 then
-				table.insert(visibleParts, d)
-			end
-			local spd = d:GetAttribute("SpinSpeed")
-			if typeof(spd) == "number" and spd ~= 0 then
-				local weld = d:FindFirstChild("AuraWeld")
-				local w = if weld and weld:IsA("Weld") then weld else nil
-				local basePos = if w then w.C0.Position else d.Position
-				local baseRot = if w then (w.C0 - w.C0.Position) else (d.CFrame - d.CFrame.Position)
-				local axisAttr = d:GetAttribute("SpinAxis")
-				local bobAttr = d:GetAttribute("BobAmp")
-				local bobAmp = if typeof(bobAttr) == "number"
-					then bobAttr
-					elseif d.Name == "RibbonCarrier" then 0.16
-					elseif d.Name == "OrbitOrbsCarrier" then 0.14
-					else 0
-				table.insert(spinners, {
-					part = d,
-					weld = w,
-					speed = spd,
-					axis = if typeof(axisAttr) == "string" then axisAttr else "Y",
-					basePos = basePos,
-					baseRot = baseRot,
-					bobAmp = bobAmp,
-					angle = 0,
-				})
-			end
-		elseif d:IsA("PointLight") then
-			if not light then
-				light = d
-			end
-			table.insert(fxToggle, d)
-		elseif d:IsA("ParticleEmitter") or d:IsA("Beam") or d:IsA("Trail") or d:IsA("BillboardGui") then
-			table.insert(fxToggle, d)
-		elseif d:IsA("SurfaceGui") then
-			local img = d:FindFirstChildOfClass("ImageLabel")
-			table.insert(ringGuis, {
-				gui = d,
-				img = img,
-				baseBr = d.Brightness,
-				isOuter = d.Parent ~= nil and (d.Parent.Name:find("Outer") ~= nil or d.Parent.Name == "GroundGlow"),
-			})
-			table.insert(fxToggle, d)
-		end
-	end
-
-	-- Tambem inclui eventuais emissores extras de aura no corpo do personagem (ex.: BarbaBranca.UpperTorso.YonkoPresence)
-	if model then
-		local yonko = model:FindFirstChild("YonkoPresence", true)
-		if yonko and yonko:IsA("ParticleEmitter") and not yonko:IsDescendantOf(folder) then
-			table.insert(fxToggle, yonko)
-		end
-	end
-
-	local outline = model and model:FindFirstChild("AnimeOutline3D")
 	local entry: AuraEntry = {
 		folder = folder,
 		model = model,
 		root = root,
-		spinners = spinners,
-		light = light,
-		baseLightBr = if light then light.Brightness else 1.6,
-		ringGuis = ringGuis,
-		outline = if outline and outline:IsA("Highlight") then outline else nil,
-		fxToggle = fxToggle,
-		visibleParts = visibleParts,
+		spinners = {},
+		light = nil,
+		baseLightBr = 1.6,
+		ringGuis = {},
+		outline = nil,
+		baseOutlineT = 0.62,
+		fxToggle = {},
+		visibleParts = {},
 		culled = false,
 		seed = math.random() * 100,
 		lastVariant = nil,
+		descConn = nil,
+		refreshQueued = false,
 	}
 	entries[folder] = entry
+	populateEntry(entry)
+
+	-- Re-escaneia automaticamente se descendentes (AuraWeld, OrbitOrbsCarrier, etc.) terminarem de replicar depois da pasta
+	entry.descConn = folder.DescendantAdded:Connect(function()
+		if entry.refreshQueued or entries[folder] ~= entry then
+			return
+		end
+		entry.refreshQueued = true
+		task.defer(function()
+			entry.refreshQueued = false
+			if entries[folder] == entry then
+				pcall(populateEntry, entry)
+			end
+		end)
+	end)
 
 	-- Aplica o estado inicial ja no cadastro (se o jogador entrou com auras desligadas, desliga na hora)
 	if not aurasEnabled() then
@@ -235,6 +314,11 @@ end
 local pendingAncestry: { [Instance]: RBXScriptConnection } = {}
 
 local function unregister(folder: Instance)
+	local entry = entries[folder]
+	if entry and entry.descConn then
+		entry.descConn:Disconnect()
+		entry.descConn = nil
+	end
 	entries[folder] = nil
 	local c = pendingAncestry[folder]
 	if c then
@@ -291,7 +375,7 @@ RunService.RenderStepped:Connect(function(dt: number)
 
 	for folder, entry in pairs(entries) do
 		if not folder.Parent or not folder:IsDescendantOf(workspace) then
-			entries[folder] = nil
+			unregister(folder)
 			continue
 		end
 
@@ -347,7 +431,7 @@ RunService.RenderStepped:Connect(function(dt: number)
 				end
 			end
 			if entry.outline and entry.outline.Parent then
-				entry.outline.OutlineTransparency = 0.36 + 0.16 * (1 - energy)
+				entry.outline.OutlineTransparency = math.clamp(entry.baseOutlineT + 0.10 * (1 - energy), 0, 0.96)
 			end
 
 			local variant = entry.model and entry.model:GetAttribute("Variant")

@@ -50,7 +50,7 @@ StarterTrack.Steps = {
 	{
 		Id = "TowerEasy",
 		Title = "Conclua a Torre F\u{e1}cil",
-		Desc = "Venza a Torre F\u{e1}cil (1x1 ou 2x2)",
+		Desc = "Ven\u{e7}a a Torre F\u{e1}cil (1x1 ou 2x2)",
 		HintAction = nil,
 		Goal = 1,
 		Reward = { Gold = 600, Items = { DoceRaro = 1 } },
@@ -68,7 +68,7 @@ StarterTrack.Steps = {
 	{
 		Id = "Gym1",
 		Title = "1\u{aa} Ins\u{ed}gnia de Gin\u{e1}sio",
-		Desc = "Venza um Gin\u{e1}sio na Torre e libere outro Banner",
+		Desc = "Ven\u{e7}a um Gin\u{e1}sio na Torre e libere outro Banner",
 		HintAction = nil,
 		Goal = 1,
 		Reward = { Gold = 1200, Gems = 2, Items = { DoceEpico = 1 } },

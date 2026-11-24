@@ -63,8 +63,8 @@ local function show(ok, text, sound)
 end
 
 local function page(name, columns, aspect)
-	local s = UI.scroll(body, { Name = name, Size = UDim2.fromScale(1, 0.73), Position = UDim2.fromScale(0, 0.205), Columns = columns, CellAspect = aspect, Visible = name == "Itens" })
-	UI.fillBetween(s, body:FindFirstChild("Tabs"), msg, 6)
+	local s = UI.scroll(body, { Name = name, Size = UDim2.fromScale(1, 0.73), Position = UDim2.fromScale(0, 0.205), Columns = columns, CellAspect = aspect, Gap = 0.028, Flat = true, Visible = name == "Itens" })
+	UI.fillBetween(s, body:FindFirstChild("Tabs"), msg, 8)
 	pages[name] = s
 	return s
 end
@@ -96,17 +96,17 @@ local function refreshBenefits()
 	for i, id in ipairs(Benefits.Sorted()) do
 		local def = Benefits.List[id]
 		local owned = Benefits.Has(profile, id)
-		local row, face = UI.panel(benefitList, { Name = "Row_" .. id, Size = UDim2.fromScale(0.98, 0), Aspect = 8, Color = if owned then "blue" else "panelAlt", Corner = 0.3, LayoutOrder = i })
+		local row, face = UI.panel(benefitList, { Name = "Row_" .. id, Size = UDim2.fromScale(1, 0), Aspect = 8.4, RowMax = 74, Color = if owned then "blue" else "panelAlt", Corner = 0.2, Shadow = false, StrokeMult = 0.8, LayoutOrder = i })
 		if owned then
 			UI.shine(row)
 		end
-		UI.icon(face, BENEFIT_ICON[id] or "star", { Name = "Icon", Size = UDim2.fromScale(0.1, 0.8), Position = UDim2.fromScale(0.015, 0.1) })
+		UI.icon(face, BENEFIT_ICON[id] or "star", { Name = "Icon", Size = UDim2.fromScale(0.1, 0.76), Position = UDim2.fromScale(0.015, 0.12) })
 		UI.text(face, def.Name, { Name = "Name", Size = UDim2.fromScale(0.42, 0.44), Position = UDim2.fromScale(0.12, 0.08), Role = "Body", AlignX = Enum.TextXAlignment.Left })
 		UI.text(face, def.Effect, { Name = "Effect", Size = UDim2.fromScale(0.42, 0.36), Position = UDim2.fromScale(0.12, 0.56), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
 		if owned then
 			UI.chip(face, "ATIVO", "green", { Name = "Owned", Icon = "tick", Size = UDim2.fromScale(0.3, 0.6), Position = UDim2.fromScale(0.97, 0.5), AnchorPoint = Vector2.new(1, 0.5), Role = "Body" })
 		else
-			priceButton(face, { Name = "Robux", Text = def.Robux .. " R$", Size = UDim2.fromScale(0.2, 0.74), Position = UDim2.fromScale(0.56, 0.13),
+			priceButton(face, { Name = "Robux", Text = def.Robux .. " R$", Size = UDim2.fromScale(0.2, 0.68), Position = UDim2.fromScale(0.56, 0.5), AnchorPoint = Vector2.new(0, 0.5),
 				OnClick = function()
 					local passId = ProductIds.GamePasses[id] or 0
 					if passId == 0 then
@@ -117,7 +117,7 @@ local function refreshBenefits()
 					MarketplaceService:PromptGamePassPurchase(player, passId)
 				end,
 			})
-			priceButton(face, { Name = "Gems", Icon = if def.Gems then "gem" else nil, Text = if def.Gems then UI.fmt(def.Gems) else "S\u{f3} Robux", Color = if def.Gems then "purple" else "grey", Size = UDim2.fromScale(0.2, 0.74), Position = UDim2.fromScale(0.78, 0.13),
+			priceButton(face, { Name = "Gems", Icon = if def.Gems then "gem" else nil, Text = if def.Gems then UI.fmt(def.Gems) else "S\u{f3} Robux", Color = if def.Gems then "purple" else "grey", Size = UDim2.fromScale(0.2, 0.68), Position = UDim2.fromScale(0.78, 0.5), AnchorPoint = Vector2.new(0, 0.5),
 				OnClick = function()
 					if not def.Gems then
 						UI.play("error")
@@ -138,7 +138,7 @@ local function refreshPacks()
 	for i, id in ipairs(ids) do
 		local pack = Benefits.GemPacks[id]
 		local best = i == #ids
-		local card, face = UI.panel(packList, { Name = "Pack_" .. id, Color = if best then "lendario" else "panelAlt", Corner = T.Corner.Card, LayoutOrder = i })
+		local card, face = UI.panel(packList, { Name = "Pack_" .. id, Color = if best then "lendario" else "panelAlt", Corner = T.Corner.Card, Shadow = false, StrokeMult = 0.85, LayoutOrder = i })
 		if best then
 			UI.shine(card)
 			UI.chip(face, "MELHOR VALOR", "red", { Name = "Best", Size = UDim2.fromScale(0.7, 0.11), Position = UDim2.fromScale(0.5, 0.03), AnchorPoint = Vector2.new(0.5, 0) })
@@ -163,7 +163,7 @@ end
 local function refreshItems()
 	UI.clear(list)
 	local sold = if profile.GemsSold and profile.GemsSold.Day == Base.Day(os.time() + (ReplicatedStorage:GetAttribute("ClockOffset") or 0)) then profile.GemsSold.Amount else 0
-	local ore, oface = UI.panel(list, { Name = "Row_Ore", Color = "ore", Corner = T.Corner.Card, LayoutOrder = -1 })
+	local ore, oface = UI.panel(list, { Name = "Row_Ore", Color = "ore", Corner = T.Corner.Card, Shadow = false, StrokeMult = 0.85, LayoutOrder = -1 })
 	UI.icon(oface, "ore", { Name = "Icon", Size = UDim2.fromScale(0.36, 0.25), Position = UDim2.fromScale(0.5, 0.03), AnchorPoint = Vector2.new(0.5, 0) })
 	UI.text(oface, "VENDER MIN\u{c9}RIO", { Name = "Name", Size = UDim2.fromScale(0.9, 0.1), Position = UDim2.fromScale(0.05, 0.29), Role = "Small" })
 	UI.text(oface, string.format("Min\u{e9}rio %s/%s\nGemas hoje %d/%d", UI.fmt(profile.Ore or 0), UI.fmt(Base.OreMax), sold, Base.DailyGemCap), { Name = "Owned", Size = UDim2.fromScale(0.9, 0.22), Position = UDim2.fromScale(0.05, 0.41), Role = "Small", StrokeMult = 0.5 })
@@ -179,10 +179,7 @@ local function refreshItems()
 			continue -- doces e outros itens que nao se compram
 		end
 		local style = ITEM_STYLE[id] or {}
-		local card, face = UI.panel(list, { Name = "Row_" .. id, Color = style.Color or "panelAlt", Corner = T.Corner.Card, LayoutOrder = item.Order or 99 })
-		if style.Frame then
-			UI.stroke(face, style.Frame, style.FrameMult or 1)
-		end
+		local card, face = UI.panel(list, { Name = "Row_" .. id, Color = style.Color or "panelAlt", Corner = T.Corner.Card, Shadow = false, StrokeColor = style.Frame, StrokeMult = if style.Frame then math.min(style.FrameMult or 1, 1.15) else 0.85, LayoutOrder = item.Order or 99 })
 		if style.Shine then
 			UI.shine(card)
 		end
