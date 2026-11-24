@@ -70,8 +70,19 @@ Characters.List = {
 		Concept = "Espadachim jovem e impulsivo",
 		BaseLevel = 10,
 		BaseStats = { HP = 62, Attack = 24, Defense = 18, Speed = 22 },
-		Moves = { "CorteFlamejante", "Investida", "BrasaViva", "PosturaDeCombate" },
-		Learnset = { { Level = 1, Move = "Investida" }, { Level = 1, Move = "BrasaViva" }, { Level = 5, Move = "PosturaDeCombate" }, { Level = 10, Move = "CorteFlamejante" } },
+		Learnset = {
+			{ Level = 1, Move = "CorteBasico" },
+			{ Level = 1, Move = "CorteCruzado" },
+			{ Level = 5, Move = "PosturaDaLamina" },
+			{ Level = 8, Move = "Investida" },
+			{ Level = 10, Move = "CorteFlamejante" },
+			{ Level = 14, Move = "BrasaViva" },
+			{ Level = 18, Move = "EstocadaVeloz" },
+			{ Level = 22, Move = "CorteDrenante" },
+			{ Level = 28, Move = "DancaDasEspadas" },
+			{ Level = 34, Move = "TempestadeDeCortes" },
+			{ Level = 40, Move = "InvestidaCortante" },
+		},
 	},
 	Raiko = {
 		Name = "Raiko",
@@ -82,8 +93,19 @@ Characters.List = {
 		Concept = "Lutador de rua calmo e r\u{e1}pido",
 		BaseLevel = 10,
 		BaseStats = { HP = 66, Attack = 22, Defense = 20, Speed = 20 },
-		Moves = { "Descarga", "SocoDireto", "PunhoDeMare", "Estatica" },
-		Learnset = { { Level = 1, Move = "SocoDireto" }, { Level = 1, Move = "PunhoDeMare" }, { Level = 5, Move = "Estatica" }, { Level = 10, Move = "Descarga" } },
+		Learnset = {
+			{ Level = 1, Move = "SocoDireto" },
+			{ Level = 1, Move = "PunhoDeMare" },
+			{ Level = 5, Move = "Estatica" },
+			{ Level = 10, Move = "Descarga" },
+			{ Level = 14, Move = "SocoRelampago" },
+			{ Level = 18, Move = "Rasteira" },
+			{ Level = 22, Move = "Agilidade" },
+			{ Level = 26, Move = "GiroVarredor" },
+			{ Level = 30, Move = "OndaDeImpacto" },
+			{ Level = 36, Move = "FocoInterior" },
+			{ Level = 40, Move = "ImpactoTotal" },
+		},
 	},
 	Yomogi = {
 		Name = "Yomogi",
@@ -94,8 +116,19 @@ Characters.List = {
 		Concept = "Meio-fera da floresta, instintivo e protetor",
 		BaseLevel = 10,
 		BaseStats = { HP = 64, Attack = 21, Defense = 23, Speed = 19 },
-		Moves = { "GaiolaDeEspinhos", "Arranhao", "SementeToxica", "CascaDeCarvalho" },
-		Learnset = { { Level = 1, Move = "Arranhao" }, { Level = 1, Move = "SementeToxica" }, { Level = 5, Move = "CascaDeCarvalho" }, { Level = 10, Move = "GaiolaDeEspinhos" } },
+		Learnset = {
+			{ Level = 1, Move = "Arranhao" },
+			{ Level = 1, Move = "SementeToxica" },
+			{ Level = 5, Move = "CascaDeCarvalho" },
+			{ Level = 10, Move = "GaiolaDeEspinhos" },
+			{ Level = 14, Move = "FogoFatuo" },
+			{ Level = 18, Move = "SifaoArcano" },
+			{ Level = 22, Move = "RunasToxicas" },
+			{ Level = 26, Move = "Recuperacao" },
+			{ Level = 30, Move = "CuraLuminosa" },
+			{ Level = 36, Move = "Purificacao" },
+			{ Level = 42, Move = "ExplosaoAstral" },
+		},
 		-- Animacoes publicadas (copias em ServerStorage/Characters/Yomogi/Animations)
 		Animations = {
 			Idle = 95978454415689, Walk = 81539047602340, Hit = 72898431375427, Faint = 108505801464543,
@@ -117,12 +150,20 @@ Characters.List = {
 		Concept = "Feiticeiro lend\u{e1}rio de luz, gravidade e vazio",
 		BaseLevel = 10,
 		BaseStats = { HP = 66, Attack = 24, Defense = 21, Speed = 23 },
-		Moves = { "TudoRoxo", "Atracao", "SocoDireto", "PosturaDeCombate" },
 		Learnset = {
-			{ Level = 1, Move = "Atracao" },
+			{ Level = 1, Move = "EsferaArcana" },
 			{ Level = 1, Move = "SocoDireto" },
-			{ Level = 1, Move = "TudoRoxo" },
 			{ Level = 5, Move = "PosturaDeCombate" },
+			{ Level = 8, Move = "PulsoVeloz" },
+			{ Level = 12, Move = "OndaArcana" },
+			{ Level = 16, Move = "MenteCalma" },
+			{ Level = 20, Move = "Proteger" },
+			{ Level = 24, Move = "BarreiraArcana" },
+			{ Level = 28, Move = "SifaoArcano" },
+			{ Level = 32, Move = "VentoAFavor" },
+			{ Level = 36, Move = "ExplosaoAstral" },
+			{ Level = 42, Move = "Atracao" },
+			{ Level = 50, Move = "TudoRoxo" },
 		},
 		-- Animacoes publicadas (copias em ServerStorage/Characters/Setero/Animations)
 		Animations = {
@@ -144,12 +185,21 @@ Characters.List = {
 		Concept = "Artista marcial lend\u{e1}rio que canaliza o Ki e a energia vital celeste",
 		BaseLevel = 10,
 		BaseStats = { HP = 68, Attack = 25, Defense = 20, Speed = 22 },
-		Moves = { "Kamehameha", "GenkiDama", "ComboMarcial", "CargaDeKi" },
 		Learnset = {
-			{ Level = 1, Move = "Kamehameha" },
-			{ Level = 1, Move = "GenkiDama" },
+			{ Level = 1, Move = "SocoDireto" },
 			{ Level = 1, Move = "ComboMarcial" },
-			{ Level = 5, Move = "CargaDeKi" },
+			{ Level = 5, Move = "PosturaDeCombate" },
+			{ Level = 8, Move = "SocoRelampago" },
+			{ Level = 12, Move = "QuebraGuarda" },
+			{ Level = 16, Move = "Agilidade" },
+			{ Level = 20, Move = "CorpoDeFerro" },
+			{ Level = 24, Move = "PunhoDemolidor" },
+			{ Level = 28, Move = "GritoDeGuerra" },
+			{ Level = 32, Move = "FocoInterior" },
+			{ Level = 36, Move = "CargaDeKi" },
+			{ Level = 38, Move = "ImpactoTotal" },
+			{ Level = 42, Move = "Kamehameha" },
+			{ Level = 50, Move = "GenkiDama" },
 		},
 		-- Animacoes publicadas (copias em ServerStorage/Characters/San/Animations)
 		Animations = {
@@ -172,12 +222,20 @@ Characters.List = {
 		Concept = "Colosso lend\u{e1}rio dos mares capaz de rachar o pr\u{f3}prio ar com sua bisento",
 		BaseLevel = 10,
 		BaseStats = { HP = 76, Attack = 27, Defense = 22, Speed = 15 },
-		Moves = { "SocoSismico", "CeuETerra", "CorteMurakumo", "HakiDoConquistador" },
 		Learnset = {
-			{ Level = 1, Move = "SocoSismico" },
-			{ Level = 1, Move = "CeuETerra" },
-			{ Level = 1, Move = "CorteMurakumo" },
-			{ Level = 5, Move = "HakiDoConquistador" },
+			{ Level = 1, Move = "CorteBasico" },
+			{ Level = 1, Move = "CorteCruzado" },
+			{ Level = 5, Move = "PosturaDaLamina" },
+			{ Level = 10, Move = "CorteGiratorio" },
+			{ Level = 14, Move = "OlharIntimidador" },
+			{ Level = 18, Move = "QuebraLamina" },
+			{ Level = 22, Move = "MuralhaDeFerro" },
+			{ Level = 26, Move = "LaminaPesada" },
+			{ Level = 30, Move = "GuardaAmpla" },
+			{ Level = 34, Move = "CorteMurakumo" },
+			{ Level = 38, Move = "HakiDoConquistador" },
+			{ Level = 44, Move = "SocoSismico" },
+			{ Level = 50, Move = "CeuETerra" },
 		},
 		-- Animacoes padrao compartilhadas + 4 golpes exclusivos publicados
 		Animations = {
@@ -201,12 +259,19 @@ Characters.List = {
 		Concept = "Capit\u{e3}o pirata de borracha com combos velozes e golpes de impacto",
 		BaseLevel = 10,
 		BaseStats = { HP = 68, Attack = 25, Defense = 20, Speed = 23 },
-		Moves = { "ComboMarcial", "SocoDireto", "QuebraGuarda", "PosturaDeCombate" },
 		Learnset = {
 			{ Level = 1, Move = "SocoDireto" },
 			{ Level = 1, Move = "ComboMarcial" },
 			{ Level = 5, Move = "PosturaDeCombate" },
-			{ Level = 10, Move = "QuebraGuarda" },
+			{ Level = 8, Move = "SocoRelampago" },
+			{ Level = 12, Move = "QuebraGuarda" },
+			{ Level = 16, Move = "CorpoDeFerro" },
+			{ Level = 20, Move = "PunhoDemolidor" },
+			{ Level = 24, Move = "OndaDeImpacto" },
+			{ Level = 28, Move = "GritoDeGuerra" },
+			{ Level = 32, Move = "PunhoArdente" },
+			{ Level = 36, Move = "GiroVarredor" },
+			{ Level = 42, Move = "ImpactoTotal" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
@@ -228,12 +293,18 @@ Characters.List = {
 		Concept = "Navegadora astuta especialista em tempestades e golpes em \u{e1}rea",
 		BaseLevel = 10,
 		BaseStats = { HP = 60, Attack = 23, Defense = 18, Speed = 25 },
-		Moves = { "EsferaArcana", "Descarga", "SeloParalisante", "OndaArcana" },
 		Learnset = {
 			{ Level = 1, Move = "EsferaArcana" },
 			{ Level = 1, Move = "Descarga" },
 			{ Level = 5, Move = "SeloParalisante" },
 			{ Level = 10, Move = "OndaArcana" },
+			{ Level = 14, Move = "RaioCongelante" },
+			{ Level = 18, Move = "VentoAFavor" },
+			{ Level = 22, Move = "Desobstruir" },
+			{ Level = 26, Move = "BarreiraArcana" },
+			{ Level = 30, Move = "CuraLuminosa" },
+			{ Level = 36, Move = "ExplosaoAstral" },
+			{ Level = 42, Move = "MeteoroArcano" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
@@ -253,12 +324,19 @@ Characters.List = {
 		Concept = "Atirador engenhoso de disparos certeiros e sementes explosivas",
 		BaseLevel = 10,
 		BaseStats = { HP = 62, Attack = 22, Defense = 19, Speed = 24 },
-		Moves = { "DisparoPreciso", "SementeToxica", "MiraFirme", "ChuvaDeProjeteis" },
 		Learnset = {
 			{ Level = 1, Move = "DisparoPreciso" },
 			{ Level = 1, Move = "SementeToxica" },
 			{ Level = 5, Move = "MiraFirme" },
-			{ Level = 10, Move = "ChuvaDeProjeteis" },
+			{ Level = 6, Move = "AtaqueRapido" },
+			{ Level = 8, Move = "TiroRapido" },
+			{ Level = 12, Move = "DardoVenenoso" },
+			{ Level = 16, Move = "FocoDePrecisao" },
+			{ Level = 18, Move = "DisparoDeRede" },
+			{ Level = 22, Move = "BombaDeFumaca" },
+			{ Level = 26, Move = "MinaDeEstrepes" },
+			{ Level = 32, Move = "ChuvaDeProjeteis" },
+			{ Level = 38, Move = "DisparoDeElite" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
@@ -278,12 +356,19 @@ Characters.List = {
 		Concept = "Espadachim implac\u{e1}vel do estilo tr\u{ea}s espadas",
 		BaseLevel = 10,
 		BaseStats = { HP = 66, Attack = 26, Defense = 21, Speed = 20 },
-		Moves = { "CorteBasico", "CorteMurakumo", "PosturaDaLamina", "CorteCruzado" },
 		Learnset = {
 			{ Level = 1, Move = "CorteBasico" },
-			{ Level = 1, Move = "CorteMurakumo" },
+			{ Level = 1, Move = "CorteCruzado" },
 			{ Level = 5, Move = "PosturaDaLamina" },
-			{ Level = 10, Move = "CorteCruzado" },
+			{ Level = 8, Move = "EstocadaVeloz" },
+			{ Level = 12, Move = "CorteGiratorio" },
+			{ Level = 16, Move = "LaminaAfiada" },
+			{ Level = 20, Move = "QuebraLamina" },
+			{ Level = 24, Move = "OlharIntimidador" },
+			{ Level = 28, Move = "LaminaPesada" },
+			{ Level = 32, Move = "DancaDasEspadas" },
+			{ Level = 36, Move = "TempestadeDeCortes" },
+			{ Level = 42, Move = "InvestidaCortante" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
@@ -304,12 +389,18 @@ Characters.List = {
 		Concept = "Cozinheiro combatente especialista em chutes r\u{e1}pidos e precisos",
 		BaseLevel = 10,
 		BaseStats = { HP = 65, Attack = 25, Defense = 19, Speed = 24 },
-		Moves = { "SocoDireto", "ComboMarcial", "PosturaDeCombate", "QuebraGuarda" },
 		Learnset = {
 			{ Level = 1, Move = "SocoDireto" },
 			{ Level = 1, Move = "ComboMarcial" },
 			{ Level = 5, Move = "PosturaDeCombate" },
-			{ Level = 10, Move = "QuebraGuarda" },
+			{ Level = 8, Move = "SocoRelampago" },
+			{ Level = 12, Move = "Rasteira" },
+			{ Level = 16, Move = "Agilidade" },
+			{ Level = 20, Move = "Proteger" },
+			{ Level = 24, Move = "VentoAFavor" },
+			{ Level = 28, Move = "PunhoArdente" },
+			{ Level = 32, Move = "GiroVarredor" },
+			{ Level = 38, Move = "ImpactoTotal" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
@@ -332,12 +423,18 @@ Characters.List = {
 		Concept = "Kunoichi \u{e1}gil de golpes f\u{ed}sicos diretos e quebra-guarda",
 		BaseLevel = 10,
 		BaseStats = { HP = 64, Attack = 23, Defense = 20, Speed = 21 },
-		Moves = { "SocoDireto", "ComboMarcial", "PosturaDeCombate", "QuebraGuarda" },
 		Learnset = {
 			{ Level = 1, Move = "SocoDireto" },
 			{ Level = 1, Move = "ComboMarcial" },
 			{ Level = 5, Move = "PosturaDeCombate" },
 			{ Level = 10, Move = "QuebraGuarda" },
+			{ Level = 14, Move = "CorpoDeFerro" },
+			{ Level = 18, Move = "SocoDrenante" },
+			{ Level = 22, Move = "PunhoDemolidor" },
+			{ Level = 26, Move = "CuraLuminosa" },
+			{ Level = 30, Move = "Purificacao" },
+			{ Level = 34, Move = "FocoInterior" },
+			{ Level = 40, Move = "ImpactoTotal" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
@@ -358,12 +455,18 @@ Characters.List = {
 		Concept = "Estrategista t\u{e1}tico especialista em controle e paralisia de sombras",
 		BaseLevel = 10,
 		BaseStats = { HP = 61, Attack = 21, Defense = 21, Speed = 24 },
-		Moves = { "EsferaArcana", "ChamaMistica", "SeloParalisante", "OndaArcana" },
 		Learnset = {
 			{ Level = 1, Move = "EsferaArcana" },
 			{ Level = 1, Move = "ChamaMistica" },
 			{ Level = 5, Move = "SeloParalisante" },
-			{ Level = 10, Move = "OndaArcana" },
+			{ Level = 10, Move = "OlharIntimidador" },
+			{ Level = 14, Move = "VenenoPuro" },
+			{ Level = 18, Move = "DisparoDeRede" },
+			{ Level = 22, Move = "NevoaDoSono" },
+			{ Level = 26, Move = "BarreiraArcana" },
+			{ Level = 30, Move = "RunasToxicas" },
+			{ Level = 34, Move = "GuardaAmpla" },
+			{ Level = 40, Move = "ExplosaoAstral" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
@@ -383,12 +486,18 @@ Characters.List = {
 		Concept = "Jounin veterano de reflexos r\u{e1}pidos e jutsus em \u{e1}rea",
 		BaseLevel = 10,
 		BaseStats = { HP = 65, Attack = 25, Defense = 20, Speed = 25 },
-		Moves = { "EsferaArcana", "Descarga", "SeloParalisante", "OndaArcana" },
 		Learnset = {
 			{ Level = 1, Move = "EsferaArcana" },
 			{ Level = 1, Move = "Descarga" },
 			{ Level = 5, Move = "SeloParalisante" },
-			{ Level = 10, Move = "OndaArcana" },
+			{ Level = 8, Move = "PulsoVeloz" },
+			{ Level = 12, Move = "OndaArcana" },
+			{ Level = 16, Move = "MenteCalma" },
+			{ Level = 20, Move = "Proteger" },
+			{ Level = 24, Move = "Desobstruir" },
+			{ Level = 28, Move = "SifaoArcano" },
+			{ Level = 34, Move = "ExplosaoAstral" },
+			{ Level = 40, Move = "MeteoroArcano" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
@@ -408,12 +517,18 @@ Characters.List = {
 		Concept = "Espadachim disciplinado especialista em cortes r\u{e1}pidos e precisos",
 		BaseLevel = 10,
 		BaseStats = { HP = 64, Attack = 26, Defense = 19, Speed = 24 },
-		Moves = { "CorteBasico", "CorteFlamejante", "PosturaDaLamina", "CorteCruzado" },
 		Learnset = {
 			{ Level = 1, Move = "CorteBasico" },
-			{ Level = 1, Move = "CorteFlamejante" },
+			{ Level = 1, Move = "CorteCruzado" },
 			{ Level = 5, Move = "PosturaDaLamina" },
-			{ Level = 10, Move = "CorteCruzado" },
+			{ Level = 8, Move = "EstocadaVeloz" },
+			{ Level = 12, Move = "CorteFlamejante" },
+			{ Level = 16, Move = "LaminaAfiada" },
+			{ Level = 20, Move = "Proteger" },
+			{ Level = 24, Move = "QuebraLamina" },
+			{ Level = 28, Move = "DancaDasEspadas" },
+			{ Level = 34, Move = "TempestadeDeCortes" },
+			{ Level = 40, Move = "InvestidaCortante" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
@@ -434,12 +549,20 @@ Characters.List = {
 		Concept = "Shinobi determinado com vigor elevado e combos diretos intensos",
 		BaseLevel = 10,
 		BaseStats = { HP = 70, Attack = 25, Defense = 21, Speed = 24 },
-		Moves = { "SocoDireto", "ComboMarcial", "PosturaDeCombate", "QuebraGuarda" },
 		Learnset = {
 			{ Level = 1, Move = "SocoDireto" },
 			{ Level = 1, Move = "ComboMarcial" },
 			{ Level = 5, Move = "PosturaDeCombate" },
-			{ Level = 10, Move = "QuebraGuarda" },
+			{ Level = 6, Move = "AtaqueRapido" },
+			{ Level = 8, Move = "SocoRelampago" },
+			{ Level = 12, Move = "QuebraGuarda" },
+			{ Level = 16, Move = "Agilidade" },
+			{ Level = 20, Move = "SocoDrenante" },
+			{ Level = 24, Move = "OndaDeImpacto" },
+			{ Level = 28, Move = "GritoDeGuerra" },
+			{ Level = 32, Move = "FocoInterior" },
+			{ Level = 36, Move = "Desobstruir" },
+			{ Level = 42, Move = "ImpactoTotal" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
@@ -460,12 +583,20 @@ Characters.List = {
 		Concept = "Mestre lend\u{e1}rio de todos os jutsus elementais de Konoha",
 		BaseLevel = 10,
 		BaseStats = { HP = 72, Attack = 26, Defense = 24, Speed = 21 },
-		Moves = { "EsferaArcana", "ChamaMistica", "SeloParalisante", "OndaArcana" },
 		Learnset = {
 			{ Level = 1, Move = "EsferaArcana" },
 			{ Level = 1, Move = "ChamaMistica" },
 			{ Level = 5, Move = "SeloParalisante" },
 			{ Level = 10, Move = "OndaArcana" },
+			{ Level = 14, Move = "RaioCongelante" },
+			{ Level = 18, Move = "FogoFatuo" },
+			{ Level = 22, Move = "MenteCalma" },
+			{ Level = 26, Move = "BarreiraArcana" },
+			{ Level = 30, Move = "GuardaAmpla" },
+			{ Level = 34, Move = "CuraLuminosa" },
+			{ Level = 38, Move = "Purificacao" },
+			{ Level = 44, Move = "ExplosaoAstral" },
+			{ Level = 50, Move = "MeteoroArcano" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
@@ -487,6 +618,19 @@ Characters.List = {
 		Concept = "Lutador resistente com golpes pesados de bra\u{e7}o blindado",
 		BaseLevel = 10,
 		BaseStats = { HP = 69, Attack = 24, Defense = 23, Speed = 17 },
+		Learnset = {
+			{ Level = 1, Move = "SocoDireto" },
+			{ Level = 1, Move = "ComboMarcial" },
+			{ Level = 5, Move = "PosturaDeCombate" },
+			{ Level = 10, Move = "QuebraGuarda" },
+			{ Level = 14, Move = "CorpoDeFerro" },
+			{ Level = 18, Move = "MuralhaDeFerro" },
+			{ Level = 22, Move = "GuardaAmpla" },
+			{ Level = 26, Move = "PunhoDemolidor" },
+			{ Level = 30, Move = "OndaDeImpacto" },
+			{ Level = 34, Move = "Recuperacao" },
+			{ Level = 40, Move = "ImpactoTotal" },
+		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
@@ -505,6 +649,19 @@ Characters.List = {
 		Concept = "Arqueiro Quincy de flechas espirituais certeiras e r\u{e1}pidas",
 		BaseLevel = 10,
 		BaseStats = { HP = 61, Attack = 24, Defense = 18, Speed = 25 },
+		Learnset = {
+			{ Level = 1, Move = "DisparoPreciso" },
+			{ Level = 1, Move = "TiroPerfurante" },
+			{ Level = 5, Move = "MiraFirme" },
+			{ Level = 8, Move = "TiroRapido" },
+			{ Level = 12, Move = "ChuvaDeProjeteis" },
+			{ Level = 16, Move = "FocoDePrecisao" },
+			{ Level = 20, Move = "TiroDeSupressao" },
+			{ Level = 24, Move = "DisparoRompeEscudo" },
+			{ Level = 28, Move = "DardoEletrico" },
+			{ Level = 34, Move = "RajadaTatica" },
+			{ Level = 40, Move = "DisparoDeElite" },
+		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
@@ -523,6 +680,19 @@ Characters.List = {
 		Concept = "Shinigami especialista em Kido glacial e controle de campo",
 		BaseLevel = 10,
 		BaseStats = { HP = 64, Attack = 24, Defense = 21, Speed = 23 },
+		Learnset = {
+			{ Level = 1, Move = "EsferaArcana" },
+			{ Level = 1, Move = "ChamaMistica" },
+			{ Level = 5, Move = "SeloParalisante" },
+			{ Level = 8, Move = "PulsoVeloz" },
+			{ Level = 12, Move = "RaioCongelante" },
+			{ Level = 16, Move = "MenteCalma" },
+			{ Level = 20, Move = "NevoaDoSono" },
+			{ Level = 24, Move = "BarreiraArcana" },
+			{ Level = 28, Move = "Purificacao" },
+			{ Level = 34, Move = "ExplosaoAstral" },
+			{ Level = 40, Move = "MeteoroArcano" },
+		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
@@ -541,6 +711,19 @@ Characters.List = {
 		Concept = "Tenente impetuoso que domina cortes amplos de longo alcance",
 		BaseLevel = 10,
 		BaseStats = { HP = 67, Attack = 26, Defense = 20, Speed = 21 },
+		Learnset = {
+			{ Level = 1, Move = "CorteBasico" },
+			{ Level = 1, Move = "CorteCruzado" },
+			{ Level = 5, Move = "PosturaDaLamina" },
+			{ Level = 10, Move = "CorteGiratorio" },
+			{ Level = 14, Move = "CorteCerteiro" },
+			{ Level = 18, Move = "FioVenenoso" },
+			{ Level = 22, Move = "QuebraLamina" },
+			{ Level = 26, Move = "LaminaPesada" },
+			{ Level = 30, Move = "LaminasNoChao" },
+			{ Level = 34, Move = "TempestadeDeCortes" },
+			{ Level = 40, Move = "InvestidaCortante" },
+		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
@@ -560,6 +743,19 @@ Characters.List = {
 		Concept = "Shinigami substituto veloz com cortes espirituais devastadores",
 		BaseLevel = 10,
 		BaseStats = { HP = 67, Attack = 26, Defense = 19, Speed = 25 },
+		Learnset = {
+			{ Level = 1, Move = "CorteBasico" },
+			{ Level = 1, Move = "CorteCruzado" },
+			{ Level = 5, Move = "PosturaDaLamina" },
+			{ Level = 8, Move = "EstocadaVeloz" },
+			{ Level = 12, Move = "CorteGiratorio" },
+			{ Level = 16, Move = "LaminaAfiada" },
+			{ Level = 20, Move = "CorteDrenante" },
+			{ Level = 24, Move = "QuebraLamina" },
+			{ Level = 28, Move = "LaminaPesada" },
+			{ Level = 34, Move = "TempestadeDeCortes" },
+			{ Level = 42, Move = "InvestidaCortante" },
+		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
@@ -578,12 +774,20 @@ Characters.List = {
 		Concept = "Capit\u{e3}o nobre da Soul Society mestre em tempestades de l\u{e2}minas",
 		BaseLevel = 10,
 		BaseStats = { HP = 70, Attack = 27, Defense = 23, Speed = 24 },
-		Moves = { "CorteBasico", "CorteCruzado", "Senbonzakura", "SenbonzakuraKageyoshi" },
 		Learnset = {
 			{ Level = 1, Move = "CorteBasico" },
 			{ Level = 1, Move = "CorteCruzado" },
-			{ Level = 5, Move = "Senbonzakura" },
-			{ Level = 10, Move = "SenbonzakuraKageyoshi" },
+			{ Level = 5, Move = "PosturaDaLamina" },
+			{ Level = 8, Move = "EstocadaVeloz" },
+			{ Level = 12, Move = "CorteCerteiro" },
+			{ Level = 16, Move = "LaminaAfiada" },
+			{ Level = 20, Move = "Proteger" },
+			{ Level = 24, Move = "QuebraLamina" },
+			{ Level = 28, Move = "DancaDasEspadas" },
+			{ Level = 32, Move = "LaminasNoChao" },
+			{ Level = 36, Move = "TempestadeDeCortes" },
+			{ Level = 42, Move = "Senbonzakura" },
+			{ Level = 50, Move = "SenbonzakuraKageyoshi" },
 		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
@@ -616,8 +820,15 @@ for id, def in pairs(Characters.List) do
 	def.Anime = def.Anime or "Generico"
 	-- Herda automaticamente o kit generico de golpes da classe quando o personagem nao define Learnset proprio
 	if not def.Learnset then
-		def.Learnset = Moves.ClassKit(def.Type, def.SignatureMove)
+		local sigLevel = if def.Rarity == "Lendario" then 50 else 45
+		def.Learnset = Moves.ClassKit(def.Type, def.SignatureMove, sigLevel)
 	end
+	table.sort(def.Learnset, function(a, b)
+		if a.Level ~= b.Level then
+			return a.Level < b.Level
+		end
+		return a.Move < b.Move
+	end)
 	if not def.Moves then
 		local list = {}
 		for _, entry in ipairs(def.Learnset) do
@@ -634,9 +845,9 @@ function Characters.Get(id: string)
 end
 
 --[[
-	Aprendizado de golpes (GDD secao 7): golpes novos nos niveis 5, 10, 18, 26, 35 e 45.
-	Learnset = { { Level = n, Move = id }, ... }. Nivel 1 = golpes iniciais.
-	Sem Learnset, o personagem conhece a lista Moves inteira.
+	Aprendizado de golpes por nivel (Nv. 1 -> 50):
+	  Learnset = { { Level = n, Move = id }, ... }. Nivel 1 = golpes iniciais.
+	  Lendarios desbloqueiam seus ataques especiais/assinaturas nos ultimos niveis (Nv. 42-44 e Nv. 50).
 ]]
 function Characters.LearnedAt(id: string, level: number): { string }
 	local def = assert(Characters.List[id], "Personagem desconhecido: " .. tostring(id))
@@ -652,6 +863,31 @@ function Characters.LearnedAt(id: string, level: number): { string }
 	return list
 end
 
+-- Nivel em que o personagem aprende um golpe especifico (nil se nao esta no Learnset)
+function Characters.LearnLevelOf(id: string, moveId: string): number?
+	local def = Characters.List[id]
+	for _, entry in ipairs(def and def.Learnset or {}) do
+		if entry.Move == moveId then
+			return entry.Level
+		end
+	end
+	return nil
+end
+
+-- Proximos golpes ainda bloqueados acima do nivel atual (em ordem crescente de nivel)
+function Characters.UpcomingMoves(id: string, level: number): { { Level: number, Move: string } }
+	local def = Characters.List[id]
+	local out = {}
+	local seen = {}
+	for _, entry in ipairs(def and def.Learnset or {}) do
+		if entry.Level > level and not seen[entry.Move] then
+			seen[entry.Move] = true
+			table.insert(out, { Level = entry.Level, Move = entry.Move })
+		end
+	end
+	return out
+end
+
 -- Golpes aprendidos exatamente ao chegar num nivel
 function Characters.NewMovesAt(id: string, level: number): { string }
 	local def = Characters.List[id]
@@ -664,12 +900,32 @@ function Characters.NewMovesAt(id: string, level: number): { string }
 	return list
 end
 
--- 4 golpes ativos padrao: os 4 ultimos aprendidos ate o nivel
+-- 4 golpes ativos padrao: os 4 ultimos aprendidos ate o nivel (garante ao menos 1 golpe de dano)
 function Characters.DefaultActive(id: string, level: number): { string }
 	local learned = Characters.LearnedAt(id, level)
 	local active = {}
 	for i = math.max(1, #learned - 3), #learned do
 		table.insert(active, learned[i])
+	end
+	local hasDamage = false
+	for _, mid in ipairs(active) do
+		local mv = Moves.Get(mid)
+		if mv and mv.Category == "Damage" then
+			hasDamage = true
+			break
+		end
+	end
+	if not hasDamage and #active > 0 then
+		local bestDmg, bestPow = nil, -1
+		for _, mid in ipairs(learned) do
+			local mv = Moves.Get(mid)
+			if mv and mv.Category == "Damage" and (mv.Power or 0) > bestPow then
+				bestDmg, bestPow = mid, mv.Power or 0
+			end
+		end
+		if bestDmg then
+			active[1] = bestDmg
+		end
 	end
 	return active
 end

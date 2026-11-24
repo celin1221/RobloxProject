@@ -44,6 +44,7 @@ local rng = Random.new()
 local STORE_NAME = "PlayerData_v1"
 local BACKUP_NAME = "PlayerDataBackup_v1"
 local VERSION = 1
+local LEARNSET_VERSION = 2 -- v2: progressao completa Nv. 1->50 (especiais lendarios nos ultimos niveis)
 local AUTOSAVE = 60 -- segundos
 local LOCK_STALE = 600 -- trava sem renovacao ha 10 min = servidor morto
 local LOCK_WAIT_TRIES = 5 -- tentativas esperando a trava antes de tomar
@@ -130,6 +131,59 @@ local function reconcile(data, template)
 	return data
 end
 
+local function syncMemberLearnset(m, strictReset: boolean)
+	local def = Characters.Get(m.CharacterId)
+	if not def then
+		return
+	end
+	local level = math.clamp(math.floor(tonumber(m.Level) or 1), 1, Characters.MaxLevel)
+	local expected = Characters.LearnedAt(m.CharacterId, level)
+	if strictReset or typeof(m.Learned) ~= "table" or #m.Learned == 0 then
+		m.Learned = expected
+	else
+		for _, mid in ipairs(expected) do
+			if not table.find(m.Learned, mid) then
+				table.insert(m.Learned, mid)
+			end
+		end
+	end
+	-- Mantem golpes ativos validos dentro de m.Learned; preenche ate 4 usando DefaultActive se faltarem
+	local kept = {}
+	if typeof(m.Active) == "table" then
+		for _, mid in ipairs(m.Active) do
+			if typeof(mid) == "string" and table.find(m.Learned, mid) and not table.find(kept, mid) and #kept < 4 then
+				table.insert(kept, mid)
+			end
+		end
+	end
+	local targetCount = math.min(4, #m.Learned)
+	if #kept < targetCount then
+		for _, mid in ipairs(Characters.DefaultActive(m.CharacterId, level)) do
+			if #kept >= targetCount then
+				break
+			end
+			if table.find(m.Learned, mid) and not table.find(kept, mid) then
+				table.insert(kept, mid)
+			end
+		end
+	end
+	if #kept == 0 and #m.Learned > 0 then
+		table.insert(kept, m.Learned[1])
+	end
+	m.Active = kept
+	-- Remove registros antigos de PP de golpes que nao estao mais ativos
+	if typeof(m.Pp) == "table" then
+		local cleanPp = nil
+		for mid, val in pairs(m.Pp) do
+			if table.find(kept, mid) then
+				cleanPp = cleanPp or {}
+				cleanPp[mid] = val
+			end
+		end
+		m.Pp = cleanPp
+	end
+end
+
 local function migrate(data)
 	-- Substitui o prototipo ProtoLendario (Satoru) pelo personagem oficial Setero
 	if typeof(data.Collection) == "table" then
@@ -139,14 +193,26 @@ local function migrate(data)
 				if m.Name == "Satoru" or not m.Name then
 					m.Name = "Setero"
 				end
-				m.Learned = { "Atracao", "SocoDireto", "TudoRoxo", "PosturaDeCombate" }
-				m.Active = { "TudoRoxo", "Atracao", "SocoDireto", "PosturaDeCombate" }
+				syncMemberLearnset(m, true)
 			end
 		end
 	end
 	if typeof(data.Album) == "table" and typeof(data.Album.Owned) == "table" and data.Album.Owned.ProtoLendario then
 		data.Album.Owned.Setero = data.Album.Owned.Setero or data.Album.Owned.ProtoLendario
 		data.Album.Owned.ProtoLendario = nil
+	end
+	-- Migracao v2: progressao completa de ataques por nivel (Nv. 1 -> 50; especiais lendarios nos ultimos niveis)
+	if (tonumber(data.LearnsetVersion) or 0) < LEARNSET_VERSION then
+		if typeof(data.Collection) == "table" then
+			for _, m in pairs(data.Collection) do
+				syncMemberLearnset(m, true)
+			end
+		end
+		data.LearnsetVersion = LEARNSET_VERSION
+	elseif typeof(data.Collection) == "table" then
+		for _, m in pairs(data.Collection) do
+			syncMemberLearnset(m, false)
+		end
 	end
 	data.Version = VERSION
 	return data
@@ -202,6 +268,7 @@ local function sanitize(data)
 	for _, m in pairs(data.Collection) do
 		m.Level = math.clamp(cleanNumber(m.Level), 1, 50)
 		m.Xp = cleanNumber(m.Xp)
+		syncMemberLearnset(m, false)
 		local def = Characters.Get(m.CharacterId)
 		if typeof(m.Genetics) ~= "table" then
 			m.Genetics = Genetics.Roll(def and def.Rarity or "Comum", rng)

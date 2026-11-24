@@ -594,31 +594,63 @@ Moves.List = {
 	Esforco = { Name = "Esfor\u{e7}o", Type = "Universal", Category = "Damage", Power = 30, Accuracy = 100, PP = 0, Hidden = true },
 }
 
--- Kit generico padrao por classe (herdado automaticamente por novos personagens sem Learnset proprio)
+-- Kit generico padrao por classe (Nv. 1 -> 42, herdado automaticamente por novos personagens sem Learnset proprio)
 Moves.ClassDefaults = {
 	Espadachim = {
 		{ Level = 1, Move = "CorteBasico" },
 		{ Level = 1, Move = "CorteCruzado" },
 		{ Level = 5, Move = "PosturaDaLamina" },
-		{ Level = 10, Move = "CorteGiratorio" },
+		{ Level = 8, Move = "EstocadaVeloz" },
+		{ Level = 12, Move = "CorteGiratorio" },
+		{ Level = 16, Move = "LaminaAfiada" },
+		{ Level = 20, Move = "CorteDrenante" },
+		{ Level = 24, Move = "QuebraLamina" },
+		{ Level = 28, Move = "LaminaPesada" },
+		{ Level = 32, Move = "DancaDasEspadas" },
+		{ Level = 36, Move = "TempestadeDeCortes" },
+		{ Level = 42, Move = "InvestidaCortante" },
 	},
 	Lutador = {
 		{ Level = 1, Move = "SocoDireto" },
 		{ Level = 1, Move = "ComboMarcial" },
 		{ Level = 5, Move = "PosturaDeCombate" },
-		{ Level = 10, Move = "QuebraGuarda" },
+		{ Level = 8, Move = "SocoRelampago" },
+		{ Level = 12, Move = "QuebraGuarda" },
+		{ Level = 16, Move = "CorpoDeFerro" },
+		{ Level = 20, Move = "SocoDrenante" },
+		{ Level = 24, Move = "PunhoDemolidor" },
+		{ Level = 28, Move = "OndaDeImpacto" },
+		{ Level = 32, Move = "GritoDeGuerra" },
+		{ Level = 36, Move = "FocoInterior" },
+		{ Level = 42, Move = "ImpactoTotal" },
 	},
 	Mago = {
 		{ Level = 1, Move = "EsferaArcana" },
 		{ Level = 1, Move = "ChamaMistica" },
 		{ Level = 5, Move = "SeloParalisante" },
-		{ Level = 10, Move = "OndaArcana" },
+		{ Level = 8, Move = "PulsoVeloz" },
+		{ Level = 12, Move = "OndaArcana" },
+		{ Level = 16, Move = "MenteCalma" },
+		{ Level = 20, Move = "SifaoArcano" },
+		{ Level = 24, Move = "BarreiraArcana" },
+		{ Level = 28, Move = "CuraLuminosa" },
+		{ Level = 32, Move = "Purificacao" },
+		{ Level = 36, Move = "ExplosaoAstral" },
+		{ Level = 42, Move = "MeteoroArcano" },
 	},
 	Atirador = {
 		{ Level = 1, Move = "DisparoPreciso" },
 		{ Level = 1, Move = "TiroPerfurante" },
 		{ Level = 5, Move = "MiraFirme" },
-		{ Level = 10, Move = "ChuvaDeProjeteis" },
+		{ Level = 8, Move = "TiroRapido" },
+		{ Level = 12, Move = "ChuvaDeProjeteis" },
+		{ Level = 16, Move = "FocoDePrecisao" },
+		{ Level = 20, Move = "DisparoDeRede" },
+		{ Level = 24, Move = "TiroDeSupressao" },
+		{ Level = 28, Move = "DisparoRompeEscudo" },
+		{ Level = 32, Move = "DardoEletrico" },
+		{ Level = 36, Move = "RajadaTatica" },
+		{ Level = 42, Move = "DisparoDeElite" },
 	},
 }
 
@@ -641,8 +673,8 @@ function Moves.Get(id: string)
 	return Moves.List[id]
 end
 
--- Retorna o Learnset padrao de uma classe (opcionalmente adicionando tecnica assinatura)
-function Moves.ClassKit(classId: string, signatureMoveId: string?)
+-- Retorna o Learnset padrao de uma classe (opcionalmente adicionando tecnica assinatura no nivel indicado)
+function Moves.ClassKit(classId: string, signatureMoveId: string?, signatureLevel: number?)
 	local base = Moves.ClassDefaults[classId] or Moves.ClassDefaults.Lutador
 	local out = {}
 	for _, entry in ipairs(base) do
@@ -657,7 +689,7 @@ function Moves.ClassKit(classId: string, signatureMoveId: string?)
 			end
 		end
 		if not found then
-			table.insert(out, { Level = 10, Move = signatureMoveId })
+			table.insert(out, { Level = signatureLevel or 45, Move = signatureMoveId })
 		end
 	end
 	return out

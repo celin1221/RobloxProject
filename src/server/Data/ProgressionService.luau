@@ -90,12 +90,22 @@ function ProgressionService.AddXp(player: Player, uid: string, amount: number)
 		for _, moveId in ipairs(Characters.NewMovesAt(m.CharacterId, m.Level)) do
 			if not table.find(m.Learned, moveId) then
 				table.insert(m.Learned, moveId)
-				local moveName = Moves.Get(moveId).Name
+				local mv = Moves.Get(moveId)
+				local moveName = if mv then mv.Name else moveId
+				local isSpecial = mv ~= nil and (mv.Signature or mv.CutIn)
 				if #m.Active < Progression.MaxActiveMoves then
 					table.insert(m.Active, moveId)
-					table.insert(lines, def.Name .. " aprendeu " .. moveName .. "!")
+					if isSpecial then
+						table.insert(lines, def.Name .. " desbloqueou o ataque especial " .. moveName .. "!")
+					else
+						table.insert(lines, def.Name .. " aprendeu " .. moveName .. "!")
+					end
 				else
-					table.insert(lines, def.Name .. " aprendeu " .. moveName .. ". Troque os golpes no menu Time.")
+					if isSpecial then
+						table.insert(lines, def.Name .. " desbloqueou o ataque especial " .. moveName .. "! Equipe no menu Golpes.")
+					else
+						table.insert(lines, def.Name .. " aprendeu " .. moveName .. ". Equipe no menu Golpes.")
+					end
 				end
 			end
 		end

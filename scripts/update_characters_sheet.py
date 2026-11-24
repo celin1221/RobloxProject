@@ -600,13 +600,15 @@ def parse_moves() -> tuple[dict[str, dict[str, Any]], dict[str, list[str]]]:
             "Generic": generic,
         }
 
-    # Moves.ClassDefaults
+    # Moves.ClassDefaults -> list of (Level, MoveId)
     m_def = re.search(r"Moves\.ClassDefaults\s*=\s*\{", src)
     assert m_def, "Moves.ClassDefaults nao encontrado"
     def_block, _ = extract_braced_block(src, m_def.end() - 1)
-    class_defaults: dict[str, list[str]] = {}
+    class_defaults: dict[str, list[tuple[int, str]]] = {}
     for cls_id, body in parse_top_level_entries(def_block):
-        class_defaults[cls_id] = re.findall(r'Move\s*=\s*"([^"]+)"', body)
+        pairs = [(int(lv), mid) for lv, mid in re.findall(r'Level\s*=\s*(\d+)\s*,\s*Move\s*=\s*"([^"]+)"', body)]
+        pairs.sort(key=lambda x: (x[0], x[1]))
+        class_defaults[cls_id] = pairs
 
     return moves, class_defaults
 
@@ -624,7 +626,7 @@ def parse_codes() -> dict[str, list[str]]:
     return by_char
 
 
-def parse_characters(class_defaults: dict[str, list[str]]) -> list[dict[str, Any]]:
+def parse_characters(class_defaults: dict[str, list[tuple[int, str]]]) -> list[dict[str, Any]]:
     src = CHARACTERS_LUAU.read_text(encoding="utf-8")
     m_list = re.search(r"Characters\.List\s*=\s*\{", src)
     assert m_list, "Characters.List nao encontrado"
@@ -654,14 +656,17 @@ def parse_characters(class_defaults: dict[str, list[str]]) -> list[dict[str, Any
         )
         hp, atk, df, spd = (int(stats_m.group(i)) for i in range(1, 5)) if stats_m else (0, 0, 0, 0)
 
-        moves_m = re.search(r"Moves\s*=\s*\{([^}]*)\}", body)
         cls_id = type_m.group(1) if type_m else "Lutador"
-        if moves_m:
-            move_ids = re.findall(r'"([^"]+)"', moves_m.group(1))
+        ls_m = re.search(r"Learnset\s*=\s*\{", body)
+        if ls_m:
+            ls_block, _ = extract_braced_block(body, ls_m.end() - 1)
+            learnset = [(int(lv), mid) for lv, mid in re.findall(r'Level\s*=\s*(\d+)\s*,\s*Move\s*=\s*"([^"]+)"', ls_block)]
+            learnset.sort(key=lambda x: (x[0], x[1]))
             uses_class_kit = False
         else:
-            move_ids = list(class_defaults.get(cls_id, class_defaults["Lutador"]))
+            learnset = list(class_defaults.get(cls_id, class_defaults["Lutador"]))
             uses_class_kit = True
+        move_ids = [mid for _, mid in learnset]
 
         chars.append(
             {
@@ -678,6 +683,7 @@ def parse_characters(class_defaults: dict[str, list[str]]) -> list[dict[str, Any
                 "ATK": atk,
                 "DEF": df,
                 "SPD": spd,
+                "Learnset": learnset,
                 "MoveIds": move_ids,
                 "UsesClassKit": uses_class_kit,
             }
@@ -1070,13 +1076,14 @@ def build_workbook(
     ws_a.auto_filter.ref = f"A1:U{len(sorted_moves) + 1}"
 
     # -----------------------------------------------------------------
-    # ABA 3: Kit por Personagem (vinculo Personagem x Ataque de todos os personagens ativos)
+    # ABA 3: Kit por Personagem (progressao Nv. 1 -> 50 de todos os personagens ativos)
     # -----------------------------------------------------------------
     ws_m = wb.create_sheet("Kit por Personagem")
-    ws_m.freeze_panes = "D2"
+    ws_m.freeze_panes = "E2"
     m_headers = [
         "Personagem",
         "Tag (Anime)",
+        "Nível",
         "ID do Golpe",
         "Nome",
         "Classe",
@@ -1085,8 +1092,9 @@ def build_workbook(
         "Poder",
         "Precisão",
         "PP",
+        "Prioridade",
         "Crítico",
-        "Efeito / Status / Buff",
+        "Efeito / Mecânica Especial",
         "Kit Genérico?",
         "Assinatura?",
         "Cut-In?",
@@ -1107,15 +1115,18 @@ def build_workbook(
         if ch["Prototype"]:
             continue
         anime_name = ANIME_DISPLAY.get(ch["Anime"], ch["Anime"])
-        for mid in ch["MoveIds"]:
+        for unlock_lv, mid in ch["Learnset"]:
             mv = moves.get(mid)
             if not mv:
                 continue
             m_row += 1
+            prio_val = mv["Priority"]
+            prio_display = f"+{prio_val}" if prio_val > 0 else str(prio_val)
             ws_m.append(
                 [
                     ch["Name"],
                     anime_name,
+                    f"Nv. {unlock_lv}",
                     mv["Id"],
                     mv["Name"],
                     mv["Type"],
@@ -1124,6 +1135,7 @@ def build_workbook(
                     mv["Power"],
                     mv["Accuracy"],
                     mv["PP"],
+                    prio_display,
                     mv["CritChance"],
                     mv["EffectDesc"],
                     "Sim" if mv["Generic"] else "Não",
@@ -1137,32 +1149,43 @@ def build_workbook(
             for c_idx in range(1, len(m_headers) + 1):
                 cell = ws_m.cell(m_row, c_idx)
                 cell.border = CELL_BORDER
-                cell.font = BOLD_FONT if c_idx in (1, 4) else BASE_FONT
+                cell.font = BOLD_FONT if c_idx in (1, 3, 5) else BASE_FONT
                 cell.alignment = Alignment(
-                    horizontal="left" if c_idx in (1, 3, 4, 12) else "center",
+                    horizontal="left" if c_idx in (1, 4, 5, 14) else "center",
                     vertical="center",
                 )
-            ws_m.cell(m_row, 11).number_format = "0.00%"
+            ws_m.cell(m_row, 13).number_format = "0.00%"
             if anime_name in ANIME_FILL:
                 ws_m.cell(m_row, 2).fill = ANIME_FILL[anime_name]
+            if unlock_lv >= 42:
+                ws_m.cell(m_row, 3).fill = GOLD
+            elif unlock_lv >= 28:
+                ws_m.cell(m_row, 3).fill = PURPLE
+            elif unlock_lv >= 12:
+                ws_m.cell(m_row, 3).fill = BLUE
+            else:
+                ws_m.cell(m_row, 3).fill = SLATE
             if mv["Type"] in CLASS_FILL:
-                ws_m.cell(m_row, 5).fill = CLASS_FILL[mv["Type"]]
+                ws_m.cell(m_row, 6).fill = CLASS_FILL[mv["Type"]]
+            if prio_val > 0:
+                ws_m.cell(m_row, 12).fill = TEAL
+                ws_m.cell(m_row, 12).font = BOLD_FONT
             if mv["Signature"]:
-                ws_m.cell(m_row, 14).fill = GOLD
-                ws_m.cell(m_row, 14).font = BOLD_FONT
+                ws_m.cell(m_row, 16).fill = GOLD
+                ws_m.cell(m_row, 16).font = BOLD_FONT
             if mv["CutIn"]:
-                ws_m.cell(m_row, 15).fill = PURPLE
-                ws_m.cell(m_row, 15).font = BOLD_FONT
-            ws_m.cell(m_row, 16).fill = GREEN if mv["HasAnim"] else RED
-            ws_m.cell(m_row, 17).fill = GREEN if mv["HasVfx"] else RED
+                ws_m.cell(m_row, 17).fill = PURPLE
+                ws_m.cell(m_row, 17).font = BOLD_FONT
+            ws_m.cell(m_row, 18).fill = GREEN if mv["HasAnim"] else RED
+            ws_m.cell(m_row, 19).fill = GREEN if mv["HasVfx"] else RED
 
     col_widths_m = {
-        "A": 15, "B": 16, "C": 21, "D": 26, "E": 13, "F": 11, "G": 15,
-        "H": 9, "I": 12, "J": 7, "K": 11, "L": 34, "M": 13, "N": 13, "O": 10, "P": 11, "Q": 11,
+        "A": 15, "B": 16, "C": 10, "D": 21, "E": 26, "F": 13, "G": 11, "H": 15,
+        "I": 9, "J": 12, "K": 7, "L": 11, "M": 11, "N": 42, "O": 13, "P": 13, "Q": 10, "R": 11, "S": 11,
     }
     for col, w in col_widths_m.items():
         ws_m.column_dimensions[col].width = w
-    ws_m.auto_filter.ref = f"A1:Q{m_row}"
+    ws_m.auto_filter.ref = f"A1:S{m_row}"
 
     # -----------------------------------------------------------------
     # ABA 4: Resumo (formulas dinamicas sobre Personagens e Ataques)

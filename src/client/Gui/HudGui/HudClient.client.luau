@@ -551,6 +551,26 @@ local function refreshList()
 	end
 end
 
+local function moveRightTag(mv): string
+	if mv.Power then
+		if (mv.Priority or 0) > 0 then
+			return tostring(mv.Power) .. " +" .. tostring(mv.Priority)
+		end
+		return tostring(mv.Power)
+	end
+	local kind = mv.Effect and mv.Effect.Kind
+	if kind == "Protect" or kind == "WideProtect" then
+		return "PROT"
+	elseif kind == "Hazard" then
+		return "HZD"
+	elseif kind == "SideEffect" or kind == "ClearHazards" then
+		return "CAMPO"
+	elseif kind == "Heal" or kind == "Cleanse" then
+		return "CURA"
+	end
+	return "SUP"
+end
+
 refreshDetail = function()
 	UI.clear(movesBox)
 	local m = profile and selectedUid and profile.Collection[selectedUid]
@@ -560,10 +580,15 @@ refreshDetail = function()
 	end
 	local def = Characters.Get(m.CharacterId)
 	local st = Progression.MemberStats(m)
+	local upcoming = Characters.UpcomingMoves(m.CharacterId, m.Level)
+	local totalLearnset = #m.Learned + #upcoming
 	detailTitle.Text = def.Name .. "  Nv. " .. m.Level
 	detailType.Face.Label.Text = UI.upper(TypeChart.DisplayName[def.Type] or def.Type)
 	UI.paint(detailType, typeColor(def.Type))
-	detailInfo.Text = string.format("HP %d  ATQ %d  DEF %d  VEL %d  \u{b7}  Golpes %d/%d", st.HP, st.Attack, st.Defense, st.Speed, #pick, Progression.MaxActiveMoves)
+	detailInfo.Text = string.format(
+		"HP %d  ATQ %d  DEF %d  VEL %d  |  Ativos %d/%d (%d/%d)",
+		st.HP, st.Attack, st.Defense, st.Speed, #pick, Progression.MaxActiveMoves, #m.Learned, totalLearnset
+	)
 	for i, c in ipairs(CANDIES) do
 		local n = (profile.Bag and profile.Bag[c.Id]) or 0
 		local b = candyButtons[c.Id]
@@ -581,12 +606,15 @@ refreshDetail = function()
 		b.Face.Count.Text = "x" .. n
 		UI.setDisabled(b, n <= 0 or m.Level >= Progression.MaxLevel, c.Color)
 	end
-	for i, moveId in ipairs(m.Learned) do
+	local order = 0
+	for _, moveId in ipairs(m.Learned) do
 		local mv = Moves.Get(moveId)
 		if mv then
+			order += 1
 			local on = table.find(pick, moveId) ~= nil
+			local isSpecial = mv.Signature or mv.CutIn
 			local b, face = UI.button(movesBox, {
-				Name = "Move_" .. moveId, Color = if on then typeColor(mv.Type) else "grey", LayoutOrder = i, Corner = 0.22,
+				Name = "Move_" .. moveId, Color = if on then typeColor(mv.Type) else "grey", LayoutOrder = order, Corner = 0.22,
 				OnClick = function()
 					local idx = table.find(pick, moveId)
 					if idx then
@@ -604,15 +632,78 @@ refreshDetail = function()
 					refreshDetail()
 				end,
 			})
-			UI.icon(face, if on then "tick" else (UI.TypeIcon[mv.Type] or "sword"), {
+			if isSpecial then
+				local st0 = face:FindFirstChildOfClass("UIStroke")
+				if st0 then
+					st0.Color = T.Palette.gold
+				else
+					UI.stroke(face, T.Palette.gold, 0.9)
+				end
+			end
+			UI.icon(face, if on then "tick" elseif isSpecial then "star" else (UI.TypeIcon[mv.Type] or "sword"), {
 				Name = "MoveIcon",
 				Size = UDim2.fromScale(0.14, 0.74),
 				Position = UDim2.fromScale(0.035, 0.5),
 				AnchorPoint = Vector2.new(0, 0.5),
 				AspectAxis = Enum.DominantAxis.Height,
 			})
-			UI.text(face, mv.Name, { Name = "MoveName", Size = UDim2.fromScale(0.56, 0.7), Position = UDim2.fromScale(0.19, 0.15), Role = "Small", AlignX = Enum.TextXAlignment.Left })
-			UI.text(face, if mv.Power then tostring(mv.Power) else "SUP", { Name = "Power", Size = UDim2.fromScale(0.20, 0.6), Position = UDim2.fromScale(0.95, 0.2), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right })
+			UI.text(face, mv.Name, { Name = "MoveName", Size = UDim2.fromScale(0.55, 0.7), Position = UDim2.fromScale(0.19, 0.15), Role = "Small", Color = if isSpecial and not on then "gold" else "onDark", AlignX = Enum.TextXAlignment.Left })
+			UI.text(face, moveRightTag(mv), { Name = "Power", Size = UDim2.fromScale(0.22, 0.6), Position = UDim2.fromScale(0.95, 0.2), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right })
+		end
+	end
+	-- Proximos golpes da progressao por nivel (bloqueados com cadeado e nivel de desbloqueio)
+	for _, entry in ipairs(upcoming) do
+		local mv = Moves.Get(entry.Move)
+		if mv then
+			order += 1
+			local isSpecial = mv.Signature or mv.CutIn
+			local unlockLv = entry.Level
+			local _, face = UI.button(movesBox, {
+				Name = "Locked_" .. entry.Move, Color = "slot", LayoutOrder = order, Corner = 0.22, Sound = false,
+				OnClick = function()
+					if mv.Signature then
+						detailMsg.Text = string.format("T\u{e9}cnica Assinatura: desbloqueia no N\u{ed}vel %d.", unlockLv)
+					elseif mv.CutIn then
+						detailMsg.Text = string.format("Ataque Especial: desbloqueia no N\u{ed}vel %d.", unlockLv)
+					else
+						detailMsg.Text = string.format("%s desbloqueia no N\u{ed}vel %d.", mv.Name, unlockLv)
+					end
+					UI.play("error")
+				end,
+			})
+			if isSpecial then
+				local st0 = face:FindFirstChildOfClass("UIStroke")
+				if st0 then
+					st0.Color = T.Palette.gold
+				else
+					UI.stroke(face, T.Palette.gold, 0.85)
+				end
+			end
+			UI.icon(face, "lock", {
+				Name = "LockIcon",
+				Size = UDim2.fromScale(0.14, 0.7),
+				Position = UDim2.fromScale(0.035, 0.5),
+				AnchorPoint = Vector2.new(0, 0.5),
+				AspectAxis = Enum.DominantAxis.Height,
+			})
+			UI.text(face, mv.Name, {
+				Name = "MoveName",
+				Size = UDim2.fromScale(0.54, 0.7),
+				Position = UDim2.fromScale(0.19, 0.15),
+				Role = "Small",
+				Color = if isSpecial then "gold" else "inkSoft",
+				AlignX = Enum.TextXAlignment.Left,
+				StrokeMult = 0.5,
+			})
+			UI.text(face, "Nv. " .. unlockLv, {
+				Name = "UnlockLevel",
+				Size = UDim2.fromScale(0.23, 0.6),
+				Position = UDim2.fromScale(0.95, 0.2),
+				AnchorPoint = Vector2.new(1, 0),
+				Role = "Small",
+				Color = if isSpecial then "gold" else "inkSoft",
+				AlignX = Enum.TextXAlignment.Right,
+			})
 		end
 	end
 end

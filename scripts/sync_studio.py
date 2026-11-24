@@ -231,8 +231,17 @@ assert(b.State == "Ended", "1x1 battle did not end")
 
 -- Test 3: 2x2 Spread multiplier (0.75x with 2 targets, 1.0x with 1 target)
 local b2 = BattleEngine.New({
-    Player = { Team = { { CharacterId = "Kaen", Level = 20 }, { CharacterId = "Yomogi", Level = 20 }, { CharacterId = "Raiko", Level = 20 }, { CharacterId = "San", Level = 20 } } },
-    Enemy = { Team = { { CharacterId = "Raiko", Level = 20 }, { CharacterId = "Yomogi", Level = 20 }, { CharacterId = "Kaen", Level = 20 } }, AI = "Medio" },
+    Player = { Team = {
+        { CharacterId = "Kaen", Level = 20, Moves = { "Investida", "BrasaViva", "PosturaDaLamina", "CorteFlamejante" } },
+        { CharacterId = "Yomogi", Level = 20, Moves = { "Arranhao", "SementeToxica", "CascaDeCarvalho", "GaiolaDeEspinhos" } },
+        { CharacterId = "Raiko", Level = 20 },
+        { CharacterId = "San", Level = 20 },
+    } },
+    Enemy = { Team = {
+        { CharacterId = "Raiko", Level = 20, Moves = { "SocoDireto", "PunhoDeMare", "Estatica", "Descarga" } },
+        { CharacterId = "Yomogi", Level = 20, Moves = { "Arranhao", "SementeToxica", "CascaDeCarvalho", "GaiolaDeEspinhos" } },
+        { CharacterId = "Kaen", Level = 20 },
+    }, AI = "Medio" },
     Format = "2x2",
     Mode = "PvP",
     EnemyHuman = true,
@@ -246,7 +255,7 @@ local okDup = b2:ValidateAction("Player", { Kind = "Double", Actions = {
 } })
 assert(not okDup, "Duplicate switch into same bench member should be rejected")
 
--- Spread move (BrasaViva = move 2 of Kaen Learnset, Target = AllEnemies) hits BOTH enemies with Spread = 0.75
+-- Spread move (BrasaViva = move 2, Target = AllEnemies) hits BOTH enemies with Spread = 0.75
 local evSpread = b2:ResolveTurn(
     { Kind = "Double", Actions = {
         { FieldSlot = 1, Kind = "Move", Index = 2 },
@@ -267,8 +276,14 @@ assert(spreadHits == 2, "Expected BrasaViva spread move to hit 2 enemies at 0.75
 
 -- Test 4: 2x2 Mid-turn Redirection when chosen Enemy Slot 1 faints before Slot 2 acts
 local bRedir = BattleEngine.New({
-    Player = { Team = { { CharacterId = "San", Level = 50 }, { CharacterId = "Kaen", Level = 40 } } },
-    Enemy = { Team = { { CharacterId = "Raiko", Level = 5 }, { CharacterId = "Yomogi", Level = 50 } }, AI = "Facil" },
+    Player = { Team = {
+        { CharacterId = "San", Level = 50, Moves = { "Kamehameha", "GenkiDama", "ComboMarcial", "CargaDeKi" } },
+        { CharacterId = "Kaen", Level = 40, Moves = { "CorteBasico", "BrasaViva", "PosturaDaLamina", "CorteFlamejante" } },
+    } },
+    Enemy = { Team = {
+        { CharacterId = "Raiko", Level = 5 },
+        { CharacterId = "Yomogi", Level = 50, Moves = { "Arranhao", "SementeToxica", "CascaDeCarvalho", "GaiolaDeEspinhos" } },
+    }, AI = "Facil" },
     Format = "2x2",
     Mode = "PvP",
     EnemyHuman = true,
@@ -299,7 +314,7 @@ assert(snapRedir.Enemy.ActiveSlots[1] == 0 and snapRedir.Enemy.ActiveSlots[2] ==
 local evSingleSpread = bRedir:ResolveTurn(
     { Kind = "Double", Actions = {
         { FieldSlot = 1, Kind = "Move", Index = 2 }, -- GenkiDama (AllEnemies)
-        { FieldSlot = 2, Kind = "Move", Index = 3 }, -- PosturaDeCombate
+        { FieldSlot = 2, Kind = "Move", Index = 3 }, -- PosturaDaLamina
     } },
     { Kind = "Double", Actions = {
         { FieldSlot = 2, Kind = "Move", Index = 3 }, -- CascaDeCarvalho
@@ -316,8 +331,17 @@ assert(singleSpreadOk or bRedir.State == "Ended", "Expected single-target spread
 
 -- Test 5: 2x2 Double Faint + Double Replacement + Full PvP Auto-Simulation
 local bDoubleRep = BattleEngine.New({
-    Player = { Team = { { CharacterId = "Kaen", Level = 5 }, { CharacterId = "Raiko", Level = 5 }, { CharacterId = "San", Level = 50 }, { CharacterId = "Setero", Level = 50 } } },
-    Enemy = { Team = { { CharacterId = "Raiko", Level = 50 }, { CharacterId = "San", Level = 50 }, { CharacterId = "Yomogi", Level = 50 } } },
+    Player = { Team = {
+        { CharacterId = "Kaen", Level = 5 },
+        { CharacterId = "Raiko", Level = 5 },
+        { CharacterId = "San", Level = 50 },
+        { CharacterId = "Setero", Level = 50 },
+    } },
+    Enemy = { Team = {
+        { CharacterId = "Raiko", Level = 50, Moves = { "SocoDireto", "PunhoDeMare", "Estatica", "Descarga" } },
+        { CharacterId = "San", Level = 50, Moves = { "Kamehameha", "GenkiDama", "ComboMarcial", "CargaDeKi" } },
+        { CharacterId = "Yomogi", Level = 50 },
+    } },
     Format = "2x2",
     Mode = "PvP",
     EnemyHuman = true,
@@ -325,7 +349,7 @@ local bDoubleRep = BattleEngine.New({
 })
 bDoubleRep:ResolveTurn(
     { Kind = "Double", Actions = {
-        { FieldSlot = 1, Kind = "Move", Index = 3 }, -- PosturaDeCombate (Lv5 Kaen has 3 moves)
+        { FieldSlot = 1, Kind = "Move", Index = 3 }, -- PosturaDaLamina (Lv5 Kaen has 3 moves)
         { FieldSlot = 2, Kind = "Move", Index = 1, TargetSide = "Enemy", TargetSlot = 1 },
     } },
     { Kind = "Double", Actions = {
@@ -435,7 +459,32 @@ local themeSrc = rs.UITheme.Source
 assert(themeSrc:find("Color3.fromRGB(39, 48, 102)", 1, true),
     "GUARDRAIL FAILED: Midnight-Blue Anime palette must remain in ReplicatedStorage.UITheme!")
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), Classes/Gyms/Practice + Progression Rebalance + AccountLevel + UI Guardrails", b.Turn, simTurns)
+-- Test 10: Move Progression Nv. 1 -> 50 & Legendary Endgame Specials (Nv. 42-50)
+for cid, def in pairs(Characters.List) do
+    assert(def.Learnset and #def.Learnset >= 10, "Expected full Learnset (>=10 moves) on " .. cid)
+    local prevLv = 0
+    for _, entry in ipairs(def.Learnset) do
+        assert(Moves.Get(entry.Move), "Invalid move " .. tostring(entry.Move) .. " on " .. cid)
+        assert(entry.Level >= prevLv, "Learnset not sorted on " .. cid)
+        prevLv = entry.Level
+    end
+    local active10 = Characters.DefaultActive(cid, 10)
+    local active50 = Characters.DefaultActive(cid, 50)
+    assert(#active10 >= 2 and #active10 <= 4 and #active50 == 4, "Invalid DefaultActive count on " .. cid)
+    local hasDmg50 = false
+    for _, mid in ipairs(active50) do
+        if Moves.Get(mid).Category == "Damage" then hasDmg50 = true end
+    end
+    assert(hasDmg50, "Expected at least 1 damage move in DefaultActive(50) on " .. cid)
+end
+-- Legendaries unlock their special/signature moves at the final levels (>= 42 and 50)
+assert(Characters.LearnLevelOf("Byakuya", "Senbonzakura") == 42 and Characters.LearnLevelOf("Byakuya", "SenbonzakuraKageyoshi") == 50, "Byakuya specials must be Nv 42 & 50")
+assert(Characters.LearnLevelOf("BarbaBranca", "SocoSismico") == 44 and Characters.LearnLevelOf("BarbaBranca", "CeuETerra") == 50, "BarbaBranca specials must be Nv 44 & 50")
+assert(Characters.LearnLevelOf("San", "Kamehameha") == 42 and Characters.LearnLevelOf("San", "GenkiDama") == 50, "San specials must be Nv 42 & 50")
+assert(Characters.LearnLevelOf("Setero", "Atracao") == 42 and Characters.LearnLevelOf("Setero", "TudoRoxo") == 50, "Setero specials must be Nv 42 & 50")
+assert(#Characters.UpcomingMoves("Byakuya", 10) >= 8 and #Characters.UpcomingMoves("Byakuya", 50) == 0, "Expected UpcomingMoves countdown on Byakuya")
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), Classes/Gyms/Practice + Progression Rebalance + AccountLevel + Learnsets Nv1-50 + UI Guardrails", b.Turn, simTurns)
 end)
 sandbox:Destroy()
 assert(ok, res)

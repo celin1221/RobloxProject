@@ -1186,3 +1186,30 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS`).
 - Suíte dedicada no Studio validou todas as novas mecânicas (`93` golpes, `71` genéricos, `Priority`, `Protect`/`WideProtect`/`BreaksProtect`, `Spikes`/`ToxicSpikes`/`StickyWeb` + `ClearHazards` inclusive com KO em entrada, `Barrier`, `Tailwind`, `Drain`, `Recoil`, `Heal`, `Cleanse`, `MultiStat`, espelhamento PvP e stress test de IA `Facil`/`Medio`/`Dificil` em 2x2) sem nenhum erro.
 - Place salvo no Roblox Studio na **versão 317** (`TeamCreate`).
+
+
+## Progressão Completa de Ataques por Nível (Nv. 1 → 50) + Especiais Lendários nos Últimos Níveis (24/11/2026)
+
+**Feito**
+- **1. Learnsets Nv. 1 → 50 em Todos os Personagens (`src/shared/Data/Characters.luau` & `Moves.luau`):**
+  - Expandido `Moves.ClassDefaults` para 12 golpes por classe (Nv. 1 → 42) e criados Learnsets individuais temáticos de **11 a 14 golpes (Nv. 1 → 50)** para todos os **23 personagens ativos**, distribuindo **100% dos 71 ataques genéricos** (e todos os 92 ataques jogáveis do catálogo — `0` ataques sem uso).
+  - **Ataques especiais e assinaturas dos Lendários nos últimos níveis (Nv. 42–50):**
+    - `Byakuya`: Nv. 42 `Senbonzakura` (Cut-In), Nv. 50 `Senbonzakura Kageyoshi` (Assinatura Cut-In).
+    - `Barba Branca`: Nv. 34 `Corte Murakumo`, Nv. 38 `Haki do Conquistador`, Nv. 44 `Soco Sísmico` (Cut-In), Nv. 50 `Abalo do Céu e da Terra` (Assinatura Cut-In).
+    - `San`: Nv. 36 `Carga de Ki`, Nv. 42 `Kamehameha` (Cut-In), Nv. 50 `Genki Dama` (Assinatura Cut-In).
+    - `Setero`: Nv. 42 `Atração`, Nv. 50 `Tudo Roxo` (Assinatura Cut-In).
+    - `Sarutobi`: Nv. 44 `Explosão Astral`, Nv. 50 `Meteoro Arcano` (pronto para receber suas futuras assinaturas de 5 Elementos).
+  - Adicionados `Characters.LearnLevelOf(id, moveId)`, `Characters.UpcomingMoves(id, level)` e salvaguarda em `Characters.DefaultActive(id, level)` garantindo ao menos 1 golpe de dano.
+- **2. Migração Automática de Saves + Mensagens de Desbloqueio (`PlayerDataService.luau` & `ProgressionService.luau`):**
+  - Adicionada migração `LEARNSET_VERSION = 2` em `PlayerDataService.luau` (`syncMemberLearnset`): recalcula `m.Learned` e `m.Active` conforme o nível atual do personagem em perfis antigos (ex.: Lendários Nv. 10 passam a desbloquear suas ultimates no Nv. 42–50), mantendo golpes ativos válidos e limpando PP obsoleto.
+  - `ProgressionService.AddXp` destaca o desbloqueio de ataques especiais/assinaturas ao subir de nível.
+- **3. Tela `GOLPES` com Progressão Visual (`src/client/Gui/HudGui/HudClient.client.luau`):**
+  - Exibe todos os golpes aprendidos (clicáveis para equipar até 4, com tags de Poder / `+1` prioridade / `SUP` / `PROT` / `HZD` / `CAMPO` / `CURA`) seguidos pelos **próximos golpes bloqueados** com ícone de cadeado (`lock`), nível de desbloqueio (`Nv. 12` .. `Nv. 50`), borda e texto dourados nos especiais/assinaturas e aviso de desbloqueio ao clicar (`"Técnica Assinatura: desbloqueia no Nível 50."`).
+- **4. Planilha Excel e Testes (`scripts/update_characters_sheet.py` & `scripts/sync_studio.py`):**
+  - Aba `Kit por Personagem` atualizada com os **269 vínculos Nv. 1 → 50** e novas colunas `Nível` (destaque por faixa de nível) e `Prioridade`, sincronizada em `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx`.
+  - Adicionado **Test 10 (Learnsets Nv. 1 → 50 e Especiais Lendários)** em `scripts/sync_studio.py`.
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- Validado ao vivo no Play Mode com migração real de perfil salvo (`LearnsetVersion=2` em `Byakuya`, `San`, `Sarutobi`, `Setero`, `Luffy`), abertura da janela `GOLPES` exibindo golpes aprendidos + bloqueados até `Senbonzakura (Nv. 42)` e `Senbonzakura Kageyoshi (Nv. 50)` com bordas douradas, clique de aviso e `0` erros no Console.
+- `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS`).
+- Place salvo no Roblox Studio na **versão 319** (`TeamCreate`).
