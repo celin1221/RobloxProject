@@ -1103,7 +1103,6 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 **Testado (Play Mode ao vivo + Suíte GDD)**
 - Validado ao vivo em 2x2 com `Byakuya + San` e `Byakuya + BarbaBranca` (personagem mais alto do jogo + bisento) sem nenhuma sobreposição entre lutadores ou HUD e `0` erros de script.
 - `python scripts/sync_studio.py status` (`100% in sync`) e `python scripts/sync_studio.py test` (`PASS`).
-- Place salvo no Roblox Studio na **versão 314** (`TeamCreate`).
 - Place salvo no Roblox Studio na **versão 313** (`TeamCreate`).
 
 
