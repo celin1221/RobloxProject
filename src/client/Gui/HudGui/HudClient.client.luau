@@ -23,6 +23,7 @@ local TypeChart = require(Data:WaitForChild("TypeChart"))
 local Progression = require(Data:WaitForChild("Progression"))
 local StarterTrack = require(Data:WaitForChild("StarterTrack"))
 local UI = require(ReplicatedStorage:WaitForChild("UI"))
+local TeamCards = require(ReplicatedStorage:WaitForChild("TeamCards"))
 local T = UI.Theme
 
 local profile = nil
@@ -475,37 +476,110 @@ local function buildStarterCards()
 end
 
 --------------------------------------------------------------------
--- Menu Time (nivel, XP e golpes ativos)
+-- Menu Golpes (estilo Pokemon: retratos 3D, 4 golpes ativos + card de detalhes + lista completa)
 --------------------------------------------------------------------
-local teamWin = UI.window(canvas, { Name = "TeamWindow", Title = "GOLPES", Icon = "book", HeaderColor = "blue", Size = UDim2.fromScale(0.92, 0.84), Aspect = 1.9 })
-local list = UI.scroll(teamWin.Body, { Name = "Members", Size = UDim2.fromScale(0.42, 1), Position = UDim2.fromScale(0, 0) })
-local detail, detailFace = UI.panel(teamWin.Body, { Name = "Detail", Size = UDim2.fromScale(0.56, 1), Position = UDim2.fromScale(0.44, 0), Color = "slot", Corner = 0.06, Shadow = false })
-local detailTitle = UI.text(detailFace, "", { Name = "Title", Size = UDim2.fromScale(0.7, 0.12), Position = UDim2.fromScale(0.04, 0.03), Role = "Heading", AlignX = Enum.TextXAlignment.Left })
-local detailType = UI.chip(detailFace, "", "grey", { Name = "Type", Size = UDim2.fromScale(0.22, 0.09), Position = UDim2.fromScale(0.96, 0.045), AnchorPoint = Vector2.new(1, 0) })
-local detailInfo = UI.text(detailFace, "", { Name = "Info", Size = UDim2.fromScale(0.92, 0.09), Position = UDim2.fromScale(0.04, 0.16), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
-local movesBox = UI.scroll(detailFace, { Name = "Moves", Size = UDim2.fromScale(0.94, 0.44), Position = UDim2.fromScale(0.03, 0.26), Columns = 2, CellAspect = 2.3, Gap = 0.03 })
+local teamWin = UI.window(canvas, { Name = "TeamWindow", Title = "GOLPES", Icon = "book", HeaderColor = "blue", Size = UDim2.fromScale(0.92, 0.86), Aspect = 1.88 })
+local list = UI.scroll(teamWin.Body, { Name = "Members", Size = UDim2.fromScale(0.40, 1), Position = UDim2.fromScale(0, 0) })
+local detail, detailFace = UI.panel(teamWin.Body, { Name = "Detail", Size = UDim2.fromScale(0.58, 1), Position = UDim2.fromScale(0.42, 0), Color = "slot", Corner = 0.06, Shadow = false })
+local detailTitle = UI.text(detailFace, "", { Name = "Title", Size = UDim2.fromScale(0.68, 0.09), Position = UDim2.fromScale(0.035, 0.02), Role = "Heading", AlignX = Enum.TextXAlignment.Left })
+local detailType = UI.chip(detailFace, "", "grey", { Name = "Type", Size = UDim2.fromScale(0.24, 0.072), Position = UDim2.fromScale(0.965, 0.028), AnchorPoint = Vector2.new(1, 0) })
+local detailInfo = UI.text(detailFace, "", { Name = "Info", Size = UDim2.fromScale(0.93, 0.06), Position = UDim2.fromScale(0.035, 0.105), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
+
+local movesBox = UI.scroll(detailFace, { Name = "Moves", Size = UDim2.fromScale(0.94, 0.40), Position = UDim2.fromScale(0.03, 0.175), Columns = 2, CellAspect = 3.85, Gap = 0.024 })
+
+-- Card inferior de detalhes do golpe selecionado (estilo Pokemon: nome, chips, poder/precisao/PP e descricao)
+local moveInfoPanel, moveInfoFace = UI.panel(detailFace, {
+	Name = "MoveInfoCard",
+	Size = UDim2.fromScale(0.94, 0.255),
+	Position = UDim2.fromScale(0.03, 0.58),
+	Color = "panelAlt",
+	Corner = 0.12,
+	Shadow = false,
+})
+local moveInfoName = UI.text(moveInfoFace, "", {
+	Name = "MoveInfoName",
+	Size = UDim2.fromScale(0.49, 0.27),
+	Position = UDim2.fromScale(0.03, 0.06),
+	Role = "Body",
+	AlignX = Enum.TextXAlignment.Left,
+})
+moveInfoName.TextWrapped = false
+local moveNameLim = moveInfoName:FindFirstChildOfClass("UITextSizeConstraint")
+if moveNameLim then
+	moveNameLim.MinTextSize = 10
+end
+local moveInfoChips = UI.frame(moveInfoFace, {
+	Name = "MoveInfoChips",
+	Size = UDim2.fromScale(0.43, 0.24),
+	Position = UDim2.fromScale(0.97, 0.075),
+	AnchorPoint = Vector2.new(1, 0),
+})
+local chipRowLayout = Instance.new("UIListLayout")
+chipRowLayout.FillDirection = Enum.FillDirection.Horizontal
+chipRowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+chipRowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+chipRowLayout.Padding = UDim.new(0, 4)
+chipRowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+chipRowLayout.Parent = moveInfoChips
+local moveInfoClassChip = UI.chip(moveInfoChips, "", "grey", { Name = "ClassChip", Size = UDim2.fromScale(0.38, 1), LayoutOrder = 1 })
+local moveInfoCatChip = UI.chip(moveInfoChips, "", "blue", { Name = "CatChip", Size = UDim2.fromScale(0.26, 1), LayoutOrder = 2 })
+local moveInfoTargetChip = UI.chip(moveInfoChips, "", "slot", { Name = "TargetChip", Size = UDim2.fromScale(0.32, 1), LayoutOrder = 3 })
+for _, ch in ipairs({ moveInfoClassChip, moveInfoCatChip, moveInfoTargetChip }) do
+	ch.Face.Label.TextWrapped = false
+end
+local moveInfoStats = UI.text(moveInfoFace, "", {
+	Name = "MoveInfoStats",
+	Size = UDim2.fromScale(0.94, 0.21),
+	Position = UDim2.fromScale(0.03, 0.36),
+	Role = "Small",
+	Color = "onDark",
+	AlignX = Enum.TextXAlignment.Left,
+	Rich = true,
+	StrokeMult = 0.45,
+})
+local moveInfoDesc = UI.text(moveInfoFace, "", {
+	Name = "MoveInfoDesc",
+	Size = UDim2.fromScale(0.94, 0.36),
+	Position = UDim2.fromScale(0.03, 0.59),
+	Role = "Small",
+	Color = "inkSoft",
+	AlignX = Enum.TextXAlignment.Left,
+	AlignY = Enum.TextYAlignment.Top,
+	StrokeMult = 0.35,
+})
+
 -- Doces de XP (so caem no Refugio): um botao por doce, usa no personagem escolhido
 local CANDIES = { { Id = "DoceComum", Icon = "doce_comum", Color = "panelAlt" }, { Id = "DoceRaro", Icon = "doce_raro", Color = "blue" }, { Id = "DoceEpico", Icon = "doce_epico", Color = "purple" } }
-local detailBottomBar = UI.frame(detailFace, { Name = "BottomBar", Size = UDim2.fromScale(0.94, 0.16), Position = UDim2.fromScale(0.03, 0.97), AnchorPoint = Vector2.new(0, 1) })
-UI.clampHeight(detailBottomBar, T.TouchMin, 50)
-local candyRow = UI.frame(detailBottomBar, { Name = "Candies", Size = UDim2.fromScale(0.60, 1), Position = UDim2.fromScale(0, 0) })
+local detailBottomBar = UI.frame(detailFace, { Name = "BottomBar", Size = UDim2.fromScale(0.94, 0.13), Position = UDim2.fromScale(0.03, 0.975), AnchorPoint = Vector2.new(0, 1) })
+UI.clampHeight(detailBottomBar, T.TouchMin, 48)
+local candyRow = UI.frame(detailBottomBar, { Name = "Candies", Size = UDim2.fromScale(0.55, 1), Position = UDim2.fromScale(0, 0) })
 local candyButtons = {}
 local useCandy
-local detailMsg = UI.text(detailFace, "", { Name = "Message", Size = UDim2.fromScale(0.92, 0.08), Position = UDim2.fromScale(0.04, 0.72), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
-local saveButton = UI.button(detailBottomBar, { Name = "SaveMoves", Text = "SALVAR", Icon = "tick", Color = "green", Layout = "row", Size = UDim2.fromScale(0.37, 1), Position = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(1, 0), Role = "Body" })
+local detailMsg = UI.text(detailFace, "", { Name = "Message", Size = UDim2.fromScale(0.93, 0.055), Position = UDim2.fromScale(0.035, 0.80), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
+local changeMovesBtn = UI.button(detailBottomBar, { Name = "ChangeMoves", Text = "TROCAR GOLPES", Icon = "swap", Color = "blue", Layout = "row", Size = UDim2.fromScale(0.42, 1), Position = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(1, 0), Role = "Small" })
+local cancelChangeBtn = UI.button(detailBottomBar, { Name = "CancelChange", Text = "VOLTAR", Color = "grey", Size = UDim2.fromScale(0.36, 1), Position = UDim2.fromScale(0, 0), Role = "Body", Visible = false })
+local saveButton = UI.button(detailBottomBar, { Name = "SaveMoves", Text = "SALVAR", Icon = "tick", Color = "green", Layout = "row", Size = UDim2.fromScale(0.60, 1), Position = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(1, 0), Role = "Body", Visible = false })
 
 local function layoutTeamDetail()
 	local h = detailFace.AbsoluteSize.Y
-	if h < 40 then
+	if h < 60 then
 		return
 	end
+	local padBot = math.max(6, math.floor(h * 0.022))
 	local bottomH = math.max(T.TouchMin, math.floor(detailBottomBar.AbsoluteSize.Y))
-	local msgH = math.max(16, math.floor(h * 0.075))
-	local msgY = h - math.floor(h * 0.03) - bottomH - msgH - 4
-	detailMsg.Position = UDim2.new(0.04, 0, 0, msgY)
-	detailMsg.Size = UDim2.new(0.92, 0, 0, msgH)
-	local movesTop = math.floor(h * 0.255)
-	local movesH = math.max(44, msgY - movesTop - 4)
+	local bottomY = h - padBot - bottomH
+	local msgH = math.max(15, math.floor(h * 0.052))
+	local msgY = bottomY - msgH - 3
+	detailMsg.Position = UDim2.new(0.035, 0, 0, msgY)
+	detailMsg.Size = UDim2.new(0.93, 0, 0, msgH)
+
+	local infoH = math.clamp(math.floor(h * 0.255), 78, 118)
+	local infoY = msgY - infoH - 5
+	moveInfoPanel.Position = UDim2.new(0.03, 0, 0, infoY)
+	moveInfoPanel.Size = UDim2.new(0.94, 0, 0, infoH)
+
+	local movesTop = math.floor(h * 0.172)
+	local movesH = math.max(60, infoY - movesTop - 6)
 	movesBox.Position = UDim2.new(0.03, 0, 0, movesTop)
 	movesBox.Size = UDim2.new(0.94, 0, 0, movesH)
 end
@@ -514,39 +588,131 @@ detailBottomBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutTeamDetai
 task.defer(layoutTeamDetail)
 
 local selectedUid = nil
-local pick = {} -- golpes marcados no menu
+local pick = {} -- golpes marcados no modo "Change"
+local viewMode = "Equipped" -- "Equipped" (4 golpes estilo Pokemon) | "Change" (lista aprendidos + bloqueados)
+local inspectedMoveId: string? = nil
+local inspectedUnlockLv: number? = nil
+local listPortraits = {} -- TeamCards ativos na barra lateral (limpos antes de reconstruir ou fechar)
+local lastListKey: string? = nil
 local refreshDetail
 local STATUS_NAME = { Burn = "Queimado", Poison = "Envenenado", Paralysis = "Paralisado", Sleep = "Dormindo", Freeze = "Congelado" }
 
-local function refreshList()
+local function clearListPortraits()
+	for _, card in ipairs(listPortraits) do
+		card.Clear()
+	end
+	table.clear(listPortraits)
+	lastListKey = nil
+end
+
+local function computeListKey(): string
+	if not profile then
+		return ""
+	end
+	local parts = { tostring(selectedUid) }
+	local inTeam = {}
+	for _, uid in ipairs(profile.Team or {}) do
+		inTeam[uid] = true
+	end
+	local uids = {}
+	if selectedUid and profile.Collection and profile.Collection[selectedUid] and not inTeam[selectedUid] then
+		table.insert(uids, selectedUid)
+	end
+	for _, uid in ipairs(profile.Team or {}) do
+		table.insert(uids, uid)
+	end
+	for _, uid in ipairs(uids) do
+		local m = profile.Collection and profile.Collection[uid]
+		if m then
+			table.insert(parts, string.format("%s:%d:%d:%s:%s:%s", uid, m.Level or 1, m.Xp or 0, tostring(m.Hp), tostring(m.Status), tostring(m.Variant)))
+		end
+	end
+	return table.concat(parts, ";")
+end
+
+local function refreshList(force: boolean?)
+	local key = computeListKey()
+	if not force and lastListKey == key and #listPortraits > 0 then
+		return
+	end
+	clearListPortraits()
 	UI.clear(list)
 	if not profile then
 		return
 	end
-	for i, uid in ipairs(profile.Team) do
+	lastListKey = key
+	local uids = {}
+	local inTeam = {}
+	for _, uid in ipairs(profile.Team or {}) do
+		inTeam[uid] = true
+	end
+	-- Se abriu pela tela Info de um personagem fora do time ativo, mostra ele no topo da lista
+	if selectedUid and profile.Collection and profile.Collection[selectedUid] and not inTeam[selectedUid] then
+		table.insert(uids, selectedUid)
+	end
+	for _, uid in ipairs(profile.Team or {}) do
+		table.insert(uids, uid)
+	end
+
+	for i, uid in ipairs(uids) do
 		local m = profile.Collection[uid]
 		if m then
 			local def = Characters.Get(m.CharacterId)
 			local hp, max = Progression.CurrentHp(m)
 			local need = Progression.XpToNext(m.Level)
-			local b, face = UI.button(list, {
-				Name = "Member_" .. uid, Color = if uid == selectedUid then "blue" else "panelAlt", Size = UDim2.fromScale(0.98, 0), Aspect = 3.6, LayoutOrder = i, Corner = 0.2,
+			local isBench = not inTeam[uid]
+			local _, face = UI.button(list, {
+				Name = "Member_" .. uid,
+				Color = if uid == selectedUid then "blue" else "panelAlt",
+				Size = UDim2.fromScale(0.98, 0),
+				Aspect = 3.25,
+				LayoutOrder = i,
+				Corner = 0.2,
 				OnClick = function()
 					selectedUid = uid
 					pick = table.clone(m.Active)
+					viewMode = "Equipped"
+					inspectedMoveId = m.Active[1] or m.Learned[1]
+					inspectedUnlockLv = nil
 					detailMsg.Text = ""
 					refreshList()
 					refreshDetail()
 				end,
 			})
-			UI.text(face, def and def.Name or m.CharacterId, { Name = "MemberName", Size = UDim2.fromScale(0.55, 0.32), Position = UDim2.fromScale(0.05, 0.08), Role = "Body", AlignX = Enum.TextXAlignment.Left })
-			UI.text(face, "Nv. " .. m.Level, { Name = "Level", Size = UDim2.fromScale(0.3, 0.28), Position = UDim2.fromScale(0.95, 0.1), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right })
-			local bar = UI.bar(face, { Name = "Hp", Size = UDim2.fromScale(0.9, 0.16), Position = UDim2.fromScale(0.05, 0.47) })
+			-- Retrato 3D do personagem (TeamCards em modo CompactPortrait)
+			local portrait = TeamCards.new(face, {
+				Name = "Portrait",
+				CompactPortrait = true,
+				Size = UDim2.fromScale(0.24, 0.84),
+				Position = UDim2.fromScale(0.025, 0.5),
+				AnchorPoint = Vector2.new(0, 0.5),
+				ZIndex = 4,
+			})
+			local ar = Instance.new("UIAspectRatioConstraint")
+			ar.AspectRatio = 1
+			ar.DominantAxis = Enum.DominantAxis.Height
+			ar.Parent = portrait.Root
+			portrait.Root.Active = false
+			portrait.Root.Selectable = false
+			portrait.Set(uid, m)
+			table.insert(listPortraits, portrait)
+
+			UI.text(face, def and def.Name or m.CharacterId, { Name = "MemberName", Size = UDim2.fromScale(0.45, 0.32), Position = UDim2.fromScale(0.28, 0.08), Role = "Body", AlignX = Enum.TextXAlignment.Left })
+			UI.text(face, "Nv. " .. m.Level, { Name = "Level", Size = UDim2.fromScale(0.22, 0.28), Position = UDim2.fromScale(0.96, 0.1), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right })
+			local bar = UI.bar(face, { Name = "Hp", Size = UDim2.fromScale(0.68, 0.16), Position = UDim2.fromScale(0.28, 0.47) })
 			local ratio = if max > 0 then hp / max else 0
 			UI.setBar(bar, ratio, if ratio > 0.5 then "hpHigh" elseif ratio > 0.2 then "hpMid" else "hpLow", true)
-			local xp = if need > 0 then string.format("XP %d/%d", m.Xp, need) else "N\u{ed}vel m\u{e1}ximo"
+			local xp = if need > 0 then string.format("XP %d/%d", m.Xp, need) else "Nv. m\u{e1}x."
 			local hpText = if hp <= 0 then "Desmaiado" else string.format("HP %d/%d", hp, max)
-			UI.text(face, hpText .. "   " .. xp .. (if m.Status then "  " .. (STATUS_NAME[m.Status] or m.Status) else ""), { Name = "Info", Size = UDim2.fromScale(0.9, 0.24), Position = UDim2.fromScale(0.05, 0.69), Role = "Small", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.5 })
+			local prefix = if isBench then "Cole\u{e7}\u{e3}o | " else ""
+			UI.text(face, prefix .. hpText .. "  " .. xp .. (if m.Status then "  " .. (STATUS_NAME[m.Status] or m.Status) else ""), {
+				Name = "Info",
+				Size = UDim2.fromScale(0.68, 0.24),
+				Position = UDim2.fromScale(0.28, 0.69),
+				Role = "Small",
+				AlignX = Enum.TextXAlignment.Left,
+				StrokeMult = 0.5,
+			})
 		end
 	end
 end
@@ -571,6 +737,85 @@ local function moveRightTag(mv): string
 	return "SUP"
 end
 
+local function refreshMoveInfoCard(m)
+	local mv = inspectedMoveId and Moves.Get(inspectedMoveId)
+	if not mv and m and m.Active and m.Active[1] then
+		inspectedMoveId = m.Active[1]
+		inspectedUnlockLv = nil
+		mv = Moves.Get(inspectedMoveId)
+	end
+	if not mv then
+		moveInfoName.Text = "Selecione um golpe"
+		moveInfoClassChip.Visible = false
+		moveInfoCatChip.Visible = false
+		moveInfoTargetChip.Visible = false
+		moveInfoStats.Text = ""
+		moveInfoDesc.Text = "Toque em qualquer golpe acima para ver poder, precis\u{e3}o, PP e efeito."
+		return
+	end
+
+	local isSpecial = mv.Signature or mv.CutIn
+	local stroke = moveInfoFace:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = if isSpecial then T.Palette.gold else typeColor(mv.Type)
+	end
+
+	moveInfoName.Text = mv.Name
+	moveInfoName.TextColor3 = if isSpecial then T.Palette.gold else T.Palette.onDark
+
+	moveInfoClassChip.Visible = true
+	moveInfoClassChip.Face.Label.Text = UI.upper(TypeChart.DisplayName[mv.Type] or mv.Type)
+	UI.paint(moveInfoClassChip, typeColor(mv.Type))
+
+	moveInfoCatChip.Visible = true
+	local isDmg = mv.Category == "Damage"
+	moveInfoCatChip.Face.Label.Text = if isDmg then "DANO" else "STATUS"
+	UI.paint(moveInfoCatChip, if isDmg then "red" else "blue")
+
+	moveInfoTargetChip.Visible = true
+	if inspectedUnlockLv then
+		moveInfoTargetChip.Face.Label.Text = "NV. " .. tostring(inspectedUnlockLv)
+		UI.paint(moveInfoTargetChip, if isSpecial then "gold" else "slot")
+	else
+		moveInfoTargetChip.Face.Label.Text = UI.upper(Moves.TargetDisplay(mv))
+		UI.paint(moveInfoTargetChip, "slot")
+	end
+
+	local powTxt = if mv.Power then tostring(mv.Power) else "-"
+	local accTxt = if mv.Accuracy then (tostring(mv.Accuracy) .. "%") else "100% (Certeiro)"
+	local ppMax = mv.PP or 0
+	local ppCur = if (not inspectedUnlockLv) and m and m.Pp and typeof(m.Pp[mv.Id]) == "number" then m.Pp[mv.Id] else ppMax
+	local ppTxt = if inspectedUnlockLv then tostring(ppMax) else string.format("%d/%d", ppCur, ppMax)
+	local statItems = {
+		string.format("<font color='#FFD84A'>PODER</font> %s", powTxt),
+		string.format("<font color='#FFD84A'>PRECIS\u{c3}O</font> %s", accTxt),
+		string.format("<font color='#FFD84A'>PP</font> %s", ppTxt),
+	}
+	if (mv.Priority or 0) > 0 then
+		table.insert(statItems, string.format("<font color='#1AD1C5'>PRIO +%d</font>", mv.Priority))
+	end
+	if (mv.CritChance or 0) >= 0.12 then
+		table.insert(statItems, string.format("<font color='#FF8C24'>CR\u{cd}T %d%%</font>", math.floor(mv.CritChance * 100 + 0.5)))
+	end
+	if inspectedUnlockLv then
+		table.insert(statItems, string.format("<font color='#FFD84A'>BLOQUEADO (NV. %d)</font>", inspectedUnlockLv))
+	end
+	moveInfoStats.Text = table.concat(statItems, "   |   ")
+	moveInfoDesc.Text = Moves.Describe(mv)
+end
+
+local function styleMoveButtonStroke(face, isSelected: boolean, isSpecial: boolean)
+	local st0 = face:FindFirstChildOfClass("UIStroke")
+	if not st0 then
+		return
+	end
+	if isSelected then
+		st0.Color = if isSpecial then T.Palette.gold else Color3.fromRGB(255, 255, 255)
+	elseif isSpecial then
+		st0.Color = T.Palette.gold
+	end
+end
+
 refreshDetail = function()
 	UI.clear(movesBox)
 	local m = profile and selectedUid and profile.Collection[selectedUid]
@@ -585,20 +830,35 @@ refreshDetail = function()
 	detailTitle.Text = def.Name .. "  Nv. " .. m.Level
 	detailType.Face.Label.Text = UI.upper(TypeChart.DisplayName[def.Type] or def.Type)
 	UI.paint(detailType, typeColor(def.Type))
-	detailInfo.Text = string.format(
-		"HP %d  ATQ %d  DEF %d  VEL %d  |  Ativos %d/%d (%d/%d)",
-		st.HP, st.Attack, st.Defense, st.Speed, #pick, Progression.MaxActiveMoves, #m.Learned, totalLearnset
-	)
+
+	local isChange = viewMode == "Change"
+	if isChange then
+		detailInfo.Text = string.format(
+			"Selecione at\u{e9} %d golpes ativos (%d/%d)  |  %d/%d aprendidos",
+			Progression.MaxActiveMoves, #pick, Progression.MaxActiveMoves, #m.Learned, totalLearnset
+		)
+	else
+		detailInfo.Text = string.format(
+			"HP %d  ATQ %d  DEF %d  VEL %d  |  Golpes %d/%d (%d/%d)",
+			st.HP, st.Attack, st.Defense, st.Speed, #m.Active, Progression.MaxActiveMoves, #m.Learned, totalLearnset
+		)
+	end
+
+	candyRow.Visible = not isChange
+	changeMovesBtn.Visible = not isChange
+	cancelChangeBtn.Visible = isChange
+	saveButton.Visible = isChange
+
 	for i, c in ipairs(CANDIES) do
 		local n = (profile.Bag and profile.Bag[c.Id]) or 0
 		local b = candyButtons[c.Id]
 		if not b then
-			b = UI.button(candyRow, { Name = "Use_" .. c.Id, Color = c.Color, Size = UDim2.fromScale(0.32, 1), Position = UDim2.fromScale((i - 1) * 0.34, 0), Corner = 0.3, Sound = false,
+			b = UI.button(candyRow, {
+				Name = "Use_" .. c.Id, Color = c.Color, Size = UDim2.fromScale(0.315, 1), Position = UDim2.fromScale((i - 1) * 0.34, 0), Corner = 0.3, Sound = false,
 				OnClick = function()
 					useCandy(c.Id)
 				end,
 			})
-			
 			UI.icon(b.Face, c.Icon, { Name = "Icon", Size = UDim2.fromScale(0.5, 0.95), Position = UDim2.fromScale(0.02, 0.025) })
 			UI.text(b.Face, "", { Name = "Count", Size = UDim2.fromScale(0.46, 0.6), Position = UDim2.fromScale(0.52, 0.2), Role = "Small", AlignX = Enum.TextXAlignment.Left })
 			candyButtons[c.Id] = b
@@ -606,106 +866,150 @@ refreshDetail = function()
 		b.Face.Count.Text = "x" .. n
 		UI.setDisabled(b, n <= 0 or m.Level >= Progression.MaxLevel, c.Color)
 	end
-	local order = 0
-	for _, moveId in ipairs(m.Learned) do
-		local mv = Moves.Get(moveId)
-		if mv then
-			order += 1
-			local on = table.find(pick, moveId) ~= nil
-			local isSpecial = mv.Signature or mv.CutIn
-			local b, face = UI.button(movesBox, {
-				Name = "Move_" .. moveId, Color = if on then typeColor(mv.Type) else "grey", LayoutOrder = order, Corner = 0.22,
-				OnClick = function()
-					local idx = table.find(pick, moveId)
-					if idx then
-						if #pick > 1 then
-							table.remove(pick, idx)
+
+	if not isChange then
+		-- MODO EQUIPADOS (estilo Pokemon: os 4 ataques ativos, clique seleciona para ver detalhes abaixo)
+		if not inspectedMoveId or (not table.find(m.Active, inspectedMoveId) and not inspectedUnlockLv) then
+			inspectedMoveId = m.Active[1] or m.Learned[1]
+			inspectedUnlockLv = nil
+		end
+		for idx, moveId in ipairs(m.Active) do
+			local mv = Moves.Get(moveId)
+			if mv then
+				local isSelected = inspectedMoveId == moveId and inspectedUnlockLv == nil
+				local isSpecial = mv.Signature or mv.CutIn
+				local _, face = UI.button(movesBox, {
+					Name = "Active_" .. moveId,
+					Color = typeColor(mv.Type),
+					LayoutOrder = idx,
+					Corner = 0.22,
+					OnClick = function()
+						inspectedMoveId = moveId
+						inspectedUnlockLv = nil
+						detailMsg.Text = ""
+						refreshDetail()
+					end,
+				})
+				styleMoveButtonStroke(face, isSelected, isSpecial)
+				UI.icon(face, if isSpecial then "star" else (UI.TypeIcon[mv.Type] or "sword"), {
+					Name = "MoveIcon",
+					Size = UDim2.fromScale(0.14, 0.72),
+					Position = UDim2.fromScale(0.035, 0.5),
+					AnchorPoint = Vector2.new(0, 0.5),
+					AspectAxis = Enum.DominantAxis.Height,
+				})
+				UI.text(face, mv.Name, { Name = "MoveName", Size = UDim2.fromScale(0.54, 0.72), Position = UDim2.fromScale(0.19, 0.14), Role = "Small", Color = "onDark", AlignX = Enum.TextXAlignment.Left })
+				UI.text(face, moveRightTag(mv), { Name = "Power", Size = UDim2.fromScale(0.23, 0.62), Position = UDim2.fromScale(0.95, 0.19), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right })
+			end
+		end
+	else
+		-- MODO TROCAR GOLPES (lista completa: aprendidos clicaveis para marcar + bloqueados com cadeado)
+		local order = 0
+		for _, moveId in ipairs(m.Learned) do
+			local mv = Moves.Get(moveId)
+			if mv then
+				order += 1
+				local on = table.find(pick, moveId) ~= nil
+				local isSelected = inspectedMoveId == moveId and inspectedUnlockLv == nil
+				local isSpecial = mv.Signature or mv.CutIn
+				local _, face = UI.button(movesBox, {
+					Name = "Move_" .. moveId,
+					Color = if on then typeColor(mv.Type) else "grey",
+					LayoutOrder = order,
+					Corner = 0.22,
+					OnClick = function()
+						inspectedMoveId = moveId
+						inspectedUnlockLv = nil
+						local idx = table.find(pick, moveId)
+						if idx then
+							if #pick > 1 then
+								table.remove(pick, idx)
+								detailMsg.Text = ""
+							else
+								detailMsg.Text = "Mantenha ao menos 1 golpe equipado."
+								UI.play("error")
+							end
+						elseif #pick < Progression.MaxActiveMoves then
+							table.insert(pick, moveId)
+							detailMsg.Text = ""
+						else
+							detailMsg.Text = "M\u{e1}ximo de 4 golpes. Desmarque um antes."
+							UI.play("error")
 						end
-					elseif #pick < Progression.MaxActiveMoves then
-						table.insert(pick, moveId)
-					else
-						detailMsg.Text = "M\u{e1}ximo de 4 golpes. Desmarque um antes."
-						UI.play("error")
-						return
-					end
-					detailMsg.Text = ""
-					refreshDetail()
-				end,
-			})
-			if isSpecial then
-				local st0 = face:FindFirstChildOfClass("UIStroke")
-				if st0 then
-					st0.Color = T.Palette.gold
-				else
-					UI.stroke(face, T.Palette.gold, 0.9)
-				end
+						refreshDetail()
+					end,
+				})
+				styleMoveButtonStroke(face, isSelected, isSpecial)
+				UI.icon(face, if on then "tick" elseif isSpecial then "star" else (UI.TypeIcon[mv.Type] or "sword"), {
+					Name = "MoveIcon",
+					Size = UDim2.fromScale(0.14, 0.72),
+					Position = UDim2.fromScale(0.035, 0.5),
+					AnchorPoint = Vector2.new(0, 0.5),
+					AspectAxis = Enum.DominantAxis.Height,
+				})
+				UI.text(face, mv.Name, { Name = "MoveName", Size = UDim2.fromScale(0.54, 0.72), Position = UDim2.fromScale(0.19, 0.14), Role = "Small", Color = if isSpecial and not on then "gold" else "onDark", AlignX = Enum.TextXAlignment.Left })
+				UI.text(face, moveRightTag(mv), { Name = "Power", Size = UDim2.fromScale(0.23, 0.62), Position = UDim2.fromScale(0.95, 0.19), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right })
 			end
-			UI.icon(face, if on then "tick" elseif isSpecial then "star" else (UI.TypeIcon[mv.Type] or "sword"), {
-				Name = "MoveIcon",
-				Size = UDim2.fromScale(0.14, 0.74),
-				Position = UDim2.fromScale(0.035, 0.5),
-				AnchorPoint = Vector2.new(0, 0.5),
-				AspectAxis = Enum.DominantAxis.Height,
-			})
-			UI.text(face, mv.Name, { Name = "MoveName", Size = UDim2.fromScale(0.55, 0.7), Position = UDim2.fromScale(0.19, 0.15), Role = "Small", Color = if isSpecial and not on then "gold" else "onDark", AlignX = Enum.TextXAlignment.Left })
-			UI.text(face, moveRightTag(mv), { Name = "Power", Size = UDim2.fromScale(0.22, 0.6), Position = UDim2.fromScale(0.95, 0.2), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right })
+		end
+		-- Proximos golpes da progressao por nivel (bloqueados, mas clicaveis para inspecionar no card!)
+		for _, entry in ipairs(upcoming) do
+			local mv = Moves.Get(entry.Move)
+			if mv then
+				order += 1
+				local isSpecial = mv.Signature or mv.CutIn
+				local unlockLv = entry.Level
+				local isSelected = inspectedMoveId == entry.Move and inspectedUnlockLv == unlockLv
+				local _, face = UI.button(movesBox, {
+					Name = "Locked_" .. entry.Move,
+					Color = "slot",
+					LayoutOrder = order,
+					Corner = 0.22,
+					Sound = false,
+					OnClick = function()
+						inspectedMoveId = entry.Move
+						inspectedUnlockLv = unlockLv
+						if mv.Signature then
+							detailMsg.Text = string.format("T\u{e9}cnica Assinatura: desbloqueia no N\u{ed}vel %d.", unlockLv)
+						elseif mv.CutIn then
+							detailMsg.Text = string.format("Ataque Especial: desbloqueia no N\u{ed}vel %d.", unlockLv)
+						else
+							detailMsg.Text = string.format("%s desbloqueia no N\u{ed}vel %d.", mv.Name, unlockLv)
+						end
+						UI.play("click")
+						refreshDetail()
+					end,
+				})
+				styleMoveButtonStroke(face, isSelected, isSpecial)
+				UI.icon(face, "lock", {
+					Name = "LockIcon",
+					Size = UDim2.fromScale(0.14, 0.7),
+					Position = UDim2.fromScale(0.035, 0.5),
+					AnchorPoint = Vector2.new(0, 0.5),
+					AspectAxis = Enum.DominantAxis.Height,
+				})
+				UI.text(face, mv.Name, {
+					Name = "MoveName",
+					Size = UDim2.fromScale(0.54, 0.72),
+					Position = UDim2.fromScale(0.19, 0.14),
+					Role = "Small",
+					Color = if isSpecial then "gold" else "inkSoft",
+					AlignX = Enum.TextXAlignment.Left,
+					StrokeMult = 0.5,
+				})
+				UI.text(face, "Nv. " .. unlockLv, {
+					Name = "UnlockLevel",
+					Size = UDim2.fromScale(0.23, 0.62),
+					Position = UDim2.fromScale(0.95, 0.19),
+					AnchorPoint = Vector2.new(1, 0),
+					Role = "Small",
+					Color = if isSpecial then "gold" else "inkSoft",
+					AlignX = Enum.TextXAlignment.Right,
+				})
+			end
 		end
 	end
-	-- Proximos golpes da progressao por nivel (bloqueados com cadeado e nivel de desbloqueio)
-	for _, entry in ipairs(upcoming) do
-		local mv = Moves.Get(entry.Move)
-		if mv then
-			order += 1
-			local isSpecial = mv.Signature or mv.CutIn
-			local unlockLv = entry.Level
-			local _, face = UI.button(movesBox, {
-				Name = "Locked_" .. entry.Move, Color = "slot", LayoutOrder = order, Corner = 0.22, Sound = false,
-				OnClick = function()
-					if mv.Signature then
-						detailMsg.Text = string.format("T\u{e9}cnica Assinatura: desbloqueia no N\u{ed}vel %d.", unlockLv)
-					elseif mv.CutIn then
-						detailMsg.Text = string.format("Ataque Especial: desbloqueia no N\u{ed}vel %d.", unlockLv)
-					else
-						detailMsg.Text = string.format("%s desbloqueia no N\u{ed}vel %d.", mv.Name, unlockLv)
-					end
-					UI.play("error")
-				end,
-			})
-			if isSpecial then
-				local st0 = face:FindFirstChildOfClass("UIStroke")
-				if st0 then
-					st0.Color = T.Palette.gold
-				else
-					UI.stroke(face, T.Palette.gold, 0.85)
-				end
-			end
-			UI.icon(face, "lock", {
-				Name = "LockIcon",
-				Size = UDim2.fromScale(0.14, 0.7),
-				Position = UDim2.fromScale(0.035, 0.5),
-				AnchorPoint = Vector2.new(0, 0.5),
-				AspectAxis = Enum.DominantAxis.Height,
-			})
-			UI.text(face, mv.Name, {
-				Name = "MoveName",
-				Size = UDim2.fromScale(0.54, 0.7),
-				Position = UDim2.fromScale(0.19, 0.15),
-				Role = "Small",
-				Color = if isSpecial then "gold" else "inkSoft",
-				AlignX = Enum.TextXAlignment.Left,
-				StrokeMult = 0.5,
-			})
-			UI.text(face, "Nv. " .. unlockLv, {
-				Name = "UnlockLevel",
-				Size = UDim2.fromScale(0.23, 0.6),
-				Position = UDim2.fromScale(0.95, 0.2),
-				AnchorPoint = Vector2.new(1, 0),
-				Role = "Small",
-				Color = if isSpecial then "gold" else "inkSoft",
-				AlignX = Enum.TextXAlignment.Right,
-			})
-		end
-	end
+
+	refreshMoveInfoCard(m)
 end
 
 useCandy = function(id)
@@ -725,15 +1029,50 @@ useCandy = function(id)
 	end
 end
 
+changeMovesBtn.Activated:Connect(function()
+	local m = profile and selectedUid and profile.Collection[selectedUid]
+	if not m then
+		return
+	end
+	pick = table.clone(m.Active)
+	viewMode = "Change"
+	detailMsg.Text = ""
+	refreshDetail()
+end)
+
+cancelChangeBtn.Activated:Connect(function()
+	local m = profile and selectedUid and profile.Collection[selectedUid]
+	if m then
+		pick = table.clone(m.Active)
+		inspectedMoveId = m.Active[1] or m.Learned[1]
+	end
+	viewMode = "Equipped"
+	inspectedUnlockLv = nil
+	detailMsg.Text = ""
+	refreshDetail()
+end)
+
 saveButton.Activated:Connect(function()
 	if not selectedUid then
 		return
 	end
 	local ok, err = Remotes.SetActiveMoves:InvokeServer(selectedUid, pick)
-	detailMsg.Text = if ok then "Golpes salvos." else (err or "N\u{e3}o foi poss\u{ed}vel salvar.")
-	if not ok then
+	if ok then
+		viewMode = "Equipped"
+		inspectedUnlockLv = nil
+		if not table.find(pick, inspectedMoveId) then
+			inspectedMoveId = pick[1]
+		end
+		detailMsg.Text = "Golpes salvos."
+		refreshDetail()
+	else
+		detailMsg.Text = err or "N\u{e3}o foi poss\u{ed}vel salvar."
 		UI.play("error")
 	end
+end)
+
+teamWin.CloseButton.Activated:Connect(function()
+	clearListPortraits()
 end)
 
 UI.onOpen("Team", function(uid)
@@ -741,10 +1080,11 @@ UI.onOpen("Team", function(uid)
 		return
 	end
 	if teamWin.IsOpen() and uid == nil then
+		clearListPortraits()
 		teamWin.Close()
 		return
 	end
-	-- aberto pelo cartao da barra do time: ja no personagem tocado
+	-- aberto pelo cartao da barra do time ou pela tela Info do personagem
 	if typeof(uid) == "string" and profile.Collection[uid] then
 		selectedUid = uid
 	end
@@ -753,6 +1093,9 @@ UI.onOpen("Team", function(uid)
 	end
 	local m = selectedUid and profile.Collection[selectedUid]
 	pick = m and table.clone(m.Active) or {}
+	viewMode = "Equipped"
+	inspectedMoveId = m and (m.Active[1] or m.Learned[1]) or nil
+	inspectedUnlockLv = nil
 	detailMsg.Text = ""
 	refreshList()
 	refreshDetail()
@@ -800,7 +1143,7 @@ local function apply(p)
 	end
 	if teamWin.IsOpen() then
 		local m = selectedUid and p.Collection[selectedUid]
-		if m then
+		if m and viewMode ~= "Change" then
 			pick = table.clone(m.Active)
 		end
 		refreshList()
@@ -833,6 +1176,7 @@ end)
 UI.onBattle(function(inBattle)
 	hud.Visible = not inBattle
 	if inBattle then
+		clearListPortraits()
 		UI.closeAllWindows()
 	end
 end)

@@ -1213,3 +1213,23 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - Validado ao vivo no Play Mode com migração real de perfil salvo (`LearnsetVersion=2` em `Byakuya`, `San`, `Sarutobi`, `Setero`, `Luffy`), abertura da janela `GOLPES` exibindo golpes aprendidos + bloqueados até `Senbonzakura (Nv. 42)` e `Senbonzakura Kageyoshi (Nv. 50)` com bordas douradas, clique de aviso e `0` erros no Console.
 - `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS`).
 - Place salvo no Roblox Studio na **versão 319** (`TeamCreate`).
+
+
+## Nova Aba `GOLPES` Estilo Pokémon + Retratos 3D + Acesso pela Aba Info (24/11/2026)
+
+**Feito**
+- **1. Acesso pela Tela Info (`src/client/Gui/CharacterDetailGui/CharacterDetailClient.client.luau`):**
+  - Adicionado botão **`GOLPES`** (azul com ícone de espada) na base do painel esquerdo de `ATRIBUTOS DO PERSONAGEM`, fechando o modal empilhado e abrindo a tela `GOLPES` já focada no `uid` inspecionado (inclusive para personagens da coleção fora do time ativo).
+- **2. Descrições e Metadados de Golpes (`src/shared/Data/Moves.luau`):**
+  - Adicionados `Moves.Describe(move)` (descrições claras em português para todos os 93 golpes do jogo — incluindo descrições exclusivas para Assinaturas/Cut-Ins e geração automática para `Protect`, `WideProtect`, `Hazards`, `ClearHazards`, `Barrier`, `Tailwind`, `Drain`, `Recoil`, `BreaksProtect`, `Priority`, `Heal`, `Cleanse`, `MultiStat`, buffs/debuffs e status) e `Moves.TargetDisplay(move)`.
+- **3. Retratos 3D Compactos (`src/shared/TeamCards.luau`):**
+  - Adicionada opção `CompactPortrait = true` em `TeamCards.new`, renderizando o busto 3D limpo com moldura de raridade, emblema de classe e brilho sem texto redundante sobreposto.
+- **4. Aba `GOLPES` Estilo Pokémon (`src/client/Gui/HudGui/HudClient.client.luau`):**
+  - **Lista lateral com foto 3D (`TeamCards`)** ao lado de nome, nível, barra de HP e XP (exibindo personagens da coleção no topo quando aberto via Info), com cache de chave (`computeListKey`) para evitar piscar em atualizações de fundo do perfil.
+  - **Modo Principal (`4 Golpes Ativos`):** grade 2×2 com os 4 ataques equipados (clique destaca o golpe selecionado) + **Card de Detalhes estilo Pokémon** embaixo exibindo Nome, Classe, Categoria (`DANO`/`STATUS`), Alvo, **Poder**, **Precisão**, **PP**, **Prioridade**, **Crítico** e **Descrição completa**, mais Doces de XP e botão **`TROCAR GOLPES`** no rodapé.
+  - **Modo `TROCAR GOLPES`:** lista rolável com todos os golpes aprendidos (marcar/desmarcar até 4) + próximos golpes bloqueados com cadeado e nível (`Nv. 12` → `Nv. 50`, destaque dourado nos especiais dos Lendários); clicar em qualquer golpe (aprendido **ou** bloqueado) já atualiza o Card de Detalhes embaixo na hora. Rodapé com **`VOLTAR`** e **`SALVAR`**.
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- Validado ao vivo no Play Mode com inspeção visual completa: tela Info (`Byakuya Nv. 10`) com botão `GOLPES` → clique abrindo `GOLPES` com retratos 3D, seleção dos 4 ataques (`Corte Rápido`, `Estocada Veloz`) atualizando o Card de Detalhes → `TROCAR GOLPES` inspecionando `Senbonzakura Kageyoshi (Nv. 50)` bloqueado com descrição completa sem cortes nem sobreposição e `0` erros no Console.
+- `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS`).
+- Place salvo no Roblox Studio na **versão 322** (`TeamCreate`).

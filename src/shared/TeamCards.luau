@@ -80,6 +80,7 @@ end
 
 function TeamCards.new(parent: Instance, p)
 	p = p or {}
+	local compactPortrait = p.CompactPortrait == true
 	local card = {}
 	local z = p.ZIndex or 2
 
@@ -400,13 +401,13 @@ function TeamCards.new(parent: Instance, p)
 		glow.Color = (RARITY_TOP[def.Rarity] or rc):Lerp(Color3.new(1, 1, 1), 0.4)
 		plus.Visible = false
 		lockIcon.Visible = false
-		fade.Visible = true
-		nameText.Visible = true
+		fade.Visible = not compactPortrait
+		nameText.Visible = not compactPortrait
 		nameText.Text = def.Name
 		local light = RARITY_TOP[def.Rarity] or rc
 		nameGrad.Color = ColorSequence.new(Color3.new(1, 1, 1), light:Lerp(Color3.new(1, 1, 1), 0.25))
 		nameStroke.Thickness = math.clamp(math.floor(root.AbsoluteSize.Y / 40 + 0.5), 1, 3)
-		lvl.Visible = true
+		lvl.Visible = not compactPortrait
 		lvlText.TextColor3 = T.Palette.onDark
 		lvlText.Text = "Nv " .. tostring(m.Level or 1)
 		local ti = UI.TypeIcon[def.Type]
@@ -418,12 +419,12 @@ function TeamCards.new(parent: Instance, p)
 		end
 		-- estrelas
 		local n = m.Stars or 0
-		stars.Visible = n > 0
+		stars.Visible = (not compactPortrait) and n > 0
 		starText.Text = tostring(n)
 		-- HP
 		local cur, max = Progression.CurrentHp(m)
 		local frac = if max > 0 then cur / max else 1
-		hp.Visible = frac < 0.999
+		hp.Visible = (not compactPortrait) and frac < 0.999
 		hpFill.Size = UDim2.fromScale(math.max(0.04, frac), 1)
 		hpFill.BackgroundColor3 = if frac > 0.5 then T.Palette.hpHigh elseif frac > 0.2 then T.Palette.hpMid else T.Palette.hpLow
 		-- (a posicao da faixa de HP e fixa: borda de baixo)

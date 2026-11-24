@@ -739,4 +739,207 @@ function Moves.TargetMode(move): string
 	return "Single"
 end
 
+local TARGET_LABELS = {
+	Single = "1 Alvo",
+	AllEnemies = "Todos Inimigos",
+	AllOthers = "Todos Outros",
+	AllAllies = "Time Aliado",
+	EnemySide = "Campo Inimigo",
+	Self = "Pr\u{f3}prio",
+}
+
+local STAT_LABELS = {
+	Attack = "Ataque",
+	Defense = "Defesa",
+	Speed = "Velocidade",
+	Accuracy = "Precis\u{e3}o",
+}
+
+local STATUS_LABELS = {
+	Burn = "Queimadura",
+	Poison = "Veneno",
+	Paralysis = "Paralisia",
+	Sleep = "Sono",
+	Freeze = "Congelamento",
+}
+
+local SPECIAL_DESCRIPTIONS = {
+	Senbonzakura = "Dispersa a l\u{e2}mina em mil p\u{e9}talas cortantes contra o alvo (Ataque Especial com Cut-In).",
+	SenbonzakuraKageyoshi = "Libera o Bankai em uma tempestade devastadora de p\u{e9}talas sobre todos os inimigos (Assinatura).",
+	SocoSismico = "Concentra ondas de tremor no punho e estilha\u{e7}a o ar contra o alvo (Ataque Especial com Cut-In).",
+	CeuETerra = "Inclina os mares e o c\u{e9}u em um abalo catacl\u{ed}smico sobre todos os inimigos (Assinatura).",
+	Kamehameha = "Dispara um feixe concentrado de energia Ki de alto impacto no alvo (Ataque Especial com Cut-In).",
+	GenkiDama = "Re\u{fa}ne energia vital celeste em uma esfera colossal que atinge todos os inimigos (Assinatura).",
+	Atracao = "Cria um ponto de atra\u{e7}\u{e3}o gravitacional intensa que esmaga o alvo (Ataque Especial).",
+	TudoRoxo = "Funde atra\u{e7}\u{e3}o e repuls\u{e3}o em massa imagin\u{e1}ria que varre todos os inimigos (Assinatura).",
+	GaiolaDeEspinhos = "Invoca uma pris\u{e3}o de ra\u{ed}zes e espinhos que atinge todos os inimigos (Assinatura).",
+	CorteMurakumo = "Golpe largo e poderoso desferido com a l\u{e2}mina gigante Murakumogiri.",
+	HakiDoConquistador = "Libera press\u{e3}o espiritual avassaladora, aumentando o Ataque (+50%) do usu\u{e1}rio.",
+	CargaDeKi = "Eleva o Ki interior ao m\u{e1}ximo, aumentando o Ataque (+50%) do usu\u{e1}rio.",
+}
+
+function Moves.TargetDisplay(move): string
+	return TARGET_LABELS[Moves.TargetMode(move)] or "1 Alvo"
+end
+
+local function stagePctLabel(stages: number): string
+	local mult = if stages >= 0 then (1 + 0.5 * stages) else (2 / (2 - stages))
+	local pct = math.floor((mult - 1) * 100 + (if mult >= 1 then 0.5 else -0.5))
+	return if pct >= 0 then ("+" .. pct .. "%") else (pct .. "%")
+end
+
+-- Descricao legivel em portugues do que o golpe faz (usada na tela de Golpes)
+function Moves.Describe(move): string
+	if not move then
+		return ""
+	end
+	if typeof(move.Description) == "string" and #move.Description > 0 then
+		return move.Description
+	end
+	if move.Id and SPECIAL_DESCRIPTIONS[move.Id] then
+		return SPECIAL_DESCRIPTIONS[move.Id]
+	end
+
+	local mode = Moves.TargetMode(move)
+	local eff = move.Effect
+
+	if move.Category == "Status" and eff then
+		local kind = eff.Kind
+		if kind == "Protect" then
+			return "Protege o usu\u{e1}rio de ataques inimigos neste turno. A chance cai se usado seguido."
+		elseif kind == "WideProtect" then
+			return "Protege todo o seu time contra golpes em \u{e1}rea neste turno (2x2). Chance cai se repetido."
+		elseif kind == "Hazard" then
+			if eff.Hazard == "Spikes" then
+				return "Espalha estrepes no campo inimigo (at\u{e9} 3x). Quem entrar perde 1/8, 1/6 ou 1/4 do HP."
+			elseif eff.Hazard == "ToxicSpikes" then
+				return "Espalha estrepes t\u{f3}xicos no campo inimigo (at\u{e9} 2x). Envenena quem entra (2x causa dano extra)."
+			elseif eff.Hazard == "StickyWeb" then
+				return "Cobre o campo inimigo com rede aderente que reduz a Velocidade (-1) de quem entrar."
+			end
+		elseif kind == "ClearHazards" then
+			local scope = if eff.Scope == "All" then "de ambos os campos" else "do seu campo"
+			return "Remove todas as armadilhas de entrada (hazards) " .. scope .. "."
+		elseif kind == "SideEffect" then
+			local turns = eff.Turns or (if eff.SideEffect == "Tailwind" then 4 else 5)
+			if eff.SideEffect == "Barrier" then
+				return "Ergue uma barreira por " .. turns .. " turnos que reduz o dano recebido pelo time (cr\u{ed}ticos ignoram)."
+			elseif eff.SideEffect == "Tailwind" then
+				return "Vento a favor por " .. turns .. " turnos que dobra a Velocidade de todo o time."
+			end
+		elseif kind == "Heal" then
+			local pct = math.floor((eff.Fraction or 0.5) * 100 + 0.5)
+			if mode == "AllAllies" then
+				return "Recupera " .. pct .. "% do HP m\u{e1}ximo de todos os aliados ativos em campo."
+			end
+			return "Recupera " .. pct .. "% do HP m\u{e1}ximo do usu\u{e1}rio."
+		elseif kind == "Cleanse" then
+			if mode == "AllAllies" then
+				return "Purifica e remove qualquer status negativo de todos os aliados ativos em campo."
+			end
+			return "Remove qualquer status negativo do usu\u{e1}rio."
+		elseif kind == "Status" then
+			local stName = STATUS_LABELS[eff.Status] or tostring(eff.Status)
+			local who = if mode == "AllEnemies" then "todos os inimigos" else "o alvo"
+			return "Aplica " .. stName .. " em " .. who .. "."
+		elseif kind == "StatStage" then
+			local statName = STAT_LABELS[eff.Stat] or tostring(eff.Stat)
+			local stages = eff.Stages or 1
+			local verb = if stages >= 2 then "Aumenta muito" elseif stages > 0 then "Aumenta" elseif stages <= -2 then "Reduz muito" else "Reduz"
+			local who = if mode == "AllAllies" then "de todos os aliados" elseif mode == "AllEnemies" then "de todos os inimigos" elseif eff.Target == "Self" then "do usu\u{e1}rio" else "do alvo"
+			return string.format("%s %s (%s) %s.", verb, statName, stagePctLabel(stages), who)
+		elseif kind == "MultiStat" then
+			local items = {}
+			for _, ch in ipairs(eff.Changes or {}) do
+				local sn = STAT_LABELS[ch.Stat] or tostring(ch.Stat)
+				table.insert(items, string.format("%s (%s)", sn, stagePctLabel(ch.Stages or 1)))
+			end
+			local who = if mode == "AllAllies" then "de todos os aliados" elseif eff.Target == "Self" then "do usu\u{e1}rio" else "do alvo"
+			return "Eleva " .. table.concat(items, " e ") .. " " .. who .. "."
+		end
+	end
+
+	-- Golpe de Dano
+	local parts = {}
+	local usedPrio, usedCrit, usedAcc, usedBreak, usedDrain, usedRecoil = false, false, false, false, false, false
+	if mode == "AllEnemies" then
+		table.insert(parts, "Golpe em \u{e1}rea que atinge todos os inimigos.")
+	elseif mode == "AllOthers" then
+		table.insert(parts, "Golpe em \u{e1}rea que atinge todos os outros lutadores.")
+	elseif move.Accuracy == nil then
+		table.insert(parts, "Ataque certeiro que nunca erra o alvo.")
+		usedAcc = true
+	elseif (move.Priority or 0) > 0 then
+		table.insert(parts, "Ataque veloz (Prioridade +" .. tostring(move.Priority) .. ") que age primeiro.")
+		usedPrio = true
+	elseif move.BreaksProtect then
+		table.insert(parts, "Ataque perfurante que rompe Proteger e Guarda Ampla.")
+		usedBreak = true
+	elseif move.Drain then
+		table.insert(parts, "Absorve " .. math.floor(move.Drain * 100 + 0.5) .. "% do dano causado em HP.")
+		usedDrain = true
+	elseif move.Recoil then
+		table.insert(parts, "Ataque pesado que causa " .. math.floor(move.Recoil * 100 + 0.5) .. "% do dano como recuo.")
+		usedRecoil = true
+	elseif (move.CritChance or 0) >= 0.12 then
+		table.insert(parts, "Ataque preciso com " .. math.floor(move.CritChance * 100 + 0.5) .. "% de chance cr\u{ed}tica.")
+		usedCrit = true
+	else
+		local clsLabel = if move.Type == "Universal" then "universal" else ("de " .. tostring(move.Type))
+		table.insert(parts, "Ataque direto " .. clsLabel .. " (b\u{f4}nus de 1,5x na mesma classe).")
+	end
+
+	if (move.Priority or 0) > 0 and not usedPrio then
+		table.insert(parts, "Prioridade +" .. tostring(move.Priority) .. ".")
+	end
+	if move.BreaksProtect and not usedBreak then
+		table.insert(parts, "Rompe Proteger e Guarda Ampla.")
+	end
+	if move.Drain and not usedDrain then
+		table.insert(parts, "Drena " .. math.floor(move.Drain * 100 + 0.5) .. "% do dano em HP.")
+	end
+	if move.Recoil and not usedRecoil then
+		table.insert(parts, "Sofre " .. math.floor(move.Recoil * 100 + 0.5) .. "% de recuo.")
+	end
+	if (move.CritChance or 0) >= 0.12 and not usedCrit then
+		table.insert(parts, math.floor(move.CritChance * 100 + 0.5) .. "% de chance cr\u{ed}tica.")
+	end
+	if move.Accuracy == nil and not usedAcc then
+		table.insert(parts, "Nunca erra.")
+	end
+
+	if eff then
+		local chance = eff.Chance or 100
+		if eff.Kind == "Status" then
+			local stName = STATUS_LABELS[eff.Status] or tostring(eff.Status)
+			if chance >= 100 then
+				table.insert(parts, "Causa " .. stName .. ".")
+			else
+				table.insert(parts, chance .. "% de causar " .. stName .. ".")
+			end
+		elseif eff.Kind == "StatStage" then
+			local sn = STAT_LABELS[eff.Stat] or tostring(eff.Stat)
+			local stg = eff.Stages or 1
+			local verb = if stg > 0 then "aumentar" else "reduzir"
+			local who = if eff.Target == "Self" then "do usu\u{e1}rio" else "do alvo"
+			if chance >= 100 then
+				table.insert(parts, string.format("%s %s (%s) %s.", if stg > 0 then "Aumenta" else "Reduz", sn, stagePctLabel(stg), who))
+			else
+				table.insert(parts, string.format("%d%% de %s %s (%s) %s.", chance, verb, sn, stagePctLabel(stg), who))
+			end
+		elseif eff.Kind == "ClearHazards" then
+			local txt = "Limpa armadilhas do seu campo"
+			if eff.BonusStat then
+				local sn = STAT_LABELS[eff.BonusStat] or tostring(eff.BonusStat)
+				txt ..= " e aumenta " .. sn .. " (" .. stagePctLabel(eff.BonusStages or 1) .. ")."
+			else
+				txt ..= "."
+			end
+			table.insert(parts, txt)
+		end
+	end
+
+	return table.concat(parts, " ")
+end
+
 return Moves

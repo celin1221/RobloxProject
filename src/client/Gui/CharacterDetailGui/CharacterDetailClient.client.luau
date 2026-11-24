@@ -57,6 +57,25 @@ local gradeLabel = UI.text(gradeFace, "", { Name = "Value", Role = "Small", ZInd
 local genAvgLabel = UI.text(idFace, "", { Name = "GenAvg", Role = "Small", ZIndex = 4, Rich = true, StrokeMult = 0.45 })
 local trnAvgLabel = UI.text(idFace, "", { Name = "TrnAvg", Role = "Small", ZIndex = 4, Rich = true, StrokeMult = 0.45 })
 local powerLabel = UI.text(idFace, "", { Name = "TotalPower", Role = "Small", Color = "gold", ZIndex = 4, StrokeMult = 0.5 })
+local movesBtn = UI.button(idFace, {
+	Name = "MovesButton",
+	Text = "GOLPES",
+	Icon = "sword",
+	Layout = "row",
+	Color = "blue",
+	Role = "Small",
+	Corner = 0.26,
+	ZIndex = 5,
+	OnClick = function()
+		local uid = currentUid
+		if not uid then
+			return
+		end
+		portrait.Clear()
+		win.Close(true)
+		UI.open("Team", uid)
+	end,
+})
 
 -- 2) Painel central: Seletor de camada + Radar + Legenda
 local modeRow = UI.frame(radarFace, { Name = "ModeButtons", ZIndex = 3 })
@@ -196,15 +215,20 @@ local function layout()
 
 	-- 1) Layout esquerdo
 	local idW, idH = col1W - 12, H - 12
-	local portMaxH = math.max(54, math.floor(idH * 0.44))
+	local movesBtnH = math.max(T.TouchMin, math.min(48, math.floor(idH * 0.125)))
+	local movesBtnY = H - 6 - movesBtnH
+	movesBtn.Size = UDim2.fromOffset(idW, movesBtnH)
+	movesBtn.Position = UDim2.fromOffset(6, movesBtnY)
+
+	local portMaxH = math.max(54, math.floor((movesBtnY - 10) * 0.43))
 	local portS = math.min(idW - 8, portMaxH)
 	portrait.Root.AnchorPoint = Vector2.new(0.5, 0)
 	portrait.Root.Size = UDim2.fromOffset(portS, portS)
 	portrait.Root.Position = UDim2.fromOffset(math.floor(col1W / 2), 6)
 
 	local y = 6 + portS + 4
-	local rem = math.max(60, H - y - 6)
-	local rowH = math.max(16, math.floor(rem / 5))
+	local rem = math.max(60, movesBtnY - y - 6)
+	local rowH = math.max(15, math.floor(rem / 5))
 	metaTag.Size = UDim2.fromOffset(idW, rowH)
 	metaTag.Position = UDim2.fromOffset(6, y)
 	y += rowH
@@ -222,7 +246,7 @@ local function layout()
 	trnAvgLabel.Position = UDim2.fromOffset(6, y)
 	y += rowH
 
-	powerLabel.Size = UDim2.fromOffset(idW, math.max(16, H - y - 4))
+	powerLabel.Size = UDim2.fromOffset(idW, math.max(15, movesBtnY - y - 4))
 	powerLabel.Position = UDim2.fromOffset(6, y)
 
 	-- 2) Layout central (Radar)
