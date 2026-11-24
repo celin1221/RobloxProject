@@ -11,6 +11,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local gui = script.Parent
@@ -20,7 +21,6 @@ local Characters = require(Data:WaitForChild("Characters"))
 local Moves = require(Data:WaitForChild("Moves"))
 local TypeChart = require(Data:WaitForChild("TypeChart"))
 local Progression = require(Data:WaitForChild("Progression"))
-local AccountLevel = require(Data:WaitForChild("AccountLevel"))
 local StarterTrack = require(Data:WaitForChild("StarterTrack"))
 local UI = require(ReplicatedStorage:WaitForChild("UI"))
 local T = UI.Theme
@@ -84,114 +84,12 @@ end
 player:GetAttributeChangedSignal("LiveGoldRate"):Connect(syncLiveGoldRate)
 syncLiveGoldRate()
 
--- Cartao do Nivel da Conta (canto superior direito, logo abaixo da engrenagem; abre Recompensas de Nivel)
-local accBtn, accFace = UI.button(hud, {
-	Name = "AccountLevelCard",
-	Color = "panel",
-	Size = UDim2.fromScale(0.25, 0.145),
-	Position = UDim2.fromScale(0.985, 0.20),
-	AnchorPoint = Vector2.new(1, 0),
-	Corner = 0.22,
-	MaxSize = Vector2.new(255, 58),
-	Visible = false,
-	Sound = "click",
-	OnClick = function()
-		if not profile or not profile.StarterChosen then
-			return
-		end
-		UI.open("LevelRewards")
-	end,
-})
-local accStroke = UI.stroke(accFace, T.Palette.gold, 1.1)
-local accLvPill, accLvFace = UI.panel(accFace, {
-	Name = "LvPill",
-	Size = UDim2.fromScale(0.30, 0.74),
-	Position = UDim2.fromScale(0.04, 0.13),
-	Color = "lendario",
-	Corner = 0.26,
-	Shadow = false,
-})
-local _accLvPill = accLvPill
-local accLvText = UI.text(accLvFace, "NV. 1", {
-	Name = "Text",
-	Size = UDim2.fromScale(0.92, 0.80),
-	Position = UDim2.fromScale(0.04, 0.10),
-	Role = "Small",
-})
-local accTitle = UI.text(accFace, "CONTA", {
-	Name = "Title",
-	Size = UDim2.fromScale(0.60, 0.34),
-	Position = UDim2.fromScale(0.37, 0.09),
-	Role = "Small",
-	Color = "gold",
-	AlignX = Enum.TextXAlignment.Left,
-	StrokeMult = 0.45,
-})
-local accBar = UI.bar(accFace, {
-	Name = "XpBar",
-	Size = UDim2.fromScale(0.60, 0.36),
-	Position = UDim2.fromScale(0.37, 0.50),
-	FillColor = "blue",
-})
-local accBarText = UI.text(accBar, "0 / 129", {
-	Name = "XpLabel",
-	Size = UDim2.fromScale(0.94, 0.90),
-	Position = UDim2.fromScale(0.03, 0.05),
-	Role = "Small",
-	StrokeMult = 0.6,
-	ZIndex = 4,
-})
-local accBadge = UI.frame(accBtn, {
-	Name = "Badge",
-	Size = UDim2.fromOffset(20, 20),
-	Position = UDim2.fromScale(0.0, 0.0),
-	AnchorPoint = Vector2.new(0.35, 0.2),
-	Color = "red",
-	Corner = 0.5,
-	ZIndex = 6,
-	Visible = false,
-})
-UI.stroke(accBadge)
-local accBadgeText = UI.text(accBadge, "!", {
-	Name = "Count",
-	Size = UDim2.fromScale(1, 1),
-	Role = "Small",
-	ZIndex = 7,
-})
-local accXpFlashId = 0
-
-local function refreshAccountCard(instant: boolean?)
-	if not profile or not profile.StarterChosen then
-		accBtn.Visible = false
-		return
-	end
-	local acc = profile.Account or { Level = 1, Xp = 0, TotalXp = 0, Claimed = {} }
-	local lv = math.max(1, math.floor(tonumber(acc.Level) or 1))
-	local xp = math.max(0, math.floor(tonumber(acc.Xp) or 0))
-	local need = AccountLevel.XpToNext(lv)
-	local frac = math.clamp(if need > 0 then xp / need else 0, 0, 1)
-	local unclaimed = AccountLevel.CountUnclaimed(acc)
-
-	accBtn.Visible = true
-	accLvText.Text = "NV. " .. lv
-	UI.setBar(accBar, frac, "blue", instant == true)
-	accBarText.Text = UI.fmt(xp) .. "/" .. UI.fmt(need)
-	if unclaimed > 0 then
-		accBadge.Visible = true
-		accBadgeText.Text = if unclaimed > 9 then "9+" else tostring(unclaimed)
-		accStroke.Color = T.Palette.gold
-	else
-		accBadge.Visible = false
-		accStroke.Color = T.Palette.blue
-	end
-end
-
--- Card compacto da Trilha de Objetivos Iniciais (canto superior direito, abaixo do Nivel da Conta)
+-- Card compacto da Trilha de Objetivos Iniciais (canto superior direito, logo abaixo da engrenagem)
 local trackBtn, trackFace = UI.button(hud, {
 	Name = "StarterTrack",
 	Color = "panel",
 	Size = UDim2.fromScale(0.25, 0.21),
-	Position = UDim2.fromScale(0.985, 0.365),
+	Position = UDim2.fromScale(0.985, 0.20),
 	AnchorPoint = Vector2.new(1, 0),
 	Corner = 0.16,
 	MaxSize = Vector2.new(255, 86),
@@ -321,7 +219,7 @@ local settingsButton = UI.button(hud, { Name = "SettingsButton", Icon = "gear", 
 	end,
 })
 
--- Posiciona a pilha direita (AccountLevelCard + StarterTrack) exatamente abaixo da engrenagem sem colisoes
+-- Posiciona a Trilha Inicial exatamente abaixo da engrenagem sem colisoes
 local function layoutRightStack()
 	local h = hud.AbsoluteSize.Y
 	if h < 40 then
@@ -329,14 +227,10 @@ local function layoutRightStack()
 	end
 	local topY = math.floor(h * 0.03)
 	local gearH = math.max(T.TouchMin, math.floor(settingsButton.AbsoluteSize.Y))
-	local accY = topY + gearH + 8
-	accBtn.Position = UDim2.new(0.985, 0, 0, accY)
-	local accH = math.max(T.TouchMin, math.floor(accBtn.AbsoluteSize.Y))
-	trackBtn.Position = UDim2.new(0.985, 0, 0, accY + accH + 8)
+	trackBtn.Position = UDim2.new(0.985, 0, 0, topY + gearH + 8)
 end
 hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutRightStack)
 settingsButton:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutRightStack)
-accBtn:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutRightStack)
 task.defer(layoutRightStack)
 
 -- ponto vermelho dos Premios (RewardsClient marca o atributo RewardsBadge no PlayerGui)
@@ -345,11 +239,124 @@ UI.stroke(badge)
 UI.text(badge, "!", { Size = UDim2.fromScale(1, 1), Role = "Small", ZIndex = 5 })
 
 --------------------------------------------------------------------
--- Evento de fim de semana (RewardsClient marca WeekendEvent) e avisos
+-- Evento de fim de semana (selo minimalista no canto inferior direito + tooltip no hover)
 --------------------------------------------------------------------
-local eventHolder, eventFace = UI.panel(hud, { Name = "Event", Size = UDim2.fromScale(0.32, 0.1), Position = UDim2.fromScale(0.895, 0.03), AnchorPoint = Vector2.new(1, 0), Color = "lendario", Corner = T.Corner.Pill, Aspect = 4.6, Visible = false, MaxSize = Vector2.new(280, 56) })
-UI.icon(eventHolder, "star", { Size = UDim2.fromScale(0.25, 1.25), Position = UDim2.fromScale(-0.04, 0.5), AnchorPoint = Vector2.new(0, 0.5), AspectAxis = Enum.DominantAxis.Height, ZIndex = 3 })
-local eventLabel = UI.text(eventFace, "", { Name = "Text", Size = UDim2.fromScale(0.78, 0.74), Position = UDim2.fromScale(0.2, 0.13), Role = "Small" })
+local isTouchOnly = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+local eventWrap = UI.frame(hud, {
+	Name = "Event",
+	Size = UDim2.fromScale(0.28, 0.09),
+	Position = UDim2.fromScale(0.985, if isTouchOnly then 0.64 else 0.965),
+	AnchorPoint = Vector2.new(1, 1),
+	MaxSize = Vector2.new(280, 54),
+	Visible = false,
+	ZIndex = 4,
+})
+local eventWrapLim = eventWrap:FindFirstChild("MaxSize")
+if eventWrapLim and eventWrapLim:IsA("UISizeConstraint") then
+	eventWrapLim.MinSize = Vector2.new(160, T.TouchMin)
+end
+
+local eventBadge, eventBadgeFace = UI.panel(eventWrap, {
+	Name = "Badge",
+	Class = "TextButton",
+	Color = "slot",
+	Corner = T.Corner.Pill,
+	Shadow = false,
+	Size = UDim2.fromScale(1, 1),
+	Position = UDim2.fromScale(1, 0.5),
+	AnchorPoint = Vector2.new(1, 0.5),
+	Aspect = 1,
+	AspectAxis = Enum.DominantAxis.Height,
+	ZIndex = 5,
+})
+local eventMin = Instance.new("UISizeConstraint")
+eventMin.MinSize = Vector2.new(T.TouchMin, T.TouchMin)
+eventMin.MaxSize = Vector2.new(54, 54)
+eventMin.Parent = eventBadge
+local eventBadgeScale = Instance.new("UIScale")
+eventBadgeScale.Parent = eventBadge
+
+local eventIcon = UI.icon(eventBadgeFace, "coin", {
+	Name = "Icon",
+	Size = UDim2.fromScale(0.7, 0.7),
+	Position = UDim2.fromScale(0.5, 0.5),
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	ZIndex = 6,
+})
+
+local eventTip, eventTipFace = UI.panel(eventWrap, {
+	Name = "Tooltip",
+	Color = "slot",
+	Corner = T.Corner.Pill,
+	Shadow = false,
+	Size = UDim2.fromScale(0.7, 0.78),
+	Position = UDim2.new(1, -64, 0.5, 0),
+	AnchorPoint = Vector2.new(1, 0.5),
+	Visible = false,
+	ZIndex = 6,
+})
+local eventTipScale = Instance.new("UIScale")
+eventTipScale.Parent = eventTip
+local eventTipLabel = UI.text(eventTipFace, "2x de Moedas", {
+	Name = "Text",
+	Size = UDim2.fromScale(0.88, 0.84),
+	Position = UDim2.fromScale(0.5, 0.5),
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Color = "gold",
+	Role = "Small",
+	StrokeMult = 0.7,
+	ZIndex = 7,
+})
+
+local function layoutEventTip()
+	local bSz = UI.unscaledSize(eventBadge)
+	if bSz > 1 then
+		eventTip.Position = UDim2.new(1, -(math.floor(bSz + 0.5) + 10), 0.5, 0)
+	end
+end
+eventBadge:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutEventTip)
+task.defer(layoutEventTip)
+
+local tipToken = 0
+local function setEventTip(show: boolean)
+	tipToken += 1
+	if show then
+		layoutEventTip()
+		eventTip.Visible = true
+		eventTipScale.Scale = 0.85
+		TweenService:Create(eventTipScale, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		TweenService:Create(eventBadgeScale, TweenInfo.new(T.Motion.HoverTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = T.Motion.HoverScale }):Play()
+	else
+		eventTip.Visible = false
+		TweenService:Create(eventBadgeScale, TweenInfo.new(T.Motion.HoverTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	end
+end
+
+eventBadge.MouseEnter:Connect(function()
+	setEventTip(true)
+end)
+eventBadge.MouseLeave:Connect(function()
+	setEventTip(false)
+end)
+eventBadge.Activated:Connect(function()
+	-- No celular (ou clique), alterna o tooltip e fecha sozinho apos 2.5s
+	if eventTip.Visible then
+		setEventTip(false)
+	else
+		setEventTip(true)
+		local myToken = tipToken
+		task.delay(2.5, function()
+			if myToken == tipToken then
+				setEventTip(false)
+			end
+		end)
+	end
+end)
+
+local EVENT_STYLE = {
+	Gold = { Icon = "coin", Text = "2x de Moedas", Color = "gold", Width = 0.72 },
+	Xp = { Icon = "sparkle", Text = "2x de XP", Color = "blue", Width = 0.58 },
+}
 
 local toastHolder, toastFace = UI.panel(canvas, { Name = "Toast", Size = UDim2.fromScale(0.5, 0.1), Position = UDim2.fromScale(0.5, 0.17), AnchorPoint = Vector2.new(0.5, 0), Color = "panel", Corner = T.Corner.Pill, Visible = false, ZIndex = 30, MaxSize = Vector2.new(560, 60) })
 local toastScale = Instance.new("UIScale")
@@ -379,12 +386,29 @@ end)
 local pg = player:WaitForChild("PlayerGui")
 local function syncAttrs()
 	badge.Visible = pg:GetAttribute("RewardsBadge") == true
+	local evId = pg:GetAttribute("WeekendEventId")
 	local ev = pg:GetAttribute("WeekendEvent")
-	eventHolder.Visible = typeof(ev) == "string" and ev ~= ""
-	eventLabel.Text = ev or ""
+	local active = (typeof(evId) == "string" and evId ~= "") or (typeof(ev) == "string" and ev ~= "")
+	if not active then
+		eventWrap.Visible = false
+		eventTip.Visible = false
+		return
+	end
+	local key = if typeof(evId) == "string" and EVENT_STYLE[evId]
+		then evId
+		elseif typeof(ev) == "string" and string.find(string.upper(ev), "XP") then "Xp"
+		else "Gold"
+	local st = EVENT_STYLE[key]
+	UI.setIcon(eventIcon, st.Icon)
+	eventTipLabel.Text = st.Text
+	eventTipLabel.TextColor3 = T.Palette[st.Color] or T.Palette.gold
+	eventTip.Size = UDim2.fromScale(st.Width, 0.78)
+	eventWrap.Visible = true
+	layoutEventTip()
 end
 pg:GetAttributeChangedSignal("RewardsBadge"):Connect(syncAttrs)
 pg:GetAttributeChangedSignal("WeekendEvent"):Connect(syncAttrs)
+pg:GetAttributeChangedSignal("WeekendEventId"):Connect(syncAttrs)
 syncAttrs()
 
 --------------------------------------------------------------------
@@ -580,8 +604,15 @@ refreshDetail = function()
 					refreshDetail()
 				end,
 			})
-			UI.text(face, (if on then "\u{2713} " else "") .. mv.Name, { Name = "MoveName", Size = UDim2.fromScale(0.68, 0.7), Position = UDim2.fromScale(0.05, 0.15), Role = "Small", AlignX = Enum.TextXAlignment.Left })
-			UI.text(face, if mv.Power then tostring(mv.Power) else "\u{2014}", { Name = "Power", Size = UDim2.fromScale(0.22, 0.6), Position = UDim2.fromScale(0.95, 0.2), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right })
+			UI.icon(face, if on then "tick" else (UI.TypeIcon[mv.Type] or "sword"), {
+				Name = "MoveIcon",
+				Size = UDim2.fromScale(0.14, 0.74),
+				Position = UDim2.fromScale(0.035, 0.5),
+				AnchorPoint = Vector2.new(0, 0.5),
+				AspectAxis = Enum.DominantAxis.Height,
+			})
+			UI.text(face, mv.Name, { Name = "MoveName", Size = UDim2.fromScale(0.56, 0.7), Position = UDim2.fromScale(0.19, 0.15), Role = "Small", AlignX = Enum.TextXAlignment.Left })
+			UI.text(face, if mv.Power then tostring(mv.Power) else "SUP", { Name = "Power", Size = UDim2.fromScale(0.20, 0.6), Position = UDim2.fromScale(0.95, 0.2), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right })
 		end
 	end
 end
@@ -665,7 +696,7 @@ local function apply(p)
 			UI.play("coin")
 		end
 	end
-	refreshAccountCard(isFirst)
+	local _ = isFirst
 	refreshStarterTrack()
 	layoutRightStack()
 	if not p.StarterChosen then
@@ -687,37 +718,6 @@ local function apply(p)
 end
 
 Remotes:WaitForChild("ProfileUpdated").OnClientEvent:Connect(apply)
-Remotes:WaitForChild("AccountXpGain").OnClientEvent:Connect(function(info)
-	if typeof(info) ~= "table" then
-		return
-	end
-	if profile then
-		profile.Account = profile.Account or { Level = 1, Xp = 0, TotalXp = 0, Claimed = {} }
-		if typeof(info.Level) == "number" then
-			profile.Account.Level = info.Level
-		end
-		if typeof(info.Xp) == "number" then
-			profile.Account.Xp = info.Xp
-		end
-	end
-	refreshAccountCard(false)
-	local amt = tonumber(info.Amount) or 0
-	if amt > 0 then
-		accXpFlashId += 1
-		local fid = accXpFlashId
-		accTitle.Text = if info.LeveledUp then ("SUBIU NV. " .. tostring(info.Level) .. "!") else ("+" .. UI.fmt(amt) .. " XP")
-		accTitle.TextColor3 = if info.LeveledUp then T.Palette.hpHigh else T.Palette.gold
-		if info.LeveledUp then
-			UI.play("reward")
-		end
-		task.delay(2.4, function()
-			if accXpFlashId == fid then
-				accTitle.Text = "CONTA"
-				accTitle.TextColor3 = T.Palette.gold
-			end
-		end)
-	end
-end)
 -- Atualiza gold ao vivo a cada segundo enquanto a Base gera renda online
 player:GetAttributeChangedSignal("LiveGold"):Connect(function()
 	if first or not profile then

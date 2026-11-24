@@ -102,6 +102,11 @@
         "$className": "ScreenGui",
         "$ignoreUnknownInstances": true,
         "$path": "src/client/Gui/TrainingGui"
+      },
+      "LevelRewardsGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/client/Gui/LevelRewardsGui"
       }
     },
     "StarterPlayer": {

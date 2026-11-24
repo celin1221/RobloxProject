@@ -210,7 +210,7 @@ local function renderChests()
 		table.insert(timers, function()
 			local ready
 			if chestClaimed(i) then
-				UI.setText(b, "ABERTO \u{2713}")
+				UI.setText(b, "ABERTO")
 				ready = false
 			else
 				local left = c.Minutes * 60 - sessionSeconds()
@@ -416,6 +416,7 @@ task.spawn(function()
 				UI.badge(tabButtons.Baus, chest)
 			end
 			local ev = Retention.EventAt(now())
+			pg:SetAttribute("WeekendEventId", ev or "")
 			pg:SetAttribute("WeekendEvent", if ev then "FIM DE SEMANA: " .. UI.upper(Retention.EventNames[ev]) else "")
 			local day = Retention.Day(now())
 			if lastDay and day ~= lastDay and win.IsOpen() then

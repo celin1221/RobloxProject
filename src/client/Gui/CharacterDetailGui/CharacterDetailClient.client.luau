@@ -63,7 +63,7 @@ local modeRow = UI.frame(radarFace, { Name = "ModeButtons", ZIndex = 3 })
 local modeBtns = {}
 local activeMode = "Both"
 local radar = RadarChart.new(radarFace, { Name = "Radar", ZIndex = 4 })
-local legendLabel = UI.text(radarFace, "<font color='#73F5FF'>\u{25a0} Gen\u{e9}tica (+40%)</font>   <font color='#FFCE54'>\u{25a0} Treino (+30%)</font>", {
+local legendLabel = UI.text(radarFace, "<font color='#73F5FF'>Gen\u{e9}tica (+40%)</font>   \u{b7}   <font color='#FFCE54'>Treino (+30%)</font>", {
 	Name = "Legend",
 	Role = "Small",
 	Rich = true,
@@ -80,14 +80,16 @@ local function updateModeButtons()
 end
 
 local MODES = {
-	{ Id = "Both", Text = "AMBOS" },
-	{ Id = "Genetics", Text = "GEN\u{c9}TICA" },
-	{ Id = "Training", Text = "TREINO" },
+	{ Id = "Both", Text = "AMBOS", Icon = "star" },
+	{ Id = "Genetics", Text = "GEN\u{c9}TICA", Icon = "sparkle" },
+	{ Id = "Training", Text = "TREINO", Icon = "pickaxe" },
 }
 for _, m in ipairs(MODES) do
 	modeBtns[m.Id] = UI.button(modeRow, {
 		Name = "Mode_" .. m.Id,
 		Text = m.Text,
+		Icon = m.Icon,
+		Layout = "row",
 		Color = "panelAlt",
 		Role = "Small",
 		Corner = 0.28,
@@ -102,7 +104,7 @@ end
 updateModeButtons()
 
 -- 3) Painel direito: Detalhamento por atributo
-local statsHeader = UI.text(statsFace, "DETALHAMENTO (BASE \u{2192} FINAL)", {
+local statsHeader = UI.text(statsFace, "DETALHAMENTO (BASE / FINAL)", {
 	Name = "Header",
 	Role = "Small",
 	Color = "inkSoft",

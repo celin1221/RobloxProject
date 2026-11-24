@@ -355,7 +355,7 @@ local function refreshConfig()
 		local hex = oreCfg.Color:ToHex()
 
 		if addVal > 0 then
-			sc.Title.Text = string.format("<font color='#%s'>%s</font> %d%% \u{2192} <font color='#73F5FF'>%d%%</font>", hex, Training.StatLabels[statKey].Short, curVal, curVal + addVal)
+			sc.Title.Text = string.format("<font color='#%s'>%s</font> %d%%  +  <font color='#73F5FF'>%d%%</font>", hex, Training.StatLabels[statKey].Short, curVal, addVal)
 		else
 			sc.Title.Text = string.format("<font color='#%s'>%s</font> %d%% / 100%%", hex, Training.StatLabels[statKey].Short, curVal)
 		end
@@ -416,7 +416,7 @@ local function refreshActiveJob()
 	UI.setBar(activeBar, frac, if ready then "hpHigh" else "teal", true)
 
 	if ready then
-		activeTimer.Text = "\u{2713} Treino conclu\u{ed}do! Clique para resgatar."
+		activeTimer.Text = "Treino conclu\u{ed}do! Clique para resgatar."
 		activeTimer.TextColor3 = T.Palette.hpHigh
 		UI.paint(activeActionBtn, "green")
 		UI.setText(activeActionBtn, "RESGATAR TREINO")

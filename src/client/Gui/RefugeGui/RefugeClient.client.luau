@@ -121,7 +121,7 @@ local function fillColumn(col, level: number?, info)
 	if not info then
 		col.Title.Text = "N\u{cd}VEL M\u{c1}XIMO"
 		for _, v in pairs(col.Rows) do
-			v.Text = "\u{2014}"
+			v.Text = "MAX"
 		end
 		col.Extra.Text = ""
 		return
@@ -129,7 +129,7 @@ local function fillColumn(col, level: number?, info)
 	for r, v in pairs(col.Rows) do
 		v.Text = pct(info.Chances[r] or 0)
 	end
-	col.Extra.Text = string.format("Selvagens nv. %d\u{2013}%d \u{b7} at\u{e9} %d \u{b7} a cada %s", info.MinLevel, info.MaxLevel, info.Max, mmss(info.Interval))
+	col.Extra.Text = string.format("Selvagens nv. %d a %d \u{b7} at\u{e9} %d \u{b7} a cada %s", info.MinLevel, info.MaxLevel, info.Max, mmss(info.Interval))
 end
 
 local function refreshForgeNow()

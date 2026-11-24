@@ -111,13 +111,59 @@ local function pair(c)
 end
 UI.pair = pair
 
--- Sombra: mais escura e puxada para o azul (nao e so escurecer)
+-- Sombra: mais escura e puxada para o azul-abissal profundo
 local function shadeOf(c)
 	local _, bottom = pair(c)
 	local h, s, v = bottom:ToHSV()
-	h = (h + (if h < 0.6 then 0.05 else -0.05)) % 1
-	return Color3.fromHSV(h, math.min(1, s + 0.06), v * 0.62)
+	h = (h + (if h < 0.6 then 0.04 else -0.04)) % 1
+	return Color3.fromHSV(h, math.min(1, s + 0.10), math.max(0.06, v * 0.52))
 end
+
+-- Textura diagonal de luz (3 bandas a 38 graus, padrao patterns.py da skill roblox-ui)
+local function addSheenLayer(face: GuiObject, cornerRadius: number, alpha: number?)
+	local a = alpha or 0.13
+	local t1 = math.clamp(1 - a, 0, 1)
+	local t2 = math.clamp(1 - a * 0.72, 0, 1)
+	local t3 = math.clamp(1 - a * 0.55, 0, 1)
+	local sheen = Instance.new("Frame")
+	sheen.Name = "_Sheen"
+	sheen.Size = UDim2.fromScale(1, 1)
+	sheen.BackgroundColor3 = Color3.new(1, 1, 1)
+	sheen.BackgroundTransparency = 0
+	sheen.BorderSizePixel = 0
+	sheen.ZIndex = face.ZIndex
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(cornerRadius, 0)
+	c.Parent = sheen
+	local g = Instance.new("UIGradient")
+	g.Rotation = 38
+	g.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0.00, 1),
+		NumberSequenceKeypoint.new(0.13, 1),
+		NumberSequenceKeypoint.new(0.17, t1),
+		NumberSequenceKeypoint.new(0.28, t1),
+		NumberSequenceKeypoint.new(0.32, 1),
+		NumberSequenceKeypoint.new(0.38, 1),
+		NumberSequenceKeypoint.new(0.41, t2),
+		NumberSequenceKeypoint.new(0.46, t2),
+		NumberSequenceKeypoint.new(0.49, 1),
+		NumberSequenceKeypoint.new(0.64, 1),
+		NumberSequenceKeypoint.new(0.68, t3),
+		NumberSequenceKeypoint.new(0.82, t3),
+		NumberSequenceKeypoint.new(0.86, 1),
+		NumberSequenceKeypoint.new(1.00, 1),
+	})
+	g.Parent = sheen
+	sheen.Parent = face
+	-- Se um layout automatico (UIListLayout/UIGridLayout) for adicionado direto na face, remove o sheen para nao ocupar slot
+	face.ChildAdded:Connect(function(ch)
+		if ch:IsA("UIGridStyleLayout") and sheen.Parent then
+			sheen:Destroy()
+		end
+	end)
+	return sheen
+end
+UI.sheen = addSheenLayer
 
 local function gradient(top, bottom)
 	local g = Instance.new("UIGradient")
@@ -428,7 +474,7 @@ function UI.text(parent, text, p)
 	if p.Stroke ~= false then
 		local s = Instance.new("UIStroke")
 		s.Color = T.Outline
-		s.LineJoinMode = Enum.LineJoinMode.Round
+		s.LineJoinMode = Enum.LineJoinMode.Bevel
 		s.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 		s.Parent = l
 		register(l, "Strokes", s, p.StrokeMult or 0.7)
@@ -499,6 +545,10 @@ function UI.panel(parent, p)
 	g.Parent = face
 	if p.Stroke ~= false then
 		UI.stroke(face, p.StrokeColor)
+	end
+	if p.Sheen ~= false then
+		local isDarkSlot = (p.Color == "slot" or p.Color == "track")
+		addSheenLayer(face, r, if p.Class == "TextButton" then 0.15 elseif isDarkSlot then 0.06 else 0.11)
 	end
 	face.Parent = holder
 	holder.Parent = parent
@@ -607,6 +657,12 @@ function UI.button(parent, p)
 	local function tween(s, t, style)
 		TweenService:Create(scale, TweenInfo.new(t, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = s }):Play()
 	end
+	local function pressFace(down: boolean)
+		local yOff = if down then 2 else 0
+		TweenService:Create(face, TweenInfo.new(if down then T.Motion.PressTime else T.Motion.ReleaseTime, if down then Enum.EasingStyle.Quad else T.Motion.ReleaseStyle, Enum.EasingDirection.Out), {
+			Position = UDim2.new(0, 0, 0, yOff),
+		}):Play()
+	end
 	holder.MouseEnter:Connect(function()
 		hovering = true
 		if not holder:GetAttribute("Disabled") then
@@ -616,15 +672,20 @@ function UI.button(parent, p)
 	holder.MouseLeave:Connect(function()
 		hovering = false
 		tween(1, T.Motion.HoverTime)
+		pressFace(false)
 	end)
 	holder.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			tween(T.Motion.PressScale, T.Motion.PressTime)
+			if not holder:GetAttribute("Disabled") then
+				pressFace(true)
+			end
 		end
 	end)
 	holder.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			tween(if hovering and input.UserInputType ~= Enum.UserInputType.Touch then T.Motion.HoverScale else 1, T.Motion.ReleaseTime, T.Motion.ReleaseStyle)
+			pressFace(false)
 		end
 	end)
 	holder.Activated:Connect(function()
@@ -675,21 +736,24 @@ function UI.pill(parent, iconName, color, p)
 	p.Corner = T.Corner.Pill
 	local aspect = p.Aspect or 3
 	local holder, face = UI.panel(parent, p)
-	-- icone 1,3x a altura, saindo um pouco pela esquerda; o numero comeca depois dele
+	local baseZ = holder.ZIndex or 1
+	-- icone 1,3x a altura, saindo um pouco pela esquerda (ZIndex sempre ACIMA da face!)
 	local iw = 1.3 / aspect
-	UI.icon(holder, iconName, { Name = "Icon", Size = UDim2.fromScale(iw, 1.3), Position = UDim2.fromScale(-iw * 0.22, 0.5), AnchorPoint = Vector2.new(0, 0.5), ZIndex = 3 })
+	UI.icon(holder, iconName, { Name = "Icon", Size = UDim2.fromScale(iw, 1.3), Position = UDim2.fromScale(-iw * 0.22, 0.5), AnchorPoint = Vector2.new(0, 0.5), ZIndex = baseZ + 3 })
 	local start = iw * 0.86
-	local l = UI.text(face, p.Text or "0", { Name = "Value", Size = UDim2.fromScale(0.95 - start, 0.72), Position = UDim2.fromScale(start, 0.14), Color = color, Role = p.Role or "Heading", AlignX = Enum.TextXAlignment.Left })
+	local l = UI.text(face, p.Text or "0", { Name = "Value", Size = UDim2.fromScale(0.95 - start, 0.72), Position = UDim2.fromScale(start, 0.14), Color = color, Role = p.Role or "Heading", AlignX = p.AlignX or Enum.TextXAlignment.Left, ZIndex = baseZ + 2 })
 	return holder, l
 end
 
 -- Barra de progresso (HP, garantia, missoes). Retorna o container; use UI.setBar
 function UI.bar(parent, p)
 	p = p or {}
-	local track = UI.frame(parent, { Name = p.Name or "Bar", Size = p.Size, Position = p.Position, AnchorPoint = p.AnchorPoint, Color = "track", Corner = T.Corner.Pill, LayoutOrder = p.LayoutOrder })
-	UI.stroke(track, nil, 0.7)
-	local fill = UI.frame(track, { Name = "Fill", Size = UDim2.fromScale(p.Value or 1, 1), Color = p.FillColor or "green", Corner = T.Corner.Pill })
+	local track = UI.frame(parent, { Name = p.Name or "Bar", Size = p.Size, Position = p.Position, AnchorPoint = p.AnchorPoint, Color = "track", Corner = T.Corner.Pill, LayoutOrder = p.LayoutOrder, ZIndex = p.ZIndex })
+	UI.stroke(track, nil, 0.85)
+	track.ClipsDescendants = true
+	local fill = UI.frame(track, { Name = "Fill", Size = UDim2.fromScale(p.Value or 1, 1), Color = p.FillColor or "green", Corner = T.Corner.Pill, ZIndex = (p.ZIndex or 1) + 1 })
 	fill.ClipsDescendants = false
+	addSheenLayer(fill, T.Corner.Pill, 0.16)
 	return track
 end
 
@@ -1069,6 +1133,13 @@ function UI.closeAllWindows()
 end
 
 -- Abas: lista de { Id, Text, Icon? }. Retorna funcao select(id)
+local DEFAULT_TAB_ICONS = {
+	Login = "gift", Baus = "chest", Missoes = "scroll", Temporada = "trophy", Codigos = "ticket",
+	Itens = "bag", Beneficios = "star", Gemas = "gem",
+	Portal = "portal", Album = "book", Dupes = "swap",
+	Todos = "star",
+	Torre = "tower", Ginasios = "trophy", Treino = "sword",
+}
 function UI.tabs(parent, list, p, onSelect)
 	p = p or {}
 	local bar = UI.frame(parent, { Name = "Tabs", Size = p.Size or UDim2.fromScale(1, 0.11), Position = p.Position or UDim2.fromScale(0, 0) })
@@ -1082,22 +1153,29 @@ function UI.tabs(parent, list, p, onSelect)
 	local function select(id)
 		current = id
 		for bid, b in pairs(buttons) do
-			UI.paint(b, if bid == id then (p.ActiveColor or "orange") else "slot")
+			local active = (bid == id)
+			UI.paint(b, if active then (p.ActiveColor or "lendario") else "slot")
+			local lbl = b:FindFirstChild("Face") and b.Face:FindFirstChild("Label")
+			if lbl and lbl:IsA("TextLabel") then
+				lbl.TextColor3 = if active then T.Palette.onDark else T.Palette.inkSoft
+			end
 		end
 		if onSelect then
 			onSelect(id)
 		end
 	end
 	for i, t in ipairs(list) do
+		local iconName = if t.Icon ~= false then (t.Icon or DEFAULT_TAB_ICONS[t.Id]) else nil
 		buttons[t.Id] = UI.button(bar, {
 			Name = "Tab_" .. t.Id,
 			Text = t.Text,
-			Icon = t.Icon,
+			Icon = iconName,
+			Layout = if iconName then "row" else "text",
 			Color = "slot",
 			Size = UDim2.fromScale(w, 1),
 			Position = UDim2.fromScale((i - 1) * (w + gap), 0),
-			Corner = 0.4,
-			Role = "Body",
+			Corner = 0.35,
+			Role = "Small",
 			OnClick = function()
 				if current ~= t.Id then
 					select(t.Id)
@@ -1332,14 +1410,33 @@ function UI.upper(s: string): string
 	return s
 end
 
--- Chip pequeno (tipo, raridade, "NOVO")
+-- Chip pequeno (tipo, raridade, "NOVO", com suporte opcional a icone personalizado p.Icon)
 function UI.chip(parent, text, color, p)
 	p = p or {}
 	p.Color = color
 	p.Corner = T.Corner.Pill
 	p.Shadow = false
 	local holder, face = UI.panel(parent, p)
-	UI.text(face, text, { Name = "Label", Size = UDim2.fromScale(0.86, 0.8), Position = UDim2.fromScale(0.07, 0.1), Role = p.Role or "Small" })
+	if p.Icon then
+		UI.icon(face, p.Icon, {
+			Name = "Icon",
+			Size = UDim2.fromScale(0.28, 0.78),
+			Position = UDim2.fromScale(0.06, 0.5),
+			AnchorPoint = Vector2.new(0, 0.5),
+			AspectAxis = Enum.DominantAxis.Height,
+			ZIndex = face.ZIndex + 1,
+		})
+		UI.text(face, text, {
+			Name = "Label",
+			Size = UDim2.fromScale(0.62, 0.8),
+			Position = UDim2.fromScale(0.34, 0.1),
+			Role = p.Role or "Small",
+			AlignX = Enum.TextXAlignment.Left,
+			ZIndex = face.ZIndex + 1,
+		})
+	else
+		UI.text(face, text, { Name = "Label", Size = UDim2.fromScale(0.86, 0.8), Position = UDim2.fromScale(0.07, 0.1), Role = p.Role or "Small", ZIndex = face.ZIndex + 1 })
+	end
 	return holder
 end
 

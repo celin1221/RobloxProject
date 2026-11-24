@@ -104,7 +104,7 @@ local function refreshBenefits()
 		UI.text(face, def.Name, { Name = "Name", Size = UDim2.fromScale(0.42, 0.44), Position = UDim2.fromScale(0.12, 0.08), Role = "Body", AlignX = Enum.TextXAlignment.Left })
 		UI.text(face, def.Effect, { Name = "Effect", Size = UDim2.fromScale(0.42, 0.36), Position = UDim2.fromScale(0.12, 0.56), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4 })
 		if owned then
-			UI.chip(face, "ATIVO \u{2713}", "green", { Name = "Owned", Size = UDim2.fromScale(0.3, 0.6), Position = UDim2.fromScale(0.97, 0.5), AnchorPoint = Vector2.new(1, 0.5), Role = "Body" })
+			UI.chip(face, "ATIVO", "green", { Name = "Owned", Icon = "tick", Size = UDim2.fromScale(0.3, 0.6), Position = UDim2.fromScale(0.97, 0.5), AnchorPoint = Vector2.new(1, 0.5), Role = "Body" })
 		else
 			priceButton(face, { Name = "Robux", Text = def.Robux .. " R$", Size = UDim2.fromScale(0.2, 0.74), Position = UDim2.fromScale(0.56, 0.13),
 				OnClick = function()

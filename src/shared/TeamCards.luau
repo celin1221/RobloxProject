@@ -21,14 +21,14 @@ local RARITY_TOP = {
 	Epico = Color3.fromRGB(205, 140, 255), Lendario = Color3.fromRGB(255, 222, 110),
 }
 local RARITY_INNER = {
-	Comum = { Color3.fromRGB(164, 174, 194), Color3.fromRGB(76, 84, 104) },
-	Raro = { Color3.fromRGB(82, 156, 255), Color3.fromRGB(26, 66, 158) },
-	Epico = { Color3.fromRGB(186, 104, 255), Color3.fromRGB(82, 30, 146) },
-	Lendario = { Color3.fromRGB(255, 202, 74), Color3.fromRGB(164, 82, 12) },
+	Comum = { Color3.fromRGB(152, 166, 192), Color3.fromRGB(58, 66, 88) },
+	Raro = { Color3.fromRGB(72, 160, 255), Color3.fromRGB(22, 58, 148) },
+	Epico = { Color3.fromRGB(184, 100, 255), Color3.fromRGB(68, 24, 134) },
+	Lendario = { Color3.fromRGB(255, 206, 72), Color3.fromRGB(156, 76, 10) },
 }
-local EMPTY_INNER_TOP = Color3.fromRGB(58, 46, 128)
-local EMPTY_INNER_BOT = Color3.fromRGB(26, 20, 64)
-local EMPTY = Color3.fromRGB(70, 62, 112)
+local EMPTY_INNER_TOP = Color3.fromRGB(36, 44, 96)
+local EMPTY_INNER_BOT = Color3.fromRGB(16, 20, 48)
+local EMPTY = Color3.fromRGB(52, 60, 108)
 
 local function previews()
 	return ReplicatedStorage:FindFirstChild("CharacterPreviews")
@@ -107,7 +107,10 @@ function TeamCards.new(parent: Instance, p)
 	corner(border, 0.2)
 	local fill = gradientOf(EMPTY, EMPTY)
 	fill.Parent = border
-	UI.stroke(border, nil, 0.6)
+	UI.stroke(border, nil, 0.75)
+	if UI.sheen then
+		UI.sheen(border, 0.2, 0.12)
+	end
 	border.Parent = root
 
 	-- brilho leve na borda de dentro
@@ -192,8 +195,8 @@ function TeamCards.new(parent: Instance, p)
 	nameGrad.Parent = nameText
 	local nameStroke = Instance.new("UIStroke")
 	nameStroke.Color = T.Outline
-	nameStroke.LineJoinMode = Enum.LineJoinMode.Round
-	nameStroke.Thickness = 1.5
+	nameStroke.LineJoinMode = Enum.LineJoinMode.Bevel
+	nameStroke.Thickness = 1.6
 	nameStroke.Parent = nameText
 	nameText.Parent = root
 

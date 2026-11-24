@@ -984,3 +984,22 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
   - `addaccxp(+200)` subiu a conta ao vivo para `NV. 3` (`58/231`), atualizou o cartão via `AccountXpGain` e `ClaimLevelReward:InvokeServer("All")` resgatou o Nível 3 (`+230 gold, +2 itens`).
   - Auditor geométrico automatizado rodado em **todas as 15 GUIs** (Desktop + `667x375`): **0 sobreposições reais e 0 overflows reais**; `get_console_output` 100% limpo.
 - Place salvo no Roblox Studio na **versão 287** (`TeamCreate`).
+
+
+## Reformulação Completa da UI (Midnight-Blue Anime), Barra de Nível Embaixo da TeamBar e Bônus Minimalista (23/11/2026)
+
+**Feito**
+- **1. Paleta Midnight-Blue Anime & Motor Visual `UI` (`src/shared/UITheme.luau`, `Blender/UI/tema.json`, `Blender/UI/UITheme.lua`, `src/shared/UI.luau`, `src/shared/TeamCards.luau`):**
+  - Nova paleta azul-noturno profundo inspirada em *Anime Vanguards / Anime Fighters* (`Outline` `#0B0E22`, `panel` `#273066 -> #161B3D`, `panelAlt` `#36428A -> #212859`, `slot` `#191E42 -> #0F122B`, `header` `#3B9EFF -> #1B64D8`, `track` `#0B0E22`, `inkSoft` `#B8C2F0`), preservando as cores das 4 Classes de Combate (`Espadachim`, `Lutador`, `Mago`, `Atirador`, `Universal`).
+  - Camada de brilho diagonal de 3 bandas a 38° (`UI.sheen`) integrada automaticamente em `UI.panel`, `UI.bar` e `TeamCards`, com remoção automática quando `UIGridStyleLayout` é inserido na `face`.
+  - Afundamento físico 3D (`pressFace` deslocando `face` em `+2px` Y ao clicar/tocar), contornos de texto com `Enum.LineJoinMode.Bevel`, suporte a ícones personalizados em `UI.tabs` (`DEFAULT_TAB_ICONS`) e `UI.chip` (`p.Icon`), e correção de `ZIndex` do ícone da moeda em `UI.pill` (`baseZ + 3` acima da `face`).
+- **2. Barra de Nível da Conta Embaixo da `TeamBar` (`src/client/Gui/TeamBarGui/TeamBarClient.client.luau` & `src/client/Gui/HudGui/HudClient.client.luau`):**
+  - Posicionada a `AccountLevelBar` diretamente embaixo da `TeamBar` (alinhada `L:+0, R:+0` com a largura exata dos 6 slots do time), composta pela pílula esquerda `LevelPill` (`"Nv. X"`) + trilha direita `XpTrack` (`"X / Y XP"`), animação de ganho `+X XP` (`spawnXpPop`) e banner de subida de nível (`AccountLevelUpBanner`).
+  - Removido o cartão duplicado `AccountLevelCard` do canto superior direito do `HudClient`, mantendo o card `StarterTrack` (Guia 1/7..7/7) posicionado logo abaixo do botão de Configurações.
+- **3. Bônus de Fim de Semana Minimalista no Canto Inferior Direito (`src/client/Gui/HudGui/HudClient.client.luau` & `src/client/Gui/RewardsGui/RewardsClient.client.luau`):**
+  - Substituída a faixa grande superior do evento de fim de semana por um selo circular minimalista (`Badge`, `44x44..54x54 px`) no canto inferior direito da tela com o ícone da moeda (`coin`) ou XP (`sparkle`), exibindo a pílula de tooltip (`"2x de Moedas"` ou `"2x de XP"`) ao passar o mouse (`MouseEnter`) ou tocar no celular.
+- **4. Zero Emojis / 100% Ícones Personalizados & Correções do Banner de Invocação (`SummonClient`, `ShopClient`, `CharacterDetailClient`, `TrainingClient`, `RefugeClient`, `TowerClient`, `LevelRewardsClient`):**
+  - Removidos 100% dos símbolos Unicode (`★`, `✦`, `✓`, `→`, `■`, `—`) de todas as 16 GUIs em `src/client/Gui/`, substituídos por ícones reais de `UI.Icons` (`star`, `sparkle`, `tick`, `trophy`, `portal`, `book`, `swap`, `gift`, `pickaxe`, `ore_*`, `classe_*`).
+  - `SummonClient.client.luau`: mantidas intactas as artes dos banners (`Artwork`) e o bloqueio de Ginásios (`LockedTag` / `LockedBannerDock`), com centralização matemática dinâmica (`TextBounds.X`) do conjunto `[Moeda + Preço]` dentro dos botões `INVOCAR 1` e `INVOCAR 10`, placas `SlotPlate_1..3` contidas dentro das margens da `BottomDock` e moeda da carteira (`HudWallet`) sempre visível na frente da pílula.
+  - `default.project.json`: registrado `LevelRewardsGui` em `StarterGui` completando as 16 `ScreenGui`s do projeto.
+

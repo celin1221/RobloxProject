@@ -515,7 +515,7 @@ for idx, gymId in ipairs(Gyms.Order) do
 	local lastLvl = gym.Stages[#gym.Stages] and gym.Stages[#gym.Stages].Level or gym.RecommendedLevel
 	UI.text(
 		face,
-		string.format("3 lutas (2 \u{2192} 4 \u{2192} 6) \u{b7} L\u{ed}der: %s \u{b7} Nv. %d\u{2013}%d", gym.LeaderName, firstLvl, lastLvl),
+		string.format("3 lutas (2 / 4 / 6) \u{b7} L\u{ed}der: %s \u{b7} Nv. %d a %d", gym.LeaderName, firstLvl, lastLvl),
 		{
 			Name = "Trail",
 			Size = UDim2.fromScale(0.62, 0.24),

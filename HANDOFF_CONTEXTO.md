@@ -11,9 +11,9 @@
 * **Open Cloud Creator UserId (conta logada no MCP):** `12009032821` *(usar `userId: "12009032821"` ao fazer upload via `open_cloud_invoke` e inserir via `insert_asset`)*.
 * **Blender:** `D:\Blender\blender.exe` (versão **5.3.0**, usado em modo `--background --python ...`).
 * **Sincronizador Disk-First (`src/` <-> Studio):**
-  * `python scripts/sync_studio.py status` — valida se os 86 scripts em `src/` estão 100% em sync.
+  * `python scripts/sync_studio.py status` — valida se os 92 scripts em `src/` estão 100% em sync.
   * `python scripts/sync_studio.py push` — envia alterações de `src/` para o Studio.
-  * `python scripts/sync_studio.py test` — roda validação do GDD (`DamageCalc` e `BattleEngine`).
+  * `python scripts/sync_studio.py test` — roda validação do GDD (`DamageCalc`, `BattleEngine` 1x1/2x2, Classes, Ginásios, Treino, Progressão e `AccountLevel`).
 
 ---
 
@@ -79,6 +79,13 @@ Consulte o detalhamento completo em [`Blender/PROGRESSO.md`](./Blender/PROGRESSO
 * **Auras dos Personagens & Arenas Santuário Malevolente:**
   * `src/client/PlayerScripts/CharacterAuraClient.client.luau` anima auras com tag `CharacterAura` (anéis, fitas, orbes, halos, tintagem por variante e culling por distância), controlado pela configuração `CharacterAuras` em `SettingsClient`, `SettingsService`, `PlayerDataService`, `ClientSettings` e `Data/Audio`.
   * `src/server_storage/_ConstrutorArenasSukuna.luau` (v5) sincronizado com as 10 arenas em grade 2×5.
+* **Batalhas 2x2, Classes de Combate, Ginásios de Anime, Elenco Bleach, Gold/s Ao Vivo, Trilha Inicial e Ranking PvP (20–22/11/2026):**
+  * Combate `2x2` estilo Pokémon (`BattleEngine`, `DamageCalc`, `AIController`, `ArenaManager`, `BattleService`, `BattleClient`), 4 Classes de Combate (`Espadachim`, `Lutador`, `Mago`, `Atirador`), 3 Ginásios de Anime (`Gyms.luau`) desbloqueando banners e insígnias, elenco Bleach provisório (`Chad`, `Uryu`, `Rukia`, `Renji`, `Ichigo`, `Byakuya`), `Gold/s` ao vivo na Base, `StarterTrack` (7 passos) e Ranking PvP ELO (`PvPRank.luau`).
+* **Nível da Conta (`AccountLevel`), Bônus Minimalista e Reformulação Completa da UI (`Midnight-Blue Anime`, 21–23/11/2026):**
+  * `src/shared/Data/AccountLevel.luau`, `src/server/Data/AccountLevelService.luau` e `src/client/Gui/LevelRewardsGui/LevelRewardsClient.client.luau` (recompensas de nível 1..50+ na árvore sagrada com baús de ouro perto da Torre).
+  * Barra minimalista `AccountLevelBar` (`[ Nv. X ] [=== XP / Meta XP ===]`) posicionada diretamente embaixo da `TeamBar` em `TeamBarClient.client.luau`.
+  * Selo circular minimalista do Bônus de Fim de Semana no canto inferior direito do `HudClient.client.luau` (`2x de Moedas` / `2x de XP` no hover/toque).
+  * Tema `Midnight-Blue Anime` em `UITheme.luau` (`Blender/UI/tema.json`), textura diagonal `UI.sheen` a 38°, afundamento físico 3D nos botões, contornos `Bevel`, centralização matemática dos preços em `INVOCAR 1` / `INVOCAR 10` e **100% ícones personalizados (`UI.Icons`)** com zero emojis/símbolos Unicode nas 16 GUIs.
 
 ---
 

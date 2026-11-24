@@ -295,19 +295,21 @@ Toda lógica de batalha e economia roda no servidor; o cliente envia escolhas e 
 
 | Tela | Conteúdo |
 | --- | --- |
-| HUD do mapa | Gold, gemas, minério, botões Time, Mochila, Base, Loja, Prêmios, Álbum e Configurações |
-| Configurações | Música (liga/desliga e volume), efeitos sonoros (liga/desliga e volume), efeitos do mapa (partículas, luzes decorativas e animações de cenário); salvas nos dados do jogador |
-| Batalha | Nome, nível, HP e status dos dois lados; menu Lutar / Mochila / Time / Fugir; log |
-| Lutar | 4 golpes com tipo (cor), poder e PP |
-| Time | 6 personagens com HP, nível e status; trocar ordem |
-| Torre | Dificuldade, recompensas, placar |
-| Invocação | Estrelas (Comum e Premium), chances visíveis, garantia, animação de revelação |
-| Base | Personagens, Passeando / Minerando, coletar |
-| Loja | Itens (gold), Vender Minério, Benefícios (Robux ou gemas) |
-| Álbum | Todos os personagens, obtidos e variantes |
-| Atributos (Radar) | Retrato 3D, rank de Genética, gráfico de radar de 4 eixos (`HP`, `ATQ`, `DEF`, `VEL` de 0–100% com camadas `Ambos` / `Genética` / `Treino`) e detalhamento Base → Final |
+| HUD do mapa | Gold (com taxa `+X/s` ao vivo), gemas, minério, botões Equipe, Mochila, Base, Loja, Prêmios, Álbum, Configurações, Trilha Inicial (7 passos) e selo circular minimalista de Bônus de Fim de Semana no canto inferior direito (`2x de Moedas` / `2x de XP` no hover/toque) |
+| Barra do Time e Nível | 6 cartões 3D do time na faixa inferior central + barra minimalista de Nível da Conta logo embaixo (`[ Nv. X ] [=== XP / Meta XP ===]`, alinhada exatamente à largura da `TeamBar`) |
+| Recompensas de Nível | Janela aberta ao apertar `E` nos baús de ouro embaixo da grande árvore perto da Torre (`RECOMPENSAS DE NÍVEL`), listando recompensas de todos os níveis (1..50+, marcos Épicos a cada 5 e Lendários a cada 10) e botão `RESGATAR TUDO` |
+| Configurações | Música (liga/desliga e volume), efeitos sonoros (liga/desliga e volume), efeitos do mapa e auras dos personagens (`CharacterAuras`); salvas nos dados do jogador |
+| Batalha | Nome, nível, HP e status dos dois lados (`1x1` ou `2x2`); menu Lutar / Mochila / Time / Fugir; log |
+| Lutar | 4 golpes com classe (cor e ícone), poder e PP |
+| Time / Equipe | 6 personagens com HP, nível e status; grade 3D com busca por nome, filtros de Anime/Raridade/Classe e ordenação por Status |
+| Torre | Abas Torre (`1x1` e `2x2`), Ginásios de Anime (Porta-Insígnias + 3 Ginásios) e Treino (simulador `1x1`/`2x2`), recompensas e placar |
+| Invocação | Palco 3D ao vivo estilo Anime Vanguards, trilho de banners por anime, chances visíveis, garantia centralizada, botões `INVOCAR 1` / `INVOCAR 10` com ícone e preço centralizados, animação 3D de revelação |
+| Base | Personagens Passeando / Minerando, taxas `g/s` ao vivo, nível da mineração, faixa dos 4 minérios e acesso à Cápsula de Treino |
+| Loja | Itens (gold), Vender Minério, Benefícios (Robux ou gemas) e Pacotes de Gemas |
+| Álbum | Todos os personagens, obtidos, variantes, metas por Classe e Raridade |
+| Atributos (Radar) | Retrato 3D, rank de Genética, gráfico de radar de 4 eixos (`HP`, `ATQ`, `DEF`, `VEL` de 0–100% com camadas `Ambos` / `Genética` / `Treino`) e detalhamento Base / Final |
 
-Botões grandes para celular; batalha funciona só com toque.
+**Padrão visual da interface (`UITheme` + `UI`):** paleta anime azul-noturno profundo (`panel` `#273066 -> #161B3D`, `slot` `#191E42 -> #0F122B`, `header` `#3B9EFF -> #1B64D8`, contorno `#0B0E22`), textura diagonal de luz de 3 bandas a 38° (`UI.sheen`), afundamento físico 3D ao clicar nos botões, fonte `FredokaOne` com contorno `Bevel` e **100% ícones personalizados (`UI.Icons`)** — proibido usar emojis ou símbolos Unicode (`★`, `✦`, `✓`, `→`, `■`, `—`) nos textos da interface. Botões grandes para celular (`>= 44x44 px`); batalha funciona só com toque.
 
 | Local | Conteúdo |
 | --- | --- |
@@ -372,8 +374,9 @@ Decisões em aberto: nome do jogo; troca de personagens entre jogadores; validar
 | Missões diárias | 3 por dia | Gold e XP; completar as 3: 5 gemas |
 | Missões semanais | 5 por semana | 1 invocação Premium |
 | Temporada do Infinito | Placar zera todo mês | Aparência para os 100 primeiros; gemas por faixa |
-| Eventos de fim de semana | 2x gold ou 2x XP | Sem custo |
+| Eventos de fim de semana | 2x gold ou 2x XP (ícone circular minimalista no canto inferior direito com tooltip no hover/toque) | Sem custo |
 | Códigos | Divulgados em atualizações | Gold e invocações comuns |
+| Nível da Conta (`AccountLevel`) | Nível permanente da conta (nunca diminui; curva $\text{XP}(L) = \lfloor 100 + 25 \cdot L^{1,55} \rfloor$), alimentado por batalhas, torre, ginásios, invocações, coleta da base, cápsula de treino, missões, trilha inicial, refúgio e PvP | Recompensa em cada nível (Gold, Poções, Doces, Selos, Gemas e Tickets nos marcos Épicos a cada 5 níveis e Lendários a cada 10 níveis), resgatada nos baús de ouro sob a grande árvore (`RECOMPENSAS DE NÍVEL`) perto da Torre |
 
 **Regras obrigatórias:** o Portal Premium conta como item aleatório pago; mostrar chances e bloquear por PolicyService (ArePaidRandomItemsRestricted) onde for restrito, deixando só o Portal Comum (estrela amarela). Sem contagem regressiva de oferta e sem pop-up de compra ao perder batalha.
 
