@@ -4,13 +4,20 @@ Valem para todo chat que trabalhar neste jogo. Ler antes de qualquer tarefa.
 
 ## Antes de começar
 
-1. Ler `C:\Blender\GDD.md`, `C:\Blender\REGRAS.md` e `C:\Blender\PROGRESSO.md`.
-2. Inspecionar o estado atual do Roblox Studio (pastas, scripts, modelos) e da pasta `C:\Blender`. Nunca assumir; verificar.
-3. Confirmar que Roblox Studio e Blender respondem pelo MCP. Se algum falhar, parar e avisar.
+1. Executar **`git pull --rebase origin main`** para garantir que o repositório local está sincronizado com os commits mais recentes do parceiro no GitHub (`https://github.com/celin1221/RobloxProject`).
+2. Ler `AGENTS.md`, `Blender/GDD.md`, `Blender/REGRAS.md` e `Blender/PROGRESSO.md`.
+3. Inspecionar o estado atual do Roblox Studio (`python scripts/sync_studio.py status`) e da pasta `Blender/`. Nunca assumir; verificar.
+4. Confirmar que Roblox Studio e Blender respondem pelo MCP. Se algum falhar, parar e avisar.
 
 ## Durante o trabalho
 
-- Fazer só o que o prompt pede. Não refazer nem apagar o que já funciona.
+- Fazer só o que o prompt pede. **Não refazer, não reverter nem apagar o que já funciona ou o que o parceiro implementou.**
+- **Decisões de UI e Mecânicas Protegidas (NUNCA remover):**
+  - **Barra de XP / Nível da Conta (`AccountLevelBar` em `TeamBarClient.client.luau`):** fica **obrigatoriamente embaixo da `TeamBar`** (`[ Nv. X ] [=== XP / Meta XP ===]`), alinhada com a largura da barra do time. Nunca mover para o canto direito nem remover.
+  - **Recompensas de Nível (`LevelRewardsShrine` perto da Torre + `LevelRewardsGui` + `AccountLevel` + `AccountLevelService`):** árvore sagrada com baús de ouro (`E`) e letreiro flutuante `"RECOMPENSAS DE NÍVEL"` (sem placa de madeira e sem estrelas no texto).
+  - **Bônus de Fim de Semana Minimalista (`HudClient.client.luau`):** selo circular discreto no **canto inferior direito** com tooltip `"2x de Moedas"` / `"2x de XP"` ao passar o mouse (`MouseEnter`) ou tocar. Nunca voltar com o banner gigante no topo.
+  - **UI `Midnight-Blue Anime` (`UITheme.luau`, `UI.luau`, `TeamCards.luau`, `SummonClient.client.luau`):** paleta azul-noturno profundo, brilho diagonal `UI.sheen` a 38°, afundamento físico 3D nos botões, `[Moeda + Preço]` centralizados em `INVOCAR 1` / `INVOCAR 10` e **zero emojis / zero símbolos Unicode (`★`, `✦`, `✓`, `→`, `■`, `—`)** (usar apenas ícones personalizados de `UI.Icons`).
+  - **Auras de Personagens:** nunca colocar círculo/disco de aura no chão embaixo do pé dos personagens.
 - Valores (dano, preços, chances, atributos) vêm do GDD. Não inventar; se faltar, usar o mais simples e registrar em PROGRESSO.md.
 - Todo cálculo de batalha, economia, sorteio e recompensa roda no servidor, com validação de tudo que vem do cliente.
 - Efeitos visuais e animações rodam só no cliente.
@@ -23,10 +30,12 @@ Valem para todo chat que trabalhar neste jogo. Ler antes de qualquer tarefa.
 
 ## Ao terminar
 
-1. Testar no Play e ler o console até não haver erro.
-2. Salvar o place.
-3. Atualizar `PROGRESSO.md`: o que foi feito, testado e o que ficou pendente.
-4. Relatório curto: feito, testado, pendente, o que o usuário precisa fazer.
+1. Sincronizar com `python scripts/sync_studio.py push`, validar `python scripts/sync_studio.py status` (`100% in sync`) e rodar `python scripts/sync_studio.py test` (`PASS`).
+2. Testar no Play e ler o console até não haver erro.
+3. Salvar o place.
+4. Atualizar `Blender/PROGRESSO.md` (e `Blender/GDD.md` se houver mudança de design): o que foi feito, testado e o que ficou pendente.
+5. Fazer **`git add` + `git commit` + `git push origin main`** para que o parceiro e a IA dele já recebam todas as alterações no GitHub.
+6. Relatório curto: feito, testado, pendente, o que o usuário precisa fazer.
 
 ## Se der errado
 

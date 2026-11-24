@@ -421,7 +421,21 @@ assert(AccountLevel.BattleVictoryXp({ 10, 10 }) == 60, "Expected BattleVictoryXp
 assert(AccountLevel.CountUnclaimed({ Level = 3, Claimed = { ["1"] = true } }) == 2, "Expected 2 unclaimed level rewards")
 assert(AccountLevel.FirstUnclaimedLevel({ Level = 3, Claimed = { ["1"] = true } }) == 2, "Expected first unclaimed = 2")
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), Classes/Gyms/Practice + Progression Rebalance + AccountLevel", b.Turn, simTurns)
+-- Test 9: Protected UI Guardrails (AccountLevelBar under TeamBar in TeamBarClient, Weekend Bonus in bottom-right of HudClient, Midnight-Blue Anime UITheme)
+local sg = game:GetService("StarterGui")
+local tbSrc = sg.TeamBarGui.TeamBarClient.Source
+assert(tbSrc:find("AccountLevelBar", 1, true) and tbSrc:find("LevelPill", 1, true) and tbSrc:find("XpTrack", 1, true),
+    "GUARDRAIL FAILED: AccountLevelBar (barra de XP embaixo da TeamBar) must remain in TeamBarClient!")
+local hudSrc = sg.HudGui.HudClient.Source
+assert(hudSrc:find("WeekendEventId", 1, true) and hudSrc:find("2x de Moedas", 1, true),
+    "GUARDRAIL FAILED: Minimalist Weekend Bonus badge/tooltip must remain in bottom-right of HudClient!")
+assert(not hudSrc:find("AccountLevelCard", 1, true),
+    "GUARDRAIL FAILED: Do not duplicate AccountLevelCard in HudClient top-right; AccountLevelBar lives under TeamBar in TeamBarClient!")
+local themeSrc = rs.UITheme.Source
+assert(themeSrc:find("Color3.fromRGB(39, 48, 102)", 1, true),
+    "GUARDRAIL FAILED: Midnight-Blue Anime palette must remain in ReplicatedStorage.UITheme!")
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), Classes/Gyms/Practice + Progression Rebalance + AccountLevel + UI Guardrails", b.Turn, simTurns)
 end)
 sandbox:Destroy()
 assert(ok, res)

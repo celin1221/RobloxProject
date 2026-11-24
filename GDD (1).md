@@ -89,6 +89,21 @@ Todos os personagens são originais. Personagens e técnicas de animes existente
 
 **Variantes:** Brilhante (+10%), Prata (+3%), Ouro (+5%), Esmeralda / Rubi / Diamante (+7%), Arco-íris (+10%), Gigante (+5%). Mudam só aparência e atributos; nunca golpes.
 
+**Genética e Treino (equivalentes a IVs e EVs):** cada personagem possui 1 valor de **Genética** (`0` a `100%`) e 1 valor de **Treino** (`0` a `100%`) para cada atributo (`HP`, `Ataque`, `Defesa`, `Velocidade`).
+
+- **Impacto nos atributos finais:** `Genética` soma até **+40%** (`+0,4%` por ponto) e `Treino` soma até **+30%** (`+0,3%` por ponto) em cada atributo correspondente (`multiplicador = 1 + 0,40 × Gen/100 + 0,30 × Treino/100`, acumulado ao bônus de estrelas e variante). Com ambos em 100%, o atributo recebe **+70%**.
+- **Distribuição da Genética (sorteio no servidor):** cada atributo é sorteado de forma independente pela curva contínua de Kumaraswamy conforme a raridade do personagem (raridades maiores puxam a média esperada para cima, porém sem garantia — valores baixos ainda podem ocorrer em Lendários e valores altos em Comuns). Além disso, há uma chance raríssima de vir **100% perfeito (100/100/100/100)** em todas as raridades:
+  - Comum: média esperada ~36% · chance de 100% perfeito: **0,005%** (~1 em 20.000)
+  - Raro: média esperada ~53% · chance de 100% perfeito: **0,012%** (~1 em 8.333)
+  - Épico: média esperada ~65% · chance de 100% perfeito: **0,025%** (~1 em 4.000)
+  - Lendário: média esperada ~74% · chance de 100% perfeito: **0,050%** (~1 em 2.000)
+- **Treino inicial:** todo personagem obtido pelo jogador (inicial, invocação, captura no Refúgio/selvagens e chefe da Torre) sempre começa com **Treino 0%** nos 4 atributos (métodos de evolução de Treino entrarão em atualização futura).
+
+**Elenco por Anime (atualização Naruto, sem modelo próprio ainda / ataques padrão):**
+- **One Piece:** Comum (`Nami`, `Usopp`), Raro (`Zoro`, `Sanji`), Épico (`Luffy`), Lendário (`Barba Branca`).
+- **Naruto:** Comum (`Sakura`, `Shikamaru`), Raro (`Kakashi`, `Sasuke`), Épico (`Naruto`), Lendário (`Sarutobi`) — utilizando rig provisório colorido via `CharacterLibrary.CloneSource` e golpes padrão existentes até a entrada dos modelos dedicados.
+- **Dragon Ball / Jujutsu Kaisen / Genéricos:** `San` (Lendário), `Setero` (Lendário), `Kaen`, `Raiko`, `Yomogi`.
+
 ## 5. Combate por turnos
 
 Batalha 1x1 em campo, com time de até 6 por lado; vence quem derrubar todos os personagens do adversário.
@@ -170,6 +185,7 @@ O protótipo usa a IA Médio.
 - Placar do servidor e global com o andar mais alto do Infinito.
 - Desbloqueio em sequência: Fácil, Médio, Difícil, Infinito.
 - Chefes do Infinito podem entregar um personagem: 5% no andar 5, +1 ponto por chefe, até 15%.
+- **Atributos PvE da Torre:** todos os inimigos NPCs da Torre possuem **Genética = 70%** e **Treino = 100%** em todos os 4 atributos (equivalente a `+58%` nos atributos base, acumulados ao escalonamento de andar/chefe no Infinito). Quando um chefe se junta ao jogador, seus atributos individuais são sorteados normalmente (curva da raridade e Treino 0%).
 
 ## 7. Coleção, time e inventário
 
@@ -204,18 +220,33 @@ Usar item em batalha gasta o turno. Mochila de 30 espaços, pilhas de 99. Poçõ
 
 ## 8. Base, mineração e economia
 
-Terreno de 40 x 40 studs por jogador; até 6 personagens ativos na base, cada um Passeando (gold) ou Minerando (minério).
+Terreno de 40 x 40 studs por jogador; até 6 personagens ativos na base, cada um Passeando (gold) ou Minerando (minério bruto + 50% do Gold/h + minérios de atributo).
 
 - Vagas de mineração: 2 no início; melhorias em gold liberam até 6 (5.000, 15.000, 40.000 e 100.000 gold).
 - Produção acumula até 8 horas com o jogador fora.
-- Quem minera fica na pedreira com a animação de minerar.
+- Quem minera fica na pedreira com a animação de minerar e também gera **Gold** (50% da taxa de Passeio) além dos minérios.
 
-| Raridade | Gold por hora (Passeando) | Minério por hora (Minerando) |
-| --- | --- | --- |
-| Comum | 20 | 10 |
-| Raro | 30 | 18 |
-| Épico | 45 | 30 |
-| Lendário | 70 | 50 |
+| Raridade | Gold/h (Passeando) | Gold/h (Minerando) | Minério bruto/h (Minerando) |
+| --- | --- | --- | --- |
+| Comum | 20 | 10 | 10 |
+| Raro | 30 | 15 | 18 |
+| Épico | 45 | 22,5 | 30 |
+| Lendário | 70 | 35 | 50 |
+
+**Nível da Mineração (Nv. 1 a 10) e os 4 Minérios de Treino:** cada ciclo de mineração (1 min por minerador Comum, escalando até 5× para Lendário) rola independentemente a chance de encontrar os minérios de atributo desbloqueados (podendo vir mais de um tipo e múltiplas unidades por achado). Subir o nível da Mineração (em Gold, `500` até `200.000`) desbloqueia minérios mais raros e equilibra as chances e quantidades:
+
+| Minério | Atributo | Raridade | Desbloqueio | Chance / Qtd (Inicial → Nv. 10) |
+| --- | --- | --- | --- | --- |
+| Minério Vital | HP | Comum | Nv. 1 | 55% (1–2) → 44% (2–4) |
+| Minério Férreo | Defesa | Raro | Nv. 2 | 18% (1) → 42% (2–3) |
+| Minério Veloz | Velocidade | Épico | Nv. 4 | 14% (1) → 39% (2–3) |
+| Minério Rubro | Ataque | Lendário (mais raro) | Nv. 6 | 10% (1) → 34% (1–3) |
+
+**Máquina de Treinamento (Cúpula de Vidro na Base):** cápsula física instalada no terreno de cada jogador (acessível pelo painel na Base ou no menu Base) para evoluir os atributos de **Treino** (`0%` a `100%`).
+
+- **Regras de crafting e seleção:** evolução estritamente de **20 em 20** (`+20`, `+40`...) gastando o minério correspondente a cada atributo escolhido (`Vital/HP = 8`, `Férreo/DEF = 6`, `Veloz/VEL = 5`, `Rubro/ATQ = 4` base por `+20`). Enquanto treina, o personagem permanece visível levitando dentro da cúpula de vidro e não pode minerar, passear, lutar no time ou ser fundido/vendido (cancelar devolve 50% dos minérios).
+- **Raridade e multi-atributo:** personagens mais raros custam mais minério (`1,00×` Comum, `1,50×` Raro, `2,25×` Épico, `3,50×` Lendário) e levam um pouco mais de tempo (`1,00×`, `1,20×`, `1,40×`, `1,65×`). Treinar vários atributos na mesma sessão executa em paralelo (economizando tempo, `+20%` por passo adicional) porém encarece o crafting (`+25%` com 2, `+50%` com 3, `+80%` com 4 atributos).
+- **Eficiência (Níveis 1 a 10 em Gold):** no nível 1, subir 1 atributo uma vez (`+20`) num Comum leva **1 minuto (`60s`)**. Melhorar a Máquina com Gold (`500` até `220.000`) eleva a eficiência de `1,00×` até **`4,00×`** (`15s` por `+20` básico no nível 10).
 
 **Conversão e teto:** 100 de minério = 1 gema. Teto de venda: 50 gemas por dia por jogador; excedente fica guardado (máximo 10.000). Outras fontes grátis: 5 gemas da torre Difícil e 5 das missões diárias. Máximo grátis: 60 gemas por dia.
 
@@ -264,18 +295,21 @@ Toda lógica de batalha e economia roda no servidor; o cliente envia escolhas e 
 
 | Tela | Conteúdo |
 | --- | --- |
-| HUD do mapa | Gold, gemas, minério, botões Time, Mochila, Base, Loja, Prêmios, Álbum e Configurações |
-| Configurações | Música (liga/desliga e volume), efeitos sonoros (liga/desliga e volume), efeitos do mapa (partículas, luzes decorativas e animações de cenário); salvas nos dados do jogador |
-| Batalha | Nome, nível, HP e status dos dois lados; menu Lutar / Mochila / Time / Fugir; log |
-| Lutar | 4 golpes com tipo (cor), poder e PP |
-| Time | 6 personagens com HP, nível e status; trocar ordem |
-| Torre | Dificuldade, recompensas, placar |
-| Invocação | Estrelas (Comum e Premium), chances visíveis, garantia, animação de revelação |
-| Base | Personagens, Passeando / Minerando, coletar |
-| Loja | Itens (gold), Vender Minério, Benefícios (Robux ou gemas) |
-| Álbum | Todos os personagens, obtidos e variantes |
+| HUD do mapa | Gold (com taxa `+X/s` ao vivo), gemas, minério, botões Equipe, Mochila, Base, Loja, Prêmios, Álbum, Configurações, Trilha Inicial (7 passos) e selo circular minimalista de Bônus de Fim de Semana no canto inferior direito (`2x de Moedas` / `2x de XP` no hover/toque) |
+| Barra do Time e Nível | 6 cartões 3D do time na faixa inferior central + barra minimalista de Nível da Conta logo embaixo (`[ Nv. X ] [=== XP / Meta XP ===]`, alinhada exatamente à largura da `TeamBar`) |
+| Recompensas de Nível | Janela aberta ao apertar `E` nos baús de ouro embaixo da grande árvore perto da Torre (`RECOMPENSAS DE NÍVEL`), listando recompensas de todos os níveis (1..50+, marcos Épicos a cada 5 e Lendários a cada 10) e botão `RESGATAR TUDO` |
+| Configurações | Música (liga/desliga e volume), efeitos sonoros (liga/desliga e volume), efeitos do mapa e auras dos personagens (`CharacterAuras`); salvas nos dados do jogador |
+| Batalha | Nome, nível, HP e status dos dois lados (`1x1` ou `2x2`); menu Lutar / Mochila / Time / Fugir; log |
+| Lutar | 4 golpes com classe (cor e ícone), poder e PP |
+| Time / Equipe | 6 personagens com HP, nível e status; grade 3D com busca por nome, filtros de Anime/Raridade/Classe e ordenação por Status |
+| Torre | Abas Torre (`1x1` e `2x2`), Ginásios de Anime (Porta-Insígnias + 3 Ginásios) e Treino (simulador `1x1`/`2x2`), recompensas e placar |
+| Invocação | Palco 3D ao vivo estilo Anime Vanguards, trilho de banners por anime, chances visíveis, garantia centralizada, botões `INVOCAR 1` / `INVOCAR 10` com ícone e preço centralizados, animação 3D de revelação |
+| Base | Personagens Passeando / Minerando, taxas `g/s` ao vivo, nível da mineração, faixa dos 4 minérios e acesso à Cápsula de Treino |
+| Loja | Itens (gold), Vender Minério, Benefícios (Robux ou gemas) e Pacotes de Gemas |
+| Álbum | Todos os personagens, obtidos, variantes, metas por Classe e Raridade |
+| Atributos (Radar) | Retrato 3D, rank de Genética, gráfico de radar de 4 eixos (`HP`, `ATQ`, `DEF`, `VEL` de 0–100% com camadas `Ambos` / `Genética` / `Treino`) e detalhamento Base / Final |
 
-Botões grandes para celular; batalha funciona só com toque.
+**Padrão visual da interface (`UITheme` + `UI`):** paleta anime azul-noturno profundo (`panel` `#273066 -> #161B3D`, `slot` `#191E42 -> #0F122B`, `header` `#3B9EFF -> #1B64D8`, contorno `#0B0E22`), textura diagonal de luz de 3 bandas a 38° (`UI.sheen`), afundamento físico 3D ao clicar nos botões, fonte `FredokaOne` com contorno `Bevel` e **100% ícones personalizados (`UI.Icons`)** — proibido usar emojis ou símbolos Unicode (`★`, `✦`, `✓`, `→`, `■`, `—`) nos textos da interface. Botões grandes para celular (`>= 44x44 px`); batalha funciona só com toque.
 
 | Local | Conteúdo |
 | --- | --- |
@@ -326,7 +360,8 @@ Decisões em aberto: nome do jogo; troca de personagens entre jogadores; validar
 | Garantia | Lendário na 200ª seguida sem Lendário | Lendário na 60ª |
 
 - Variante Brilhante: 1% em toda invocação; outras variantes por evento.
-- Animação: a estrela brilha, a cor do raio indica raridade (cinza, azul, roxo, dourado). Lendário e Brilhante anunciados no chat do servidor.
+- **Painéis de Seleção de Anime na Estrela:** a tela dos Portais exibe cartões ilustrados (`Todos os Animes`, `Naruto`, `One Piece`) para escolher qual pool/estrela roletar; o servidor valida o painel selecionado e filtra os sorteios por anime mantendo integralmente as chances de raridade e a garantia (*pity*) do portal.
+- **Animação e Som ao Roletar:** além do raio no portal do mapa, o cliente exibe na frente da tela um palco de destaque rápido (`~1,45–1,85s`, pulável com `PULAR` e ignorado por `Invocação Rápida`) com o personagem 3D completo girando sob raios radiais na cor da raridade, clarão/partículas, badge de raridade/anime e efeitos sonoros estimulantes (`summon_charge`, `summon_shimmer`, `summon_reveal`, `summon_epic`, `summon_legendary`), seguidos pela grade de cartas com prévias 3D. Lendário e Brilhante continuam anunciados no chat do servidor.
 - Chances sempre visíveis na tela.
 - Banner da semana: 1 Lendário em destaque fica com metade da chance de Lendário do Portal Premium.
 - Repetidos: 3 iguais viram +1 estrela (até 5, +5% de atributos cada); sobras vendidas por gold (Comum 50, Raro 150, Épico 500, Lendário 3.000).
@@ -339,8 +374,9 @@ Decisões em aberto: nome do jogo; troca de personagens entre jogadores; validar
 | Missões diárias | 3 por dia | Gold e XP; completar as 3: 5 gemas |
 | Missões semanais | 5 por semana | 1 invocação Premium |
 | Temporada do Infinito | Placar zera todo mês | Aparência para os 100 primeiros; gemas por faixa |
-| Eventos de fim de semana | 2x gold ou 2x XP | Sem custo |
+| Eventos de fim de semana | 2x gold ou 2x XP (ícone circular minimalista no canto inferior direito com tooltip no hover/toque) | Sem custo |
 | Códigos | Divulgados em atualizações | Gold e invocações comuns |
+| Nível da Conta (`AccountLevel`) | Nível permanente da conta (nunca diminui; curva $\text{XP}(L) = \lfloor 100 + 25 \cdot L^{1,55} \rfloor$), alimentado por batalhas, torre, ginásios, invocações, coleta da base, cápsula de treino, missões, trilha inicial, refúgio e PvP | Recompensa em cada nível (Gold, Poções, Doces, Selos, Gemas e Tickets nos marcos Épicos a cada 5 níveis e Lendários a cada 10 níveis), resgatada nos baús de ouro sob a grande árvore (`RECOMPENSAS DE NÍVEL`) perto da Torre |
 
 **Regras obrigatórias:** o Portal Premium conta como item aleatório pago; mostrar chances e bloquear por PolicyService (ArePaidRandomItemsRestricted) onde for restrito, deixando só o Portal Comum (estrela amarela). Sem contagem regressiva de oferta e sem pop-up de compra ao perder batalha.
 
@@ -358,7 +394,7 @@ Decisões em aberto: nome do jogo; troca de personagens entre jogadores; validar
 
 - Surgem um a cada intervalo, até o máximo simultâneo da Forja. O contador continua com o jogador fora, até o máximo.
 - Tocar ou clicar num selvagem abre batalha na arena normal, com as regras de selvagem: pode fugir e capturar com Selo de Contrato ou Selo Superior (fórmula da seção 7).
-- Derrotar dá gold e XP; capturar põe o personagem na coleção. Raridade e nível sorteados no servidor.
+- Derrotar dá gold e XP; capturar põe o personagem na coleção. Raridade, nível e **Genética** sorteados no servidor (mesma curva probabilística por raridade usada no Gacha; Treino inicia em 0%).
 
 | Forja | Comum | Raro | Épico | Lendário | Nível do selvagem | Máximo | Intervalo |
 | --- | --- | --- | --- | --- | --- | --- | --- |
