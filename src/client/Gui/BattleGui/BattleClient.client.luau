@@ -100,16 +100,9 @@ local function makeCard(name, anchor, position, stagesBelow: boolean?)
 	level.TextWrapped = false
 	local typeChip = UI.chip(face, "", "grey", { Name = "Type", Size = UDim2.fromScale(0.26, 0.26), Position = UDim2.fromScale(0.70, 0.08) })
 	typeChip.Face.Label.TextWrapped = false
-	local status = UI.chip(face, "", "grey", { Name = "Status", Size = UDim2.fromScale(0.16, 0.22), Position = UDim2.fromScale(0.8, 0.7), Visible = false })
+	local status = UI.chip(face, "", "grey", { Name = "Status", Size = UDim2.fromScale(0.22, 0.22), Position = UDim2.fromScale(0.05, 0.70), Visible = false })
 	local bar = UI.bar(face, { Name = "Hp", Size = UDim2.fromScale(0.9, 0.17), Position = UDim2.fromScale(0.05, 0.45), FillColor = "hpHigh" })
-	local pips = UI.frame(face, { Name = "Pips", Size = UDim2.fromScale(0.42, 0.16), Position = UDim2.fromScale(0.05, 0.74) })
-	local pl = Instance.new("UIListLayout")
-	pl.FillDirection = Enum.FillDirection.Horizontal
-	pl.Padding = UDim.new(0.04, 0)
-	pl.VerticalAlignment = Enum.VerticalAlignment.Center
-	pl.SortOrder = Enum.SortOrder.LayoutOrder
-	pl.Parent = pips
-	local hpText = UI.text(face, "", { Name = "HpText", Size = UDim2.fromScale(0.34, 0.24), Position = UDim2.fromScale(0.44, 0.7), Role = "Small", AlignX = Enum.TextXAlignment.Right })
+	local hpText = UI.text(face, "", { Name = "HpText", Size = UDim2.fromScale(0.45, 0.24), Position = UDim2.fromScale(0.50, 0.69), Role = "Small", AlignX = Enum.TextXAlignment.Right })
 
 	-- Faixa externa de alteracoes de atributo (ATQ/DEF/VEL/PRE): acima nos cartoes do jogador, abaixo nos inimigos
 	local stagesBar = UI.frame(holder, {
@@ -150,20 +143,52 @@ local function makeCard(name, anchor, position, stagesBelow: boolean?)
 	return {
 		Frame = holder, Face = face, Scale = scale,
 		BorderStroke = borderStroke, DefaultStrokeColor = defaultStrokeColor, DefaultStrokeThick = defaultStrokeThick,
-		Title = title, Level = level, Type = typeChip, Status = status, Bar = bar, HpText = hpText, Pips = pips,
+		Title = title, Level = level, Type = typeChip, Status = status, Bar = bar, HpText = hpText,
 		StagesBar = stagesBar, StageChips = stageChips, HasStages = false,
 	}
 end
 
+-- Barra vertical externa com as bolinhas do time (fora dos cartoes dos personagens)
+local function makeTeamPipsBar(name: string, anchor: Vector2, position: UDim2)
+	local holder, face = UI.panel(root, {
+		Name = name,
+		Size = UDim2.fromScale(0.024, 0.20),
+		Position = position,
+		AnchorPoint = anchor,
+		Color = "slot",
+		Corner = T.Corner.Pill,
+		Shadow = false,
+		MaxSize = Vector2.new(30, 141),
+		MinSize = Vector2.new(20, 88),
+	})
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 6)
+	pad.PaddingBottom = UDim.new(0, 6)
+	pad.PaddingLeft = UDim.new(0, 4)
+	pad.PaddingRight = UDim.new(0, 4)
+	pad.Parent = face
+	local vl = Instance.new("UIListLayout")
+	vl.FillDirection = Enum.FillDirection.Vertical
+	vl.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	vl.VerticalAlignment = Enum.VerticalAlignment.Center
+	vl.Padding = UDim.new(0.04, 0)
+	vl.SortOrder = Enum.SortOrder.LayoutOrder
+	vl.Parent = face
+	return { Frame = holder, Container = face }
+end
+
+local playerTeamPips = makeTeamPipsBar("PlayerTeamPips", Vector2.new(0, 1), UDim2.fromScale(0.010, 0.975))
+local enemyTeamPips = makeTeamPipsBar("EnemyTeamPips", Vector2.new(1, 0), UDim2.fromScale(0.990, 0.015))
+
 local enemyCards = {
-	makeCard("EnemyCard1", Vector2.new(1, 0), UDim2.fromScale(0.985, 0.015), true),
-	makeCard("EnemyCard2", Vector2.new(1, 0), UDim2.fromScale(0.945, 0.015), true),
+	makeCard("EnemyCard1", Vector2.new(1, 0), UDim2.fromScale(0.958, 0.015), true),
+	makeCard("EnemyCard2", Vector2.new(1, 0), UDim2.fromScale(0.942, 0.015), true),
 }
 enemyCards[2].Frame.Visible = false
 
 local playerCards = {
-	makeCard("PlayerCard1", Vector2.new(0, 1), UDim2.fromScale(0.015, 0.975), false),
-	makeCard("PlayerCard2", Vector2.new(0, 1), UDim2.fromScale(0.28, 0.975), false),
+	makeCard("PlayerCard1", Vector2.new(0, 1), UDim2.fromScale(0.042, 0.975), false),
+	makeCard("PlayerCard2", Vector2.new(0, 1), UDim2.fromScale(0.302, 0.975), false),
 }
 playerCards[2].Frame.Visible = false
 
@@ -405,7 +430,7 @@ local function updateEnemyCardsStack(instant: boolean?)
 		return
 	end
 	local y = if enemyCards[2].Frame.Visible and enemyCards[2].HasStages then 0.238 else 0.184
-	local targetPos = UDim2.fromScale(0.985, y)
+	local targetPos = UDim2.fromScale(0.958, y)
 	if instant then
 		enemyCards[1].Frame.Position = targetPos
 	elseif enemyCards[1].Frame.Position ~= targetPos then
@@ -413,7 +438,7 @@ local function updateEnemyCardsStack(instant: boolean?)
 	end
 end
 
--- Ajusta tamanho/posicao dos cartoes e log para 1x1 vs 2x2 (sem sobreposicao em nenhuma tela)
+-- Ajusta tamanho/posicao dos cartoes, barras de bolinhas e log para 1x1 vs 2x2 (sem sobreposicao em nenhuma tela)
 local function applyFormatLayout(double: boolean)
 	local logMax = logHolder:FindFirstChildOfClass("UISizeConstraint")
 	if double then
@@ -422,16 +447,25 @@ local function applyFormatLayout(double: boolean)
 		if logMax then
 			logMax.MaxSize = Vector2.new(540, 90)
 		end
-		-- Inimigos escalonados no topo a direita: Slot 2 (esquerda 3D) em cima, Slot 1 (direita 3D) abaixo
-		enemyCards[2].Frame.Size = UDim2.fromScale(0.26, 0.15)
-		enemyCards[2].Frame.Position = UDim2.fromScale(0.945, 0.015)
-		enemyCards[1].Frame.Size = UDim2.fromScale(0.26, 0.15)
-		enemyCards[1].Frame.Position = UDim2.fromScale(0.985, if enemyCards[2].HasStages then 0.238 else 0.184)
-		-- Jogador lado a lado embaixo a esquerda: Slot 1 (esquerda 3D), Slot 2 (direita 3D)
-		playerCards[1].Frame.Size = UDim2.fromScale(0.255, 0.16)
-		playerCards[1].Frame.Position = UDim2.fromScale(0.015, 0.975)
-		playerCards[2].Frame.Size = UDim2.fromScale(0.255, 0.16)
-		playerCards[2].Frame.Position = UDim2.fromScale(0.28, 0.975)
+		-- Barras verticais de bolinhas nas laterais externas (mesma altura dos cartoes 2x2)
+		playerTeamPips.Frame.Size = UDim2.fromScale(0.024, 0.16)
+		enemyTeamPips.Frame.Size = UDim2.fromScale(0.024, 0.15)
+		for _, bar in ipairs({ playerTeamPips, enemyTeamPips }) do
+			local sc = bar.Frame:FindFirstChildOfClass("UISizeConstraint")
+			if sc then
+				sc.MaxSize = Vector2.new(28, 118)
+			end
+		end
+		-- Inimigos escalonados no topo a direita (a esquerda da barra de bolinhas inimiga)
+		enemyCards[2].Frame.Size = UDim2.fromScale(0.25, 0.15)
+		enemyCards[2].Frame.Position = UDim2.fromScale(0.942, 0.015)
+		enemyCards[1].Frame.Size = UDim2.fromScale(0.25, 0.15)
+		enemyCards[1].Frame.Position = UDim2.fromScale(0.958, if enemyCards[2].HasStages then 0.238 else 0.184)
+		-- Jogador lado a lado embaixo a esquerda (a direita da barra de bolinhas do jogador)
+		playerCards[1].Frame.Size = UDim2.fromScale(0.25, 0.16)
+		playerCards[1].Frame.Position = UDim2.fromScale(0.042, 0.975)
+		playerCards[2].Frame.Size = UDim2.fromScale(0.25, 0.16)
+		playerCards[2].Frame.Position = UDim2.fromScale(0.302, 0.975)
 		for _, list in ipairs({ enemyCards, playerCards }) do
 			for _, card in ipairs(list) do
 				local sc = card.Frame:FindFirstChildOfClass("UISizeConstraint")
@@ -445,11 +479,19 @@ local function applyFormatLayout(double: boolean)
 		if logMax then
 			logMax.MaxSize = Vector2.new(720, 90)
 		end
+		playerTeamPips.Frame.Size = UDim2.fromScale(0.024, 0.20)
+		enemyTeamPips.Frame.Size = UDim2.fromScale(0.024, 0.20)
+		for _, bar in ipairs({ playerTeamPips, enemyTeamPips }) do
+			local sc = bar.Frame:FindFirstChildOfClass("UISizeConstraint")
+			if sc then
+				sc.MaxSize = Vector2.new(30, 141)
+			end
+		end
 		enemyCards[1].Frame.Size = UDim2.fromScale(0.29, 0.2)
-		enemyCards[1].Frame.Position = UDim2.fromScale(0.985, 0.015)
+		enemyCards[1].Frame.Position = UDim2.fromScale(0.958, 0.015)
 		enemyCards[2].Frame.Visible = false
 		playerCards[1].Frame.Size = UDim2.fromScale(0.29, 0.2)
-		playerCards[1].Frame.Position = UDim2.fromScale(0.015, 0.975)
+		playerCards[1].Frame.Position = UDim2.fromScale(0.042, 0.975)
 		playerCards[2].Frame.Visible = false
 		for _, card in ipairs({ enemyCards[1], playerCards[1] }) do
 			local sc = card.Frame:FindFirstChildOfClass("UISizeConstraint")
@@ -570,11 +612,21 @@ local function setStages(card, stages: { [string]: number }?, highlightStat: str
 	end
 end
 
--- Bolinhas do time: verde = de pe, vermelho = desmaiado
-local function setPips(card, sideState)
-	UI.clear(card.Pips)
+-- Bolinhas do time na barra vertical externa: verde = de pe, vermelho = desmaiado
+local function setTeamPips(side: string, sideState)
+	local bar = if side == "Player" then playerTeamPips else enemyTeamPips
+	UI.clear(bar.Container)
+	local n = #sideState.Team
+	bar.Frame.Visible = n > 0
 	for i, m in ipairs(sideState.Team) do
-		local dot = UI.frame(card.Pips, { Name = "Pip" .. i, Size = UDim2.fromScale(0.13, 1), Color = if m.Hp > 0 then "hpHigh" else "hpLow", Aspect = 1, LayoutOrder = i })
+		local dot = UI.frame(bar.Container, {
+			Name = "Pip" .. i,
+			Size = UDim2.fromScale(0.76, 0.135),
+			Color = if m.Hp > 0 then "hpHigh" else "hpLow",
+			Aspect = 1,
+			Corner = T.Corner.Pill,
+			LayoutOrder = i,
+		})
 		UI.stroke(dot, nil, 0.6)
 	end
 end
@@ -582,7 +634,7 @@ end
 local function refreshSide(side: string, instant: boolean?)
 	local sideState = current.State[side]
 	local count = slotsPerSide()
-	local pipsShown = false
+	setTeamPips(side, sideState)
 	for fs = 1, 2 do
 		local card = cardFor(side, fs)
 		local m = if fs <= count then memberAt(sideState, fs) else nil
@@ -595,14 +647,6 @@ local function refreshSide(side: string, instant: boolean?)
 			setHp(card, m.Hp, m.MaxHp, instant)
 			setStatus(card, m.Status)
 			setStages(card, m.Stages, nil, instant)
-			if not pipsShown then
-				card.Pips.Visible = true
-				setPips(card, sideState)
-				pipsShown = true
-			else
-				card.Pips.Visible = false
-				UI.clear(card.Pips)
-			end
 		else
 			setStages(card, nil, nil, instant)
 		end

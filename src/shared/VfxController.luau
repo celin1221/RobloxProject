@@ -1319,7 +1319,7 @@ HANDLERS.GenkiDama = {
 		pulseLight(fx.Hit:FindFirstChild("HitLight"), 14, 28)
 		shake(0.28, 0.62)
 
-		-- Domo em hemisferio + coluna celeste ascendente!
+		-- Domo em hemisferio (sem cilindro vertical no impacto)
 		fx.SupernovaCore.CFrame = CFrame.new(floorCenter + Vector3.new(0, 1.2, 0))
 		fx.SupernovaDome.CFrame = CFrame.new(floorCenter + Vector3.new(0, 1.2, 0))
 		fx.SupernovaCore.Size = Vector3.new(3.2, 3.2, 3.2)
@@ -1328,11 +1328,6 @@ HANDLERS.GenkiDama = {
 		fx.SupernovaDome.Transparency = 0.20
 		tween(fx.SupernovaCore, 0.45, { Size = Vector3.new(10.5, 9.5, 10.5), Transparency = 1 })
 		tween(fx.SupernovaDome, 0.52, { Size = Vector3.new(14.5, 13.0, 14.5), Transparency = 1 })
-
-		fx.SkyPillar.CFrame = CFrame.new(floorCenter + Vector3.new(0, 9.0, 0)) * CFrame.Angles(0, 0, math.pi / 2)
-		fx.SkyPillar.Size = Vector3.new(18, 1.8, 1.8)
-		fx.SkyPillar.Transparency = 0.08
-		tween(fx.SkyPillar, 0.46, { Size = Vector3.new(22, 6.8, 6.8), Transparency = 1 })
 
 		setDisc(fx.GroundShock1, CFrame.new(floorCenter), 3.0, 0.02)
 		setDisc(fx.GroundShock2, CFrame.new(floorCenter + Vector3.new(0, 0.12, 0)) * CFrame.Angles(0, 0.8, 0), 2.2, 0.08)
@@ -1709,11 +1704,6 @@ HANDLERS.CeuETerra = {
 			tweenDisc(fx.CraterCrack1, 0.40, 16.0, 1)
 			tweenDisc(fx.CraterCrack2, 0.40, 14.5, 1)
 		end)
-
-		fx.QuakeGeyserCore.CFrame = CFrame.new(floorCenter + Vector3.new(0, 8.5, 0)) * CFrame.Angles(0, 0, math.pi / 2)
-		fx.QuakeGeyserCore.Size = Vector3.new(17, 2.0, 2.0)
-		fx.QuakeGeyserCore.Transparency = 0.04
-		tween(fx.QuakeGeyserCore, 0.46, { Size = Vector3.new(21, 7.2, 7.2), Transparency = 1 })
 
 		fx.QuakeGeyserShell.CFrame = CFrame.new(floorCenter + Vector3.new(0, 1.5, 0))
 		fx.QuakeGeyserShell.Size = Vector3.new(4.2, 4.2, 4.2)
@@ -2370,18 +2360,7 @@ HANDLERS.SenbonzakuraKageyoshi = {
 		emit(fx.Hit, "SakuraMist", 24)
 		pulseLight(fx.Hit:FindFirstChild("HitLight"), 4.0, 26)
 
-		-- Coluna/Ciclone organico de Senbonzakura (nucleo sutil translucido + aneis giratorios subindo + 6 cortes!)
-		fx.StormPillarCore.CFrame = CFrame.new(floorCenter + Vector3.new(0, 5.5, 0)) * CFrame.Angles(0, 0, math.pi / 2)
-		fx.StormPillarCore.Size = Vector3.new(11.0, 1.3, 1.3)
-		fx.StormPillarCore.Transparency = 0.42
-		tween(fx.StormPillarCore, 0.48, { Size = Vector3.new(14.5, 4.4, 4.4), Transparency = 1 })
-
-		fx.StormPillarOuter.CFrame = CFrame.new(floorCenter + Vector3.new(0, 4.8, 0)) * CFrame.Angles(0, 0, math.pi / 2)
-		fx.StormPillarOuter.Size = Vector3.new(9.5, 2.8, 2.8)
-		fx.StormPillarOuter.Transparency = 0.68
-		tween(fx.StormPillarOuter, 0.56, { Size = Vector3.new(13.5, 8.6, 8.6), Transparency = 1 })
-
-		-- 3 aneis de furacao de petalas subindo em espiral ao redor do alvo
+		-- 3 aneis de furacao de petalas subindo em espiral ao redor do alvo (sem cilindros verticais no impacto)
 		for idx, r in ipairs({ fx.PetalSwirlRing1, fx.PetalSwirlRing2, fx.PetalSwirlRing3 }) do
 			local startY = floorCenter.Y + 0.6 + (idx - 1) * 1.4
 			local endY = startY + 5.8

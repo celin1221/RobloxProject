@@ -1132,3 +1132,18 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - Validado ao vivo em batalha 2x2 real com `Postura da Lâmina` (`ATQ +50%` → empilhado `ATQ +100%`) e `Carga de Ki` (`ATQ +50%` → `ATQ +100%`), além de stress test visual simultâneo com 1, 2, 3 e 4 badges verdes/vermelhos nos 4 cartões sem cortes nem sobreposições (`0` erros de script).
 - `python scripts/sync_studio.py status` (`100% in sync`) e `python scripts/sync_studio.py test` (`PASS`).
 - Place salvo no Roblox Studio na **versão 315** (`TeamCreate`).
+
+
+## Bolinhas do Time Fora dos Cartões (Lateral Vertical) + Remoção dos Cilindros de Impacto nos Golpes (24/11/2026)
+
+**Feito**
+- **1. Bolinhas do time fora dos cartões (`src/client/Gui/BattleGui/BattleClient.client.luau`):**
+  - Removidas as bolinhas (`Pips`) de dentro dos cartões dos personagens, deixando a linha inferior limpa (`Status` à esquerda e `HpText` alinhado à direita sob a barra de HP).
+  - Criadas duas barras verticais externas no tema *Midnight-Blue Anime* (`PlayerTeamPips` na lateral esquerda externa junto ao `PlayerCard1` e `EnemyTeamPips` na lateral direita externa junto aos cartões inimigos), exibindo até 6 bolinhas empilhadas verticalmente (verde = de pé, vermelho = desmaiado) com espaçamento limpo em **1x1** e **2x2**.
+- **2. Remoção dos cilindros verticais ao final dos golpes (`src/shared/VfxController.luau` & `ReplicatedStorage/Vfx`):**
+  - Removidos os cilindros neon verticais de impacto de todos os golpes implementados que os utilizavam: `GenkiDama.SkyPillar`, `CeuETerra.QuakeGeyserCore` (Barba Branca) e `SenbonzakuraKageyoshi.StormPillarCore` / `StormPillarOuter` (Byakuya), preservando intactos todos os demais efeitos (domos, ondas de choque, partículas, cortes neon, câmeras e som).
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- Validados ao vivo no Play Mode: HUD 2x2 com `PlayerTeamPips` e `EnemyTeamPips` verticais fora dos cartões sem sobreposição, e execução completa dos VFX de `GenkiDama`, `CeuETerra` e `SenbonzakuraKageyoshi` com `0` erros e `0` cilindros residuais.
+- `python scripts/sync_studio.py status` (`100% in sync`) e `python scripts/sync_studio.py test` (`PASS`).
+- Place salvo no Roblox Studio na **versão 316** (`TeamCreate`).
