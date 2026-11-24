@@ -484,7 +484,40 @@ assert(Characters.LearnLevelOf("San", "Kamehameha") == 42 and Characters.LearnLe
 assert(Characters.LearnLevelOf("Setero", "Atracao") == 42 and Characters.LearnLevelOf("Setero", "TudoRoxo") == 50, "Setero specials must be Nv 42 & 50")
 assert(#Characters.UpcomingMoves("Byakuya", 10) >= 8 and #Characters.UpcomingMoves("Byakuya", 50) == 0, "Expected UpcomingMoves countdown on Byakuya")
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), Classes/Gyms/Practice + Progression Rebalance + AccountLevel + Learnsets Nv1-50 + UI Guardrails", b.Turn, simTurns)
+-- Test 11: 100% Move Animation + VFX Coverage (all 93 moves have Anim, Vfx & Timing)
+local caClone = rs:WaitForChild("CombatAnimator"):Clone()
+caClone.Parent = sandbox
+local vfxClone = rs:WaitForChild("VfxController"):Clone()
+vfxClone.Source = vfxClone.Source
+    :gsub('ReplicatedStorage:WaitForChild%("Data"%)', 'script.Parent:WaitForChild("Data")')
+    :gsub('ReplicatedStorage:WaitForChild%("CombatAnimator"%)', 'script.Parent:WaitForChild("CombatAnimator")')
+vfxClone.Parent = sandbox
+local CombatAnimator = require(caClone)
+local VfxController = require(vfxClone)
+local ssChars = game:GetService("ServerStorage"):FindFirstChild("Characters")
+local modelAnims = {}
+if ssChars then
+    for _, cm in ipairs(ssChars:GetChildren()) do
+        local af = cm:FindFirstChild("Animations")
+        if af then
+            for _, a in ipairs(af:GetChildren()) do
+                modelAnims[a.Name] = true
+            end
+        end
+    end
+end
+local totalMoves = 0
+for mid, mv in pairs(Moves.List) do
+    totalMoves += 1
+    assert(typeof(mv.Anim) == "string" and #mv.Anim > 0, "Missing Anim on move " .. mid)
+    assert(typeof(mv.Vfx) == "string" and #mv.Vfx > 0, "Missing Vfx on move " .. mid)
+    assert(typeof(mv.Timing) == "table" and mv.Timing.Charge and mv.Timing.Release and mv.Timing.Impact and mv.Timing.Length, "Missing Timing on move " .. mid)
+    assert(CombatAnimator.Has(mv.Anim) or modelAnims[mv.Anim], "Unregistered Anim '" .. mv.Anim .. "' on move " .. mid)
+    assert(VfxController.HasVfx(mv.Vfx), "Unregistered Vfx '" .. mv.Vfx .. "' on move " .. mid)
+end
+assert(totalMoves >= 93, "Expected >= 93 animated moves, got " .. tostring(totalMoves))
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), Classes/Gyms/Practice + Progression Rebalance + AccountLevel + Learnsets Nv1-50 + %d/93 Animated Moves + UI Guardrails", b.Turn, simTurns, totalMoves)
 end)
 sandbox:Destroy()
 assert(ok, res)

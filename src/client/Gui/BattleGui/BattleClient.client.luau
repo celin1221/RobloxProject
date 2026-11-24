@@ -1568,7 +1568,17 @@ BattleUpdate.OnClientEvent:Connect(function(battleId, data)
 			local attackerModel = ev.Model or model
 			local targetSide = ev.TargetSide or (if side == "Player" then "Enemy" else "Player")
 			local targetModel = ev.TargetModel or slotModelFor(targetSide, ev.TargetFieldSlot or 1)
-			VfxController.PlayMove(ev.MoveId, attackerModel, targetModel)
+			local targetModels = ev.TargetModels
+			if not targetModels and typeof(ev.Targets) == "table" and #ev.Targets > 1 then
+				targetModels = {}
+				for _, ref in ipairs(ev.Targets) do
+					local tm = ref.Side and slotModelFor(ref.Side, ref.FieldSlot or 1)
+					if tm then
+						table.insert(targetModels, tm)
+					end
+				end
+			end
+			VfxController.PlayMove(ev.MoveId, attackerModel, targetModel, targetModels)
 		elseif ev.Kind == "Damage" or ev.Kind == "StatusDamage" then
 			if ev.Crit then
 				VfxController.CritFlash()

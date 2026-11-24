@@ -552,6 +552,13 @@ def parse_moves() -> tuple[dict[str, dict[str, Any]], dict[str, list[str]]]:
         effect_desc = parse_effect_desc(body, target, drain, recoil, breaks_protect)
         timing_desc = parse_timing_desc(body)
 
+        anim_name = anim_m.group(1) if anim_m else ""
+        vfx_name = vfx_m.group(1) if vfx_m else ""
+        is_proc_gen = vfx_name in {
+            "GenSlash", "GenMelee", "GenGroundWave", "GenProjectile", "GenVolley",
+            "GenSkyStrike", "GenHex", "GenBuff", "GenShield", "GenHazard", "GenHeal", "GenWind",
+        }
+
         if hidden:
             origin = "Reserva (Sem PP)"
         elif generic and move_type == "Universal":
@@ -560,7 +567,7 @@ def parse_moves() -> tuple[dict[str, dict[str, Any]], dict[str, list[str]]]:
             origin = "Genérico de Classe"
         elif sig:
             origin = "Assinatura"
-        elif has_anim or has_vfx or cutin:
+        elif (has_anim or has_vfx or cutin) and not is_proc_gen:
             origin = "Exclusivo"
         else:
             origin = "Clássico"

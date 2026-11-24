@@ -1258,3 +1258,32 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
   - `Byakuya` (`Refuge`), `San` (`Capture`) e `Barba Branca Brilhante` (`Tower`) dispararam fila de banners com retrato 3D nítido girando suavemente, borda dourada/ciano, zero sobreposição com qualquer elemento do HUD e mensagem no chat do sistema.
 - `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS`).
 - Place salvo no Roblox Studio na **versão 325** (`TeamCreate`).
+
+
+## Animações 3D e VFX Procedurais em 100% dos Golpes do Jogo (93/93) (24/11/2026)
+
+**Feito**
+- **1. 26 Novas Animações Procedurais 60 FPS (`src/shared/CombatAnimator.luau` — total 30 animações):**
+  - Compatíveis com os 3 tipos de rig do projeto (**Híbrido R6-em-R15 I-Pose**, **R15 Motor6D** e **R15 Skinned Bone**), sem dependência de permissões de `AnimationId`, com katana procedural acoplada e paletas adicionadas para `BarbaBranca` e `Kakashi` (preservando integralmente `CorteBasico`, `CorteCruzado`, `Senbonzakura` e `SenbonzakuraKageyoshi`):
+    - **Espadachim (6):** `SwordThrust`, `SwordSpin` (giro 360° em passos SLERP), `SwordHeavyCleave`, `SwordDashSlash`, `SwordStance`, `SwordGroundPlant`.
+    - **Lutador (7):** `PunchJab`, `PunchHeavy`, `LowSweepKick` (rasteira 360°), `GroundSlam`, `ShoulderRush`, `FighterFlex`, `MeditateFocus`.
+    - **Mago (6):** `MagicCastOrb`, `MagicWaveCast`, `MagicSkyCall`, `MagicHexSeal`, `MagicAuraChannel`, `MagicBarrierCast`.
+    - **Atirador (4):** `RangedSnapShot`, `RangedSnipeShot`, `RangedVolley`, `RangedThrowGadget`.
+    - **Universal / Tático (3):** `GuardBrace`, `IntimidateGlare`, `WindSweep`.
+- **2. Motor Procedural de VFX com 12 Arquétipos + Paleta Individual por Golpe (`src/shared/VfxController.luau`):**
+  - Criados 12 arquétipos procedurais leves (sem cilindros verticais finais, reaproveitando texturas e SFX verificados de `ReplicatedStorage/Vfx`, com suporte a múltiplos alvos no 2x2 e auto-limpeza garantida): `GenSlash`, `GenMelee`, `GenGroundWave`, `GenProjectile`, `GenVolley`, `GenSkyStrike`, `GenHex`, `GenBuff`, `GenShield`, `GenHazard`, `GenHeal` e `GenWind`.
+  - Tabela `GENERIC_STYLES` personalizando cores, texturas, pitch e mecânicas visuais de todos os **75 golpes** restantes (orbes de drenagem retornando ao atacante em golpes `Drain`, estilhaçamento de escudo ciano em `BreaksProtect`, 3 lâminas orbitantes em `DancaDasEspadas`, raios celestes em `Descarga`, meteoro em `MeteoroArcano`, domo/muralha em `Proteger`/`GuardaAmpla`/`BarreiraArcana`, espinhos/runas/rede no chão inimigo em `Hazards`, etc.).
+  - Fallback procedural seguro em `VfxController.PlayMove` caso um modelo legado não possua a track específica (ex.: `ComboMarcial`), além de `VfxController.HasVfx`.
+- **3. Cobertura 100% em `Moves.luau` + Suporte Multi-Alvo 2x2 no `BattleClient` (`src/shared/Data/Moves.luau`, `src/client/Gui/BattleGui/BattleClient.client.luau`):**
+  - Vinculados `Anim`, `Vfx` e `Timing` (`Charge`, `Release`, `Impact`, `Length`) em todos os **75 golpes** que ainda não tinham animação (todos os 69 genéricos restantes + 6 clássicos + `Esforco`), atingindo **93/93 golpes animados** (18 exclusivos/assinatura preservados + 75 procedurais).
+  - `BattleClient` passou a repassar `TargetModels` para `VfxController.PlayMove` para que golpes em área (`AllEnemies`/`AllAllies`) atinjam visualmente todos os alvos no 2x2.
+- **4. Planilha Excel e Suíte de Validação (`scripts/update_characters_sheet.py`, `scripts/sync_studio.py`):**
+  - Planilha sincronizada em `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` com todos os 93 golpes atualizados (`0` pendentes).
+  - Adicionado **Test 11 (`93/93 Animated Moves`)** em `scripts/sync_studio.py` garantindo que nenhum golpe novo fique sem `Anim`, `Vfx` ou `Timing` registrados.
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- Auditoria completa no Play Mode ao vivo nos 3 tipos de rig (`Ichigo` I-Pose, `Kaen` R15 Motor6D, `Setero` Skinned Bone, `Uryu` I-Pose):
+  - **78/78** testes de animação (26 animações × 3 rigs) com movimentação real de juntas, spawn/limpeza de `BattleKatana` e `0` falhas.
+  - **75/75** golpes procedurais executados por completo (`Charge` → `Release` → `Impact` → expiração natural) com **`0` erros no Console** e **`0` vazamentos** (`BattleVfx=0`, `Katana/Attr=0`).
+- `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS: ... 93/93 Animated Moves + UI Guardrails`).
+- Place salvo no Roblox Studio na **versão 326** (`TeamCreate`).

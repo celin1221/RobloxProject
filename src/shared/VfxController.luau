@@ -17,6 +17,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
@@ -2408,19 +2409,1052 @@ HANDLERS.SenbonzakuraKageyoshi = {
 }
 
 --------------------------------------------------------------------
+-- Sistema Procedural de VFX para Golpes Genericos e Classicos
+-- (Leve, sem cilindros finais, 100% versionado em codigo, suporte 1x1 e 2x2)
+--------------------------------------------------------------------
+local procActive = {} -- [Model] = ctx
+
+local TEX = {
+	Spark = "rbxassetid://111340920948521",
+	Star = "rbxassetid://77032248103074",
+	Glint = "rbxassetid://105042923162509",
+	Diamond = "rbxassetid://105200043049019",
+	Flame = "rbxassetid://79477996185324",
+	Bolt = "rbxassetid://78119176408303",
+	Streak = "rbxassetid://122479098668481",
+	Gather = "rbxassetid://115073640656853",
+	Puff = "rbxassetid://82305102124278",
+	Ring = "rbxassetid://136971071117749",
+	Shock = "rbxassetid://83043634785289",
+	Trail = "rbxassetid://115075243133786",
+	Leaves = "rbxassetid://134973377891827",
+}
+
+local SFX = {
+	Charge = "rbxassetid://6456542119",
+	Release = "rbxassetid://126546670067885",
+	ReleaseHeavy = "rbxassetid://92846408037360",
+	Impact = "rbxassetid://98753363372264",
+	ImpactHeavy = "rbxassetid://99881515803650",
+}
+
+local function genPart(parent: Instance, size: Vector3, color: Color3, material: Enum.Material?, shape: Enum.PartType?, trans: number?): Part
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Massless = true
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Size = size
+	p.Color = color
+	p.Material = material or Enum.Material.Neon
+	p.Shape = shape or Enum.PartType.Block
+	p.Transparency = trans or 0
+	p.Parent = parent
+	return p
+end
+
+local function genAnchor(parent: Instance, cf: CFrame): Part
+	local p = genPart(parent, Vector3.new(0.2, 0.2, 0.2), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, Enum.PartType.Block, 1)
+	p.CFrame = cf
+	return p
+end
+
+local function genSound(parent: Instance, soundId: string, volume: number?, pitch: number?)
+	local s = Instance.new("Sound")
+	s.SoundId = soundId
+	s.Volume = volume or 0.42
+	s.PlaybackSpeed = pitch or 1
+	local grp = SoundService:FindFirstChild("Efeitos")
+	if grp and grp:IsA("SoundGroup") then
+		s.SoundGroup = grp
+	end
+	s.Parent = parent
+	s:Play()
+	Debris:AddItem(s, 2.5)
+end
+
+local function genLight(parent: Instance, pos: Vector3, color: Color3, peak: number?, range: number?)
+	local a = genAnchor(parent, CFrame.new(pos))
+	local l = Instance.new("PointLight")
+	l.Color = color
+	l.Shadows = false
+	l.Brightness = 0
+	l.Range = range or 12
+	l.Parent = a
+	pulseLight(l, math.min(peak or 3.0, 3.6), range or 12)
+	return a
+end
+
+local function genBurst(parent: Instance, pos: Vector3, tex: string, c1: Color3, c2: Color3?, count: number, sMin: number, sMax: number, sz0: number, sz1: number, life: number?, spread: number?, rotSpd: number?, accel: Vector3?)
+	local a = genAnchor(parent, CFrame.new(pos))
+	local pe = Instance.new("ParticleEmitter")
+	pe.Texture = tex
+	pe.Color = ColorSequence.new(c1, c2 or c1)
+	pe.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, sz0),
+		NumberSequenceKeypoint.new(0.65, sz0 * 0.7 + sz1 * 0.3),
+		NumberSequenceKeypoint.new(1, sz1),
+	})
+	pe.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.05),
+		NumberSequenceKeypoint.new(0.7, 0.35),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	pe.Speed = NumberRange.new(sMin, sMax)
+	pe.Lifetime = NumberRange.new((life or 0.36) * 0.7, life or 0.36)
+	pe.SpreadAngle = Vector2.new(spread or 180, spread or 180)
+	pe.RotSpeed = NumberRange.new(-(rotSpd or 120), rotSpd or 120)
+	pe.Rotation = NumberRange.new(0, 360)
+	pe.LightEmission = 0.85
+	pe.Drag = 3.5
+	if accel then
+		pe.Acceleration = accel
+	end
+	pe.Rate = 0
+	pe.Parent = a
+	pe:Emit(if lowQuality() then math.max(1, math.floor(count / 2)) else count)
+	return a
+end
+
+local function genShockDisc(parent: Instance, cf: CFrame, color: Color3, startSz: number, endSz: number, dur: number, tex: string?)
+	local p = genPart(parent, Vector3.new(startSz, 0.05, startSz), color, Enum.Material.SmoothPlastic, Enum.PartType.Block, 1)
+	p.CFrame = cf
+	local decals = {}
+	for _, face in ipairs({ Enum.NormalId.Top, Enum.NormalId.Bottom }) do
+		local d = Instance.new("Decal")
+		d.Face = face
+		d.Texture = tex or TEX.Ring
+		d.Color3 = color
+		d.Transparency = 0.06
+		d.Parent = p
+		table.insert(decals, d)
+	end
+	tween(p, dur, { Size = Vector3.new(endSz, 0.05, endSz) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	for _, d in ipairs(decals) do
+		tween(d, dur, { Transparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	end
+	return p
+end
+
+local function genSlashMark(parent: Instance, lookCF: CFrame, offset: Vector3, angleDeg: number, len: number, thick: number, c1: Color3, c2: Color3?)
+	local core = genPart(parent, Vector3.new(thick, 0.4, 0.10), c2 or Color3.new(1, 1, 1), Enum.Material.Neon, Enum.PartType.Block, 0)
+	core.CFrame = lookCF * CFrame.new(offset) * CFrame.Angles(0, 0, math.rad(angleDeg))
+	local outer = genPart(parent, Vector3.new(thick * 1.9, 0.4, 0.08), c1, Enum.Material.Neon, Enum.PartType.Block, 0.25)
+	outer.CFrame = core.CFrame * CFrame.new(0, 0, 0.03)
+	tween(core, 0.065, { Size = Vector3.new(thick, len, 0.10) }, Enum.EasingStyle.Exponential)
+	tween(outer, 0.075, { Size = Vector3.new(thick * 1.85, len * 1.06, 0.08) }, Enum.EasingStyle.Exponential)
+	task.delay(0.09, function()
+		if core.Parent then
+			tween(core, 0.18, { Size = Vector3.new(0.03, len * 1.15, 0.04), Transparency = 1 })
+		end
+		if outer.Parent then
+			tween(outer, 0.20, { Size = Vector3.new(0.05, len * 1.2, 0.04), Transparency = 1 })
+		end
+	end)
+end
+
+local function attachGenTrail(part: BasePart, c1: Color3, c2: Color3?, width: number, life: number?): Trail
+	local a0 = Instance.new("Attachment")
+	a0.Position = Vector3.new(0, width * 0.5, 0)
+	a0.Parent = part
+	local a1 = Instance.new("Attachment")
+	a1.Position = Vector3.new(0, -width * 0.5, 0)
+	a1.Parent = part
+	local tr = Instance.new("Trail")
+	tr.Attachment0 = a0
+	tr.Attachment1 = a1
+	tr.Texture = TEX.Trail
+	tr.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, c2 or Color3.new(1, 1, 1)),
+		ColorSequenceKeypoint.new(0.4, c1),
+		ColorSequenceKeypoint.new(1, c1),
+	})
+	tr.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.06),
+		NumberSequenceKeypoint.new(0.6, 0.4),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	tr.Lifetime = life or 0.18
+	tr.MinLength = 0.08
+	tr.LightEmission = 0.9
+	tr.FaceCamera = true
+	tr.Parent = part
+	return tr
+end
+
+local function genDrainOrbs(parent: Instance, fromPos: Vector3, attacker: Model, c1: Color3, c2: Color3?)
+	for i = 1, 3 do
+		task.delay((i - 1) * 0.06, function()
+			if not parent.Parent or not alive(attacker) then
+				return
+			end
+			local orb = genPart(parent, Vector3.new(0.46, 0.46, 0.46), c1, Enum.Material.Neon, Enum.PartType.Ball, 0.08)
+			orb.CFrame = CFrame.new(fromPos)
+			attachGenTrail(orb, c1, c2 or Color3.fromRGB(220, 255, 225), 0.42, 0.18)
+			local arcSide = (i - 2) * 2.1
+			local arcUp = 1.4 + (i % 2) * 1.1
+			local t0 = os.clock()
+			local dur = 0.34
+			local conn
+			conn = RunService.RenderStepped:Connect(function()
+				if not parent.Parent or not alive(attacker) then
+					conn:Disconnect()
+					return
+				end
+				local a = math.clamp((os.clock() - t0) / dur, 0, 1)
+				local toPos = targetCenter(attacker)
+				local dir = flat(toPos - fromPos)
+				local right = if dir.Magnitude > 0.1 then dir.Unit:Cross(Vector3.yAxis) else Vector3.xAxis
+				local pos = fromPos:Lerp(toPos, a) + right * (math.sin(a * math.pi) * arcSide) + Vector3.new(0, math.sin(a * math.pi) * arcUp, 0)
+				orb.CFrame = CFrame.new(pos)
+				if a >= 1 then
+					conn:Disconnect()
+					orb.Transparency = 1
+					if i == 1 then
+						genBurst(parent, toPos, TEX.Diamond, c1, Color3.fromRGB(235, 255, 235), 14, 3, 8, 0.55, 0.05, 0.32)
+					end
+				end
+			end)
+		end)
+	end
+end
+
+local function genShieldShatter(parent: Instance, pos: Vector3)
+	for i = 1, 6 do
+		local ang = (i / 6) * math.pi * 2
+		local shard = genPart(parent, Vector3.new(0.55, 0.72, 0.10), Color3.fromRGB(115, 240, 255), Enum.Material.Neon, Enum.PartType.Block, 0.18)
+		shard.CFrame = CFrame.new(pos) * CFrame.Angles(math.random() * 3, ang, math.random() * 3)
+		local out = pos + Vector3.new(math.cos(ang) * 3.4, 0.8 + (i % 3) * 0.7, math.sin(ang) * 3.4)
+		tween(shard, 0.32, {
+			CFrame = CFrame.new(out) * CFrame.Angles(math.random() * 6, ang + 2, math.random() * 6),
+			Size = Vector3.new(0.14, 0.22, 0.04),
+			Transparency = 1,
+		})
+	end
+end
+
+local function ctxTargets(ctx): { Model }
+	local list = {}
+	if typeof(ctx.targets) == "table" and #ctx.targets > 0 then
+		for _, m in ipairs(ctx.targets) do
+			if alive(m) then
+				table.insert(list, m)
+			end
+		end
+	end
+	if #list == 0 and alive(ctx.target) then
+		table.insert(list, ctx.target)
+	end
+	return list
+end
+
+local function ctxCenterOfTargets(ctx): (Vector3, number)
+	local ts = ctxTargets(ctx)
+	if #ts == 0 then
+		return targetCenter(ctx.attacker), groundY(ctx.attacker)
+	end
+	local sum = Vector3.zero
+	local gy = groundY(ts[1])
+	for _, m in ipairs(ts) do
+		sum += targetCenter(m)
+	end
+	return sum / #ts, gy
+end
+
+-- Paletas e variacoes individuais para os 75 golpes genericos e classicos
+local GENERIC_STYLES: { [string]: any } = {
+	-- ESPADACHIM (13 genericos + CorteFlamejante)
+	PosturaDaLamina = { variant = "attack", c1 = Color3.fromRGB(255, 118, 92), c2 = Color3.fromRGB(255, 232, 180), pitch = 1.1 },
+	EstocadaVeloz = { variant = "thrust", c1 = Color3.fromRGB(125, 225, 255), c2 = Color3.fromRGB(245, 252, 255), pitch = 1.28 },
+	CorteGiratorio = { variant = "spin", c1 = Color3.fromRGB(165, 228, 255), c2 = Color3.fromRGB(255, 255, 255), pitch = 1.12 },
+	CorteCerteiro = { variant = "thrust", c1 = Color3.fromRGB(255, 214, 96), c2 = Color3.fromRGB(255, 250, 225), pitch = 1.2 },
+	LaminaAfiada = { variant = "attack", c1 = Color3.fromRGB(115, 230, 255), c2 = Color3.fromRGB(255, 240, 175), pitch = 1.22 },
+	CorteDrenante = { variant = "dash", c1 = Color3.fromRGB(92, 245, 152), c2 = Color3.fromRGB(225, 255, 235), drain = true, pitch = 1.05 },
+	QuebraLamina = { variant = "heavy", c1 = Color3.fromRGB(115, 238, 255), c2 = Color3.fromRGB(255, 245, 200), breaksProtect = true, heavy = true, pitch = 0.92 },
+	FioVenenoso = { variant = "dash", c1 = Color3.fromRGB(184, 88, 255), c2 = Color3.fromRGB(145, 255, 130), tex = TEX.Puff, pitch = 1.08 },
+	LaminaPesada = { variant = "heavy", c1 = Color3.fromRGB(255, 152, 72), c2 = Color3.fromRGB(255, 238, 196), heavy = true, pitch = 0.85 },
+	DancaDasEspadas = { variant = "swords", c1 = Color3.fromRGB(255, 198, 72), c2 = Color3.fromRGB(255, 248, 215), pitch = 1.15 },
+	LaminasNoChao = { variant = "spikes", c1 = Color3.fromRGB(215, 228, 248), c2 = Color3.fromRGB(130, 195, 255), pitch = 1.05 },
+	TempestadeDeCortes = { variant = "spin", c1 = Color3.fromRGB(140, 218, 255), c2 = Color3.fromRGB(255, 235, 160), heavy = true, pitch = 1.04 },
+	InvestidaCortante = { variant = "dash", c1 = Color3.fromRGB(255, 92, 82), c2 = Color3.fromRGB(255, 234, 168), recoil = true, heavy = true, pitch = 0.94 },
+	CorteFlamejante = { variant = "heavy", c1 = Color3.fromRGB(255, 110, 32), c2 = Color3.fromRGB(255, 232, 128), tex = TEX.Flame, heavy = true, pitch = 0.96 },
+
+	-- LUTADOR (14 genericos + Investida + PunhoDeMare)
+	SocoDireto = { variant = "jab", c1 = Color3.fromRGB(255, 190, 96), c2 = Color3.fromRGB(255, 248, 222), pitch = 1.12 },
+	PosturaDeCombate = { variant = "attack", c1 = Color3.fromRGB(255, 138, 62), c2 = Color3.fromRGB(255, 232, 165), pitch = 1.0 },
+	SocoRelampago = { variant = "jab", c1 = Color3.fromRGB(255, 232, 78), c2 = Color3.fromRGB(245, 252, 255), tex = TEX.Bolt, pitch = 1.32 },
+	QuebraGuarda = { variant = "heavy", c1 = Color3.fromRGB(255, 146, 56), c2 = Color3.fromRGB(255, 236, 178), pitch = 0.96 },
+	Rasteira = { variant = "sweep", c1 = Color3.fromRGB(238, 196, 118), c2 = Color3.fromRGB(255, 242, 210), pitch = 1.15 },
+	CorpoDeFerro = { variant = "defense", c1 = Color3.fromRGB(168, 206, 242), c2 = Color3.fromRGB(240, 248, 255), pitch = 0.88 },
+	SocoDrenante = { variant = "jab", c1 = Color3.fromRGB(98, 242, 148), c2 = Color3.fromRGB(228, 255, 236), drain = true, pitch = 1.06 },
+	PunhoDemolidor = { variant = "heavy", c1 = Color3.fromRGB(110, 236, 255), c2 = Color3.fromRGB(255, 236, 170), breaksProtect = true, heavy = true, pitch = 0.88 },
+	OndaDeImpacto = { variant = "wave", c1 = Color3.fromRGB(255, 164, 62), c2 = Color3.fromRGB(255, 240, 185), heavy = true, pitch = 0.84 },
+	GritoDeGuerra = { variant = "roar", c1 = Color3.fromRGB(255, 112, 62), c2 = Color3.fromRGB(255, 224, 115), pitch = 0.90 },
+	PunhoArdente = { variant = "heavy", c1 = Color3.fromRGB(255, 96, 28), c2 = Color3.fromRGB(255, 226, 108), tex = TEX.Flame, heavy = true, pitch = 0.95 },
+	GiroVarredor = { variant = "sweep", c1 = Color3.fromRGB(132, 238, 255), c2 = Color3.fromRGB(245, 255, 255), clearGust = true, pitch = 1.2 },
+	FocoInterior = { variant = "heal", c1 = Color3.fromRGB(92, 245, 162), c2 = Color3.fromRGB(255, 244, 178), pitch = 1.1 },
+	ImpactoTotal = { variant = "heavy", c1 = Color3.fromRGB(255, 76, 56), c2 = Color3.fromRGB(255, 228, 132), recoil = true, heavy = true, pitch = 0.82 },
+	Investida = { variant = "rush", c1 = Color3.fromRGB(245, 210, 140), c2 = Color3.fromRGB(255, 252, 240), pitch = 1.1 },
+	PunhoDeMare = { variant = "jab", c1 = Color3.fromRGB(58, 182, 255), c2 = Color3.fromRGB(215, 246, 255), pitch = 1.05 },
+
+	-- MAGO (16 genericos + BrasaViva + Descarga + Estatica)
+	EsferaArcana = { variant = "orb", c1 = Color3.fromRGB(168, 104, 255), c2 = Color3.fromRGB(238, 215, 255), pitch = 1.12 },
+	ChamaMistica = { variant = "flames", c1 = Color3.fromRGB(255, 108, 42), c2 = Color3.fromRGB(255, 214, 108), pitch = 1.02 },
+	SeloParalisante = { variant = "paralysis", c1 = Color3.fromRGB(255, 226, 56), c2 = Color3.fromRGB(255, 252, 200), pitch = 1.24 },
+	PulsoVeloz = { variant = "orb", c1 = Color3.fromRGB(115, 216, 255), c2 = Color3.fromRGB(245, 252, 255), pitch = 1.35 },
+	OndaArcana = { variant = "wave", c1 = Color3.fromRGB(178, 96, 255), c2 = Color3.fromRGB(130, 218, 255), pitch = 1.04 },
+	RaioCongelante = { variant = "beam", c1 = Color3.fromRGB(108, 226, 255), c2 = Color3.fromRGB(240, 252, 255), tex = TEX.Diamond, pitch = 1.18 },
+	FogoFatuo = { variant = "burn", c1 = Color3.fromRGB(120, 198, 255), c2 = Color3.fromRGB(255, 138, 56), pitch = 1.14 },
+	MenteCalma = { variant = "defense", c1 = Color3.fromRGB(172, 138, 255), c2 = Color3.fromRGB(160, 242, 255), pitch = 1.16 },
+	SifaoArcano = { variant = "orb", c1 = Color3.fromRGB(132, 248, 178), c2 = Color3.fromRGB(196, 132, 255), drain = true, pitch = 1.08 },
+	NevoaDoSono = { variant = "sleep", c1 = Color3.fromRGB(186, 152, 255), c2 = Color3.fromRGB(238, 228, 255), pitch = 0.92 },
+	BarreiraArcana = { variant = "wall", c1 = Color3.fromRGB(142, 192, 255), c2 = Color3.fromRGB(228, 246, 255), pitch = 1.06 },
+	RunasToxicas = { variant = "toxic", c1 = Color3.fromRGB(172, 72, 248), c2 = Color3.fromRGB(145, 255, 128), pitch = 0.98 },
+	CuraLuminosa = { variant = "heal", c1 = Color3.fromRGB(105, 252, 168), c2 = Color3.fromRGB(255, 248, 196), pitch = 1.18 },
+	Purificacao = { variant = "cleanse", c1 = Color3.fromRGB(168, 245, 255), c2 = Color3.fromRGB(255, 255, 255), pitch = 1.24 },
+	ExplosaoAstral = { variant = "stars", c1 = Color3.fromRGB(192, 118, 255), c2 = Color3.fromRGB(255, 226, 126), heavy = true, pitch = 0.92 },
+	MeteoroArcano = { variant = "meteor", c1 = Color3.fromRGB(196, 92, 255), c2 = Color3.fromRGB(255, 168, 62), heavy = true, pitch = 0.80 },
+	BrasaViva = { variant = "flames", c1 = Color3.fromRGB(255, 92, 28), c2 = Color3.fromRGB(255, 222, 98), pitch = 1.08 },
+	Descarga = { variant = "lightning", c1 = Color3.fromRGB(255, 232, 68), c2 = Color3.fromRGB(145, 232, 255), heavy = true, pitch = 1.15 },
+	Estatica = { variant = "paralysis", c1 = Color3.fromRGB(255, 236, 78), c2 = Color3.fromRGB(195, 242, 255), pitch = 1.28 },
+
+	-- ATIRADOR (15 genericos)
+	DisparoPreciso = { variant = "dart", c1 = Color3.fromRGB(115, 232, 255), c2 = Color3.fromRGB(255, 255, 255), pitch = 1.26 },
+	TiroPerfurante = { variant = "beam", c1 = Color3.fromRGB(255, 196, 74), c2 = Color3.fromRGB(255, 250, 224), pitch = 1.12 },
+	MiraFirme = { variant = "attack", c1 = Color3.fromRGB(255, 214, 78), c2 = Color3.fromRGB(255, 250, 215), pitch = 1.25 },
+	TiroRapido = { variant = "dart", c1 = Color3.fromRGB(152, 242, 255), c2 = Color3.fromRGB(255, 255, 255), pitch = 1.38 },
+	ChuvaDeProjeteis = { variant = "shots", c1 = Color3.fromRGB(130, 224, 255), c2 = Color3.fromRGB(255, 244, 190), pitch = 1.22 },
+	DardoVenenoso = { variant = "dart", c1 = Color3.fromRGB(178, 84, 255), c2 = Color3.fromRGB(142, 255, 132), tex = TEX.Puff, pitch = 1.18 },
+	FocoDePrecisao = { variant = "attack", c1 = Color3.fromRGB(98, 234, 255), c2 = Color3.fromRGB(255, 232, 128), pitch = 1.28 },
+	DisparoDeRede = { variant = "web", c1 = Color3.fromRGB(224, 246, 255), c2 = Color3.fromRGB(132, 222, 255), pitch = 1.10 },
+	TiroDeSupressao = { variant = "shots", c1 = Color3.fromRGB(255, 168, 72), c2 = Color3.fromRGB(255, 242, 198), pitch = 1.14 },
+	DisparoRompeEscudo = { variant = "beam", c1 = Color3.fromRGB(108, 242, 255), c2 = Color3.fromRGB(255, 248, 200), breaksProtect = true, heavy = true, pitch = 0.98 },
+	BombaDeFumaca = { variant = "smoke", c1 = Color3.fromRGB(112, 118, 152), c2 = Color3.fromRGB(190, 198, 228), pitch = 0.88 },
+	MinaDeEstrepes = { variant = "spikes", c1 = Color3.fromRGB(255, 164, 72), c2 = Color3.fromRGB(225, 232, 245), pitch = 1.02 },
+	DardoEletrico = { variant = "dart", c1 = Color3.fromRGB(255, 234, 72), c2 = Color3.fromRGB(165, 238, 255), tex = TEX.Bolt, pitch = 1.28 },
+	RajadaTatica = { variant = "shots", c1 = Color3.fromRGB(255, 142, 72), c2 = Color3.fromRGB(255, 236, 142), heavy = true, pitch = 1.16 },
+	DisparoDeElite = { variant = "beam", c1 = Color3.fromRGB(255, 86, 86), c2 = Color3.fromRGB(255, 236, 138), heavy = true, pitch = 0.90 },
+
+	-- UNIVERSAL (10 genericos + Esforco)
+	AtaqueRapido = { variant = "rush", c1 = Color3.fromRGB(215, 242, 255), c2 = Color3.fromRGB(255, 255, 255), pitch = 1.32 },
+	Proteger = { variant = "dome", c1 = Color3.fromRGB(72, 232, 238), c2 = Color3.fromRGB(225, 255, 255), pitch = 1.18 },
+	OlharIntimidador = { variant = "glare", c1 = Color3.fromRGB(255, 76, 88), c2 = Color3.fromRGB(255, 212, 148), pitch = 0.86 },
+	GuardaAmpla = { variant = "wall", c1 = Color3.fromRGB(78, 236, 224), c2 = Color3.fromRGB(225, 255, 248), pitch = 1.08 },
+	VenenoPuro = { variant = "poison", c1 = Color3.fromRGB(172, 68, 248), c2 = Color3.fromRGB(132, 255, 118), pitch = 0.96 },
+	Agilidade = { variant = "speed", c1 = Color3.fromRGB(122, 242, 255), c2 = Color3.fromRGB(255, 255, 255), pitch = 1.32 },
+	Desobstruir = { variant = "clear", c1 = Color3.fromRGB(156, 246, 255), c2 = Color3.fromRGB(255, 255, 255), pitch = 1.22 },
+	VentoAFavor = { variant = "tailwind", c1 = Color3.fromRGB(115, 242, 225), c2 = Color3.fromRGB(255, 242, 168), pitch = 1.18 },
+	MuralhaDeFerro = { variant = "defense", c1 = Color3.fromRGB(178, 208, 238), c2 = Color3.fromRGB(245, 250, 255), pitch = 0.86 },
+	Recuperacao = { variant = "heal", c1 = Color3.fromRGB(98, 248, 164), c2 = Color3.fromRGB(240, 255, 228), pitch = 1.14 },
+	Esforco = { variant = "rush", c1 = Color3.fromRGB(215, 218, 232), c2 = Color3.fromRGB(255, 255, 255), recoil = true, pitch = 1.0 },
+}
+
+local PROC_HANDLERS: { [string]: any } = {}
+
+-- 1. GenSlash: cortes, estocadas, giros 360 e golpes pesados de Espadachim
+PROC_HANDLERS.GenSlash = {
+	Charge = function(ctx)
+		local cfg = ctx.cfg
+		local hp = handPos(ctx.attacker)
+		genSound(ctx.fx, SFX.Charge, 0.28, cfg.pitch or 1.1)
+		genBurst(ctx.fx, hp, TEX.Glint, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 6, 1, 4, 0.9, 0.1, 0.24)
+		genLight(ctx.fx, hp, cfg.c1, 2.2, 10)
+	end,
+	Release = function(ctx)
+		local cfg = ctx.cfg
+		local aRoot = rootOf(ctx.attacker)
+		local startPos = aRoot.CFrame:PointToWorldSpace(Vector3.new(0, 0.6, -1.8))
+		local endPos = ctxCenterOfTargets(ctx)
+		local lookCF = CFrame.lookAt(startPos, endPos)
+		local travel = math.max(0.09, (ctx.timing.Impact or 0.38) - (ctx.timing.Release or 0.24))
+		genSound(ctx.fx, if cfg.heavy then SFX.ReleaseHeavy else SFX.Release, 0.36, cfg.pitch or 1.05)
+
+		if cfg.variant == "spin" then
+			genShockDisc(ctx.fx, CFrame.new(aRoot.Position + Vector3.new(0, 0.2, 0)), cfg.c1, 2.8, 11.5, 0.32, TEX.Ring)
+			genBurst(ctx.fx, aRoot.Position, TEX.Streak, cfg.c1, cfg.c2, 16, 10, 22, 0.7, 0.1, 0.26)
+		elseif cfg.variant == "thrust" then
+			local lance = genPart(ctx.fx, Vector3.new(0.28, 0.28, 1.4), cfg.c2 or Color3.new(1, 1, 1), Enum.Material.Neon, Enum.PartType.Block, 0.05)
+			lance.CFrame = lookCF
+			attachGenTrail(lance, cfg.c1, cfg.c2, 0.55, 0.16)
+			tween(lance, travel, { CFrame = CFrame.lookAt(endPos, endPos + lookCF.LookVector), Size = Vector3.new(0.18, 0.18, 4.6) })
+			task.delay(travel + 0.05, function()
+				if lance.Parent then tween(lance, 0.12, { Transparency = 1 }) end
+			end)
+		else
+			local roll = if cfg.variant == "heavy" then 90 elseif cfg.variant == "dash" then 36 else -28
+			local arc = genPart(ctx.fx, Vector3.new(4.4, 0.06, 4.4), cfg.c1, Enum.Material.SmoothPlastic, Enum.PartType.Block, 1)
+			arc.CFrame = lookCF * CFrame.Angles(0, 0, math.rad(roll))
+			local dec = Instance.new("Decal")
+			dec.Face = Enum.NormalId.Top
+			dec.Texture = TEX.Shock
+			dec.Color3 = cfg.c1
+			dec.Transparency = 0.05
+			dec.Parent = arc
+			local t0 = os.clock()
+			local conn
+			conn = RunService.RenderStepped:Connect(function()
+				if not ctx.alive or not arc.Parent then conn:Disconnect(); return end
+				local a = math.clamp((os.clock() - t0) / travel, 0, 1)
+				local p = startPos:Lerp(endPos, 1 - (1 - a) * (1 - a))
+				local sz = 4.4 + a * (if cfg.heavy then 3.2 else 2.2)
+				arc.CFrame = CFrame.lookAt(p, p + lookCF.LookVector) * CFrame.Angles(0, 0, math.rad(roll))
+				arc.Size = Vector3.new(sz, 0.06, sz)
+				if a >= 1 then
+					conn:Disconnect()
+					tween(dec, 0.14, { Transparency = 1 })
+				end
+			end)
+		end
+	end,
+	Impact = function(ctx)
+		local cfg = ctx.cfg
+		local aPos = rootOf(ctx.attacker).Position
+		CombatAnimator.Hitstop(ctx.attacker, if cfg.heavy then 0.055 else 0.038)
+		genSound(ctx.fx, if cfg.heavy then SFX.ImpactHeavy else SFX.Impact, if cfg.heavy then 0.45 else 0.38, cfg.pitch or 1.0)
+		springShake(if cfg.heavy then 0.36 else 0.22, 0.24, 44, 12, if cfg.heavy then 1.1 else 0.6)
+		if cfg.heavy then fovPunch(-2.8, 0.05, 0.20) end
+
+		for _, tModel in ipairs(ctxTargets(ctx)) do
+			local hitPos = targetCenter(tModel)
+			local hitLook = CFrame.lookAt(hitPos, Vector3.new(aPos.X, hitPos.Y, aPos.Z))
+			if cfg.variant == "thrust" then
+				genSlashMark(ctx.fx, hitLook, Vector3.new(0, 0.1, -0.7), 0, 5.2, 0.20, cfg.c1, cfg.c2)
+				genBurst(ctx.fx, hitPos, TEX.Star, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 6, 4, 12, 1.4, 0.1, 0.28)
+			elseif cfg.variant == "spin" then
+				genSlashMark(ctx.fx, hitLook, Vector3.new(0, 0.35, -0.7), 78, 5.8, 0.20, cfg.c1, cfg.c2)
+				genSlashMark(ctx.fx, hitLook, Vector3.new(0, -0.25, -0.7), -78, 5.4, 0.18, cfg.c1, cfg.c2)
+			elseif cfg.variant == "heavy" then
+				genSlashMark(ctx.fx, hitLook, Vector3.new(0, 0.15, -0.7), 4, 7.2, 0.28, cfg.c1, cfg.c2)
+				genShockDisc(ctx.fx, CFrame.new(Vector3.new(hitPos.X, groundY(tModel) + 0.08, hitPos.Z)), cfg.c1, 1.8, 9.4, 0.34, TEX.Shock)
+			else
+				genSlashMark(ctx.fx, hitLook, Vector3.new(0, 0.1, -0.7), -40, 6.2, 0.22, cfg.c1, cfg.c2)
+			end
+			genShockDisc(ctx.fx, hitLook * CFrame.Angles(math.pi / 2, 0, 0), cfg.c1, 1.2, if cfg.heavy then 8.2 else 6.4, 0.26, TEX.Ring)
+			genBurst(ctx.fx, hitPos, cfg.tex or TEX.Spark, cfg.c1, cfg.c2, if cfg.heavy then 24 else 16, 8, 22, 0.75, 0.08, 0.36)
+			genLight(ctx.fx, hitPos, cfg.c1, if cfg.heavy then 3.4 else 2.6, 14)
+			if cfg.drain then genDrainOrbs(ctx.fx, hitPos, ctx.attacker, cfg.c1, cfg.c2) end
+			if cfg.breaksProtect then genShieldShatter(ctx.fx, hitPos) end
+		end
+		if cfg.recoil and alive(ctx.attacker) then
+			genBurst(ctx.fx, targetCenter(ctx.attacker), TEX.Puff, cfg.c1, Color3.fromRGB(255, 220, 200), 10, 4, 10, 0.9, 0.2, 0.30)
+		end
+	end,
+	Duration = 0.85,
+}
+
+-- 2. GenMelee: socos, chutes varredores e investidas marciais
+PROC_HANDLERS.GenMelee = {
+	Charge = function(ctx)
+		local cfg = ctx.cfg
+		local hp = handPos(ctx.attacker)
+		genBurst(ctx.fx, hp, cfg.tex or TEX.Glint, cfg.c1, cfg.c2, 10, 2, 7, 0.75, 0.1, 0.24)
+		genLight(ctx.fx, hp, cfg.c1, 2.2, 9)
+	end,
+	Release = function(ctx)
+		local cfg = ctx.cfg
+		local aRoot = rootOf(ctx.attacker)
+		genSound(ctx.fx, if cfg.heavy then SFX.ReleaseHeavy else SFX.Release, 0.34, cfg.pitch or 1.05)
+		if cfg.variant == "sweep" then
+			local gy = groundY(ctx.attacker) + 0.35
+			genShockDisc(ctx.fx, CFrame.new(aRoot.Position.X, gy, aRoot.Position.Z), cfg.c1, 2.0, 9.6, 0.30, TEX.Ring)
+			if cfg.clearGust then
+				genShockDisc(ctx.fx, CFrame.new(aRoot.Position.X, gy + 0.5, aRoot.Position.Z), cfg.c2 or Color3.new(1, 1, 1), 3.0, 14.0, 0.38, TEX.Shock)
+			end
+		elseif cfg.variant == "rush" then
+			genBurst(ctx.fx, aRoot.Position, TEX.Streak, cfg.c1, cfg.c2, 14, 10, 22, 0.75, 0.1, 0.24)
+		else
+			local startPos = handPos(ctx.attacker)
+			local endPos = ctxCenterOfTargets(ctx)
+			local travel = math.max(0.08, (ctx.timing.Impact or 0.34) - (ctx.timing.Release or 0.22))
+			local fist = genPart(ctx.fx, Vector3.new(0.75, 0.75, 0.75), cfg.c1, Enum.Material.Neon, Enum.PartType.Ball, 0.22)
+			fist.CFrame = CFrame.new(startPos)
+			attachGenTrail(fist, cfg.c1, cfg.c2, 0.75, 0.15)
+			tween(fist, travel, { CFrame = CFrame.new(endPos), Size = Vector3.new(1.15, 1.15, 1.15) })
+			task.delay(travel + 0.04, function()
+				if fist.Parent then tween(fist, 0.12, { Transparency = 1 }) end
+			end)
+		end
+	end,
+	Impact = function(ctx)
+		local cfg = ctx.cfg
+		local aPos = rootOf(ctx.attacker).Position
+		CombatAnimator.Hitstop(ctx.attacker, if cfg.heavy then 0.055 else 0.036)
+		genSound(ctx.fx, if cfg.heavy then SFX.ImpactHeavy else SFX.Impact, if cfg.heavy then 0.45 else 0.38, cfg.pitch or 1.0)
+		springShake(if cfg.heavy then 0.38 else 0.22, 0.24, 46, 12, if cfg.heavy then 1.2 else 0.6)
+		if cfg.heavy then fovPunch(-3.0, 0.05, 0.22) end
+
+		for _, tModel in ipairs(ctxTargets(ctx)) do
+			local hitPos = targetCenter(tModel)
+			local hitLook = CFrame.lookAt(hitPos, Vector3.new(aPos.X, hitPos.Y, aPos.Z))
+			genShockDisc(ctx.fx, hitLook * CFrame.Angles(math.pi / 2, 0, 0), cfg.c1, 1.2, if cfg.heavy then 8.8 else 6.2, 0.28, TEX.Shock)
+			genBurst(ctx.fx, hitPos, TEX.Star, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 5, 2, 8, if cfg.heavy then 2.2 else 1.5, 0.1, 0.22)
+			genBurst(ctx.fx, hitPos, cfg.tex or TEX.Spark, cfg.c1, cfg.c2, if cfg.heavy then 26 else 16, 8, 22, 0.85, 0.08, 0.36)
+			genLight(ctx.fx, hitPos, cfg.c1, if cfg.heavy then 3.5 else 2.6, 14)
+			if cfg.drain then genDrainOrbs(ctx.fx, hitPos, ctx.attacker, cfg.c1, cfg.c2) end
+			if cfg.breaksProtect then genShieldShatter(ctx.fx, hitPos) end
+		end
+		if cfg.recoil and alive(ctx.attacker) then
+			genBurst(ctx.fx, targetCenter(ctx.attacker), TEX.Puff, cfg.c1, Color3.fromRGB(255, 220, 200), 10, 4, 10, 0.9, 0.2, 0.30)
+		end
+	end,
+	Duration = 0.82,
+}
+
+-- 3. GenGroundWave: soco no chao enviando ondas sismicas ate todos os inimigos
+PROC_HANDLERS.GenGroundWave = {
+	Charge = function(ctx)
+		local cfg = ctx.cfg
+		genBurst(ctx.fx, rootOf(ctx.attacker).Position + Vector3.new(0, 1.2, 0), TEX.Gather, cfg.c1, cfg.c2, 14, 3, 9, 0.8, 0.1, 0.26)
+	end,
+	Release = function(ctx)
+		local cfg = ctx.cfg
+		local aRoot = rootOf(ctx.attacker)
+		local floorPos = Vector3.new(aRoot.Position.X, groundY(ctx.attacker) + 0.08, aRoot.Position.Z)
+		genSound(ctx.fx, SFX.ReleaseHeavy, 0.42, cfg.pitch or 0.85)
+		genShockDisc(ctx.fx, CFrame.new(floorPos), cfg.c1, 1.8, 12.5, 0.38, TEX.Shock)
+		genBurst(ctx.fx, floorPos + Vector3.new(0, 0.4, 0), TEX.Puff, cfg.c1, cfg.c2, 16, 6, 16, 1.1, 0.2, 0.36, 80)
+		springShake(0.24, 0.22, 38, 10, 0.6)
+	end,
+	Impact = function(ctx)
+		local cfg = ctx.cfg
+		genSound(ctx.fx, SFX.ImpactHeavy, 0.44, cfg.pitch or 0.86)
+		springShake(0.36, 0.28, 42, 10, 1.0)
+		for _, tModel in ipairs(ctxTargets(ctx)) do
+			local hitPos = targetCenter(tModel)
+			local gy = groundY(tModel) + 0.08
+			genShockDisc(ctx.fx, CFrame.new(hitPos.X, gy, hitPos.Z), cfg.c1, 1.6, 10.2, 0.36, TEX.Shock)
+			genBurst(ctx.fx, Vector3.new(hitPos.X, gy + 0.6, hitPos.Z), TEX.Spark, cfg.c1, cfg.c2, 22, 8, 22, 0.9, 0.1, 0.40, 65, 160, Vector3.new(0, 14, 0))
+			genLight(ctx.fx, hitPos, cfg.c1, 3.2, 15)
+		end
+	end,
+	Duration = 0.90,
+}
+
+-- 4. GenProjectile: orbes arcanos, dardos velozes e feixes finos de precisao/gelo
+PROC_HANDLERS.GenProjectile = {
+	Charge = function(ctx)
+		local cfg = ctx.cfg
+		local hp = handPos(ctx.attacker)
+		genSound(ctx.fx, SFX.Charge, 0.26, cfg.pitch or 1.15)
+		local chargeOrb = genPart(ctx.fx, Vector3.new(0.25, 0.25, 0.25), cfg.c2 or Color3.new(1, 1, 1), Enum.Material.Neon, Enum.PartType.Ball, 0.08)
+		chargeOrb.CFrame = CFrame.new(hp)
+		tween(chargeOrb, 0.16, { Size = Vector3.new(0.95, 0.95, 0.95) }, Enum.EasingStyle.Back)
+		ctx.chargeOrb = chargeOrb
+		genBurst(ctx.fx, hp, TEX.Gather, cfg.c1, cfg.c2, 10, 2, 6, 0.6, 0.08, 0.22)
+		genLight(ctx.fx, hp, cfg.c1, 2.2, 9)
+	end,
+	Release = function(ctx)
+		local cfg = ctx.cfg
+		if ctx.chargeOrb and ctx.chargeOrb.Parent then
+			ctx.chargeOrb:Destroy()
+		end
+		local fromPos = handPos(ctx.attacker)
+		local toPos = ctxCenterOfTargets(ctx)
+		local travel = math.max(0.10, (ctx.timing.Impact or 0.44) - (ctx.timing.Release or 0.28))
+		genSound(ctx.fx, if cfg.heavy then SFX.ReleaseHeavy else SFX.Release, 0.36, cfg.pitch or 1.15)
+
+		if cfg.variant == "beam" then
+			local dist = (toPos - fromPos).Magnitude
+			local mid = fromPos:Lerp(toPos, 0.5)
+			local beamCF = CFrame.lookAt(mid, toPos)
+			local core = genPart(ctx.fx, Vector3.new(0.26, 0.26, dist), cfg.c2 or Color3.new(1, 1, 1), Enum.Material.Neon, Enum.PartType.Block, 0.02)
+			local glow = genPart(ctx.fx, Vector3.new(0.68, 0.68, dist), cfg.c1, Enum.Material.Neon, Enum.PartType.Block, 0.38)
+			core.CFrame = beamCF
+			glow.CFrame = beamCF
+			genShockDisc(ctx.fx, CFrame.lookAt(fromPos, toPos) * CFrame.Angles(math.pi / 2, 0, 0), cfg.c1, 0.8, 3.6, 0.22, TEX.Ring)
+			task.delay(math.min(0.16, travel + 0.04), function()
+				if core.Parent then tween(core, 0.16, { Size = Vector3.new(0.04, 0.04, dist), Transparency = 1 }) end
+				if glow.Parent then tween(glow, 0.18, { Size = Vector3.new(0.08, 0.08, dist), Transparency = 1 }) end
+			end)
+		else
+			local isDart = cfg.variant == "dart"
+			local proj = genPart(
+				ctx.fx,
+				if isDart then Vector3.new(0.24, 0.24, 1.65) else Vector3.new(0.95, 0.95, 0.95),
+				cfg.c1,
+				Enum.Material.Neon,
+				if isDart then Enum.PartType.Block else Enum.PartType.Ball,
+				0.04
+			)
+			proj.CFrame = CFrame.lookAt(fromPos, toPos)
+			attachGenTrail(proj, cfg.c1, cfg.c2, if isDart then 0.38 else 0.85, 0.18)
+			local t0 = os.clock()
+			local conn
+			conn = RunService.RenderStepped:Connect(function()
+				if not ctx.alive or not proj.Parent then conn:Disconnect(); return end
+				local a = math.clamp((os.clock() - t0) / travel, 0, 1)
+				local p = fromPos:Lerp(toPos, a) + Vector3.new(0, math.sin(a * math.pi) * (if isDart then 0.35 else 0.9), 0)
+				proj.CFrame = CFrame.lookAt(p, toPos + Vector3.new(0, 0.05, 0))
+				if a >= 1 then
+					conn:Disconnect()
+					proj.Transparency = 1
+				end
+			end)
+		end
+	end,
+	Impact = function(ctx)
+		local cfg = ctx.cfg
+		local aPos = rootOf(ctx.attacker).Position
+		genSound(ctx.fx, if cfg.heavy then SFX.ImpactHeavy else SFX.Impact, if cfg.heavy then 0.44 else 0.36, cfg.pitch or 1.1)
+		springShake(if cfg.heavy then 0.34 else 0.20, 0.22, 46, 12, if cfg.heavy then 1.0 else 0.5)
+		if cfg.heavy then fovPunch(-2.8, 0.05, 0.20) end
+
+		for _, tModel in ipairs(ctxTargets(ctx)) do
+			local hitPos = targetCenter(tModel)
+			local hitLook = CFrame.lookAt(hitPos, Vector3.new(aPos.X, hitPos.Y, aPos.Z))
+			genShockDisc(ctx.fx, hitLook * CFrame.Angles(math.pi / 2, 0, 0), cfg.c1, 1.0, if cfg.heavy then 8.4 else 6.0, 0.28, TEX.Ring)
+			genBurst(ctx.fx, hitPos, TEX.Star, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 5, 3, 10, if cfg.heavy then 2.2 else 1.4, 0.1, 0.24)
+			genBurst(ctx.fx, hitPos, cfg.tex or TEX.Spark, cfg.c1, cfg.c2, if cfg.heavy then 26 else 18, 8, 22, 0.85, 0.08, 0.36)
+			genLight(ctx.fx, hitPos, cfg.c1, if cfg.heavy then 3.4 else 2.6, 14)
+			if cfg.drain then genDrainOrbs(ctx.fx, hitPos, ctx.attacker, cfg.c1, cfg.c2) end
+			if cfg.breaksProtect then genShieldShatter(ctx.fx, hitPos) end
+		end
+	end,
+	Duration = 0.85,
+}
+
+-- 5. GenVolley: chuvas de projeteis, rajadas, ondas arcanas e leques de fogo em todos os alvos
+PROC_HANDLERS.GenVolley = {
+	Charge = function(ctx)
+		local cfg = ctx.cfg
+		local hp = handPos(ctx.attacker)
+		genSound(ctx.fx, SFX.Charge, 0.26, cfg.pitch or 1.1)
+		genBurst(ctx.fx, hp, TEX.Gather, cfg.c1, cfg.c2, 12, 2, 7, 0.7, 0.1, 0.24)
+		genLight(ctx.fx, hp, cfg.c1, 2.4, 10)
+	end,
+	Release = function(ctx)
+		local cfg = ctx.cfg
+		local ts = ctxTargets(ctx)
+		local aRoot = rootOf(ctx.attacker)
+		local travel = math.max(0.14, (ctx.timing.Impact or 0.50) - (ctx.timing.Release or 0.26))
+		genSound(ctx.fx, if cfg.heavy then SFX.ReleaseHeavy else SFX.Release, 0.36, cfg.pitch or 1.12)
+
+		local shotsCount = if cfg.variant == "wave" then 3 else 5
+		for i = 1, shotsCount do
+			task.delay((i - 1) * 0.04, function()
+				if not ctx.alive or not alive(ctx.attacker) then return end
+				local tModel = ts[((i - 1) % math.max(1, #ts)) + 1]
+				if not tModel or not alive(tModel) then return end
+				local fromPos = if i % 2 == 0 then leftHandPos(ctx.attacker) else handPos(ctx.attacker)
+				local toPos = targetCenter(tModel) + Vector3.new((math.random() - 0.5) * 1.4, (math.random() - 0.5) * 1.1, 0)
+				local isWave = cfg.variant == "wave"
+				local pSize = if isWave then Vector3.new(2.2, 0.22, 0.9) elseif cfg.variant == "flames" or cfg.variant == "stars" then Vector3.new(0.8, 0.8, 0.8) else Vector3.new(0.22, 0.22, 1.45)
+				local bolt = genPart(ctx.fx, pSize, cfg.c1, Enum.Material.Neon, if isWave or cfg.variant == "shots" then Enum.PartType.Block else Enum.PartType.Ball, 0.06)
+				bolt.CFrame = CFrame.lookAt(fromPos, toPos)
+				attachGenTrail(bolt, cfg.c1, cfg.c2, if isWave then 0.9 else 0.45, 0.16)
+				local arcY = if cfg.variant == "shots" then (0.4 + (i % 3) * 0.45) else (0.7 + (i % 2) * 0.5)
+				local sideOff = ((i % 3) - 1) * 1.1
+				local look = CFrame.lookAt(fromPos, toPos)
+				local t0 = os.clock()
+				local segDur = math.max(0.11, travel - (i - 1) * 0.025)
+				local conn
+				conn = RunService.RenderStepped:Connect(function()
+					if not ctx.alive or not bolt.Parent then conn:Disconnect(); return end
+					local a = math.clamp((os.clock() - t0) / segDur, 0, 1)
+					local pos = fromPos:Lerp(toPos, a) + look.RightVector * (math.sin(a * math.pi) * sideOff) + Vector3.new(0, math.sin(a * math.pi) * arcY, 0)
+					bolt.CFrame = CFrame.lookAt(pos, toPos + look.LookVector)
+					if a >= 1 then
+						conn:Disconnect()
+						bolt.Transparency = 1
+					end
+				end)
+			end)
+		end
+		if cfg.variant == "flames" then
+			genBurst(ctx.fx, aRoot.CFrame:PointToWorldSpace(Vector3.new(0, 0.6, -1.8)), TEX.Flame, cfg.c1, cfg.c2, 14, 8, 18, 1.1, 0.2, 0.30)
+		end
+	end,
+	Impact = function(ctx)
+		local cfg = ctx.cfg
+		genSound(ctx.fx, if cfg.heavy then SFX.ImpactHeavy else SFX.Impact, if cfg.heavy then 0.44 else 0.36, cfg.pitch or 1.08)
+		springShake(if cfg.heavy then 0.34 else 0.22, 0.24, 44, 11, 0.9)
+		local hitTex = if cfg.variant == "flames" then TEX.Flame elseif cfg.variant == "stars" then TEX.Star else TEX.Spark
+		for _, tModel in ipairs(ctxTargets(ctx)) do
+			local hitPos = targetCenter(tModel)
+			genShockDisc(ctx.fx, CFrame.new(hitPos), cfg.c1, 1.4, if cfg.heavy then 8.6 else 6.6, 0.30, TEX.Ring)
+			genBurst(ctx.fx, hitPos, hitTex, cfg.c1, cfg.c2, if cfg.heavy then 24 else 16, 7, 20, 1.1, 0.1, 0.38)
+			genBurst(ctx.fx, hitPos, TEX.Glint, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 8, 5, 14, 0.85, 0.08, 0.28)
+			genLight(ctx.fx, hitPos, cfg.c1, 3.0, 14)
+		end
+	end,
+	Duration = 0.90,
+}
+
+-- 6. GenSkyStrike: raios celestes (Descarga) e meteoros arcanos (MeteoroArcano)
+PROC_HANDLERS.GenSkyStrike = {
+	Charge = function(ctx)
+		local cfg = ctx.cfg
+		local hp = handPos(ctx.attacker)
+		genSound(ctx.fx, SFX.Charge, 0.34, cfg.pitch or 0.95)
+		genBurst(ctx.fx, hp + Vector3.new(0, 1.2, 0), TEX.Gather, cfg.c1, cfg.c2, 14, 3, 9, 0.85, 0.1, 0.28)
+		for _, tModel in ipairs(ctxTargets(ctx)) do
+			local skyPos = targetCenter(tModel) + Vector3.new(0, 13.5, 0)
+			genShockDisc(ctx.fx, CFrame.new(skyPos), cfg.c1, 1.2, 6.8, 0.42, TEX.Ring)
+		end
+	end,
+	Release = function(ctx)
+		local cfg = ctx.cfg
+		local travel = math.max(0.14, (ctx.timing.Impact or 0.56) - (ctx.timing.Release or 0.32))
+		genSound(ctx.fx, SFX.ReleaseHeavy, 0.40, cfg.pitch or 0.95)
+		for _, tModel in ipairs(ctxTargets(ctx)) do
+			local hitPos = targetCenter(tModel)
+			local skyPos = hitPos + Vector3.new(if cfg.variant == "meteor" then 4.5 else 0, 14.5, 0)
+			if cfg.variant == "meteor" then
+				local meteor = genPart(ctx.fx, Vector3.new(2.2, 2.2, 2.2), cfg.c1, Enum.Material.Neon, Enum.PartType.Ball, 0.05)
+				meteor.CFrame = CFrame.new(skyPos)
+				attachGenTrail(meteor, cfg.c2 or Color3.fromRGB(255, 175, 65), cfg.c1, 2.0, 0.24)
+				tween(meteor, travel, { CFrame = CFrame.new(hitPos), Size = Vector3.new(2.7, 2.7, 2.7) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+				task.delay(travel + 0.03, function()
+					if meteor.Parent then tween(meteor, 0.14, { Transparency = 1, Size = Vector3.new(0.4, 0.4, 0.4) }) end
+				end)
+			else
+				-- Raio em zigue-zague (3 segmentos neon finos, some em 0.22s — nunca cilindro grosso!)
+				local pts = {
+					skyPos,
+					skyPos:Lerp(hitPos, 0.35) + Vector3.new(1.1, 0, -0.8),
+					skyPos:Lerp(hitPos, 0.70) + Vector3.new(-1.0, 0, 0.7),
+					hitPos,
+				}
+				for s = 1, 3 do
+					local p0, p1 = pts[s], pts[s + 1]
+					local dist = (p1 - p0).Magnitude
+					local seg = genPart(ctx.fx, Vector3.new(0.26, 0.26, dist), cfg.c2 or Color3.new(1, 1, 1), Enum.Material.Neon, Enum.PartType.Block, 0.02)
+					seg.CFrame = CFrame.lookAt(p0:Lerp(p1, 0.5), p1)
+					task.delay(0.12, function()
+						if seg.Parent then tween(seg, 0.16, { Size = Vector3.new(0.04, 0.04, dist), Transparency = 1 }) end
+					end)
+				end
+			end
+		end
+	end,
+	Impact = function(ctx)
+		local cfg = ctx.cfg
+		genSound(ctx.fx, SFX.ImpactHeavy, 0.46, cfg.pitch or 0.90)
+		springShake(0.42, 0.30, 46, 10, 1.4)
+		fovPunch(-3.5, 0.055, 0.24)
+		local hitTex = if cfg.variant == "meteor" then TEX.Flame else TEX.Bolt
+		for _, tModel in ipairs(ctxTargets(ctx)) do
+			local hitPos = targetCenter(tModel)
+			local gy = groundY(tModel) + 0.08
+			genShockDisc(ctx.fx, CFrame.new(hitPos.X, gy, hitPos.Z), cfg.c1, 2.0, 11.5, 0.38, TEX.Shock)
+			genBurst(ctx.fx, hitPos, hitTex, cfg.c1, cfg.c2, 26, 8, 24, 1.4, 0.1, 0.42)
+			genBurst(ctx.fx, hitPos, TEX.Star, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 8, 4, 14, 1.8, 0.1, 0.28)
+			genLight(ctx.fx, hitPos, cfg.c1, 3.6, 18)
+		end
+	end,
+	Duration = 0.95,
+}
+
+-- 7. GenHex: maldicoes, selos de status, nevoas, fumaca e olhar intimidador
+PROC_HANDLERS.GenHex = {
+	Charge = function(ctx)
+		local cfg = ctx.cfg
+		local hp = handPos(ctx.attacker)
+		genSound(ctx.fx, SFX.Charge, 0.26, cfg.pitch or 1.05)
+		genBurst(ctx.fx, hp, TEX.Diamond, cfg.c1, cfg.c2, 10, 2, 6, 0.65, 0.08, 0.24)
+	end,
+	Release = function(ctx)
+		local cfg = ctx.cfg
+		genSound(ctx.fx, SFX.Release, 0.30, cfg.pitch or 1.0)
+		local fromPos = handPos(ctx.attacker)
+		local toPos = ctxCenterOfTargets(ctx)
+		local travel = math.max(0.12, (ctx.timing.Impact or 0.48) - (ctx.timing.Release or 0.28))
+		if cfg.variant == "glare" then
+			genBurst(ctx.fx, rootOf(ctx.attacker).Position + Vector3.new(0, 1.5, 0), TEX.Star, cfg.c1, cfg.c2, 6, 2, 6, 1.8, 0.1, 0.26)
+			return
+		end
+		local orb = genPart(ctx.fx, Vector3.new(0.68, 0.68, 0.68), cfg.c1, Enum.Material.Neon, Enum.PartType.Ball, 0.14)
+		orb.CFrame = CFrame.new(fromPos)
+		attachGenTrail(orb, cfg.c1, cfg.c2, 0.65, 0.18)
+		local t0 = os.clock()
+		local conn
+		conn = RunService.RenderStepped:Connect(function()
+			if not ctx.alive or not orb.Parent then conn:Disconnect(); return end
+			local a = math.clamp((os.clock() - t0) / travel, 0, 1)
+			orb.CFrame = CFrame.new(fromPos:Lerp(toPos, a) + Vector3.new(0, math.sin(a * math.pi) * 1.4, 0))
+			if a >= 1 then conn:Disconnect(); orb.Transparency = 1 end
+		end)
+	end,
+	Impact = function(ctx)
+		local cfg = ctx.cfg
+		genSound(ctx.fx, SFX.Impact, 0.30, cfg.pitch or 1.05)
+		local tex = if cfg.variant == "paralysis" then TEX.Bolt
+			elseif cfg.variant == "burn" then TEX.Flame
+			elseif cfg.variant == "smoke" or cfg.variant == "sleep" or cfg.variant == "poison" then TEX.Puff
+			else TEX.Diamond
+		for _, tModel in ipairs(ctxTargets(ctx)) do
+			local hitPos = targetCenter(tModel)
+			local gy = groundY(tModel) + 0.12
+			genShockDisc(ctx.fx, CFrame.new(hitPos.X, gy, hitPos.Z), cfg.c1, 1.4, 7.2, 0.42, TEX.Ring)
+			genBurst(ctx.fx, hitPos, tex, cfg.c1, cfg.c2, if cfg.variant == "smoke" then 26 else 18, 4, 12, if cfg.variant == "smoke" then 2.2 else 1.2, 0.2, 0.50)
+			if cfg.variant == "burn" or cfg.variant == "glare" then
+				genShockDisc(ctx.fx, CFrame.new(hitPos + Vector3.new(0, 1.1, 0)), cfg.c2 or cfg.c1, 1.2, 5.4, 0.36, TEX.Ring)
+			end
+			genLight(ctx.fx, hitPos, cfg.c1, 2.4, 12)
+		end
+	end,
+	Duration = 0.88,
+}
+
+-- 8. GenBuff: posturas, gritos de guerra, danca das espadas, corpo de ferro e agilidade
+PROC_HANDLERS.GenBuff = {
+	Charge = function(ctx)
+		local cfg = ctx.cfg
+		local aPos = rootOf(ctx.attacker).Position
+		genSound(ctx.fx, SFX.Charge, 0.30, cfg.pitch or 1.1)
+		genBurst(ctx.fx, aPos, TEX.Gather, cfg.c1, cfg.c2, 12, 3, 8, 0.7, 0.1, 0.28)
+	end,
+	Release = function(ctx)
+		local cfg = ctx.cfg
+		genSound(ctx.fx, SFX.Release, 0.32, cfg.pitch or 1.12)
+		local targets = if cfg.variant == "roar" then ctxTargets(ctx) else { ctx.attacker }
+		for _, m in ipairs(targets) do
+			if not alive(m) then continue end
+			local pos = targetCenter(m)
+			local gy = groundY(m) + 0.18
+			for i = 1, 2 do
+				task.delay((i - 1) * 0.11, function()
+					if not ctx.alive then return end
+					local ring = genShockDisc(ctx.fx, CFrame.new(pos.X, gy, pos.Z), if i == 1 then cfg.c1 else (cfg.c2 or cfg.c1), 2.4, 6.2, 0.45, TEX.Ring)
+					tween(ring, 0.45, { CFrame = CFrame.new(pos.X, gy + 4.4, pos.Z) }, Enum.EasingStyle.Sine)
+				end)
+			end
+			local riseTex = if cfg.variant == "speed" then TEX.Streak elseif cfg.variant == "defense" then TEX.Diamond else TEX.Glint
+			genBurst(ctx.fx, Vector3.new(pos.X, gy + 0.6, pos.Z), riseTex, cfg.c1, cfg.c2, 18, 4, 11, 0.75, 0.1, 0.44, 45, 90, Vector3.new(0, 12, 0))
+			genLight(ctx.fx, pos, cfg.c1, 2.6, 12)
+
+			-- Danca das Espadas: 3 laminas espectrais orbitando rapidamente em volta do espadachim
+			if cfg.variant == "swords" then
+				local blades = {}
+				for b = 1, 3 do
+					local bl = genPart(ctx.fx, Vector3.new(0.12, 2.3, 0.26), cfg.c1, Enum.Material.Neon, Enum.PartType.Block, 0.12)
+					table.insert(blades, bl)
+				end
+				local t0 = os.clock()
+				local conn
+				conn = RunService.RenderStepped:Connect(function()
+					if not ctx.alive or not alive(m) then conn:Disconnect(); return end
+					local e = os.clock() - t0
+					local center = rootOf(m).Position + Vector3.new(0, 0.6, 0)
+					for b, bl in ipairs(blades) do
+						local ang = e * 10 + (b / 3) * math.pi * 2
+						local p = center + Vector3.new(math.cos(ang) * 2.8, math.sin(e * 6 + b) * 0.4, math.sin(ang) * 2.8)
+						bl.CFrame = CFrame.new(p) * CFrame.Angles(0, -ang, math.rad(16))
+						if e > 0.35 then
+							bl.Transparency = math.clamp(0.12 + (e - 0.35) / 0.25, 0.12, 1)
+						end
+					end
+					if e >= 0.60 then conn:Disconnect() end
+				end)
+			end
+		end
+	end,
+	Impact = function() end,
+	Duration = 0.85,
+}
+
+-- 9. GenShield: Proteger (domo cristalino), Guarda Ampla e Barreira Arcana (muralha luminosa)
+PROC_HANDLERS.GenShield = {
+	Charge = function(ctx)
+		local cfg = ctx.cfg
+		genSound(ctx.fx, SFX.Charge, 0.28, cfg.pitch or 1.15)
+		genBurst(ctx.fx, targetCenter(ctx.attacker), TEX.Diamond, cfg.c1, cfg.c2, 10, 2, 7, 0.6, 0.1, 0.24)
+	end,
+	Release = function(ctx)
+		local cfg = ctx.cfg
+		local aRoot = rootOf(ctx.attacker)
+		genSound(ctx.fx, SFX.Release, 0.32, cfg.pitch or 1.15)
+		if cfg.variant == "dome" then
+			local dome = genPart(ctx.fx, Vector3.new(1.5, 1.5, 1.5), cfg.c1, Enum.Material.ForceField, Enum.PartType.Ball, 0.15)
+			dome.CFrame = CFrame.new(aRoot.Position + Vector3.new(0, 0.2, 0))
+			tween(dome, 0.20, { Size = Vector3.new(7.4, 7.4, 7.4), Transparency = 0.35 }, Enum.EasingStyle.Back)
+			task.delay(0.32, function()
+				if dome.Parent then tween(dome, 0.28, { Size = Vector3.new(8.2, 8.2, 8.2), Transparency = 1 }) end
+			end)
+			genLight(ctx.fx, aRoot.Position, cfg.c1, 2.8, 13)
+		else
+			local wallCF = aRoot.CFrame * CFrame.new(0, 0.6, -3.2)
+			local wall = genPart(ctx.fx, Vector3.new(1.2, 1.2, 0.25), cfg.c1, Enum.Material.ForceField, Enum.PartType.Block, 0.18)
+			wall.CFrame = wallCF
+			tween(wall, 0.22, { Size = Vector3.new(12.5, 6.2, 0.25), Transparency = 0.32 }, Enum.EasingStyle.Back)
+			task.delay(0.34, function()
+				if wall.Parent then tween(wall, 0.30, { Size = Vector3.new(13.5, 6.6, 0.15), Transparency = 1 }) end
+			end)
+			genLight(ctx.fx, wallCF.Position, cfg.c1, 2.8, 14)
+		end
+	end,
+	Impact = function() end,
+	Duration = 0.85,
+}
+
+-- 10. GenHazard: espinhos/laminas, runas toxicas e rede pegajosa no lado inimigo
+PROC_HANDLERS.GenHazard = {
+	Charge = function(ctx)
+		local cfg = ctx.cfg
+		genSound(ctx.fx, SFX.Charge, 0.26, cfg.pitch or 1.05)
+		genBurst(ctx.fx, handPos(ctx.attacker), TEX.Glint, cfg.c1, cfg.c2, 10, 2, 6, 0.6, 0.1, 0.22)
+	end,
+	Release = function(ctx)
+		local cfg = ctx.cfg
+		local fromPos = handPos(ctx.attacker)
+		local center, gy = ctxCenterOfTargets(ctx)
+		local landCenter = Vector3.new(center.X, gy + 0.25, center.Z)
+		local travel = math.max(0.14, (ctx.timing.Impact or 0.48) - (ctx.timing.Release or 0.28))
+		genSound(ctx.fx, SFX.Release, 0.32, cfg.pitch or 1.05)
+		for i = 1, 3 do
+			local off = Vector3.new((i - 2) * 2.2, 0, ((i % 2) - 0.5) * 1.4)
+			local toPos = landCenter + off
+			local piece = genPart(ctx.fx, Vector3.new(0.45, 0.45, 0.45), cfg.c1, Enum.Material.Neon, Enum.PartType.Ball, 0.08)
+			piece.CFrame = CFrame.new(fromPos)
+			attachGenTrail(piece, cfg.c1, cfg.c2, 0.36, 0.16)
+			local t0 = os.clock()
+			local conn
+			conn = RunService.RenderStepped:Connect(function()
+				if not ctx.alive or not piece.Parent then conn:Disconnect(); return end
+				local a = math.clamp((os.clock() - t0) / travel, 0, 1)
+				piece.CFrame = CFrame.new(fromPos:Lerp(toPos, a) + Vector3.new(0, math.sin(a * math.pi) * 3.0, 0))
+				if a >= 1 then conn:Disconnect(); piece.Transparency = 1 end
+			end)
+		end
+	end,
+	Impact = function(ctx)
+		local cfg = ctx.cfg
+		local center, gy = ctxCenterOfTargets(ctx)
+		local floorCenter = Vector3.new(center.X, gy + 0.10, center.Z)
+		genSound(ctx.fx, SFX.Impact, 0.32, cfg.pitch or 1.02)
+		genShockDisc(ctx.fx, CFrame.new(floorCenter), cfg.c1, 2.2, 10.5, 0.46, TEX.Ring)
+		if cfg.variant == "spikes" then
+			for i = 1, 5 do
+				local ang = (i / 5) * math.pi * 2
+				local spPos = floorCenter + Vector3.new(math.cos(ang) * 2.6, 0.55, math.sin(ang) * 2.6)
+				local sp = genPart(ctx.fx, Vector3.new(0.28, 0.1, 0.28), cfg.c1, Enum.Material.Neon, Enum.PartType.Block, 0.08)
+				sp.CFrame = CFrame.new(spPos) * CFrame.Angles(math.rad(16), ang, 0)
+				tween(sp, 0.14, { Size = Vector3.new(0.28, 1.5, 0.28) }, Enum.EasingStyle.Back)
+				task.delay(0.32, function()
+					if sp.Parent then tween(sp, 0.24, { Size = Vector3.new(0.08, 0.1, 0.08), Transparency = 1 }) end
+				end)
+			end
+		elseif cfg.variant == "toxic" then
+			genBurst(ctx.fx, floorCenter + Vector3.new(0, 0.4, 0), TEX.Puff, cfg.c1, cfg.c2, 22, 4, 12, 1.4, 0.2, 0.50, 75)
+		else
+			genShockDisc(ctx.fx, CFrame.new(floorCenter + Vector3.new(0, 0.06, 0)) * CFrame.Angles(0, 0.5, 0), cfg.c2 or cfg.c1, 1.8, 11.2, 0.50, TEX.Shock)
+			genBurst(ctx.fx, floorCenter + Vector3.new(0, 0.5, 0), TEX.Glint, cfg.c1, cfg.c2, 16, 4, 10, 0.85, 0.1, 0.42)
+		end
+		genLight(ctx.fx, floorCenter + Vector3.new(0, 1.0, 0), cfg.c1, 2.5, 13)
+	end,
+	Duration = 0.90,
+}
+
+-- 11. GenHeal: cura individual/em grupo e purificacao radiante
+PROC_HANDLERS.GenHeal = {
+	Charge = function(ctx)
+		local cfg = ctx.cfg
+		genSound(ctx.fx, SFX.Charge, 0.28, cfg.pitch or 1.18)
+		genBurst(ctx.fx, targetCenter(ctx.attacker), TEX.Diamond, cfg.c1, cfg.c2, 12, 2, 6, 0.65, 0.08, 0.28)
+	end,
+	Release = function(ctx)
+		local cfg = ctx.cfg
+		genSound(ctx.fx, SFX.Release, 0.30, cfg.pitch or 1.2)
+		local targets = ctxTargets(ctx)
+		for _, m in ipairs(targets) do
+			if not alive(m) then continue end
+			local pos = targetCenter(m)
+			local gy = groundY(m) + 0.15
+			local halo = genShockDisc(ctx.fx, CFrame.new(pos.X, gy, pos.Z), cfg.c1, 2.2, 6.2, 0.50, TEX.Ring)
+			tween(halo, 0.50, { CFrame = CFrame.new(pos.X, gy + 5.0, pos.Z) }, Enum.EasingStyle.Sine)
+			genBurst(ctx.fx, Vector3.new(pos.X, gy + 0.6, pos.Z), TEX.Diamond, cfg.c1, cfg.c2, 22, 3, 9, 0.8, 0.08, 0.52, 50, 90, Vector3.new(0, 10, 0))
+			genBurst(ctx.fx, pos, TEX.Star, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 6, 2, 6, 1.3, 0.1, 0.36)
+			genLight(ctx.fx, pos, cfg.c1, 2.6, 13)
+		end
+	end,
+	Impact = function() end,
+	Duration = 0.90,
+}
+
+-- 12. GenWind: Vento a Favor e Desobstruir (rajadas luminosas varrendo a arena)
+PROC_HANDLERS.GenWind = {
+	Charge = function(ctx)
+		local cfg = ctx.cfg
+		genSound(ctx.fx, SFX.Charge, 0.26, cfg.pitch or 1.2)
+		genBurst(ctx.fx, rootOf(ctx.attacker).Position, TEX.Streak, cfg.c1, cfg.c2, 10, 5, 12, 0.7, 0.1, 0.24)
+	end,
+	Release = function(ctx)
+		local cfg = ctx.cfg
+		local aRoot = rootOf(ctx.attacker)
+		genSound(ctx.fx, SFX.Release, 0.34, cfg.pitch or 1.2)
+		local gy = groundY(ctx.attacker) + 0.5
+		for i = 1, 3 do
+			task.delay((i - 1) * 0.09, function()
+				if not ctx.alive then return end
+				local cf = CFrame.new(aRoot.Position.X, gy + (i - 1) * 1.1, aRoot.Position.Z) * CFrame.Angles(math.rad(12), i * 1.1, 0)
+				genShockDisc(ctx.fx, cf, if i % 2 == 0 then (cfg.c2 or cfg.c1) else cfg.c1, 2.4, 13.5, 0.40, TEX.Ring)
+			end)
+		end
+		genBurst(ctx.fx, aRoot.Position + Vector3.new(0, 1.0, 0), TEX.Streak, cfg.c1, cfg.c2, 24, 12, 28, 0.9, 0.1, 0.42, 120)
+		genLight(ctx.fx, aRoot.Position, cfg.c1, 2.6, 14)
+	end,
+	Impact = function() end,
+	Duration = 0.85,
+}
+
+local function fallbackGenericStyle(moveId: string?)
+	local mv = moveId and Moves.Get(moveId)
+	local col = Color3.fromRGB(165, 224, 255)
+	if mv then
+		if mv.Type == "Espadachim" then col = Color3.fromRGB(165, 224, 255)
+		elseif mv.Type == "Lutador" then col = Color3.fromRGB(255, 170, 78)
+		elseif mv.Type == "Mago" then col = Color3.fromRGB(178, 112, 255)
+		elseif mv.Type == "Atirador" then col = Color3.fromRGB(115, 232, 255)
+		end
+	end
+	return { variant = "jab", c1 = col, c2 = Color3.new(1, 1, 1), pitch = 1.05 }
+end
+
+--------------------------------------------------------------------
 -- API
 --------------------------------------------------------------------
-local function runEffect(name: string, attacker: Model, target: Model, timing, track: AnimationTrack?, exactTiming: boolean?)
+local function runEffect(name: string, attacker: Model, target: Model, timing, track: AnimationTrack?, exactTiming: boolean?, moveId: string?, targetModels: { Model }?)
+	local isProc = false
 	local handler = HANDLERS[name]
+	if not handler then
+		handler = PROC_HANDLERS[name]
+		isProc = handler ~= nil
+	end
 	if not handler or not attacker or not rootOf(attacker) then
 		return false
 	end
 	target = if target and rootOf(target) then target else attacker
-	local fx = acquire(name)
+
+	local fx: Model?
+	if isProc then
+		local m = Instance.new("Model")
+		m.Name = "ProcVfx_" .. name
+		m.Parent = container()
+		fx = m
+	else
+		fx = acquire(name)
+	end
 	if not fx then
 		return false
 	end
-	local ctx = { fx = fx, attacker = attacker, target = target, timing = timing or {}, alive = true }
+
+	local ctx = {
+		fx = fx,
+		attacker = attacker,
+		target = target,
+		targets = targetModels,
+		timing = timing or {},
+		cfg = if isProc then ((moveId and GENERIC_STYLES[moveId]) or fallbackGenericStyle(moveId)) else nil,
+		alive = true,
+	}
+	if isProc then
+		procActive[fx] = ctx
+	end
+
 	local fired = {}
 	local function fire(phase)
 		if fired[phase] or not ctx.alive then
@@ -2470,9 +3504,26 @@ local function runEffect(name: string, attacker: Model, target: Model, timing, t
 		if myCutIn and cutInState == myCutIn then
 			clearCutIn()
 		end
-		release(fx)
+		if isProc then
+			procActive[fx] = nil
+			if fx.Parent then
+				fx:Destroy()
+			end
+		else
+			release(fx)
+		end
 	end)
 	return true
+end
+
+function VfxController.HasVfx(name: string?): boolean
+	if not name then
+		return false
+	end
+	if PROC_HANDLERS[name] ~= nil then
+		return true
+	end
+	return HANDLERS[name] ~= nil and VFX:FindFirstChild(name) ~= nil
 end
 
 function VfxController.Play(name: string, attacker: Model, target: Model?)
@@ -2511,14 +3562,14 @@ function VfxController.Preload(model: Model, moveIds: { string }?)
 	end
 	for _, id in moveIds or {} do
 		local move = Moves.Get(id)
-		if move and move.Anim then
+		if move and move.Anim and not CombatAnimator.Has(move.Anim) then
 			loadTrack(model, move.Anim)
 		end
 	end
 end
 
 -- Toca animacao + efeito de um golpe. Retorna false se o golpe nao tem Anim/Vfx.
-function VfxController.PlayMove(moveId: string, attacker: Model, target: Model?)
+function VfxController.PlayMove(moveId: string, attacker: Model, target: Model?, targetModels: { Model }?)
 	local move = Moves.Get(moveId)
 	if not move or not move.Vfx or not attacker then
 		return false
@@ -2533,12 +3584,15 @@ function VfxController.PlayMove(moveId: string, attacker: Model, target: Model?)
 		if track then
 			track:Play(0.05)
 			track:AdjustSpeed(move.AnimSpeed or 1)
+		elseif move.Anim then
+			-- Fallback procedural caso o modelo nao possua a AnimationTrack especifica (ex.: ComboMarcial)
+			usedProcedural = CombatAnimator.Play(attacker, "PunchHeavy", move.Timing)
 		end
 	end
 	if move.CutIn then
 		playCutIn(move, attacker, move.Timing)
 	end
-	return runEffect(move.Vfx, attacker, target, move.Timing, track, move.AnimSpeed ~= nil or usedProcedural)
+	return runEffect(move.Vfx, attacker, target, move.Timing, track, move.AnimSpeed ~= nil or usedProcedural, moveId, targetModels)
 end
 
 -- Flash de ColorCorrection so em golpe critico
@@ -2557,6 +3611,16 @@ end
 function VfxController.Cleanup()
 	CombatAnimator.Cleanup()
 	clearCutIn()
+	for m, ctx in procActive do
+		procActive[m] = nil
+		ctx.alive = false
+		if ctx.follow then
+			ctx.follow:Disconnect()
+		end
+		if m.Parent then
+			m:Destroy()
+		end
+	end
 	for m in active do
 		active[m] = nil
 		m:Destroy()
