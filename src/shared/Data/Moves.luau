@@ -33,14 +33,19 @@ local Moves = {}
 Moves.List = {
 	--------------------------------------------------------------------
 	-- Golpes Genericos de Classe: ESPADACHIM
+	-- (CorteBasico e CorteCruzado sao os 2 ataques basicos identicos para TODOS os espadachins)
 	--------------------------------------------------------------------
 	CorteBasico = {
 		Name = "Corte R\u{e1}pido", Type = "Espadachim", Category = "Damage", Power = 40, Accuracy = 100, PP = 30,
 		Generic = true,
+		Anim = "CorteBasico", Vfx = "CorteBasico",
+		Timing = { Charge = 0.12, Release = 0.28, Impact = 0.38, Length = 0.90 },
 	},
 	CorteCruzado = {
 		Name = "Corte Cruzado", Type = "Espadachim", Category = "Damage", Power = 52, Accuracy = 95, PP = 20,
 		CritChance = 0.15, Generic = true,
+		Anim = "CorteCruzado", Vfx = "CorteCruzado",
+		Timing = { Charge = 0.14, Release = 0.34, Impact = 0.62, Length = 1.15 },
 	},
 	CorteGiratorio = {
 		Name = "Corte Girat\u{f3}rio", Type = "Espadachim", Category = "Damage", Power = 42, Accuracy = 100, PP = 15,
@@ -253,6 +258,36 @@ Moves.List = {
 		Effect = { Kind = "StatStage", Stat = "Attack", Stages = 1, Target = "Self" },
 		Anim = "HakiDoConquistador", Vfx = "HakiDoConquistador", AnimSpeed = 1.35,
 		Timing = { Charge = 0.12, Release = 0.45, Impact = 0.55, Length = 1.46 },
+	},
+
+	-- Byakuya Kuchiki (Bleach, Espadachim, Lendario)
+	Senbonzakura = {
+		Name = "Senbonzakura", Type = "Espadachim", Category = "Damage", Power = 58, Accuracy = 100, PP = 15,
+		CutIn = true, CutInFocusY = 1.65, CutInFov = 44, Anim = "Senbonzakura", Vfx = "Senbonzakura",
+		CutInColors = {
+			Bg = Color3.fromRGB(36, 14, 34),
+			Grad1 = Color3.fromRGB(224, 96, 158),
+			Grad2 = Color3.fromRGB(48, 16, 44),
+			Stroke = Color3.fromRGB(255, 212, 234),
+			Text = Color3.fromRGB(255, 246, 252),
+			TextStroke = Color3.fromRGB(42, 10, 32),
+		},
+		Timing = { Charge = 0.20, Release = 0.68, Impact = 1.08, Length = 1.60 },
+	},
+	SenbonzakuraKageyoshi = {
+		Name = "Senbonzakura Kageyoshi", Type = "Espadachim", Category = "Damage", Power = 72, Accuracy = 95, PP = 10,
+		Target = "AllEnemies",
+		Signature = true, CutIn = true, Anim = "SenbonzakuraKageyoshi", Vfx = "SenbonzakuraKageyoshi",
+		CutInFocusY = 1.9, CutInFov = 45, CutInBannerY = 0.16,
+		CutInColors = {
+			Bg = Color3.fromRGB(24, 10, 28),
+			Grad1 = Color3.fromRGB(240, 74, 148),
+			Grad2 = Color3.fromRGB(42, 12, 46),
+			Stroke = Color3.fromRGB(255, 224, 170),
+			Text = Color3.fromRGB(255, 244, 250),
+			TextStroke = Color3.fromRGB(32, 8, 28),
+		},
+		Timing = { Charge = 0.26, Release = 1.16, Impact = 1.66, Length = 2.25 },
 	},
 
 	-- Golpe reserva usado so quando todos os golpes estao sem PP

@@ -45,8 +45,8 @@ M.GRID = {
 local COL = {
 	skyTop       = Color3.fromRGB(14, 0, 3),
 	skyHorizon   = Color3.fromRGB(2, 0, 1),
-	waterBase    = Color3.fromRGB(228, 142, 174),
-	waterDeep    = Color3.fromRGB(142, 38, 72),
+	waterBase    = Color3.fromRGB(68, 10, 16),
+	waterDeep    = Color3.fromRGB(48, 6, 12),
 	cyanBright   = Color3.fromRGB(115, 244, 242),
 	cyanDeep     = Color3.fromRGB(48, 192, 202),
 	gumMain      = Color3.fromRGB(178, 24, 64),
@@ -852,6 +852,7 @@ function M.buildArena(id: number, centerPos: Vector3): Model
 		tex.Name = "CloudPanoramaTex"
 		tex.Face = Enum.NormalId.Front
 		tex.Texture = M.TEX.SKY_CLOUDS
+		tex.Color3 = Color3.fromRGB(148, 38, 44)
 		tex.StudsPerTileU = tileW
 		tex.StudsPerTileV = WALL_H
 		tex.OffsetStudsU = ((i - 1) % 6) * panelW
@@ -876,8 +877,8 @@ function M.buildArena(id: number, centerPos: Vector3): Model
 		})
 		local sl = Instance.new("SurfaceLight")
 		sl.Face = Enum.NormalId.Front
-		sl.Color = Color3.fromRGB(255, 95, 115)
-		sl.Brightness = 2.15
+		sl.Color = Color3.fromRGB(172, 26, 36)
+		sl.Brightness = 0.90
 		sl.Range = 34
 		sl.Angle = 165
 		sl.Shadows = false
@@ -927,7 +928,7 @@ function M.buildArena(id: number, centerPos: Vector3): Model
 		Name = "InfiniteMirrorWater",
 		Size = Vector3.new(VAULT_R * 2.02, 0.14, VAULT_R * 2.02),
 		CFrame = CFrame.new(cx, waterY - 0.06, cz) * CFrame.Angles(0, camYaw, 0),
-		Color = Color3.fromRGB(228, 138, 172),
+		Color = Color3.fromRGB(68, 10, 16),
 		Material = Enum.Material.SmoothPlastic,
 		Reflectance = 0,
 		Transparency = 0,
@@ -937,9 +938,10 @@ function M.buildArena(id: number, centerPos: Vector3): Model
 	rippleTex.Name = "PinkWaterRipples"
 	rippleTex.Face = Enum.NormalId.Top
 	rippleTex.Texture = M.TEX.WATER_RIPPLES
+	rippleTex.Color3 = Color3.fromRGB(118, 22, 30)
 	rippleTex.StudsPerTileU = 20
 	rippleTex.StudsPerTileV = 34
-	rippleTex.Transparency = 0.05
+	rippleTex.Transparency = 0.12
 	rippleTex.Parent = waterTop
 
 	-- Vinheta radial de abismo negro sobre as bordas distantes da agua (dissolve o rosa no preto infinito sem nenhuma linha de fim!)
@@ -996,8 +998,8 @@ function M.buildArena(id: number, centerPos: Vector3): Model
 	})
 	local wsl = Instance.new("SurfaceLight")
 	wsl.Face = Enum.NormalId.Front
-	wsl.Color = Color3.fromRGB(255, 190, 212)
-	wsl.Brightness = 1.15
+	wsl.Color = Color3.fromRGB(162, 32, 42)
+	wsl.Brightness = 0.42
 	wsl.Range = 28
 	wsl.Angle = 170
 	wsl.Shadows = false
@@ -1012,8 +1014,8 @@ function M.buildArena(id: number, centerPos: Vector3): Model
 		CanQuery = false,
 	})
 	local centerLight = Instance.new("PointLight")
-	centerLight.Color = Color3.fromRGB(255, 208, 218)
-	centerLight.Brightness = 1.75
+	centerLight.Color = Color3.fromRGB(238, 194, 198)
+	centerLight.Brightness = 1.15
 	centerLight.Range = 60
 	centerLight.Shadows = false
 	centerLight.Parent = centerLightHolder
@@ -1042,8 +1044,8 @@ function M.buildArena(id: number, centerPos: Vector3): Model
 	roseRipples.Orientation = Enum.ParticleOrientation.VelocityPerpendicular
 	roseRipples.EmissionDirection = Enum.NormalId.Top
 	roseRipples.Speed = NumberRange.new(0.02, 0.03)
-	roseRipples.Color = ColorSequence.new(Color3.fromRGB(255, 224, 238), Color3.fromRGB(242, 148, 188))
-	roseRipples.LightEmission = 0.78
+	roseRipples.Color = ColorSequence.new(Color3.fromRGB(190, 48, 60), Color3.fromRGB(115, 16, 26))
+	roseRipples.LightEmission = 0.45
 	roseRipples.LightInfluence = 0
 	roseRipples.Size = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.7),
@@ -1075,11 +1077,11 @@ function M.buildArena(id: number, centerPos: Vector3): Model
 	spiritMotes.Shape = Enum.ParticleEmitterShape.Box
 	spiritMotes.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
 	spiritMotes.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 235, 244)),
-		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(252, 132, 178)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(215, 38, 82)),
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(235, 130, 140)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(185, 32, 48)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(115, 12, 22)),
 	})
-	spiritMotes.LightEmission = 1
+	spiritMotes.LightEmission = 0.65
 	spiritMotes.LightInfluence = 0
 	spiritMotes.Size = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0),
@@ -1142,8 +1144,8 @@ function M.buildArena(id: number, centerPos: Vector3): Model
 	silkMist.Texture = "rbxasset://textures/particles/smoke_main.dds"
 	silkMist.Shape = Enum.ParticleEmitterShape.Box
 	silkMist.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
-	silkMist.Color = ColorSequence.new(Color3.fromRGB(238, 142, 178), Color3.fromRGB(172, 52, 92))
-	silkMist.LightEmission = 0.22
+	silkMist.Color = ColorSequence.new(Color3.fromRGB(132, 24, 34), Color3.fromRGB(68, 8, 16))
+	silkMist.LightEmission = 0.10
 	silkMist.LightInfluence = 0
 	silkMist.Size = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 5.5),
@@ -1192,7 +1194,8 @@ function M.buildArena(id: number, centerPos: Vector3): Model
 		reflDecal.Name = "LiquidReflectionDecal"
 		reflDecal.Face = Enum.NormalId.Top
 		reflDecal.Texture = M.TEX.WATER_REFLECTION
-		reflDecal.Transparency = 0.02
+		reflDecal.Color3 = Color3.fromRGB(165, 68, 76)
+		reflDecal.Transparency = 0.14
 		reflDecal.Parent = reflPlane
 
 		local reflCyanGlow = makePart(sideFolder, {

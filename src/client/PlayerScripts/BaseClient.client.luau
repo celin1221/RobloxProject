@@ -468,7 +468,7 @@ RunService.Stepped:Connect(function(now, dt)
 
 		-- Em batalha: cede controle imediatamente para golpes, dano, desmaio ou vitoria
 		if st.isBattle then
-			if model:GetAttribute("Fainted") or model:GetAttribute("Victory") or hasActiveCombatTrack(st.animator) then
+			if model:GetAttribute("Fainted") or model:GetAttribute("Victory") or model:GetAttribute("ProceduralAttack") or hasActiveCombatTrack(st.animator) then
 				continue
 			end
 		end
@@ -493,7 +493,7 @@ RunService.Stepped:Connect(function(now, dt)
 			local joints = st.joints
 			setJoint(joints, "LowerTorso", CFrame.new(0, floatY, 0) * CFrame.Angles(math.rad(-3), math.rad(8 * math.sin(phase * 0.5)), 0))
 			setJoint(joints, "UpperTorso", CFrame.Angles(math.rad(3 + 2 * math.cos(phase)), math.rad(-4 * math.sin(phase * 0.5)), 0))
-			setJoint(joints, "Head", CFrame.Angles(math.rad(-6 + 3 * math.sin(phase)), math.rad(6 * math.cos(phase * 0.45)), 0))
+			setJoint(joints, "Head", if model:GetAttribute("LockNeckHair") == true then CFrame.identity else CFrame.Angles(math.rad(-6 + 3 * math.sin(phase)), math.rad(6 * math.cos(phase * 0.45)), 0))
 			setJoint(joints, "LeftUpperArm", CFrame.Angles(math.rad(-14 - 5 * armWave) - liftArms, 0, armOut))
 			setJoint(joints, "LeftLowerArm", CFrame.Angles(math.rad(22), 0, 0))
 			setJoint(joints, "LeftHand", CFrame.identity)
@@ -601,9 +601,11 @@ RunService.Stepped:Connect(function(now, dt)
 		local torsoRotZ = math.rad((1.0 * math.cos(idlePhase * 0.5) * (1 - 0.5 * w) - 1.2 * c * w) * liveW)
 
 		-- 3. Head (compensacao da respiracao + foco na pedra durante Mineracao)
-		local headRotX = math.rad(((1.4 - 1.8 * breath) + 1.2 * (stepBounce - 0.5) * w) * liveW + mineHeadDeg * m)
-		local headRotY = math.rad((3.2 * lookWave * (1 - 0.6 * w) - 1.8 * s * w) * liveW - mineTorsoYDeg * 0.45 * m)
-		local headRotZ = math.rad(-0.8 * sway * (1 - w) * liveW)
+		-- Modelos com cabelo comprido dividido entre Head_Mesh e Torso_Mesh (LockNeckHair) travam o pescoco para nao abrir fenda
+		local lockNeck = model:GetAttribute("LockNeckHair") == true
+		local headRotX = if lockNeck then 0 else math.rad(((1.4 - 1.8 * breath) + 1.2 * (stepBounce - 0.5) * w) * liveW + mineHeadDeg * m)
+		local headRotY = if lockNeck then 0 else math.rad((3.2 * lookWave * (1 - 0.6 * w) - 1.8 * s * w) * liveW - mineTorsoYDeg * 0.45 * m)
+		local headRotZ = if lockNeck then 0 else math.rad(-0.8 * sway * (1 - w) * liveW)
 
 		-- 4. Bracos (respiracao no Idle + balanco no Walk + golpe com picareta na Mineracao)
 		local armBaseZ = if st.isIPose then math.rad(-4.5) else math.rad(32.0)

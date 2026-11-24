@@ -78,4 +78,8 @@ Qualquer Agente de IA trabalhando neste projeto **DEVE preservar integralmente**
    * Brilho diagonal de 3 bandas a 38° (`UI.sheen`), afundamento físico 3D nos botões (`pressFace`), contorno de texto `Bevel` e centralização matemática dinâmica (`TextBounds.X`) de `[Moeda + Preço]` dentro dos botões `INVOCAR 1` e `INVOCAR 10` (e `Icon.ZIndex = baseZ + 3` em `UI.pill`).
    * **PROIBIDO usar emojis ou símbolos Unicode (`★`, `✦`, `✓`, `→`, `■`, `—`)** em textos de UI: usar sempre os ícones personalizados de `UI.Icons`.
 5. **Auras 3D dos Personagens (`AuraVfx` / `CharacterAuraClient`):**
-   * **PROIBIDO** colocar círculos, discos ou vórtices de aura no chão/pé dos personagens (`San`, `Setero`, `BarbaBranca` e futuros personagens).
+   * **REGRA PERMANENTE (Minimalismo):** Toda aura de personagem deve ser **bonita e minimalista**, nunca poluindo a tela (poucas partículas leves e elegantes, luz suave de alcance curto, sem fitas/orbes/halos gigantes).
+   * **PROIBIDO** colocar círculos, discos ou vórtices de aura no chão/pé dos personagens (`Byakuya`, `San`, `Setero`, `BarbaBranca` e futuros personagens).
+6. **Ataques Básicos Compartilhados da Classe `Espadachim` (`Moves.luau` / `CombatAnimator.luau` / `VfxController.luau`):**
+   * **REGRA PERMANENTE:** Os **2 ataques básicos de Espadachim** (`CorteBasico` — *Corte Rápido*, e `CorteCruzado` — *Corte Cruzado*) possuem **animações e VFX idênticos compartilhados por TODOS os espadachins** (`Byakuya`, `Zoro`, `Ichigo`, `Renji`, `Sasuke`, `Kaen`, etc.).
+   * Cada espadachim de destaque adiciona suas **2 habilidades especiais / assinatura próprias** (ex.: `Byakuya` = `Senbonzakura` + `SenbonzakuraKageyoshi`).

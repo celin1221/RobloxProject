@@ -23,6 +23,7 @@ local Lighting = game:GetService("Lighting")
 local Debris = game:GetService("Debris")
 
 local Moves = require(ReplicatedStorage:WaitForChild("Data"):WaitForChild("Moves"))
+local CombatAnimator = require(ReplicatedStorage:WaitForChild("CombatAnimator"))
 local VFX = ReplicatedStorage:WaitForChild("Vfx")
 
 local VfxController = {}
@@ -37,8 +38,11 @@ local camPoseValue = Instance.new("CFrameValue")
 local camFovValue = Instance.new("NumberValue")
 camFovValue.Value = 50
 local camTiltValue = Instance.new("NumberValue")
+local fovPunchValue = Instance.new("NumberValue")
 local activeTiltTweens = {}
+local activeFovPunchTweens = {}
 local shakeState = nil
+local springShakeState = nil
 local camDriverConn: RBXScriptConnection? = nil
 
 local function getBattleBase(cam: Camera): (CFrame, number)
@@ -57,7 +61,9 @@ local function ensureCamDriver()
 		local cam = workspace.CurrentCamera
 		if not cam or cam.CameraType ~= Enum.CameraType.Scriptable then
 			shakeState = nil
+			springShakeState = nil
 			camTiltValue.Value = 0
+			fovPunchValue.Value = 0
 			if camDriverConn then
 				camDriverConn:Disconnect()
 				camDriverConn = nil
@@ -68,7 +74,9 @@ local function ensureCamDriver()
 		local baseCF, baseFov = getBattleBase(cam)
 		local hasPose = cutInState ~= nil and cutInState.activePose == true
 		local poseCF = if hasPose then camPoseValue.Value else baseCF
-		local fov = if hasPose then camFovValue.Value else baseFov
+		local fovPunch = fovPunchValue.Value
+		local hasFovPunch = math.abs(fovPunch) > 0.01
+		local fov = (if hasPose then camFovValue.Value else baseFov) + fovPunch
 
 		local tiltDeg = camTiltValue.Value
 		local hasTilt = math.abs(tiltDeg) > 0.001
@@ -84,8 +92,20 @@ local function ensureCamDriver()
 				jitterCF = CFrame.new((math.random() - 0.5) * k, (math.random() - 0.5) * k, 0)
 			end
 		end
+		if springShakeState then
+			local elapsed = os.clock() - springShakeState.t0
+			if elapsed >= springShakeState.dur then
+				springShakeState = nil
+			else
+				local decay = math.exp(-springShakeState.damping * elapsed)
+				local ox = math.sin(elapsed * springShakeState.freq + springShakeState.sx) * springShakeState.mag * decay
+				local oy = math.cos(elapsed * springShakeState.freq * 1.18 + springShakeState.sy) * springShakeState.mag * 0.72 * decay
+				local rz = math.sin(elapsed * springShakeState.freq * 0.85) * math.rad(springShakeState.rotDeg) * decay
+				jitterCF = jitterCF * CFrame.new(ox, oy, 0) * CFrame.Angles(0, 0, rz)
+			end
+		end
 
-		if not hasPose and not hasTilt and not shakeState then
+		if not hasPose and not hasTilt and not hasFovPunch and not shakeState and not springShakeState then
 			cam.CFrame = baseCF
 			cam.FieldOfView = baseFov
 			if camDriverConn then
@@ -96,7 +116,7 @@ local function ensureCamDriver()
 		end
 
 		cam.CFrame = poseCF * tiltCF * jitterCF
-		cam.FieldOfView = fov
+		cam.FieldOfView = math.clamp(fov, 32, 75)
 	end)
 end
 
@@ -198,6 +218,50 @@ local function shake(duration: number, magnitude: number)
 		mag = magnitude,
 	}
 	ensureCamDriver()
+end
+
+-- Tremor harmonico amortecido (mola 2a ordem: impacto anime sem ruido seco)
+local function springShake(magnitude: number, duration: number?, freq: number?, damping: number?, rotDeg: number?)
+	if lowQuality() then
+		return
+	end
+	local cam = workspace.CurrentCamera
+	if not cam or cam.CameraType ~= Enum.CameraType.Scriptable then
+		return
+	end
+	springShakeState = {
+		t0 = os.clock(),
+		dur = duration or 0.34,
+		mag = magnitude,
+		freq = freq or 42,
+		damping = damping or 10.5,
+		rotDeg = rotDeg or (magnitude * 2.4),
+		sx = math.random() * math.pi * 2,
+		sy = math.random() * math.pi * 2,
+	}
+	ensureCamDriver()
+end
+
+-- Pulso rapido de FOV no impacto (ex.: -5 graus em 0.06s e volta em 0.24s)
+local function fovPunch(deltaFov: number, inTime: number?, outTime: number?)
+	if lowQuality() then
+		return
+	end
+	local cam = workspace.CurrentCamera
+	if not cam or cam.CameraType ~= Enum.CameraType.Scriptable then
+		return
+	end
+	for _, t in activeFovPunchTweens do
+		t:Cancel()
+	end
+	table.clear(activeFovPunchTweens)
+	ensureCamDriver()
+	local t1 = tween(fovPunchValue, inTime or 0.055, { Value = deltaFov }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	table.insert(activeFovPunchTweens, t1)
+	t1.Completed:Once(function()
+		local t2 = tween(fovPunchValue, outTime or 0.24, { Value = 0 }, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+		table.insert(activeFovPunchTweens, t2)
+	end)
 end
 
 local function rootOf(model: Model): BasePart?
@@ -302,6 +366,52 @@ local function impactFrame(darkTime: number, brightTime: number)
 	end)
 end
 
+-- Impact Frame 2D estilo anime (alto contraste com tom opcional + vinheta sutil de impacto)
+local function animeImpactFrame(tint: Color3?, darkTime: number?, brightTime: number?, withFlashLines: boolean?)
+	local dt = darkTime or 0.045
+	local bt = brightTime or 0.20
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Name = "AnimeImpactFrame"
+	cc.Contrast = 0.72
+	cc.Saturation = -0.82
+	cc.Brightness = -0.20
+	cc.TintColor = tint or Color3.fromRGB(255, 232, 244)
+	cc.Parent = Lighting
+	Debris:AddItem(cc, dt + bt + 0.15)
+
+	if withFlashLines and not lowQuality() then
+		local player = Players.LocalPlayer
+		local pg = player and player:FindFirstChildOfClass("PlayerGui")
+		if pg then
+			local sg = Instance.new("ScreenGui")
+			sg.Name = "AnimeImpactOverlay"
+			sg.DisplayOrder = 16
+			sg.IgnoreGuiInset = true
+			sg.Parent = pg
+			local flash = Instance.new("Frame")
+			flash.Size = UDim2.fromScale(1, 1)
+			flash.BackgroundColor3 = tint or Color3.fromRGB(255, 210, 235)
+			flash.BackgroundTransparency = 0.72
+			flash.BorderSizePixel = 0
+			flash.Parent = sg
+			tween(flash, dt + bt * 0.7, { BackgroundTransparency = 1 })
+			Debris:AddItem(sg, dt + bt + 0.1)
+		end
+	end
+
+	task.delay(dt, function()
+		if not cc.Parent then
+			return
+		end
+		cc.Brightness = 0.10
+		cc.Contrast = 0.24
+		cc.Saturation = 0.18
+		tween(cc, bt, { Brightness = 0, Contrast = 0, Saturation = 0, TintColor = Color3.new(1, 1, 1) }).Completed:Once(function()
+			cc:Destroy()
+		end)
+	end)
+end
+
 local function clearCutIn()
 	for _, t in activeTweens do
 		t:Cancel()
@@ -311,8 +421,14 @@ local function clearCutIn()
 		t:Cancel()
 	end
 	table.clear(activeTiltTweens)
+	for _, t in activeFovPunchTweens do
+		t:Cancel()
+	end
+	table.clear(activeFovPunchTweens)
 	camTiltValue.Value = 0
+	fovPunchValue.Value = 0
 	shakeState = nil
+	springShakeState = nil
 	if camDriverConn then
 		camDriverConn:Disconnect()
 		camDriverConn = nil
@@ -1786,6 +1902,533 @@ HANDLERS.HakiDoConquistador = {
 }
 
 --------------------------------------------------------------------
+-- Golpes Basicos Compartilhados: ESPADACHIM (identicos para todos os Espadachins)
+--------------------------------------------------------------------
+
+-- Corte Rapido (Espadachim basico #1): brilho metalico na lamina -> onda crescente diagonal -> rasgo cel + faiscas
+HANDLERS.CorteBasico = {
+	Charge = function(ctx)
+		local fx = ctx.fx
+		playSfx(fx.Origin, "ChargeSfx")
+		local hp = handPos(ctx.attacker)
+		fx.Origin.CFrame = CFrame.new(hp)
+		emit(fx.Origin, "DrawGlint", 5)
+		emit(fx.Origin, "SteelGather", 12)
+		pulseLight(fx.Origin:FindFirstChild("DrawLight"), 2.4, 9)
+	end,
+	Release = function(ctx)
+		local fx = ctx.fx
+		playSfx(fx.Origin, "ReleaseSfx")
+		local aRoot = rootOf(ctx.attacker)
+		local startPos = aRoot.CFrame:PointToWorldSpace(Vector3.new(0.4, 0.7, -2.0))
+		local endPos = targetCenter(ctx.target)
+		local lookCF = CFrame.lookAt(startPos, endPos)
+		local travel = math.max(0.09, (ctx.timing.Impact or 0.38) - (ctx.timing.Release or 0.28))
+
+		setDisc(fx.SlashArc, lookCF * CFrame.Angles(0, 0, math.rad(-28)), 4.6, 0.02)
+		fx.SlashArc.SlashTrail.Enabled = true
+
+		-- Dois riscos de vento cel acompanhando o corte
+		for i = 1, 2 do
+			local ws = fx["WindStreak" .. i]
+			local offX = if i == 1 then -0.8 else 0.8
+			local offY = if i == 1 then 0.5 else -0.4
+			ws.CFrame = lookCF * CFrame.new(offX, offY, -0.4)
+			ws.Size = Vector3.new(0.10, 0.10, 0.8)
+			ws.Transparency = 0.12
+			tween(ws, travel + 0.06, {
+				CFrame = CFrame.lookAt(endPos, endPos + lookCF.LookVector) * CFrame.new(offX * 0.4, offY * 0.4, 0.6),
+				Size = Vector3.new(0.05, 0.05, 4.4),
+				Transparency = 1,
+			})
+		end
+
+		local t0 = os.clock()
+		ctx.follow = RunService.RenderStepped:Connect(function()
+			if not ctx.alive then return end
+			local a = math.clamp((os.clock() - t0) / travel, 0, 1)
+			local eased = 1 - (1 - a) * (1 - a)
+			local pos = startPos:Lerp(endPos, eased)
+			local cf = CFrame.lookAt(pos, pos + lookCF.LookVector)
+			fx.SlashArc.CFrame = cf * CFrame.Angles(0, 0, math.rad(-28))
+			local sz = 4.6 + eased * 2.4
+			fx.SlashArc.Size = Vector3.new(sz, 0.05, sz)
+			if a >= 1 and ctx.follow then
+				ctx.follow:Disconnect()
+				ctx.follow = nil
+			end
+		end)
+	end,
+	Impact = function(ctx)
+		local fx = ctx.fx
+		if ctx.follow then
+			ctx.follow:Disconnect()
+			ctx.follow = nil
+		end
+		local hitPos = targetCenter(ctx.target)
+		local aPos = rootOf(ctx.attacker).Position
+		local hitLook = CFrame.lookAt(hitPos, Vector3.new(aPos.X, hitPos.Y, aPos.Z))
+
+		fx.SlashArc.SlashTrail.Enabled = false
+		tweenDisc(fx.SlashArc, 0.12, 8.2, 1)
+
+		fx.Hit.CFrame = hitLook
+		playSfx(fx.Hit, "ImpactSfx")
+		CombatAnimator.Hitstop(ctx.attacker, 0.045)
+		emit(fx.Hit, "SlashStar", 4)
+		emit(fx.Hit, "SteelSparks", 24)
+		emit(fx.Hit, "HitDust", 12)
+		pulseLight(fx.Hit:FindFirstChild("HitLight"), 3.4, 14)
+		springShake(0.28, 0.24, 46, 13, 0.8)
+
+		-- Rasgo neon diagonal limpo atravessando o inimigo
+		fx.SlashMark.CFrame = hitLook * CFrame.new(0, 0.1, -0.7) * CFrame.Angles(0, 0, math.rad(42))
+		fx.SlashMark.Size = Vector3.new(0.22, 0.5, 0.12)
+		fx.SlashMark.Transparency = 0
+		tween(fx.SlashMark, 0.07, { Size = Vector3.new(0.24, 6.2, 0.12) }, Enum.EasingStyle.Exponential)
+		task.delay(0.09, function()
+			tween(fx.SlashMark, 0.18, { Size = Vector3.new(0.04, 7.2, 0.05), Transparency = 1 })
+		end)
+
+		setDisc(fx.HitShock, hitLook * CFrame.Angles(math.pi / 2, 0, math.rad(22)), 1.4, 0.06)
+		tweenDisc(fx.HitShock, 0.28, 7.6, 1)
+	end,
+	Duration = 0.95,
+}
+
+-- Corte Cruzado (Espadachim basico #2): dois cortes diagonais rapidos formando um X luminoso com impacto cruzado!
+HANDLERS.CorteCruzado = {
+	Charge = function(ctx)
+		local fx = ctx.fx
+		playSfx(fx.Origin, "ChargeSfx")
+		local hp = handPos(ctx.attacker)
+		fx.Origin.CFrame = CFrame.new(hp)
+		emit(fx.Origin, "BladeCharge", 18)
+		emit(fx.Origin, "DrawGlint", 5)
+		pulseLight(fx.Origin:FindFirstChild("ChargeLight"), 3.0, 11)
+	end,
+	Release = function(ctx)
+		local fx = ctx.fx
+		local aRoot = rootOf(ctx.attacker)
+		local startPos = aRoot.CFrame:PointToWorldSpace(Vector3.new(0, 0.65, -2.0))
+		local endPos = targetCenter(ctx.target)
+		local lookCF = CFrame.lookAt(startPos, endPos)
+		local totalSpan = math.max(0.24, (ctx.timing.Impact or 0.62) - (ctx.timing.Release or 0.34))
+		local flight = math.max(0.11, totalSpan * 0.56)
+
+		local function launchWave(part: BasePart, rollDeg: number, delayT: number)
+			task.delay(delayT, function()
+				if not ctx.alive then return end
+				playSfx(fx.Origin, "ReleaseSfx")
+				setDisc(part, lookCF * CFrame.Angles(0, 0, math.rad(rollDeg)), 4.8, 0.02)
+				local tr = part:FindFirstChild("SlashTrail")
+				if tr and tr:IsA("Trail") then
+					tr.Enabled = true
+				end
+				local t0 = os.clock()
+				local conn
+				conn = RunService.RenderStepped:Connect(function()
+					if not ctx.alive then
+						conn:Disconnect()
+						return
+					end
+					local a = math.clamp((os.clock() - t0) / flight, 0, 1)
+					local eased = 1 - (1 - a) * (1 - a)
+					local pos = startPos:Lerp(endPos, eased)
+					part.CFrame = CFrame.lookAt(pos, pos + lookCF.LookVector) * CFrame.Angles(0, 0, math.rad(rollDeg))
+					local sz = 4.8 + eased * 2.8
+					part.Size = Vector3.new(sz, 0.05, sz)
+					if a >= 1 then
+						conn:Disconnect()
+						if tr and tr:IsA("Trail") then
+							tr.Enabled = false
+						end
+						tweenDisc(part, 0.12, 8.8, 1)
+					end
+				end)
+			end)
+		end
+
+		launchWave(fx.SlashArcA, -38, 0)
+		launchWave(fx.SlashArcB, 38, totalSpan * 0.42)
+	end,
+	Impact = function(ctx)
+		local fx = ctx.fx
+		local hitPos = targetCenter(ctx.target)
+		local aPos = rootOf(ctx.attacker).Position
+		local hitLook = CFrame.lookAt(hitPos, Vector3.new(aPos.X, hitPos.Y, aPos.Z))
+
+		fx.Hit.CFrame = hitLook
+		playSfx(fx.Hit, "ImpactSfx")
+		CombatAnimator.Hitstop(ctx.attacker, 0.055)
+		animeImpactFrame(Color3.fromRGB(220, 245, 255), 0.035, 0.16, false)
+		fovPunch(-3.4, 0.05, 0.22)
+		springShake(0.42, 0.30, 44, 11, 1.3)
+
+		emit(fx.Hit, "CrossStar", 6)
+		emit(fx.Hit, "CrossSparks", 32)
+		emit(fx.Hit, "VaporDust", 16)
+		pulseLight(fx.Hit:FindFirstChild("HitLight"), 3.9, 17)
+
+		-- X luminoso cravado no alvo!
+		for i, cutInfo in ipairs({ { fx.CutA, 42 }, { fx.CutB, -42 } }) do
+			local cutPart: BasePart = cutInfo[1]
+			local ang: number = cutInfo[2]
+			cutPart.CFrame = hitLook * CFrame.new(0, 0.15, -0.75) * CFrame.Angles(0, 0, math.rad(ang))
+			cutPart.Size = Vector3.new(0.26, 0.6, 0.14)
+			cutPart.Transparency = 0
+			tween(cutPart, 0.075, { Size = Vector3.new(0.28, 7.2, 0.14) }, Enum.EasingStyle.Exponential)
+			task.delay(0.11 + (i - 1) * 0.02, function()
+				tween(cutPart, 0.22, { Size = Vector3.new(0.04, 8.4, 0.05), Transparency = 1 })
+			end)
+		end
+
+		setDisc(fx.HitShock1, hitLook * CFrame.Angles(math.pi / 2, 0, 0.25), 1.8, 0.04)
+		setDisc(fx.HitShock2, hitLook * CFrame.Angles(math.pi / 2, 0.4, -0.35), 1.4, 0.08)
+		tweenDisc(fx.HitShock1, 0.32, 9.8, 1)
+		tweenDisc(fx.HitShock2, 0.38, 8.0, 1)
+	end,
+	Duration = 1.15,
+}
+
+--------------------------------------------------------------------
+-- Tecnicas Assinatura do Byakuya Kuchiki (Bleach)
+--------------------------------------------------------------------
+
+-- Senbonzakura (Shikai): lamina se desfaz em mil petalas luminosas que correm em fita espiral e retalham o alvo!
+HANDLERS.Senbonzakura = {
+	Charge = function(ctx)
+		local fx = ctx.fx
+		playSfx(fx.Origin, "ChargeSfx")
+		local hp = handPos(ctx.attacker) + Vector3.new(0, 1.0, 0)
+		fx.Origin.CFrame = CFrame.new(hp)
+		setDisc(fx.DisperseRing, CFrame.new(hp) * CFrame.Angles(0.2, 0, 0.15), 0.9, 0.05)
+		tweenDisc(fx.DisperseRing, 0.45, 5.2, 1)
+		emit(fx.Origin, "PetalBurstOrigin", 26)
+		emit(fx.Origin, "BladeGlints", 12)
+		pulseLight(fx.Origin:FindFirstChild("OriginLight"), 3.2, 13)
+
+		-- Mantem a nuvem de petalas acompanhando a mao durante a dissolucao
+		ctx.follow = RunService.RenderStepped:Connect(function()
+			if not ctx.alive or not alive(ctx.attacker) then return end
+			fx.Origin.CFrame = CFrame.new(handPos(ctx.attacker) + Vector3.new(0, 0.6, 0))
+		end)
+		task.delay(0.22, function()
+			if not ctx.alive then return end
+			emit(fx.Origin, "PetalBurstOrigin", 20)
+		end)
+	end,
+	Release = function(ctx)
+		local fx = ctx.fx
+		if ctx.follow then
+			ctx.follow:Disconnect()
+			ctx.follow = nil
+		end
+		playSfx(fx.Origin, "ReleaseSfx")
+
+		local startPos = handPos(ctx.attacker) + Vector3.new(0, 0.4, 0)
+		local endPos = targetCenter(ctx.target)
+		local lookCF = CFrame.lookAt(startPos, endPos)
+		local right = lookCF.RightVector
+		local travel = math.max(0.20, (ctx.timing.Impact or 1.08) - (ctx.timing.Release or 0.68))
+
+		fx.StreamStart.CFrame = lookCF
+		fx.StreamHead.CFrame = lookCF
+		fx.StreamStart.SakuraRibbonCore.Enabled = true
+		fx.StreamStart.SakuraRibbonOuter.Enabled = true
+		fx.StreamHead.StreamPetals.Enabled = true
+		fx.StreamHead.StreamGlints.Enabled = true
+
+		local t0 = os.clock()
+		ctx.follow = RunService.RenderStepped:Connect(function()
+			if not ctx.alive then return end
+			local a = math.clamp((os.clock() - t0) / travel, 0, 1)
+			local eased = 1 - (1 - a) * (1 - a)
+			-- Curva graciosa em S das petalas da Senbonzakura!
+			local arcX = math.sin(a * math.pi) * 2.6
+			local arcY = math.sin(a * math.pi) * 1.4
+			local pos = startPos:Lerp(endPos, eased) + right * arcX + Vector3.new(0, arcY, 0)
+			fx.StreamHead.CFrame = CFrame.lookAt(pos, endPos + Vector3.new(0, 0.2, 0))
+			if a >= 1 and ctx.follow then
+				ctx.follow:Disconnect()
+				ctx.follow = nil
+			end
+		end)
+	end,
+	Impact = function(ctx)
+		local fx = ctx.fx
+		if ctx.follow then
+			ctx.follow:Disconnect()
+			ctx.follow = nil
+		end
+		local hitPos = targetCenter(ctx.target)
+		local aPos = rootOf(ctx.attacker).Position
+		local hitLook = CFrame.lookAt(hitPos, Vector3.new(aPos.X, hitPos.Y, aPos.Z))
+
+		fx.StreamHead.StreamPetals.Enabled = false
+		fx.StreamHead.StreamGlints.Enabled = false
+		task.delay(0.18, function()
+			if fx.StreamStart and fx.StreamStart.Parent then
+				fx.StreamStart.SakuraRibbonCore.Enabled = false
+				fx.StreamStart.SakuraRibbonOuter.Enabled = false
+			end
+		end)
+
+		fx.Hit.CFrame = hitLook
+		playSfx(fx.Hit, "ImpactSfx")
+		CombatAnimator.Hitstop(ctx.attacker, 0.05)
+		animeImpactFrame(Color3.fromRGB(255, 206, 232), 0.04, 0.18, false)
+		fovPunch(-4.5, 0.055, 0.24)
+		springShake(0.46, 0.32, 42, 10.5, 1.5)
+
+		emit(fx.Hit, "HitStar", 6)
+		emit(fx.Hit, "HitPetals", 48)
+		emit(fx.Hit, "HitSparks", 26)
+		pulseLight(fx.Hit:FindFirstChild("HitLight"), 4.0, 18)
+
+		-- 4 cortes luminosos rosados em cascata rapida (mil laminas retalhando!)
+		local cutAngles = { 34, -46, 12, -22 }
+		local cutOffsets = {
+			Vector3.new(-0.4, 0.5, -0.7),
+			Vector3.new(0.45, 0.1, -0.75),
+			Vector3.new(-0.2, -0.35, -0.7),
+			Vector3.new(0.25, 0.65, -0.75),
+		}
+		for i = 1, 4 do
+			local cut = fx["SakuraCut" .. i]
+			task.delay((i - 1) * 0.045, function()
+				if not ctx.alive then return end
+				cut.CFrame = hitLook * CFrame.new(cutOffsets[i]) * CFrame.Angles(0, 0, math.rad(cutAngles[i]))
+				cut.Size = Vector3.new(0.18, 0.5, 0.10)
+				cut.Transparency = 0
+				tween(cut, 0.07, { Size = Vector3.new(0.22, 6.4, 0.10) }, Enum.EasingStyle.Exponential)
+				task.delay(0.10, function()
+					tween(cut, 0.22, { Size = Vector3.new(0.04, 7.6, 0.04), Transparency = 1 })
+				end)
+			end)
+		end
+
+		setDisc(fx.SakuraRing1, CFrame.new(hitPos) * CFrame.Angles(0.28, 0, -0.22), 1.8, 0.04)
+		setDisc(fx.SakuraRing2, CFrame.new(hitPos) * CFrame.Angles(-0.32, 0.6, 0.28), 1.5, 0.08)
+		tweenDisc(fx.SakuraRing1, 0.42, 10.6, 1)
+		tweenDisc(fx.SakuraRing2, 0.48, 8.8, 1)
+	end,
+	Duration = 1.65,
+}
+
+-- Senbonzakura Kageyoshi (Bankai — Tecnica Assinatura Suprema do Byakuya):
+-- Katana afunda no chao -> 6 laminas espectrais colossais se erguem nas laterais -> estilhacam em ciclone colossal de petalas!
+HANDLERS.SenbonzakuraKageyoshi = {
+	Charge = function(ctx)
+		local fx = ctx.fx
+		playSfx(fx.Origin, "ChargeSfx")
+		local aRoot = rootOf(ctx.attacker)
+		local tRoot = rootOf(ctx.target)
+		local gy = groundY(ctx.attacker)
+		local sFloor = Vector3.new(aRoot.Position.X, gy + 0.06, aRoot.Position.Z)
+		local eFloor = Vector3.new(tRoot.Position.X, groundY(ctx.target) + 0.06, tRoot.Position.Z)
+		local dir = flat(eFloor - sFloor)
+		dir = if dir.Magnitude > 0.1 then dir.Unit else aRoot.CFrame.LookVector
+		local right = dir:Cross(Vector3.yAxis)
+		if right.Magnitude < 0.05 then
+			right = Vector3.xAxis
+		else
+			right = right.Unit
+		end
+
+		-- Anel luminoso de absorcao quando a katana cai e afunda no piso
+		local dropPos = sFloor + dir * 2.1
+		fx.Origin.CFrame = CFrame.new(dropPos + Vector3.new(0, 0.4, 0))
+		setDisc(fx.FloorRipple, CFrame.new(dropPos), 0.8, 0.02)
+		task.delay(0.26, function()
+			if not ctx.alive then return end
+			tweenDisc(fx.FloorRipple, 0.55, 7.6, 1)
+			emit(fx.Origin, "DropPetals", 16)
+			pulseLight(fx.Origin:FindFirstChild("OriginLight"), 3.4, 16)
+			springShake(0.22, 0.28, 36, 10, 0.5)
+		end)
+
+		-- 6 Laminas Espectrais Gigantes subindo em duas fileiras majestosas nos flancos da arena!
+		ctx.bladeTopPositions = {}
+		local arenaSpan = math.clamp((eFloor - sFloor).Magnitude, 8, 22)
+		for i = 1, 6 do
+			local side = if i <= 3 then -1 else 1
+			local rank = ((i - 1) % 3) + 1
+			local forwardDist = (rank / 3.4) * arenaSpan * 0.72 + 1.2
+			local lateralDist = 4.0 + (rank - 1) * 0.55
+			local basePos = sFloor + dir * forwardDist + right * (side * lateralDist)
+			local bladeH = 10.5 + (rank % 2) * 1.6
+			local blade = fx["GiantBlade" .. i]
+			local rim = fx["GiantBladeRim" .. i]
+			local bCF = CFrame.lookAt(basePos + Vector3.new(0, bladeH * 0.5, 0), basePos + Vector3.new(0, bladeH * 0.5, 0) + dir)
+			local startCF = bCF * CFrame.new(0, -bladeH - 1.5, 0)
+			ctx.bladeTopPositions[i] = basePos + Vector3.new(0, bladeH * 0.55, 0)
+
+			task.delay(0.32 + (rank - 1) * 0.08 + (if side > 0 then 0.03 else 0), function()
+				if not ctx.alive then return end
+				blade.CFrame = startCF
+				blade.Size = Vector3.new(0.28, bladeH, 1.45)
+				blade.Transparency = 0.06
+				rim.CFrame = startCF
+				rim.Size = Vector3.new(0.42, bladeH * 1.02, 1.65)
+				rim.Transparency = 0.34
+				tween(blade, 0.32, { CFrame = bCF }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+				tween(rim, 0.32, { CFrame = bCF }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+			end)
+		end
+	end,
+	Release = function(ctx)
+		local fx = ctx.fx
+		playSfx(fx.Origin, "ReleaseSfx")
+
+		-- Todas as 6 laminas gigantes estilhacam em luz branca e milhares de petalas simultaneamente!
+		local positions = ctx.bladeTopPositions or {}
+		for i = 1, 6 do
+			local blade = fx["GiantBlade" .. i]
+			local rim = fx["GiantBladeRim" .. i]
+			tween(blade, 0.16, { Size = blade.Size + Vector3.new(0.5, 1.5, 0.8), Transparency = 1 })
+			tween(rim, 0.18, { Size = rim.Size + Vector3.new(0.8, 1.8, 1.0), Transparency = 1 })
+			if positions[i] then
+				fx.ShatterAnchor.CFrame = CFrame.new(positions[i])
+				emit(fx.ShatterAnchor, "BladeShatterPetals", 8)
+				emit(fx.ShatterAnchor, "BladeShatterGlints", 3)
+			end
+		end
+
+		local aRoot = rootOf(ctx.attacker)
+		local startPos = aRoot.CFrame:PointToWorldSpace(Vector3.new(0, 1.4, -2.5))
+		local endPos = targetCenter(ctx.target)
+		local lookCF = CFrame.lookAt(startPos, endPos)
+		local travel = math.max(0.24, (ctx.timing.Impact or 1.66) - (ctx.timing.Release or 1.16))
+
+		fx.TorrentStart.CFrame = lookCF
+		fx.StormHead.CFrame = lookCF
+		fx.TorrentStart.TorrentBeam1.Enabled = true
+		fx.TorrentStart.TorrentBeam2.Enabled = true
+		fx.StormHead.StormPetals.Enabled = true
+		fx.StormHead.StormGlints.Enabled = true
+
+		local rings = { fx.PetalSwirlRing1, fx.PetalSwirlRing2, fx.PetalSwirlRing3 }
+		for _, r in ipairs(rings) do
+			setDisc(r, lookCF * CFrame.Angles(math.pi / 2, 0, 0), 4.6, 0.10)
+		end
+
+		springShake(0.32, 0.36, 38, 9, 1.1)
+
+		local t0 = os.clock()
+		ctx.follow = RunService.RenderStepped:Connect(function()
+			if not ctx.alive then return end
+			local elapsed = os.clock() - t0
+			local a = math.clamp(elapsed / travel, 0, 1)
+			local eased = a * a * (3 - 2 * a)
+			local pos = startPos:Lerp(endPos, eased)
+			fx.StormHead.CFrame = CFrame.lookAt(pos, endPos + lookCF.LookVector)
+			for idx, r in ipairs(rings) do
+				local u = ((elapsed * 2.6 + (idx - 1) / 3) % 1) * math.max(0.15, eased)
+				local rp = startPos:Lerp(pos, math.clamp(u, 0.05, 0.98))
+				r.CFrame = CFrame.lookAt(rp, endPos + lookCF.LookVector) * CFrame.Angles(math.pi / 2, elapsed * 9 + idx * 1.4, 0)
+				local sz = 4.2 + math.sin(u * math.pi) * 3.4
+				r.Size = Vector3.new(sz, 0.05, sz)
+			end
+			if a >= 1 and ctx.follow then
+				ctx.follow:Disconnect()
+				ctx.follow = nil
+			end
+		end)
+	end,
+	Impact = function(ctx)
+		local fx = ctx.fx
+		if ctx.follow then
+			ctx.follow:Disconnect()
+			ctx.follow = nil
+		end
+		local tRoot = rootOf(ctx.target)
+		local floorCenter = Vector3.new(tRoot.Position.X, groundY(ctx.target) + 0.09, tRoot.Position.Z)
+		local hitPos = floorCenter + Vector3.new(0, 2.2, 0)
+		local aPos = rootOf(ctx.attacker).Position
+		local hitLook = CFrame.lookAt(hitPos, Vector3.new(aPos.X, hitPos.Y, aPos.Z))
+
+		fx.StormHead.StormPetals.Enabled = false
+		fx.StormHead.StormGlints.Enabled = false
+		task.delay(0.20, function()
+			if fx.TorrentStart and fx.TorrentStart.Parent then
+				fx.TorrentStart.TorrentBeam1.Enabled = false
+				fx.TorrentStart.TorrentBeam2.Enabled = false
+			end
+		end)
+
+		fx.Hit.CFrame = hitLook
+		playSfx(fx.Hit, "ImpactSfx")
+		CombatAnimator.Hitstop(ctx.attacker, 0.065)
+		animeImpactFrame(Color3.fromRGB(255, 186, 224), 0.055, 0.26, true)
+		fovPunch(-6.2, 0.06, 0.32)
+		springShake(0.68, 0.44, 46, 9.5, 2.4)
+
+		emit(fx.Hit, "BankaiStar", 8)
+		emit(fx.Hit, "BankaiPetals", 62)
+		emit(fx.Hit, "BankaiGlints", 22)
+		emit(fx.Hit, "SakuraMist", 24)
+		pulseLight(fx.Hit:FindFirstChild("HitLight"), 4.0, 26)
+
+		-- Coluna/Ciclone organico de Senbonzakura (nucleo sutil translucido + aneis giratorios subindo + 6 cortes!)
+		fx.StormPillarCore.CFrame = CFrame.new(floorCenter + Vector3.new(0, 5.5, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+		fx.StormPillarCore.Size = Vector3.new(11.0, 1.3, 1.3)
+		fx.StormPillarCore.Transparency = 0.42
+		tween(fx.StormPillarCore, 0.48, { Size = Vector3.new(14.5, 4.4, 4.4), Transparency = 1 })
+
+		fx.StormPillarOuter.CFrame = CFrame.new(floorCenter + Vector3.new(0, 4.8, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+		fx.StormPillarOuter.Size = Vector3.new(9.5, 2.8, 2.8)
+		fx.StormPillarOuter.Transparency = 0.68
+		tween(fx.StormPillarOuter, 0.56, { Size = Vector3.new(13.5, 8.6, 8.6), Transparency = 1 })
+
+		-- 3 aneis de furacao de petalas subindo em espiral ao redor do alvo
+		for idx, r in ipairs({ fx.PetalSwirlRing1, fx.PetalSwirlRing2, fx.PetalSwirlRing3 }) do
+			local startY = floorCenter.Y + 0.6 + (idx - 1) * 1.4
+			local endY = startY + 5.8
+			local tilt = if idx % 2 == 0 then 0.24 else -0.22
+			setDisc(r, CFrame.new(floorCenter.X, startY, floorCenter.Z) * CFrame.Angles(tilt, idx * 1.1, -tilt * 0.7), 3.2 + idx * 0.9, 0.08)
+			tween(r, 0.52 + idx * 0.06, {
+				CFrame = CFrame.new(floorCenter.X, endY, floorCenter.Z) * CFrame.Angles(tilt, idx * 1.1 + 3.6, -tilt * 0.7),
+				Size = Vector3.new(10.5 + idx * 1.8, 0.05, 10.5 + idx * 1.8),
+			})
+			for _, d in r:GetChildren() do
+				if d:IsA("Decal") then tween(d, 0.52 + idx * 0.06, { Transparency = 1 }) end
+			end
+		end
+
+		-- 6 flashes de corte anime cortando o alvo em todas as direcoes dentro do ciclone!
+		local bankaiAngles = { 44, -44, 16, -24, 68, -62 }
+		for i = 1, 6 do
+			local cut = fx["BankaiCut" .. i]
+			task.delay((i - 1) * 0.04, function()
+				if not ctx.alive then return end
+				local ox = ((i % 2 == 0) and 0.65 or -0.65)
+				local oy = ((i % 3) - 1) * 0.65
+				cut.CFrame = hitLook * CFrame.new(ox, oy, -0.8) * CFrame.Angles(0, 0, math.rad(bankaiAngles[i]))
+				cut.Size = Vector3.new(0.24, 0.6, 0.12)
+				cut.Transparency = 0
+				tween(cut, 0.075, { Size = Vector3.new(0.26, 8.4, 0.12) }, Enum.EasingStyle.Exponential)
+				task.delay(0.11, function()
+					tween(cut, 0.24, { Size = Vector3.new(0.05, 9.6, 0.05), Transparency = 1 })
+				end)
+			end)
+		end
+
+		setDisc(fx.MegaShock1, CFrame.new(floorCenter + Vector3.new(0, 0.10, 0)), 3.0, 0.02)
+		setDisc(fx.MegaShock2, CFrame.new(hitPos) * CFrame.Angles(0.25, 0.6, -0.20), 2.4, 0.08)
+		tweenDisc(fx.MegaShock1, 0.50, 18.5, 1)
+		tweenDisc(fx.MegaShock2, 0.56, 15.0, 1)
+
+		-- Residuo poetico: petalas caindo suavemente apos o furacao
+		task.delay(0.40, function()
+			if not ctx.alive then return end
+			emit(fx.Hit, "ResiduePetals", 20)
+		end)
+	end,
+	Duration = 2.35,
+}
+
+--------------------------------------------------------------------
 -- API
 --------------------------------------------------------------------
 local function runEffect(name: string, attacker: Model, target: Model, timing, track: AnimationTrack?, exactTiming: boolean?)
@@ -1901,15 +2544,22 @@ function VfxController.PlayMove(moveId: string, attacker: Model, target: Model?)
 	if not move or not move.Vfx or not attacker then
 		return false
 	end
-	local track = move.Anim and loadTrack(attacker, move.Anim)
-	if track then
-		track:Play(0.05)
-		track:AdjustSpeed(move.AnimSpeed or 1)
+	local track: AnimationTrack? = nil
+	local usedProcedural = false
+	if move.Anim and CombatAnimator.Has(move.Anim) then
+		usedProcedural = CombatAnimator.Play(attacker, move.Anim, move.Timing)
+	end
+	if not usedProcedural then
+		track = move.Anim and loadTrack(attacker, move.Anim)
+		if track then
+			track:Play(0.05)
+			track:AdjustSpeed(move.AnimSpeed or 1)
+		end
 	end
 	if move.CutIn then
 		playCutIn(move, attacker, move.Timing)
 	end
-	return runEffect(move.Vfx, attacker, target, move.Timing, track, move.AnimSpeed ~= nil)
+	return runEffect(move.Vfx, attacker, target, move.Timing, track, move.AnimSpeed ~= nil or usedProcedural)
 end
 
 -- Flash de ColorCorrection so em golpe critico
@@ -1926,6 +2576,7 @@ end
 
 -- Limpa tudo no fim da batalha
 function VfxController.Cleanup()
+	CombatAnimator.Cleanup()
 	clearCutIn()
 	for m in active do
 		active[m] = nil

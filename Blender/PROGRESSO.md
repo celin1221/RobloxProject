@@ -1003,3 +1003,23 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
   - `SummonClient.client.luau`: mantidas intactas as artes dos banners (`Artwork`) e o bloqueio de Ginásios (`LockedTag` / `LockedBannerDock`), com centralização matemática dinâmica (`TextBounds.X`) do conjunto `[Moeda + Preço]` dentro dos botões `INVOCAR 1` e `INVOCAR 10`, placas `SlotPlate_1..3` contidas dentro das margens da `BottomDock` e moeda da carteira (`HudWallet`) sempre visível na frente da pílula.
   - `default.project.json`: registrado `LevelRewardsGui` em `StarterGui` completando as 16 `ScreenGui`s do projeto.
 
+
+## Byakuya (Aura Minimalista, Fix de Cabelo, Shikai/Bankai), Ataques Compartilhados de Espadachim e Arena Carmesim Escuro (24/11/2026)
+
+**Feito**
+- **1. Aura Minimalista + Correção do Cabelo do Byakuya (`ServerStorage/Characters/Byakuya`):**
+  - Substituída a aura antiga poluída (backup salvo em `ServerStorage/_ByakuyaOldAuraBackup`) por aura minimalista `Senbonzakura`: 1 `AuraVolume` compacto com `SenbonzakuraPetals` (`Rate = 7`), `SilverBladeGlints` (`Rate = 2.6`), `AuraLight` suave (`Brightness = 0.72`, `Range = 8.5`, `Shadows = false`) e contorno fino `AnimeOutline3D` (`FillTransparency = 0.96`), com **zero discos/vórtices no chão**.
+  - Corrigida a divisão/fresta branca no cabelo traseiro do Byakuya: `Head_Mesh` rebaixado `-0.09` studs + `HairSeamBridge` preto fosco na nuca + atributo `LockNeckHair = true` respeitado por `BaseClient.client.luau` e `CombatAnimator.luau` (impede o cabelo superior e inferior de abrir/fechar durante Idle, Walk ou combate).
+- **2. Motor de Combate 60 FPS & 2 Ataques Básicos Compartilhados de Espadachim (`src/shared/CombatAnimator.luau`, `src/shared/Data/Moves.luau`, `src/shared/VfxController.luau`, `ReplicatedStorage/Vfx/CorteBasico` e `CorteCruzado`):**
+  - Novo `CombatAnimator.luau` procedural 60 FPS compatível com rigs Híbridos R6-em-R15 e R15/Skinned, com katana acoplada à mão direita (paletas personalizadas por espadachim + `BladeTrail`) e suporte a **Hitstop** real.
+  - `CorteBasico` (*Corte Rápido*) e `CorteCruzado` (*Corte Cruzado*) configurados como os **2 ataques básicos idênticos compartilhados por todos os Espadachins** (`Byakuya`, `Zoro`, `Ichigo`, `Renji`, `Sasuke`, etc.).
+- **3. Técnicas Assinatura do Byakuya (`Senbonzakura` & `SenbonzakuraKageyoshi`):**
+  - `Senbonzakura` (Shikai, `Power = 58`, `CutIn = true`): lâmina erguida verticalmente se dissolve em pétalas → fita espiral de cerejeira + 4 cortes neon em cascata + Impact Frame rosado.
+  - `SenbonzakuraKageyoshi` (Bankai, `Power = 72`, `Target = "AllEnemies"`, `Signature = true`, `CutIn = true`): katana afunda verticalmente no chão → 6 lâminas espectrais gigantes sobem nas laterais e estilhaçam → torrente ciclônica de pétalas + anéis giratórios + Impact Frame 2D + Hitstop + Spring Camera Shake + FOV Punch + 6 cortes luminosos + pétalas de resíduo.
+- **4. Arena Carmesim Escuro (`workspace.Arenas/Arena01..10` & `src/server_storage/_ConstrutorArenasSukuna.luau`):**
+  - Escurecido o espelho d'água (`InfiniteMirrorWater` `#440A10`, `PinkWaterRipples` `#76161E`), panorama de nuvens (`#94262C`), reflexos e VFX ambiente de rosa brilhante para **vermelho carmesim escuro**, reduzindo `SkyIllum` (`2.15 → 0.90`), `WaterPinkFill` (`1.15 → 0.42`) e `CenterBattleLight` (`1.75 → 1.15`).
+- **5. Regras Permanentes Atualizadas (`AGENTS.md` & `Blender/REGRAS.md`):**
+  - Registradas permanentemente as regras de `git pull` prévio, auras minimalistas (sem círculos no chão) e os 2 ataques básicos compartilhados de Espadachim.
+
+**Testado (Play Mode ao vivo + Capturas Visuais)**
+- Validados ao vivo na `Arena01`: aura minimalista, cabelo traseiro sem fresta branca, nova Arena vermelho carmesim escuro e todos os 4 golpes (`CorteBasico` no Ichigo; `CorteCruzado`, `Senbonzakura` e `SenbonzakuraKageyoshi` no Byakuya) com **0 erros no console**. Place salvo na **versão 307** (`TeamCreate`).

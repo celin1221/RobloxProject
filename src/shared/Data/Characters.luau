@@ -632,6 +632,13 @@ Characters.List = {
 		Concept = "Capit\u{e3}o nobre da Soul Society mestre em tempestades de l\u{e2}minas",
 		BaseLevel = 10,
 		BaseStats = { HP = 70, Attack = 27, Defense = 23, Speed = 24 },
+		Moves = { "CorteBasico", "CorteCruzado", "Senbonzakura", "SenbonzakuraKageyoshi" },
+		Learnset = {
+			{ Level = 1, Move = "CorteBasico" },
+			{ Level = 1, Move = "CorteCruzado" },
+			{ Level = 5, Move = "Senbonzakura" },
+			{ Level = 10, Move = "SenbonzakuraKageyoshi" },
+		},
 		Animations = {
 			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
