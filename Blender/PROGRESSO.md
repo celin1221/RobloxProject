@@ -1090,3 +1090,17 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - `python scripts/sync_studio.py status` → `All 93 scripts in src/ are 100% in sync with Roblox Studio.`
 - `python scripts/sync_studio.py test` → `PASS`.
 - Place salvo no Roblox Studio na **versão 312** (`TeamCreate`).
+
+
+## Nova Câmera 3/4 Elevada para Batalhas 2x2 (`ArenaManager.BattleCamera`) (24/11/2026)
+
+**Feito**
+- Testadas 7 angulações de câmera ao vivo em batalha 2x2 real com a HUD completa (`Byakuya + San` e `Byakuya + BarbaBranca` vs `Uryu + Ichigo`) em `Workspace.Arenas`.
+- Atualizada `ArenaManager.BattleCamera` em `src/server/Battle/ArenaManager.luau` para o modo `"2x2"` (mantendo o `CameraPoint` do `1x1` intacto):
+  - Antes: `camPos = pp.CFrame * CFrame.new(13.5, 5.8, 15.5)` olhando para `center + (0, 0.5, 0)` (causava sobreposição direta do aliado da direita sobre o inimigo esquerdo).
+  - Depois: `camPos = pp.CFrame * CFrame.new(21.5, 10.2, 14.5)` olhando para `center + pp.CFrame.RightVector * 3.2 + Vector3.new(0, -0.3, 0)` — ângulo 3/4 elevado e lateralizado que separa os 4 lutadores horizontalmente (`u ≈ 0.20 / 0.35 / 0.51 / 0.62`) e verticalmente, mantém os pés dos aliados acima dos cartões de HP inferiores, os inimigos livres dos cartões/botões direitos, o Grande Portão do Santuário centralizado no topo e simetria completa no PvP 2x2 (`MirroredCamera`).
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- Validado ao vivo em 2x2 com `Byakuya + San` e `Byakuya + BarbaBranca` (personagem mais alto do jogo + bisento) sem nenhuma sobreposição entre lutadores ou HUD e `0` erros de script.
+- `python scripts/sync_studio.py status` (`100% in sync`) e `python scripts/sync_studio.py test` (`PASS`).
+- Place salvo no Roblox Studio na **versão 313** (`TeamCreate`).

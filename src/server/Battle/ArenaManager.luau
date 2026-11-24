@@ -87,7 +87,7 @@ function ArenaManager.SlotCFrame(arena: Model, side: string, fieldSlot: number?,
 	return point.CFrame * CFrame.new(xOff, 0, 0)
 end
 
--- Camera da arena: 1x1 usa CameraPoint original; 2x2 afasta e eleva levemente para enquadrar os 4 lutadores
+-- Camera da arena: 1x1 usa CameraPoint original; 2x2 usa angulo 3/4 elevado e lateralizado para separar os 4 lutadores sem sobreposicao e sem colisoes com a HUD
 function ArenaManager.BattleCamera(arena: Model, format: string?): CFrame?
 	if format ~= "2x2" then
 		local cameraPoint = arena:FindFirstChild("CameraPoint")
@@ -100,8 +100,9 @@ function ArenaManager.BattleCamera(arena: Model, format: string?): CFrame?
 		return cameraPoint and cameraPoint.CFrame
 	end
 	local center = (pp.Position + ep.Position) / 2
-	local camPos = (pp.CFrame * CFrame.new(13.5, 5.8, 15.5)).Position
-	return CFrame.lookAt(camPos, center + Vector3.new(0, 0.5, 0))
+	local camPos = (pp.CFrame * CFrame.new(21.5, 10.2, 14.5)).Position
+	local lookAt = center + pp.CFrame.RightVector * 3.2 + Vector3.new(0, -0.3, 0)
+	return CFrame.lookAt(camPos, lookAt)
 end
 
 -- Cria (pelo nome do modelo nos dados) o personagem em campo de um lado/slot.
