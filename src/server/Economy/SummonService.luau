@@ -133,10 +133,6 @@ local function pickCharacter(rarity: string, banner: string?, share: number?, an
 	return nil
 end
 
-local function announce(text: string)
-	Remotes.Announce:FireAllClients(text)
-end
-
 -- Faz as invocacoes. Retorna (true, resultados) ou (false, motivo).
 function SummonService.Summon(player: Player, portalId: string, count: number, bannerId: string?)
 	local portal = Summon.Portals[portalId]
@@ -200,7 +196,7 @@ function SummonService.Summon(player: Player, portalId: string, count: number, b
 		local isNew = data.Album.Owned[charId] == nil
 		local variant = if shiny then "Brilhante" else nil
 		local toTeam = #data.Team < MAX_TEAM
-		local uid, albumLines = ProgressionService.AddCharacter(player, charId, Summon.SummonLevel, toTeam, variant)
+		local uid, albumLines = ProgressionService.AddCharacter(player, charId, Summon.SummonLevel, toTeam, variant, nil, { Source = "Summon" })
 		local member = data.Collection[uid]
 		table.insert(results, {
 			Uid = uid,
@@ -219,9 +215,6 @@ function SummonService.Summon(player: Player, portalId: string, count: number, b
 			New = isNew,
 			Album = albumLines,
 		})
-		if def.Rarity == "Lendario" or shiny then
-			announce(string.format("%s invocou %s%s (%s)!", player.Name, def.Name, if shiny then " Brilhante" else "", Summon.RarityName[def.Rarity]))
-		end
 	end
 	data.SummonPity[portal.PityKey] = pity
 	RetentionService.Track(player, "Summon", count)

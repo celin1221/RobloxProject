@@ -483,7 +483,7 @@ local function onBattleEnd(player: Player, run, battle, result: string)
 					table.insert(lines, "O chefe " .. boss.Name .. " queria se juntar, mas o dep\u{f3}sito de personagens est\u{e1} cheio (" .. Benefits.CollectionMax(data) .. ").")
 				else
 					local toTeam = #data.Team < 6
-					ProgressionService.AddCharacter(player, boss.Id, boss.Level, toTeam)
+					ProgressionService.AddCharacter(player, boss.Id, boss.Level, toTeam, nil, nil, { Source = "Tower" })
 					table.insert(lines, "O chefe " .. boss.Name .. " se juntou a voc\u{ea}!")
 				end
 			end

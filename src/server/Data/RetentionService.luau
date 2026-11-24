@@ -146,7 +146,7 @@ local function grant(player: Player, data, reward): { string }
 		if def then
 			local lvl = reward.Level or def.BaseLevel or 10
 			local toTeam = #data.Team < 3
-			ProgressionService.AddCharacter(player, cid, lvl, toTeam, reward.Variant)
+			ProgressionService.AddCharacter(player, cid, lvl, toTeam, reward.Variant, nil, { Source = "Reward", Silent = #charList > 6 })
 			table.insert(lines, "+1 " .. def.Name .. " (Nv. " .. lvl .. ")")
 		end
 	end

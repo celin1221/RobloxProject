@@ -1233,3 +1233,28 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - Validado ao vivo no Play Mode com inspeção visual completa: tela Info (`Byakuya Nv. 10`) com botão `GOLPES` → clique abrindo `GOLPES` com retratos 3D, seleção dos 4 ataques (`Corte Rápido`, `Estocada Veloz`) atualizando o Card de Detalhes → `TROCAR GOLPES` inspecionando `Senbonzakura Kageyoshi (Nv. 50)` bloqueado com descrição completa sem cortes nem sobreposição e `0` erros no Console.
 - `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS`).
 - Place salvo no Roblox Studio na **versão 322** (`TeamCreate`).
+
+
+## Notificação Global do Servidor ao Conseguir Lendário / Brilhante (24/11/2026)
+
+**Feito**
+- **1. Anúncio Global Centralizado no Servidor (`src/server/Data/ProgressionService.luau` + todas as fontes de aquisição):**
+  - Criada função central `ProgressionService.AnnounceRareDrop(player, characterId, variant, sourceKey)` e integrada automaticamente em `ProgressionService.AddCharacter(..., announceOpts)` para disparar `Remotes.Announce:FireAllClients(text, meta)` sempre que qualquer jogador obtiver um personagem `Lendario` (ou variante `Brilhante`), ignorando protótipos (`Prototype == true`) e entregas em massa silenciosas (`Silent == true`).
+  - Todas as origens conectadas com frase contextualizada:
+    - **Invocação (`SummonService.luau`):** `"<jogador> invocou <personagem> na Invocação!"` (removido `announce()` duplicado local).
+    - **Refúgio (`RefugeService.luau`):** `"<jogador> capturou <personagem> no Refúgio!"`.
+    - **Captura em batalha (`EncounterService.luau`):** `"<jogador> capturou <personagem> em batalha!"`.
+    - **Torre Infinita (`TowerService.luau`):** `"<jogador> recrutou <personagem> na Torre Infinita!"`.
+    - **Códigos / Recompensas (`RetentionService.luau`):** `"<jogador> conseguiu <personagem>!"` (com proteção anti-flood `Silent = #charList > 6` para códigos dev de elenco completo como `DEVALL`, mantendo anúncio normal em códigos individuais).
+- **2. Banner Animado Global + Mensagem no Chat do Sistema (`src/client/Gui/HudGui/HudClient.client.luau` e `SummonClient.client.luau`):**
+  - Removido listener duplicado em `SummonClient.client.luau`; todo anúncio passa por `HudClient.client.luau`.
+  - **Overlay dedicado (`ServerAnnounceOverlay`, `DisplayOrder = 25`):** flutua limpo acima de todas as telas (Praça, Batalha, Loja, Info, Equipe, Invocação) sem cobrir moedas, menu lateral, configurações ou TeamBar (`X = 0.5, Y = 0.13` na praça / `0.145` em batalha).
+  - **Banner visual `Midnight-Blue Anime`:** borda dourada para `LENDÁRIO NO SERVIDOR` (ícone `star`) e ciano para `LENDÁRIO BRILHANTE NO SERVIDOR` / `BRILHANTE NO SERVIDOR` (ícone `sparkle`, zero emojis), brilho animado `UI.shine`, retrato 3D animado com rotação suave (`TeamCards` `CompactPortrait = true`), fila de anúncios (`4.8s` cada), som celebratório (`UI.play("reward")`) e atraso anti-spoiler de `3.8s` apenas para o jogador que está assistindo à própria revelação 3D da Invocação.
+  - **Chat do Sistema (`TextChatService.TextChannels.RBXGeneral:DisplaySystemMessage` + fallback `SetCore`):** envia mensagem formatada em RichText (`[LENDÁRIO]`, `[LENDÁRIO BRILHANTE]`, `[BRILHANTE]`) para todos os jogadores do servidor.
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- Validado ao vivo no Play Mode com inspeção visual e console (`0` erros):
+  - Personagem `Comum` (`Kaen`) **não** dispara anúncio.
+  - `Byakuya` (`Refuge`), `San` (`Capture`) e `Barba Branca Brilhante` (`Tower`) dispararam fila de banners com retrato 3D nítido girando suavemente, borda dourada/ciano, zero sobreposição com qualquer elemento do HUD e mensagem no chat do sistema.
+- `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS`).
+- Place salvo no Roblox Studio na **versão 325** (`TeamCreate`).

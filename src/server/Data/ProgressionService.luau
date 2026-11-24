@@ -41,9 +41,55 @@ local function throttled(player: Player): boolean
 	return false
 end
 
--- Cria um personagem na colecao (usado pelo inicial; invocacao e captura usarao o mesmo)
+local SOURCE_INFO = {
+	Summon = { Verb = "invocou", Place = "na Invoca\u{e7}\u{e3}o" },
+	Refuge = { Verb = "capturou", Place = "no Ref\u{fa}gio" },
+	Capture = { Verb = "capturou", Place = "em batalha" },
+	Tower = { Verb = "recrutou", Place = "na Torre Infinita" },
+	Reward = { Verb = "conseguiu", Place = "" },
+}
+
+-- Notifica todo o servidor quando um jogador consegue um personagem Lendario (ou Brilhante)
+function ProgressionService.AnnounceRareDrop(player: Player, characterId: string, variant: string?, sourceKey: string?)
+	local def = Characters.Get(characterId)
+	if not def or def.Prototype then
+		return
+	end
+	local isLegendary = def.Rarity == "Lendario"
+	local isShiny = variant == "Brilhante"
+	if not isLegendary and not isShiny then
+		return
+	end
+	local src = SOURCE_INFO[sourceKey or "Reward"] or SOURCE_INFO.Reward
+	local displayName = if player.DisplayName and #player.DisplayName > 0 then player.DisplayName else player.Name
+	local rarityLabel = (Summon.RarityName and Summon.RarityName[def.Rarity]) or def.Rarity
+	local shinySuffix = if isShiny then " Brilhante" else ""
+	local placeSuffix = if #src.Place > 0 then (" " .. src.Place) else ""
+	local text = string.format("%s %s %s%s (%s)%s!", displayName, src.Verb, def.Name, shinySuffix, rarityLabel, placeSuffix)
+	local meta = {
+		PlayerName = displayName,
+		UserName = player.Name,
+		UserId = player.UserId,
+		CharacterId = characterId,
+		CharacterName = def.Name,
+		Rarity = def.Rarity,
+		RarityName = rarityLabel,
+		Variant = variant,
+		Anime = def.Anime or "Generico",
+		Type = def.Type,
+		SourceKey = sourceKey or "Reward",
+		Verb = src.Verb,
+		Place = src.Place,
+	}
+	local announceRemote = Remotes:FindFirstChild("Announce")
+	if announceRemote then
+		announceRemote:FireAllClients(text, meta)
+	end
+end
+
+-- Cria um personagem na colecao (usado pelo inicial, invocacao, captura, torre e recompensas)
 -- Retorna uid e mensagens do album (premios de tipo/raridade completos)
-function ProgressionService.AddCharacter(player: Player, characterId: string, level: number, toTeam: boolean?, variant: string?, geneticsOverride)
+function ProgressionService.AddCharacter(player: Player, characterId: string, level: number, toTeam: boolean?, variant: string?, geneticsOverride, announceOpts)
 	local data = assert(PlayerDataService.Get(player), "Perfil nao carregado")
 	local def = assert(Characters.Get(characterId), "Personagem desconhecido: " .. tostring(characterId))
 	level = math.clamp(math.floor(level), 1, Progression.MaxLevel)
@@ -66,6 +112,9 @@ function ProgressionService.AddCharacter(player: Player, characterId: string, le
 		table.insert(data.Team, uid)
 	end
 	local albumLines = AlbumService.Record(data, characterId, variant)
+	if not (typeof(announceOpts) == "table" and announceOpts.Silent == true) then
+		ProgressionService.AnnounceRareDrop(player, characterId, variant, typeof(announceOpts) == "table" and announceOpts.Source or "Reward")
+	end
 	return uid, albumLines
 end
 

@@ -215,7 +215,7 @@ startEncounter = function(player: Player, model: Model)
 			end
 			if battle.Captured then
 				local toTeam = #profile.Team < MAX_TEAM
-				local _, albumLines = ProgressionService.AddCharacter(player, battle.Captured.CharacterId, battle.Captured.Level, toTeam, nil, battle.Captured.Genetics)
+				local _, albumLines = ProgressionService.AddCharacter(player, battle.Captured.CharacterId, battle.Captured.Level, toTeam, nil, battle.Captured.Genetics, { Source = "Capture" })
 				table.insert(lines, def.Name .. " entrou para " .. (if toTeam then "o seu time." else "a sua cole\u{e7}\u{e3}o (base)."))
 				for _, l in ipairs(albumLines or {}) do
 					table.insert(lines, l)

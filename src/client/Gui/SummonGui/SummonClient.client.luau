@@ -2232,20 +2232,3 @@ UI.onBattle(function(inBattle)
 		reveal.Close(true)
 	end
 end)
-
-Remotes:WaitForChild("Announce").OnClientEvent:Connect(function(text)
-	local shown = false
-	pcall(function()
-		local channels = TextChatService:FindFirstChild("TextChannels")
-		local general = channels and channels:FindFirstChild("RBXGeneral")
-		if general then
-			general:DisplaySystemMessage("<font color=\"#ffd84a\">" .. text .. "</font>")
-			shown = true
-		end
-	end)
-	if not shown then
-		pcall(function()
-			StarterGui:SetCore("ChatMakeSystemMessage", { Text = text, Color = Color3.fromRGB(255, 216, 74) })
-		end)
-	end
-end)

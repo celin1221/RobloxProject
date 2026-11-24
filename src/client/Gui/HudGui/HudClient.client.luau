@@ -10,6 +10,9 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+local TextChatService = game:GetService("TextChatService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -384,7 +387,268 @@ Remotes:WaitForChild("Notify").OnClientEvent:Connect(function(text)
 	showToast(text)
 end)
 
+--------------------------------------------------------------------
+-- Anuncio global do servidor (Lendario / Brilhante): banner animado + chat do sistema
+--------------------------------------------------------------------
 local pg = player:WaitForChild("PlayerGui")
+
+local function escapeRich(s: string): string
+	return (tostring(s or ""):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"))
+end
+
+local announceGui = pg:FindFirstChild("ServerAnnounceOverlay")
+if not announceGui then
+	announceGui = Instance.new("ScreenGui")
+	announceGui.Name = "ServerAnnounceOverlay"
+	announceGui.ResetOnSpawn = false
+	announceGui.IgnoreGuiInset = false
+	announceGui.DisplayOrder = 25 -- acima de todas as janelas (Info = 16, Battle = 10, Rewards/Shop/Summon = 9)
+	announceGui.Parent = pg
+end
+local announceCanvas = UI.screen(announceGui)
+
+local bannerHolder, bannerFace = UI.panel(announceCanvas, {
+	Name = "LegendaryBanner",
+	Size = UDim2.fromScale(0.48, 0.115),
+	Position = UDim2.fromScale(0.5, -0.15),
+	AnchorPoint = Vector2.new(0.5, 0),
+	Color = "panel",
+	Corner = 0.24,
+	Visible = false,
+	ZIndex = 40,
+	MaxSize = Vector2.new(540, 74),
+	MinSize = Vector2.new(300, 56),
+})
+bannerHolder.Active = false
+bannerFace.Active = false
+local bannerScale = Instance.new("UIScale")
+bannerScale.Parent = bannerHolder
+local bannerShine = UI.shine(bannerFace, Color3.fromRGB(255, 240, 175))
+bannerShine.ZIndex = 41
+
+local bannerPortrait = TeamCards.new(bannerFace, {
+	Name = "Portrait",
+	CompactPortrait = true,
+	Size = UDim2.fromScale(0.14, 0.84),
+	Position = UDim2.fromScale(0.02, 0.5),
+	AnchorPoint = Vector2.new(0, 0.5),
+	ZIndex = 42,
+})
+local bannerPortraitAr = Instance.new("UIAspectRatioConstraint")
+bannerPortraitAr.AspectRatio = 1
+bannerPortraitAr.DominantAxis = Enum.DominantAxis.Height
+bannerPortraitAr.Parent = bannerPortrait.Root
+bannerPortrait.Root.Active = false
+bannerPortrait.Root.Selectable = false
+
+local bannerFallbackIcon = UI.icon(bannerFace, "star", {
+	Name = "FallbackIcon",
+	Size = UDim2.fromScale(0.11, 0.72),
+	Position = UDim2.fromScale(0.03, 0.5),
+	AnchorPoint = Vector2.new(0, 0.5),
+	AspectAxis = Enum.DominantAxis.Height,
+	ZIndex = 42,
+	Visible = false,
+})
+
+local bannerTagIcon = UI.icon(bannerFace, "star", {
+	Name = "TagIcon",
+	Size = UDim2.fromScale(0.055, 0.30),
+	Position = UDim2.fromScale(0.175, 0.11),
+	AspectAxis = Enum.DominantAxis.Height,
+	ZIndex = 43,
+})
+local bannerTagLabel = UI.text(bannerFace, "LEND\u{c1}RIO NO SERVIDOR", {
+	Name = "TagLabel",
+	Size = UDim2.fromScale(0.74, 0.31),
+	Position = UDim2.fromScale(0.225, 0.10),
+	Role = "Small",
+	Color = "gold",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.5,
+	ZIndex = 43,
+})
+bannerTagLabel.TextWrapped = false
+
+local bannerMainLabel = UI.text(bannerFace, "", {
+	Name = "MainLabel",
+	Size = UDim2.fromScale(0.79, 0.50),
+	Position = UDim2.fromScale(0.175, 0.43),
+	Role = "Small",
+	Color = "onDark",
+	AlignX = Enum.TextXAlignment.Left,
+	Rich = true,
+	StrokeMult = 0.5,
+	ZIndex = 43,
+})
+
+local announceQueue = {}
+local announceBusy = false
+local bannerTurnConn: RBXScriptConnection? = nil
+
+local function stopBannerTurn()
+	if bannerTurnConn then
+		bannerTurnConn:Disconnect()
+		bannerTurnConn = nil
+	end
+end
+
+local function startBannerTurn()
+	stopBannerTurn()
+	local elapsed = 0
+	bannerTurnConn = RunService.RenderStepped:Connect(function(dt)
+		if not bannerHolder.Visible then
+			stopBannerTurn()
+			return
+		end
+		elapsed += dt
+		bannerPortrait.SetAngle(math.sin(elapsed * 1.6) * 0.28)
+	end)
+end
+
+local function postSystemChat(text: string, meta)
+	local isLeg = meta and meta.Rarity == "Lendario"
+	local isShiny = meta and meta.Variant == "Brilhante"
+	local richMsg
+	if meta and meta.PlayerName and meta.CharacterName then
+		local tagColor = if isShiny then "#73F5FF" else "#FFD84A"
+		local tagText = if isLeg and isShiny then "[LEND\u{c1}RIO BRILHANTE]" elseif isLeg then "[LEND\u{c1}RIO]" else "[BRILHANTE]"
+		local pName = escapeRich(meta.PlayerName)
+		local cName = escapeRich(meta.CharacterName)
+		local verb = escapeRich(meta.Verb or "conseguiu")
+		local place = if meta.Place and #meta.Place > 0 then (" " .. escapeRich(meta.Place)) else ""
+		local shinyTxt = if isShiny then " Brilhante" else ""
+		richMsg = string.format(
+			'<font color="%s"><b>%s</b></font> <font color="#FFFFFF"><b>%s</b></font> <font color="#FFE79A">%s</font> <font color="#FFB41F"><b>%s%s</b></font><font color="#FFE79A">%s!</font>',
+			tagColor, tagText, pName, verb, cName, shinyTxt, place
+		)
+	else
+		richMsg = '<font color="#FFD84A">' .. escapeRich(text) .. "</font>"
+	end
+
+	local shown = false
+	pcall(function()
+		local channels = TextChatService:FindFirstChild("TextChannels")
+		local general = channels and channels:FindFirstChild("RBXGeneral")
+		if general then
+			general:DisplaySystemMessage(richMsg)
+			shown = true
+		end
+	end)
+	if not shown then
+		pcall(function()
+			StarterGui:SetCore("ChatMakeSystemMessage", {
+				Text = text,
+				Color = if isShiny then Color3.fromRGB(115, 245, 255) else Color3.fromRGB(255, 216, 74),
+			})
+		end)
+	end
+end
+
+local function drainAnnounceQueue()
+	if announceBusy then
+		return
+	end
+	announceBusy = true
+	task.spawn(function()
+		while #announceQueue > 0 do
+			local item = table.remove(announceQueue, 1)
+			local text, meta = item.Text, item.Meta
+			local isLeg = meta and meta.Rarity == "Lendario"
+			local isShiny = meta and meta.Variant == "Brilhante"
+
+			local stroke = bannerFace:FindFirstChildOfClass("UIStroke")
+			if stroke then
+				stroke.Color = if isShiny then Color3.fromRGB(115, 245, 255) else T.Palette.lendario
+			end
+
+			if isLeg and isShiny then
+				UI.setIcon(bannerTagIcon, "sparkle")
+				bannerTagLabel.Text = "LEND\u{c1}RIO BRILHANTE NO SERVIDOR"
+				bannerTagLabel.TextColor3 = Color3.fromRGB(115, 245, 255)
+			elseif isLeg then
+				UI.setIcon(bannerTagIcon, "star")
+				bannerTagLabel.Text = "LEND\u{c1}RIO NO SERVIDOR"
+				bannerTagLabel.TextColor3 = T.Palette.gold
+			else
+				UI.setIcon(bannerTagIcon, "sparkle")
+				bannerTagLabel.Text = "BRILHANTE NO SERVIDOR"
+				bannerTagLabel.TextColor3 = Color3.fromRGB(115, 245, 255)
+			end
+
+			local targetY = if UI.inBattle() then 0.145 else 0.13
+			bannerHolder.Position = UDim2.fromScale(0.5, -0.15)
+			bannerScale.Scale = 0.82
+			bannerHolder.Visible = true
+
+			if meta and meta.CharacterId and Characters.Get(meta.CharacterId) then
+				bannerPortrait.Root.Visible = true
+				bannerFallbackIcon.Visible = false
+				bannerPortrait.Set("announce_" .. meta.CharacterId, {
+					CharacterId = meta.CharacterId,
+					Level = 1,
+					Variant = meta.Variant,
+					Stars = 0,
+				})
+				startBannerTurn()
+			else
+				stopBannerTurn()
+				bannerPortrait.Clear()
+				bannerPortrait.Root.Visible = false
+				bannerFallbackIcon.Visible = true
+			end
+
+			if meta and meta.PlayerName and meta.CharacterName then
+				local pName = escapeRich(meta.PlayerName)
+				local cName = escapeRich(meta.CharacterName)
+				local verb = escapeRich(meta.Verb or "conseguiu")
+				local place = if meta.Place and #meta.Place > 0 then (" " .. escapeRich(meta.Place)) else ""
+				local shinyTxt = if isShiny then " Brilhante" else ""
+				bannerMainLabel.Text = string.format(
+					'<font color="#FFFFFF"><b>%s</b></font> %s <font color="#FFB41F"><b>%s%s</b></font>%s!',
+					pName, verb, cName, shinyTxt, place
+				)
+			else
+				bannerMainLabel.Text = escapeRich(text)
+			end
+
+			TweenService:Create(bannerHolder, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0.5, targetY) }):Play()
+			TweenService:Create(bannerScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+			if not (meta and meta.SourceKey == "Summon" and meta.UserId == player.UserId) then
+				UI.play("reward")
+			end
+
+			task.wait(4.8)
+
+			local hideTween = TweenService:Create(bannerHolder, TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = UDim2.fromScale(0.5, -0.15) })
+			hideTween:Play()
+			hideTween.Completed:Wait()
+			stopBannerTurn()
+			bannerHolder.Visible = false
+			bannerPortrait.Clear()
+			task.wait(0.2)
+		end
+		announceBusy = false
+	end)
+end
+
+Remotes:WaitForChild("Announce").OnClientEvent:Connect(function(text, meta)
+	if typeof(text) ~= "string" or #text == 0 then
+		return
+	end
+	local function dispatch()
+		postSystemChat(text, meta)
+		table.insert(announceQueue, { Text = text, Meta = meta })
+		drainAnnounceQueue()
+	end
+	-- Para quem esta invocando, espera o fim da revelacao 3D para nao dar spoiler antes da carta aparecer
+	if typeof(meta) == "table" and meta.SourceKey == "Summon" and meta.UserId == player.UserId then
+		task.delay(3.8, dispatch)
+	else
+		dispatch()
+	end
+end)
+
 local function syncAttrs()
 	badge.Visible = pg:GetAttribute("RewardsBadge") == true
 	local evId = pg:GetAttribute("WeekendEventId")
