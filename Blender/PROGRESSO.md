@@ -1103,4 +1103,19 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 **Testado (Play Mode ao vivo + Suíte GDD)**
 - Validado ao vivo em 2x2 com `Byakuya + San` e `Byakuya + BarbaBranca` (personagem mais alto do jogo + bisento) sem nenhuma sobreposição entre lutadores ou HUD e `0` erros de script.
 - `python scripts/sync_studio.py status` (`100% in sync`) e `python scripts/sync_studio.py test` (`PASS`).
+- Place salvo no Roblox Studio na **versão 314** (`TeamCreate`).
 - Place salvo no Roblox Studio na **versão 313** (`TeamCreate`).
+
+
+## Escudos/Altares de Chão Individuais para Batalhas 2x2 (`ArenaManager.ConfigureAltars`) (24/11/2026)
+
+**Feito**
+- Implementado `ArenaManager.ConfigureAltars(arena, isDouble)` em `src/server/Battle/ArenaManager.luau`:
+  - No modo **1x1**, mantém os 2 altares originais (`DomainDecor.AltaresPersonagens`) centralizados em `PlayerPoint` e `EnemyPoint`.
+  - No modo **2x2**, gera sob demanda (com cache em `ServerStorage/_ArenaAltarsCache/<Arena>`) a pasta `AltaresPersonagens2x2` com **4 escudos/altares individuais** (`AltarCombate_Player_1/2` e `AltarCombate_Enemy_1/2`) centralizados exatamente nos 4 slots 2x2 (`±5.2` studs), escalados em XZ (`0.78x`, diâmetro `6.08` studs, mantendo a altura exata do piso `floorY` e ~`2.3` studs de água carmesim livre entre escudos vizinhos, além de reposicionar os `AltarApoio` para o ponto 2x2 do treinador).
+  - Integrado em `src/server/Battle/BattleService.luau` (`StartBattle`, `StartPvP` e restauração automática para `1x1` em `cleanup`).
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- Validado ao vivo em batalha 2x2 (`Byakuya + San` vs `Uryu + Ichigo`): os 4 lutadores ficam centralizados cada um no seu próprio escudo/altar com zero sobreposição e alternância limpa `1x1 ↔ 2x2`.
+- `python scripts/sync_studio.py status` (`100% in sync`) e `python scripts/sync_studio.py test` (`PASS`).
+- Place salvo no Roblox Studio na **versão 314** (`TeamCreate`).

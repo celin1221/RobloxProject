@@ -338,6 +338,7 @@ local function cleanup(session, returnPlayer: boolean)
 		session.TurnToken = (session.TurnToken or 0) + 1
 		destroyAllModels(session)
 		if session.Arena and session.Arena.Parent then
+			ArenaManager.ConfigureAltars(session.Arena, false)
 			session.Arena:SetAttribute("InUse", false)
 		end
 		for _, p in ipairs({ session.Player, session.Opponent }) do
@@ -357,6 +358,7 @@ local function cleanup(session, returnPlayer: boolean)
 	sessions[session.Player] = nil
 	destroyAllModels(session)
 	if session.Arena and session.Arena.Parent then
+		ArenaManager.ConfigureAltars(session.Arena, false)
 		session.Arena:SetAttribute("InUse", false)
 	end
 	cooldownUntil[session.Player] = os.clock() + Config.TriggerCooldown
@@ -486,6 +488,7 @@ function BattleService.StartBattle(player: Player, opts): boolean
 
 	local ok, err = pcall(function()
 		session.FloorY = ArenaManager.GetFloorY(arena)
+		ArenaManager.ConfigureAltars(arena, battle:IsDouble())
 		local actors = arena:FindFirstChild("BattleActors") or Instance.new("Folder")
 		actors.Name = "BattleActors"
 		actors.Parent = arena
@@ -735,6 +738,7 @@ function BattleService.StartPvP(playerA: Player, playerB: Player, teamA, teamB, 
 
 	local ok, err = pcall(function()
 		session.FloorY = ArenaManager.GetFloorY(arena)
+		ArenaManager.ConfigureAltars(arena, battle:IsDouble())
 		local actors = arena:FindFirstChild("BattleActors") or Instance.new("Folder")
 		actors.Name = "BattleActors"
 		actors.Parent = arena
