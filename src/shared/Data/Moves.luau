@@ -9,120 +9,420 @@
 	  adicionar suas tecnicas assinatura exclusivas quando desejar.
 
 	Campos:
-	  Name       nome mostrado
-	  Type       id da classe ("Espadachim" | "Lutador" | "Mago" | "Atirador" | "Universal")
-	  Category   "Damage" (causa dano) ou "Status" (so efeito)
-	  Power      poder (so Damage)
-	  Accuracy   precisao 0-100; nil = nunca erra
-	  PP         usos maximos
-	  CritChance (opcional) chance de critico propria (padrao 0.0625 em DamageCalc)
-	  Effect     efeito opcional:
-	               { Kind = "Status", Status = "Burn" | "Poison" | "Paralysis" | "Sleep" | "Freeze", Chance = 0-100, Target = "Target" | "Self" }
-	               { Kind = "StatStage", Stat = "Attack" | "Defense" | "Speed" | "Accuracy", Stages = n, Target = ... }
-	  Anim       (opcional) nome da animacao na pasta Animations do modelo; tocada no cliente
-	  Vfx        (opcional) nome do efeito em ReplicatedStorage/Vfx; tocado pelo VfxController
-	  Timing     (com Anim) instantes Charge, Release e Impact em segundos
-	  Target     (opcional, usado no 2x2): "Single" (padrao), "AllEnemies" (0.75x em 2+ alvos),
-	             "AllOthers", "AllAllies" ou "Self".
-	  Generic    true nos golpes genericos compartilhados por classe
-	  Signature  true na tecnica assinatura do personagem
+	  Name          nome mostrado
+	  Type          id da classe ("Espadachim" | "Lutador" | "Mago" | "Atirador" | "Universal")
+	  Category      "Damage" (causa dano) ou "Status" (so efeito)
+	  Power         poder (so Damage)
+	  Accuracy      precisao 0-100; nil = nunca erra
+	  PP            usos maximos
+	  Priority      (opcional) prioridade na fila do turno (+4 Protect, +3 WideProtect, +1 rapido, 0 padrao)
+	  CritChance    (opcional) chance de critico propria (padrao 0.0625 em DamageCalc)
+	  Drain         (opcional) fracao do dano causado drenado como HP (ex.: 0.5 = 50%)
+	  Recoil        (opcional) fracao do dano causado sofrido como recuo (ex.: 0.25 = 25%)
+	  BreaksProtect (opcional) true para romper Protect/WideProtect do alvo
+	  LearnLevel    (opcional) nivel sugerido de aprendizado para progressao por nivel
+	  Effect        efeito opcional:
+	                  { Kind = "Status", Status = "Burn" | "Poison" | "Paralysis" | "Sleep" | "Freeze", Chance = 0-100, Target = "Target" | "Self" }
+	                  { Kind = "StatStage", Stat = "Attack" | "Defense" | "Speed" | "Accuracy", Stages = n, Target = ... }
+	                  { Kind = "MultiStat", Changes = { { Stat = ..., Stages = n }, ... }, Target = "Self" | "Target" }
+	                  { Kind = "Protect" } | { Kind = "WideProtect" }
+	                  { Kind = "Hazard", Hazard = "Spikes" | "ToxicSpikes" | "StickyWeb" }
+	                  { Kind = "ClearHazards", Scope = "Own" | "All", BonusStat = ..., BonusStages = ... }
+	                  { Kind = "SideEffect", SideEffect = "Barrier" | "Tailwind", Turns = n }
+	                  { Kind = "Heal", Fraction = 0.35..0.5, Target = "Self" | "Target" }
+	                  { Kind = "Cleanse", Target = "Self" | "Target" }
+	  Anim          (opcional) nome da animacao na pasta Animations do modelo; tocada no cliente
+	  Vfx           (opcional) nome do efeito em ReplicatedStorage/Vfx; tocado pelo VfxController
+	  Timing        (com Anim) instantes Charge, Release e Impact em segundos
+	  Target        (opcional, usado no 2x2): "Single" (padrao), "AllEnemies" (0.75x em 2+ alvos),
+	                "AllOthers", "AllAllies", "EnemySide" ou "Self".
+	  Generic       true nos golpes genericos compartilhados por classe
+	  Signature     true na tecnica assinatura do personagem
 ]]
 
 local Moves = {}
 
 Moves.List = {
 	--------------------------------------------------------------------
-	-- Golpes Genericos de Classe: ESPADACHIM
+	-- Golpes Genericos de Classe: ESPADACHIM (15 genericos: Nv. 1 -> 38)
 	-- (CorteBasico e CorteCruzado sao os 2 ataques basicos identicos para TODOS os espadachins)
 	--------------------------------------------------------------------
 	CorteBasico = {
 		Name = "Corte R\u{e1}pido", Type = "Espadachim", Category = "Damage", Power = 40, Accuracy = 100, PP = 30,
-		Generic = true,
+		Generic = true, LearnLevel = 1,
 		Anim = "CorteBasico", Vfx = "CorteBasico",
 		Timing = { Charge = 0.12, Release = 0.28, Impact = 0.38, Length = 0.90 },
 	},
 	CorteCruzado = {
 		Name = "Corte Cruzado", Type = "Espadachim", Category = "Damage", Power = 52, Accuracy = 95, PP = 20,
-		CritChance = 0.15, Generic = true,
+		CritChance = 0.15, Generic = true, LearnLevel = 1,
 		Anim = "CorteCruzado", Vfx = "CorteCruzado",
 		Timing = { Charge = 0.14, Release = 0.34, Impact = 0.62, Length = 1.15 },
-	},
-	CorteGiratorio = {
-		Name = "Corte Girat\u{f3}rio", Type = "Espadachim", Category = "Damage", Power = 42, Accuracy = 100, PP = 15,
-		Target = "AllEnemies", Generic = true,
 	},
 	PosturaDaLamina = {
 		Name = "Postura da L\u{e2}mina", Type = "Espadachim", Category = "Status", Accuracy = nil, PP = 15,
 		Effect = { Kind = "StatStage", Stat = "Attack", Stages = 1, Target = "Self" },
-		Generic = true,
+		Generic = true, LearnLevel = 5,
+	},
+	EstocadaVeloz = {
+		Name = "Estocada Veloz", Type = "Espadachim", Category = "Damage", Power = 35, Accuracy = 100, PP = 25,
+		Priority = 1, Generic = true, LearnLevel = 8,
+	},
+	CorteGiratorio = {
+		Name = "Corte Girat\u{f3}rio", Type = "Espadachim", Category = "Damage", Power = 42, Accuracy = 100, PP = 15,
+		Target = "AllEnemies", Generic = true, LearnLevel = 10,
+	},
+	CorteCerteiro = {
+		Name = "Corte Certeiro", Type = "Espadachim", Category = "Damage", Power = 45, Accuracy = nil, PP = 20,
+		Generic = true, LearnLevel = 12,
+	},
+	LaminaAfiada = {
+		Name = "L\u{e2}mina Afiada", Type = "Espadachim", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "Self",
+		Effect = { Kind = "MultiStat", Changes = { { Stat = "Attack", Stages = 1 }, { Stat = "Speed", Stages = 1 } }, Target = "Self" },
+		Generic = true, LearnLevel = 15,
+	},
+	CorteDrenante = {
+		Name = "Corte Drenante", Type = "Espadachim", Category = "Damage", Power = 48, Accuracy = 100, PP = 15,
+		Drain = 0.5, Generic = true, LearnLevel = 18,
+	},
+	QuebraLamina = {
+		Name = "Quebra-L\u{e2}mina", Type = "Espadachim", Category = "Damage", Power = 50, Accuracy = 100, PP = 15,
+		BreaksProtect = true, Generic = true, LearnLevel = 20,
+	},
+	FioVenenoso = {
+		Name = "Fio Venenoso", Type = "Espadachim", Category = "Damage", Power = 52, Accuracy = 100, PP = 15,
+		Effect = { Kind = "Status", Status = "Poison", Chance = 30, Target = "Target" },
+		Generic = true, LearnLevel = 22,
+	},
+	LaminaPesada = {
+		Name = "L\u{e2}mina Pesada", Type = "Espadachim", Category = "Damage", Power = 60, Accuracy = 95, PP = 15,
+		Effect = { Kind = "StatStage", Stat = "Defense", Stages = -1, Chance = 20, Target = "Target" },
+		Generic = true, LearnLevel = 26,
+	},
+	DancaDasEspadas = {
+		Name = "Dan\u{e7}a das Espadas", Type = "Espadachim", Category = "Status", Accuracy = nil, PP = 10,
+		Target = "Self",
+		Effect = { Kind = "StatStage", Stat = "Attack", Stages = 2, Target = "Self" },
+		Generic = true, LearnLevel = 28,
+	},
+	LaminasNoChao = {
+		Name = "L\u{e2}minas no Ch\u{e3}o", Type = "Espadachim", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "EnemySide",
+		Effect = { Kind = "Hazard", Hazard = "Spikes" },
+		Generic = true, LearnLevel = 30,
+	},
+	TempestadeDeCortes = {
+		Name = "Tempestade de Cortes", Type = "Espadachim", Category = "Damage", Power = 56, Accuracy = 95, PP = 10,
+		Target = "AllEnemies", CritChance = 0.12, Generic = true, LearnLevel = 34,
+	},
+	InvestidaCortante = {
+		Name = "Investida Cortante", Type = "Espadachim", Category = "Damage", Power = 72, Accuracy = 90, PP = 10,
+		Recoil = 0.25, Generic = true, LearnLevel = 38,
 	},
 
 	--------------------------------------------------------------------
-	-- Golpes Genericos de Classe: LUTADOR
+	-- Golpes Genericos de Classe: LUTADOR (15 genericos: Nv. 1 -> 38)
 	--------------------------------------------------------------------
 	SocoDireto = {
 		Name = "Soco Direto", Type = "Lutador", Category = "Damage", Power = 40, Accuracy = 100, PP = 30,
-		Generic = true,
+		Generic = true, LearnLevel = 1,
 	},
 	ComboMarcial = {
 		Name = "Combo Marcial", Type = "Lutador", Category = "Damage", Power = 45, Accuracy = 100, PP = 25,
-		Generic = true,
+		Generic = true, LearnLevel = 1,
 		Anim = "ComboMarcial", Vfx = "ComboMarcial", AnimSpeed = 2.6,
 		Timing = { Charge = 0.12, Release = 0.54, Impact = 1.15, Length = 1.52 },
-	},
-	QuebraGuarda = {
-		Name = "Quebra-Guarda", Type = "Lutador", Category = "Damage", Power = 45, Accuracy = 95, PP = 15,
-		Effect = { Kind = "StatStage", Stat = "Defense", Stages = -1, Chance = 40, Target = "Target" },
-		Generic = true,
 	},
 	PosturaDeCombate = {
 		Name = "Postura de Combate", Type = "Lutador", Category = "Status", Accuracy = nil, PP = 15,
 		Effect = { Kind = "StatStage", Stat = "Attack", Stages = 1, Target = "Self" },
-		Generic = true,
+		Generic = true, LearnLevel = 5,
+	},
+	SocoRelampago = {
+		Name = "Soco Rel\u{e2}mpago", Type = "Lutador", Category = "Damage", Power = 35, Accuracy = 100, PP = 25,
+		Priority = 1, Generic = true, LearnLevel = 8,
+	},
+	QuebraGuarda = {
+		Name = "Quebra-Guarda", Type = "Lutador", Category = "Damage", Power = 45, Accuracy = 95, PP = 15,
+		Effect = { Kind = "StatStage", Stat = "Defense", Stages = -1, Chance = 40, Target = "Target" },
+		Generic = true, LearnLevel = 10,
+	},
+	Rasteira = {
+		Name = "Rasteira", Type = "Lutador", Category = "Damage", Power = 42, Accuracy = 100, PP = 20,
+		Effect = { Kind = "StatStage", Stat = "Speed", Stages = -1, Chance = 100, Target = "Target" },
+		Generic = true, LearnLevel = 12,
+	},
+	CorpoDeFerro = {
+		Name = "Corpo de Ferro", Type = "Lutador", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "Self",
+		Effect = { Kind = "MultiStat", Changes = { { Stat = "Attack", Stages = 1 }, { Stat = "Defense", Stages = 1 } }, Target = "Self" },
+		Generic = true, LearnLevel = 15,
+	},
+	SocoDrenante = {
+		Name = "Soco Drenante", Type = "Lutador", Category = "Damage", Power = 48, Accuracy = 100, PP = 15,
+		Drain = 0.5, Generic = true, LearnLevel = 18,
+	},
+	PunhoDemolidor = {
+		Name = "Punho Demolidor", Type = "Lutador", Category = "Damage", Power = 50, Accuracy = 100, PP = 15,
+		BreaksProtect = true, Generic = true, LearnLevel = 20,
+	},
+	OndaDeImpacto = {
+		Name = "Onda de Impacto", Type = "Lutador", Category = "Damage", Power = 48, Accuracy = 100, PP = 15,
+		Target = "AllEnemies",
+		Effect = { Kind = "StatStage", Stat = "Defense", Stages = -1, Chance = 20, Target = "Target" },
+		Generic = true, LearnLevel = 22,
+	},
+	GritoDeGuerra = {
+		Name = "Grito de Guerra", Type = "Lutador", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "AllAllies",
+		Effect = { Kind = "StatStage", Stat = "Attack", Stages = 1, Target = "Target" },
+		Generic = true, LearnLevel = 25,
+	},
+	PunhoArdente = {
+		Name = "Punho Ardente", Type = "Lutador", Category = "Damage", Power = 58, Accuracy = 95, PP = 15,
+		Effect = { Kind = "Status", Status = "Burn", Chance = 20, Target = "Target" },
+		Generic = true, LearnLevel = 28,
+	},
+	GiroVarredor = {
+		Name = "Giro Varredor", Type = "Lutador", Category = "Damage", Power = 35, Accuracy = 100, PP = 20,
+		Effect = { Kind = "ClearHazards", Scope = "Own", BonusStat = "Speed", BonusStages = 1 },
+		Generic = true, LearnLevel = 30,
+	},
+	FocoInterior = {
+		Name = "Foco Interior", Type = "Lutador", Category = "Status", Accuracy = nil, PP = 10,
+		Target = "Self",
+		Effect = { Kind = "Heal", Fraction = 0.5, Target = "Self" },
+		Generic = true, LearnLevel = 34,
+	},
+	ImpactoTotal = {
+		Name = "Impacto Total", Type = "Lutador", Category = "Damage", Power = 74, Accuracy = 90, PP = 10,
+		Recoil = 0.30, Generic = true, LearnLevel = 38,
 	},
 
 	--------------------------------------------------------------------
-	-- Golpes Genericos de Classe: MAGO
+	-- Golpes Genericos de Classe: MAGO (16 genericos: Nv. 1 -> 38)
 	--------------------------------------------------------------------
 	EsferaArcana = {
 		Name = "Esfera Arcana", Type = "Mago", Category = "Damage", Power = 42, Accuracy = 100, PP = 25,
-		Generic = true,
-	},
-	OndaArcana = {
-		Name = "Onda Arcana", Type = "Mago", Category = "Damage", Power = 45, Accuracy = 100, PP = 15,
-		Target = "AllEnemies", Generic = true,
+		Generic = true, LearnLevel = 1,
 	},
 	ChamaMistica = {
 		Name = "Chama M\u{ed}stica", Type = "Mago", Category = "Damage", Power = 35, Accuracy = 100, PP = 15,
 		Target = "AllEnemies",
 		Effect = { Kind = "Status", Status = "Burn", Chance = 30, Target = "Target" },
-		Generic = true,
+		Generic = true, LearnLevel = 1,
 	},
 	SeloParalisante = {
 		Name = "Selo Paralisante", Type = "Mago", Category = "Status", Accuracy = 90, PP = 15,
 		Effect = { Kind = "Status", Status = "Paralysis", Chance = 100, Target = "Target" },
-		Generic = true,
+		Generic = true, LearnLevel = 5,
+	},
+	PulsoVeloz = {
+		Name = "Pulso Veloz", Type = "Mago", Category = "Damage", Power = 35, Accuracy = 100, PP = 25,
+		Priority = 1, Generic = true, LearnLevel = 8,
+	},
+	OndaArcana = {
+		Name = "Onda Arcana", Type = "Mago", Category = "Damage", Power = 45, Accuracy = 100, PP = 15,
+		Target = "AllEnemies", Generic = true, LearnLevel = 10,
+	},
+	RaioCongelante = {
+		Name = "Raio Congelante", Type = "Mago", Category = "Damage", Power = 48, Accuracy = 100, PP = 15,
+		Effect = { Kind = "Status", Status = "Freeze", Chance = 15, Target = "Target" },
+		Generic = true, LearnLevel = 12,
+	},
+	FogoFatuo = {
+		Name = "Fogo-F\u{e1}tuo", Type = "Mago", Category = "Status", Accuracy = 85, PP = 15,
+		Effect = { Kind = "Status", Status = "Burn", Chance = 100, Target = "Target" },
+		Generic = true, LearnLevel = 14,
+	},
+	MenteCalma = {
+		Name = "Mente Calma", Type = "Mago", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "Self",
+		Effect = { Kind = "MultiStat", Changes = { { Stat = "Attack", Stages = 1 }, { Stat = "Defense", Stages = 1 } }, Target = "Self" },
+		Generic = true, LearnLevel = 16,
+	},
+	SifaoArcano = {
+		Name = "Sif\u{e3}o Arcano", Type = "Mago", Category = "Damage", Power = 48, Accuracy = 100, PP = 15,
+		Drain = 0.5, Generic = true, LearnLevel = 18,
+	},
+	NevoaDoSono = {
+		Name = "N\u{e9}voa do Sono", Type = "Mago", Category = "Status", Accuracy = 75, PP = 10,
+		Effect = { Kind = "Status", Status = "Sleep", Chance = 100, Target = "Target" },
+		Generic = true, LearnLevel = 20,
+	},
+	BarreiraArcana = {
+		Name = "Barreira Arcana", Type = "Mago", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "Self",
+		Effect = { Kind = "SideEffect", SideEffect = "Barrier", Turns = 5 },
+		Generic = true, LearnLevel = 22,
+	},
+	RunasToxicas = {
+		Name = "Runas T\u{f3}xicas", Type = "Mago", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "EnemySide",
+		Effect = { Kind = "Hazard", Hazard = "ToxicSpikes" },
+		Generic = true, LearnLevel = 24,
+	},
+	CuraLuminosa = {
+		Name = "Cura Luminosa", Type = "Mago", Category = "Status", Accuracy = nil, PP = 10,
+		Target = "AllAllies",
+		Effect = { Kind = "Heal", Fraction = 0.35, Target = "Target" },
+		Generic = true, LearnLevel = 26,
+	},
+	Purificacao = {
+		Name = "Purifica\u{e7}\u{e3}o", Type = "Mago", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "AllAllies",
+		Effect = { Kind = "Cleanse", Target = "Target" },
+		Generic = true, LearnLevel = 28,
+	},
+	ExplosaoAstral = {
+		Name = "Explos\u{e3}o Astral", Type = "Mago", Category = "Damage", Power = 60, Accuracy = 95, PP = 10,
+		Target = "AllEnemies",
+		Effect = { Kind = "StatStage", Stat = "Defense", Stages = -1, Chance = 15, Target = "Target" },
+		Generic = true, LearnLevel = 34,
+	},
+	MeteoroArcano = {
+		Name = "Meteoro Arcano", Type = "Mago", Category = "Damage", Power = 72, Accuracy = 90, PP = 10,
+		Effect = { Kind = "StatStage", Stat = "Attack", Stages = -1, Chance = 100, Target = "Self" },
+		Generic = true, LearnLevel = 38,
 	},
 
 	--------------------------------------------------------------------
-	-- Golpes Genericos de Classe: ATIRADOR
+	-- Golpes Genericos de Classe: ATIRADOR (15 genericos: Nv. 1 -> 38)
 	--------------------------------------------------------------------
 	DisparoPreciso = {
 		Name = "Disparo Preciso", Type = "Atirador", Category = "Damage", Power = 42, Accuracy = nil, PP = 25,
-		Generic = true,
+		Generic = true, LearnLevel = 1,
 	},
 	TiroPerfurante = {
 		Name = "Tiro Perfurante", Type = "Atirador", Category = "Damage", Power = 52, Accuracy = 95, PP = 15,
-		CritChance = 0.18, Generic = true,
-	},
-	ChuvaDeProjeteis = {
-		Name = "Chuva de Proj\u{e9}teis", Type = "Atirador", Category = "Damage", Power = 40, Accuracy = 95, PP = 15,
-		Target = "AllEnemies", Generic = true,
+		CritChance = 0.18, Generic = true, LearnLevel = 1,
 	},
 	MiraFirme = {
 		Name = "Mira Firme", Type = "Atirador", Category = "Status", Accuracy = nil, PP = 15,
 		Effect = { Kind = "StatStage", Stat = "Attack", Stages = 1, Target = "Self" },
-		Generic = true,
+		Generic = true, LearnLevel = 5,
+	},
+	TiroRapido = {
+		Name = "Tiro R\u{e1}pido", Type = "Atirador", Category = "Damage", Power = 35, Accuracy = 100, PP = 25,
+		Priority = 1, Generic = true, LearnLevel = 8,
+	},
+	ChuvaDeProjeteis = {
+		Name = "Chuva de Proj\u{e9}teis", Type = "Atirador", Category = "Damage", Power = 40, Accuracy = 95, PP = 15,
+		Target = "AllEnemies", Generic = true, LearnLevel = 10,
+	},
+	DardoVenenoso = {
+		Name = "Dardo Venenoso", Type = "Atirador", Category = "Damage", Power = 42, Accuracy = 100, PP = 20,
+		Effect = { Kind = "Status", Status = "Poison", Chance = 40, Target = "Target" },
+		Generic = true, LearnLevel = 12,
+	},
+	FocoDePrecisao = {
+		Name = "Foco de Precis\u{e3}o", Type = "Atirador", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "Self",
+		Effect = { Kind = "MultiStat", Changes = { { Stat = "Attack", Stages = 1 }, { Stat = "Accuracy", Stages = 1 } }, Target = "Self" },
+		Generic = true, LearnLevel = 15,
+	},
+	DisparoDeRede = {
+		Name = "Disparo de Rede", Type = "Atirador", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "EnemySide",
+		Effect = { Kind = "Hazard", Hazard = "StickyWeb" },
+		Generic = true, LearnLevel = 18,
+	},
+	TiroDeSupressao = {
+		Name = "Tiro de Supress\u{e3}o", Type = "Atirador", Category = "Damage", Power = 44, Accuracy = 95, PP = 15,
+		Target = "AllEnemies",
+		Effect = { Kind = "StatStage", Stat = "Speed", Stages = -1, Chance = 100, Target = "Target" },
+		Generic = true, LearnLevel = 20,
+	},
+	DisparoRompeEscudo = {
+		Name = "Disparo Rompe-Escudo", Type = "Atirador", Category = "Damage", Power = 50, Accuracy = 100, PP = 15,
+		BreaksProtect = true, Generic = true, LearnLevel = 22,
+	},
+	BombaDeFumaca = {
+		Name = "Bomba de Fuma\u{e7}a", Type = "Atirador", Category = "Status", Accuracy = 95, PP = 15,
+		Target = "AllEnemies",
+		Effect = { Kind = "StatStage", Stat = "Accuracy", Stages = -1, Target = "Target" },
+		Generic = true, LearnLevel = 24,
+	},
+	MinaDeEstrepes = {
+		Name = "Mina de Estrepes", Type = "Atirador", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "EnemySide",
+		Effect = { Kind = "Hazard", Hazard = "Spikes" },
+		Generic = true, LearnLevel = 28,
+	},
+	DardoEletrico = {
+		Name = "Dardo El\u{e9}trico", Type = "Atirador", Category = "Damage", Power = 52, Accuracy = 95, PP = 15,
+		Effect = { Kind = "Status", Status = "Paralysis", Chance = 30, Target = "Target" },
+		Generic = true, LearnLevel = 30,
+	},
+	RajadaTatica = {
+		Name = "Rajada T\u{e1}tica", Type = "Atirador", Category = "Damage", Power = 58, Accuracy = 95, PP = 10,
+		Target = "AllEnemies", CritChance = 0.12, Generic = true, LearnLevel = 34,
+	},
+	DisparoDeElite = {
+		Name = "Disparo de Elite", Type = "Atirador", Category = "Damage", Power = 72, Accuracy = 90, PP = 10,
+		CritChance = 0.25, Generic = true, LearnLevel = 38,
+	},
+
+	--------------------------------------------------------------------
+	-- Golpes Genericos Universais (10 genericos taticos para qualquer classe)
+	--------------------------------------------------------------------
+	AtaqueRapido = {
+		Name = "Ataque R\u{e1}pido", Type = "Universal", Category = "Damage", Power = 35, Accuracy = 100, PP = 30,
+		Priority = 1, Generic = true, LearnLevel = 6,
+	},
+	Proteger = {
+		Name = "Proteger", Type = "Universal", Category = "Status", Accuracy = nil, PP = 10,
+		Priority = 4, Target = "Self",
+		Effect = { Kind = "Protect" },
+		Generic = true, LearnLevel = 10,
+	},
+	OlharIntimidador = {
+		Name = "Olhar Intimidador", Type = "Universal", Category = "Status", Accuracy = 100, PP = 20,
+		Target = "AllEnemies",
+		Effect = { Kind = "StatStage", Stat = "Attack", Stages = -1, Target = "Target" },
+		Generic = true, LearnLevel = 12,
+	},
+	GuardaAmpla = {
+		Name = "Guarda Ampla", Type = "Universal", Category = "Status", Accuracy = nil, PP = 10,
+		Priority = 3, Target = "Self",
+		Effect = { Kind = "WideProtect" },
+		Generic = true, LearnLevel = 16,
+	},
+	VenenoPuro = {
+		Name = "Veneno Puro", Type = "Universal", Category = "Status", Accuracy = 90, PP = 15,
+		Effect = { Kind = "Status", Status = "Poison", Chance = 100, Target = "Target" },
+		Generic = true, LearnLevel = 16,
+	},
+	Agilidade = {
+		Name = "Agilidade", Type = "Universal", Category = "Status", Accuracy = nil, PP = 20,
+		Target = "Self",
+		Effect = { Kind = "StatStage", Stat = "Speed", Stages = 2, Target = "Self" },
+		Generic = true, LearnLevel = 18,
+	},
+	Desobstruir = {
+		Name = "Desobstruir", Type = "Universal", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "Self",
+		Effect = { Kind = "ClearHazards", Scope = "All" },
+		Generic = true, LearnLevel = 18,
+	},
+	VentoAFavor = {
+		Name = "Vento a Favor", Type = "Universal", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "Self",
+		Effect = { Kind = "SideEffect", SideEffect = "Tailwind", Turns = 4 },
+		Generic = true, LearnLevel = 20,
+	},
+	MuralhaDeFerro = {
+		Name = "Muralha de Ferro", Type = "Universal", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "Self",
+		Effect = { Kind = "StatStage", Stat = "Defense", Stages = 2, Target = "Self" },
+		Generic = true, LearnLevel = 22,
+	},
+	Recuperacao = {
+		Name = "Recupera\u{e7}\u{e3}o", Type = "Universal", Category = "Status", Accuracy = nil, PP = 10,
+		Target = "Self",
+		Effect = { Kind = "Heal", Fraction = 0.5, Target = "Self" },
+		Generic = true, LearnLevel = 24,
 	},
 
 	--------------------------------------------------------------------
@@ -363,7 +663,32 @@ function Moves.ClassKit(classId: string, signatureMoveId: string?)
 	return out
 end
 
--- Modo de alvo do golpe (usado no 2x2): "Single" | "AllEnemies" | "AllOthers" | "AllAllies" | "Self"
+-- Lista todos os golpes genericos de uma classe (opcionalmente incluindo "Universal"),
+-- ordenados por LearnLevel crescente. Base para montar Learnsets de progressao por nivel.
+function Moves.GenericsByClass(classId: string?, includeUniversal: boolean?)
+	local out = {}
+	for _, move in pairs(Moves.List) do
+		if move.Generic and not move.Hidden then
+			if classId == nil or move.Type == classId or (includeUniversal and move.Type == "Universal") then
+				table.insert(out, move)
+			end
+		end
+	end
+	table.sort(out, function(a, b)
+		local la = a.LearnLevel or 1
+		local lb = b.LearnLevel or 1
+		if la ~= lb then
+			return la < lb
+		end
+		if a.Type ~= b.Type then
+			return a.Type < b.Type
+		end
+		return a.Name < b.Name
+	end)
+	return out
+end
+
+-- Modo de alvo do golpe (usado no 2x2): "Single" | "AllEnemies" | "AllOthers" | "AllAllies" | "EnemySide" | "Self"
 function Moves.TargetMode(move): string
 	if not move then
 		return "Single"
@@ -371,8 +696,13 @@ function Moves.TargetMode(move): string
 	if move.Target then
 		return move.Target
 	end
-	if move.Category == "Status" and move.Effect and move.Effect.Target == "Self" then
-		return "Self"
+	if move.Category == "Status" and move.Effect then
+		local kind = move.Effect.Kind
+		if move.Effect.Target == "Self" or kind == "Protect" or kind == "WideProtect" or kind == "SideEffect" or kind == "ClearHazards" then
+			return "Self"
+		elseif kind == "Hazard" then
+			return "EnemySide"
+		end
 	end
 	return "Single"
 end

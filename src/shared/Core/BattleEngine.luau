@@ -56,6 +56,16 @@ local function freshStages()
 	return { Attack = 0, Defense = 0, Speed = 0, Accuracy = 0 }
 end
 
+local function freshHazards()
+	return { Spikes = 0, ToxicSpikes = 0, StickyWeb = false }
+end
+
+local function freshSideEffects()
+	return { Barrier = 0, Tailwind = 0 }
+end
+
+local SPIKES_FRACTION = { 1 / 8, 1 / 6, 1 / 4 }
+
 -- Cria um lutador a partir dos dados (Characters + Moves)
 local function newBattler(characterId: string, level: number, moveIds: { string }?, uid: string?, extra)
 	local def = assert(Characters.Get(characterId), "Personagem desconhecido: " .. tostring(characterId))
@@ -90,6 +100,8 @@ local function newBattler(characterId: string, level: number, moveIds: { string 
 		Status = extra.Status, -- "Burn" | "Poison" | "Paralysis" | "Sleep" | "Freeze" | nil
 		StatusTurns = if extra.Status == "Sleep" then (extra.StatusTurns or 1) else 0,
 		Stages = freshStages(),
+		Protected = false,
+		ProtectStreak = 0,
 		Moves = moves,
 		Uid = uid,
 		Genetics = if typeof(extra.Genetics) == "table" then Genetics.SanitizeTable(extra.Genetics) else nil,
@@ -117,7 +129,14 @@ local function newSide(teamDef, slotsPerSide: number)
 		end
 	end
 	assert(#activeSlots >= 1, "Time sem ninguem de pe")
-	return { Team = team, Active = activeSlots[1], ActiveSlots = activeSlots }
+	return {
+		Team = team,
+		Active = activeSlots[1],
+		ActiveSlots = activeSlots,
+		Hazards = freshHazards(),
+		SideEffects = freshSideEffects(),
+		WideProtected = false,
+	}
 end
 
 -- Aceita o formato antigo (CharacterId/Level) ou o novo (Team = {...})
@@ -574,6 +593,29 @@ function BattleEngine:ValidateAction(side: string, action): (boolean, string?)
 	return true
 end
 
+-- Velocidade efetiva do lutador considerando Tailwind do lado
+function BattleEngine:_EffectiveSpeed(side: string, actor): number
+	local spd = DamageCalc.EffectiveStat(actor, "Speed")
+	local sideState = self.Sides[side]
+	if sideState and sideState.SideEffects and sideState.SideEffects.Tailwind > 0 then
+		spd = math.floor(spd * 2)
+	end
+	return spd
+end
+
+-- Prioridade da acao na fila do turno: Flee (10) > Switch/Item (6) > Golpes (move.Priority ou 0)
+function BattleEngine:_ActionPriority(actor, sub): number
+	if sub.Kind == "Flee" then
+		return 10
+	elseif sub.Kind == "Switch" or sub.Kind == "Item" then
+		return 6
+	elseif sub.Kind == "Move" and actor then
+		local move = self:GetMove(actor, sub.Index)
+		return if move and typeof(move.Priority) == "number" then move.Priority else 0
+	end
+	return 0
+end
+
 -- Empilha acoes de um lado na fila do turno
 function BattleEngine:_EnqueueSide(queue, side: string, sideAction)
 	if sideAction.Kind == "Flee" then
@@ -581,7 +623,7 @@ function BattleEngine:_EnqueueSide(queue, side: string, sideAction)
 			Side = side,
 			FieldSlot = 0,
 			Action = sideAction,
-			Priority = 2,
+			Priority = 10,
 			Speed = 0,
 			Tiebreak = self.Rng:NextNumber(),
 		})
@@ -590,14 +632,13 @@ function BattleEngine:_EnqueueSide(queue, side: string, sideAction)
 	if not self:IsDouble() then
 		local actor = self:ActiveAt(side, 1)
 		if actor and actor.Hp > 0 then
-			local kind = sideAction.Kind
 			table.insert(queue, {
 				Side = side,
 				FieldSlot = 1,
 				Actor = actor,
 				Action = sideAction,
-				Priority = if kind == "Switch" or kind == "Item" then 1 else 0,
-				Speed = DamageCalc.EffectiveStat(actor, "Speed"),
+				Priority = self:_ActionPriority(actor, sideAction),
+				Speed = self:_EffectiveSpeed(side, actor),
 				Tiebreak = self.Rng:NextNumber(),
 			})
 		end
@@ -617,14 +658,13 @@ function BattleEngine:_EnqueueSide(queue, side: string, sideAction)
 		local sub = bySlot and bySlot[fs]
 		local actor = self:ActiveAt(side, fs)
 		if sub and actor and actor.Hp > 0 then
-			local kind = sub.Kind
 			table.insert(queue, {
 				Side = side,
 				FieldSlot = fs,
 				Actor = actor,
 				Action = sub,
-				Priority = if kind == "Switch" or kind == "Item" then 1 else 0,
-				Speed = DamageCalc.EffectiveStat(actor, "Speed"),
+				Priority = self:_ActionPriority(actor, sub),
+				Speed = self:_EffectiveSpeed(side, actor),
 				Tiebreak = self.Rng:NextNumber(),
 			})
 		end
@@ -643,6 +683,15 @@ function BattleEngine:ResolveTurn(playerAction, enemyAction, prefix)
 	end
 	assert(self.State == "WaitingForInput", "Fora de turno")
 	self.State = "Resolving"
+
+	-- Protecoes duram apenas 1 turno e sao resetadas no inicio da resolucao
+	for _, sideName in ipairs(SIDES) do
+		local s = self.Sides[sideName]
+		s.WideProtected = false
+		for _, b in ipairs(s.Team) do
+			b.Protected = false
+		end
+	end
 
 	local events = {}
 	local function push(ev)
@@ -727,15 +776,29 @@ function BattleEngine:_AfterTurn(push)
 		if #faintedSlots > 0 then
 			local bench = self:BenchAliveIndices(side)
 			if side == "Enemy" and not self.EnemyHuman then
-				-- Maquina escolhe imediatamente quantos substitutos tiver no banco
+				-- Maquina escolhe imediatamente quantos substitutos tiver no banco (repete se cair em hazards de entrada)
 				local foe = self:Active("Player")
 				local exclude = {}
 				for _, fs in ipairs(faintedSlots) do
-					local nextIdx = AIController.ChooseReplacement(self.EnemyAI, s.Team, s.ActiveSlots, foe, self.Rng, exclude)
-					if nextIdx then
+					local filled = false
+					while not self.Winner do
+						local nextIdx = AIController.ChooseReplacement(self.EnemyAI, s.Team, s.ActiveSlots, foe, self.Rng, exclude)
+						if not nextIdx then
+							break
+						end
 						exclude[nextIdx] = true
 						self:_DoSwitch("Enemy", fs, nextIdx, push, true)
-					else
+						local entered = self:ActiveAt("Enemy", fs)
+						if entered and entered.Hp > 0 then
+							filled = true
+							break
+						end
+					end
+					if self.Winner then
+						self.State = "Ended"
+						return
+					end
+					if not filled then
 						s.ActiveSlots[fs] = nil
 						push({ Kind = "ClearSlot", Side = "Enemy", FieldSlot = fs })
 					end
@@ -824,9 +887,46 @@ function BattleEngine:ResolveReplacement(side: string, choice)
 		table.insert(events, ev)
 	end
 	for _, entry in ipairs(list) do
+		if self.Winner then
+			break
+		end
 		self:_DoSwitch(side, entry.FieldSlot, entry.Index, push, true)
 	end
-	self.PendingReplace[side] = nil
+	if self.Winner then
+		self.PendingReplace = {}
+		self:SyncLegacyActive(side)
+		self.State = "Ended"
+		return events
+	end
+	-- Se algum substituto desmaiou ao pisar em hazards de entrada, pede novo substituto ou limpa o slot
+	local s = self.Sides[side]
+	local stillFainted = {}
+	for _, entry in ipairs(list) do
+		local b = self:ActiveAt(side, entry.FieldSlot)
+		if b and b.Hp <= 0 then
+			table.insert(stillFainted, entry.FieldSlot)
+		end
+	end
+	if #stillFainted > 0 then
+		local bench = self:BenchAliveIndices(side)
+		local needCount = math.min(#stillFainted, #bench)
+		for i = needCount + 1, #stillFainted do
+			local emptySlot = stillFainted[i]
+			s.ActiveSlots[emptySlot] = nil
+			push({ Kind = "ClearSlot", Side = side, FieldSlot = emptySlot })
+		end
+		if needCount > 0 then
+			local nextPending = {}
+			for i = 1, needCount do
+				table.insert(nextPending, stillFainted[i])
+			end
+			self.PendingReplace[side] = nextPending
+		else
+			self.PendingReplace[side] = nil
+		end
+	else
+		self.PendingReplace[side] = nil
+	end
 	self:SyncLegacyActive(side)
 	self.State = if next(self.PendingReplace) then "WaitingForReplacement" else "WaitingForInput"
 	return events
@@ -886,6 +986,14 @@ function BattleEngine:_ResolveTargets(side: string, fieldSlot: number, move, act
 			end
 		end
 		return targets, targetMode
+	elseif targetMode == "EnemySide" then
+		local alive = self:AliveFieldSlots(foeSide)
+		local fs = alive[1] or 1
+		local foe = self:ActiveAt(foeSide, fs)
+		if foe and foe.Hp > 0 then
+			table.insert(targets, { Side = foeSide, FieldSlot = fs, Battler = foe, IsSideTarget = true })
+		end
+		return targets, targetMode
 	end
 
 	-- "Single" (padrao)
@@ -911,12 +1019,30 @@ function BattleEngine:_ResolveTargets(side: string, fieldSlot: number, move, act
 	return targets, targetMode
 end
 
+local function isSelfOrFieldEffect(effect): boolean
+	if not effect then
+		return false
+	end
+	return effect.Target == "Self"
+		or effect.Kind == "ClearHazards"
+		or effect.Kind == "Hazard"
+		or effect.Kind == "SideEffect"
+		or effect.Kind == "Protect"
+		or effect.Kind == "WideProtect"
+end
+
 function BattleEngine:_DoMove(side: string, fieldSlot: number, action, push)
 	local actor = self:ActiveAt(side, fieldSlot)
 	local move, slot = self:GetMove(actor, action.Index)
 
 	if not self:_CanAct(side, fieldSlot, actor, push) then
+		actor.ProtectStreak = 0
 		return -- o PP nao e gasto
+	end
+
+	local isProtectMove = move.Effect ~= nil and (move.Effect.Kind == "Protect" or move.Effect.Kind == "WideProtect")
+	if not isProtectMove then
+		actor.ProtectStreak = 0
 	end
 
 	if slot then
@@ -951,17 +1077,46 @@ function BattleEngine:_DoMove(side: string, fieldSlot: number, action, push)
 	local isSpread = targetMode == "AllEnemies" or targetMode == "AllOthers"
 	local spreadMult = if isSpread and #targets >= 2 then DamageCalc.SPREAD_MULTIPLIER else 1
 	local multiTarget = #targets > 1
+	local selfFieldEffectDone = false
 
 	for _, t in ipairs(targets) do
-		if self.Winner then
+		if self.Winner or actor.Hp <= 0 then
 			break
 		end
 		if t.Battler.Hp <= 0 then
 			continue
 		end
 
-		-- Precisao por alvo (golpes de status no proprio usuario nunca erram)
-		if move.Accuracy and targetMode ~= "Self" then
+		-- Verificacao de Protect / WideProtect (nao bloqueia golpes em si, aliados ou hazards de lado)
+		if t.Side ~= side and not t.IsSideTarget then
+			if move.BreaksProtect then
+				if t.Battler.Protected then
+					t.Battler.Protected = false
+					push({ Kind = "Message", Side = t.Side, FieldSlot = t.FieldSlot, Text = actor.Name .. " rompeu a prote\u{e7}\u{e3}o de " .. t.Battler.Name .. "!" })
+				end
+			else
+				if t.Battler.Protected then
+					push({
+						Kind = "Protected",
+						Side = t.Side,
+						FieldSlot = t.FieldSlot,
+						Text = t.Battler.Name .. " se protegeu!",
+					})
+					continue
+				elseif isSpread and self.Sides[t.Side].WideProtected then
+					push({
+						Kind = "Protected",
+						Side = t.Side,
+						FieldSlot = t.FieldSlot,
+						Text = t.Battler.Name .. " foi protegido pela Guarda Ampla!",
+					})
+					continue
+				end
+			end
+		end
+
+		-- Precisao por alvo (golpes em si ou no lado do campo nunca erram)
+		if move.Accuracy and targetMode ~= "Self" and not t.IsSideTarget then
 			local chance = move.Accuracy * DamageCalc.StageMultiplier(actor.Stages.Accuracy)
 			if self.Rng:NextNumber() * 100 >= chance then
 				push({
@@ -977,7 +1132,10 @@ function BattleEngine:_DoMove(side: string, fieldSlot: number, action, push)
 		end
 
 		if move.Category == "Damage" then
-			local result = DamageCalc.Compute(actor, t.Battler, move, self.Rng, spreadMult)
+			local barrierMult = if self.Sides[t.Side].SideEffects.Barrier > 0
+				then (if self:IsDouble() then 0.75 else 0.67)
+				else 1
+			local result = DamageCalc.Compute(actor, t.Battler, move, self.Rng, spreadMult, barrierMult)
 			t.Battler.Hp = math.max(0, t.Battler.Hp - result.Damage)
 			push({
 				Kind = "Damage",
@@ -1000,13 +1158,63 @@ function BattleEngine:_DoMove(side: string, fieldSlot: number, action, push)
 			elseif result.TypeMultiplier < 1 then
 				push({ Kind = "Message", Text = if multiTarget then "N\u{e3}o \u{e9} muito efetivo em " .. t.Battler.Name .. "..." else "N\u{e3}o \u{e9} muito efetivo..." })
 			end
-			if t.Battler.Hp <= 0 then
+
+			-- Dreno de vida (absorve parte do dano causado)
+			if move.Drain and result.Damage > 0 and actor.Hp > 0 and actor.Hp < actor.MaxHp then
+				local healed = math.min(actor.MaxHp - actor.Hp, math.max(1, math.floor(result.Damage * move.Drain)))
+				if healed > 0 then
+					actor.Hp += healed
+					push({
+						Kind = "Heal",
+						Side = side,
+						FieldSlot = fieldSlot,
+						Active = true,
+						Amount = healed,
+						Hp = actor.Hp,
+						MaxHp = actor.MaxHp,
+						Text = actor.Name .. " absorveu " .. healed .. " de HP!",
+					})
+				end
+			end
+
+			local targetFainted = t.Battler.Hp <= 0
+			if targetFainted then
 				self:_Faint(t.Side, t.FieldSlot, push)
-			elseif move.Effect then
-				self:_ApplyEffect(side, fieldSlot, t.Side, t.FieldSlot, move.Effect, false, push)
+			end
+
+			-- Efeito secundario (se for no usuario/campo, aplica mesmo se o alvo desmaiou, e no maximo 1 vez por uso)
+			if move.Effect and not self.Winner and actor.Hp > 0 then
+				if isSelfOrFieldEffect(move.Effect) then
+					if not selfFieldEffectDone then
+						selfFieldEffectDone = true
+						self:_ApplyEffect(side, fieldSlot, t.Side, t.FieldSlot, move.Effect, false, multiTarget, push)
+					end
+				elseif not targetFainted then
+					self:_ApplyEffect(side, fieldSlot, t.Side, t.FieldSlot, move.Effect, false, multiTarget, push)
+				end
+			end
+
+			-- Recuo (usuario sofre parte do dano causado)
+			if move.Recoil and result.Damage > 0 and actor.Hp > 0 and not self.Winner then
+				local recoil = math.max(1, math.floor(result.Damage * move.Recoil))
+				actor.Hp = math.max(0, actor.Hp - recoil)
+				push({
+					Kind = "Damage",
+					Side = side,
+					FieldSlot = fieldSlot,
+					Amount = recoil,
+					Hp = actor.Hp,
+					MaxHp = actor.MaxHp,
+					Recoil = true,
+					MoveType = move.Type,
+					Text = actor.Name .. " sofreu " .. recoil .. " de recuo!",
+				})
+				if actor.Hp <= 0 then
+					self:_Faint(side, fieldSlot, push)
+				end
 			end
 		else
-			self:_ApplyEffect(side, fieldSlot, t.Side, t.FieldSlot, move.Effect, true, push)
+			self:_ApplyEffect(side, fieldSlot, t.Side, t.FieldSlot, move.Effect, true, multiTarget, push)
 		end
 	end
 end
@@ -1042,14 +1250,165 @@ function BattleEngine:ApplyStatus(side: string, status: string, fieldSlot: numbe
 	return events
 end
 
+function BattleEngine:_PushFieldUpdate(side: string, push, text: string?, textEnemy: string?)
+	local s = self.Sides[side]
+	push({
+		Kind = "FieldUpdate",
+		Side = side,
+		Hazards = table.clone(s.Hazards),
+		SideEffects = table.clone(s.SideEffects),
+		Text = text,
+		TextEnemy = if self.EnemyHuman then textEnemy else nil,
+	})
+end
+
+function BattleEngine:_ApplyStatStage(targetSide: string, targetSlot: number, target, stat: string, delta: number, announceCap: boolean, push): boolean
+	local before = target.Stages[stat] or 0
+	local after = math.clamp(before + delta, DamageCalc.MIN_STAGE, DamageCalc.MAX_STAGE)
+	local statName = STAT_NAMES[stat] or stat
+	if after == before then
+		if announceCap then
+			push({ Kind = "Message", Text = statName .. " de " .. target.Name .. " n\u{e3}o pode mudar mais." })
+		end
+		return false
+	end
+	target.Stages[stat] = after
+	local verb = if delta >= 2 then " aumentou muito!" elseif delta > 0 then " aumentou!" elseif delta <= -2 then " caiu muito!" else " diminuiu!"
+	push({
+		Kind = "StatStage",
+		Side = targetSide,
+		FieldSlot = targetSlot,
+		Stat = stat,
+		Stage = after,
+		Text = statName .. " de " .. target.Name .. verb,
+	})
+	return true
+end
+
 -- Aplica o Effect de um golpe. isPrimary = golpe de status (avisa quando falha).
-function BattleEngine:_ApplyEffect(actorSide: string, actorSlot: number, hitSide: string, hitSlot: number, effect, isPrimary: boolean, push)
+function BattleEngine:_ApplyEffect(actorSide: string, actorSlot: number, hitSide: string, hitSlot: number, effect, isPrimary: boolean, multiTarget: boolean, push)
 	if not effect then
 		return
 	end
 	if self.Rng:NextNumber() * 100 >= (effect.Chance or 100) then
 		return
 	end
+
+	local kind = effect.Kind
+	local actor = self:ActiveAt(actorSide, actorSlot)
+
+	-- Efeitos de protecao e de campo (independem de alvo inimigo estar vivo)
+	if kind == "Protect" then
+		if not actor or actor.Hp <= 0 then
+			return
+		end
+		local successChance = 1 / (2 ^ (actor.ProtectStreak or 0))
+		if self.Rng:NextNumber() < successChance then
+			actor.Protected = true
+			actor.ProtectStreak = (actor.ProtectStreak or 0) + 1
+			push({ Kind = "Message", Side = actorSide, FieldSlot = actorSlot, Text = actor.Name .. " entrou em posi\u{e7}\u{e3}o de defesa!" })
+		else
+			actor.ProtectStreak = 0
+			push({ Kind = "Message", Side = actorSide, FieldSlot = actorSlot, Text = "Mas falhou!" })
+		end
+		return
+	elseif kind == "WideProtect" then
+		if not actor or actor.Hp <= 0 then
+			return
+		end
+		local successChance = 1 / (2 ^ (actor.ProtectStreak or 0))
+		if self.Rng:NextNumber() < successChance then
+			self.Sides[actorSide].WideProtected = true
+			actor.ProtectStreak = (actor.ProtectStreak or 0) + 1
+			push({ Kind = "Message", Side = actorSide, FieldSlot = actorSlot, Text = "Guarda Ampla protegeu o time de " .. actor.Name .. "!" })
+		else
+			actor.ProtectStreak = 0
+			push({ Kind = "Message", Side = actorSide, FieldSlot = actorSlot, Text = "Mas falhou!" })
+		end
+		return
+	elseif kind == "Hazard" then
+		local foeSide = otherSide(actorSide)
+		local h = self.Sides[foeSide].Hazards
+		local hType = effect.Hazard
+		local changed = false
+		local ownTxt, foeTxt = "", ""
+		if hType == "Spikes" then
+			if h.Spikes < 3 then
+				h.Spikes += 1
+				changed = true
+				ownTxt = "Estrepes foram espalhados no campo advers\u{e1}rio! (x" .. h.Spikes .. ")"
+				foeTxt = "Estrepes foram espalhados no seu campo! (x" .. h.Spikes .. ")"
+			end
+		elseif hType == "ToxicSpikes" then
+			if h.ToxicSpikes < 2 then
+				h.ToxicSpikes += 1
+				changed = true
+				ownTxt = "Estrepes t\u{f3}xicos foram espalhados no campo advers\u{e1}rio! (x" .. h.ToxicSpikes .. ")"
+				foeTxt = "Estrepes t\u{f3}xicos foram espalhados no seu campo! (x" .. h.ToxicSpikes .. ")"
+			end
+		elseif hType == "StickyWeb" then
+			if not h.StickyWeb then
+				h.StickyWeb = true
+				changed = true
+				ownTxt = "Uma rede aderente cobriu o campo advers\u{e1}rio!"
+				foeTxt = "Uma rede aderente cobriu o seu campo!"
+			end
+		end
+		if changed then
+			local text = if actorSide == "Player" then ownTxt else foeTxt
+			local textEnemy = if actorSide == "Enemy" then ownTxt else foeTxt
+			self:_PushFieldUpdate(foeSide, push, text, textEnemy)
+		elseif isPrimary then
+			push({ Kind = "Message", Text = "Mas o campo j\u{e1} est\u{e1} no limite." })
+		end
+		return
+	elseif kind == "ClearHazards" then
+		local sidesToClear = if effect.Scope == "All" then SIDES else { actorSide }
+		local clearedAny = false
+		for _, sName in ipairs(sidesToClear) do
+			local h = self.Sides[sName].Hazards
+			if h.Spikes > 0 or h.ToxicSpikes > 0 or h.StickyWeb then
+				self.Sides[sName].Hazards = freshHazards()
+				clearedAny = true
+				self:_PushFieldUpdate(sName, push, "O campo foi limpo de armadilhas!", "O campo foi limpo de armadilhas!")
+			end
+		end
+		if effect.BonusStat and actor and actor.Hp > 0 then
+			self:_ApplyStatStage(actorSide, actorSlot, actor, effect.BonusStat, effect.BonusStages or 1, false, push)
+		elseif not clearedAny and isPrimary then
+			push({ Kind = "Message", Text = "Mas n\u{e3}o havia armadilhas em campo." })
+		end
+		return
+	elseif kind == "SideEffect" then
+		local se = self.Sides[actorSide].SideEffects
+		local seType = effect.SideEffect
+		local turns = effect.Turns or (if seType == "Tailwind" then 4 else 5)
+		if seType == "Barrier" then
+			if se.Barrier > 0 then
+				if isPrimary then
+					push({ Kind = "Message", Text = "Mas a barreira j\u{e1} est\u{e1} ativa." })
+				end
+				return
+			end
+			se.Barrier = turns
+			local ownTxt = "Uma barreira reduziu o dano recebido pelo seu time!"
+			local foeTxt = "Uma barreira protegeu o time advers\u{e1}rio!"
+			self:_PushFieldUpdate(actorSide, push, if actorSide == "Player" then ownTxt else foeTxt, if actorSide == "Enemy" then ownTxt else foeTxt)
+		elseif seType == "Tailwind" then
+			if se.Tailwind > 0 then
+				if isPrimary then
+					push({ Kind = "Message", Text = "Mas o vento a favor j\u{e1} est\u{e1} ativo." })
+				end
+				return
+			end
+			se.Tailwind = turns
+			local ownTxt = "Vento a favor dobrou a velocidade do seu time!"
+			local foeTxt = "Vento a favor dobrou a velocidade do advers\u{e1}rio!"
+			self:_PushFieldUpdate(actorSide, push, if actorSide == "Player" then ownTxt else foeTxt, if actorSide == "Enemy" then ownTxt else foeTxt)
+		end
+		return
+	end
+
 	local targetSide = if effect.Target == "Self" then actorSide else hitSide
 	local targetSlot = if effect.Target == "Self" then actorSlot else hitSlot
 	local target = self:ActiveAt(targetSide, targetSlot)
@@ -1057,25 +1416,123 @@ function BattleEngine:_ApplyEffect(actorSide: string, actorSlot: number, hitSide
 		return
 	end
 
-	if effect.Kind == "Status" then
-		self:_SetStatus(targetSide, targetSlot, effect.Status, push, isPrimary)
-	elseif effect.Kind == "StatStage" then
-		local before = target.Stages[effect.Stat] or 0
-		local after = math.clamp(before + effect.Stages, DamageCalc.MIN_STAGE, DamageCalc.MAX_STAGE)
-		local statName = STAT_NAMES[effect.Stat] or effect.Stat
-		if after == before then
-			push({ Kind = "Message", Text = statName .. " de " .. target.Name .. " n\u{e3}o pode mudar mais." })
+	if kind == "Status" then
+		self:_SetStatus(targetSide, targetSlot, effect.Status, push, isPrimary and not multiTarget)
+	elseif kind == "StatStage" then
+		self:_ApplyStatStage(targetSide, targetSlot, target, effect.Stat, effect.Stages, true, push)
+	elseif kind == "MultiStat" then
+		local anyChanged = false
+		for _, ch in ipairs(effect.Changes or {}) do
+			if self:_ApplyStatStage(targetSide, targetSlot, target, ch.Stat, ch.Stages, false, push) then
+				anyChanged = true
+			end
+		end
+		if not anyChanged and isPrimary and not multiTarget then
+			push({ Kind = "Message", Text = "Os atributos de " .. target.Name .. " n\u{e3}o podem mudar mais." })
+		end
+	elseif kind == "Heal" then
+		if target.Hp >= target.MaxHp then
+			if isPrimary and not multiTarget then
+				push({ Kind = "Message", Text = target.Name .. " j\u{e1} est\u{e1} com o HP cheio." })
+			end
 			return
 		end
-		target.Stages[effect.Stat] = after
+		local fraction = effect.Fraction or 0.5
+		local healed = math.min(target.MaxHp - target.Hp, math.max(1, math.floor(target.MaxHp * fraction)))
+		target.Hp += healed
 		push({
-			Kind = "StatStage",
+			Kind = "Heal",
 			Side = targetSide,
 			FieldSlot = targetSlot,
-			Stat = effect.Stat,
-			Stage = after,
-			Text = statName .. " de " .. target.Name .. (if effect.Stages > 0 then " aumentou!" else " diminuiu!"),
+			Active = true,
+			Amount = healed,
+			Hp = target.Hp,
+			MaxHp = target.MaxHp,
+			Text = target.Name .. " recuperou " .. healed .. " de HP!",
 		})
+	elseif kind == "Cleanse" then
+		if not target.Status then
+			if isPrimary and not multiTarget then
+				push({ Kind = "Message", Text = "Mas n\u{e3}o teve efeito." })
+			end
+			return
+		end
+		local old = target.Status
+		target.Status = nil
+		target.StatusTurns = 0
+		push({
+			Kind = "StatusCured",
+			Side = targetSide,
+			FieldSlot = targetSlot,
+			Status = old,
+			Text = target.Name .. " se purificou do status!",
+		})
+	end
+end
+
+-- Aplica hazards de entrada no lutador recem-entrado no campo
+function BattleEngine:_ApplyEntryHazards(side: string, fieldSlot: number, incoming, push)
+	if not incoming or incoming.Hp <= 0 then
+		return
+	end
+	local h = self.Sides[side].Hazards
+	if not h then
+		return
+	end
+	if h.Spikes > 0 then
+		local frac = SPIKES_FRACTION[math.clamp(h.Spikes, 1, 3)]
+		local dmg = math.max(1, math.floor(incoming.MaxHp * frac))
+		incoming.Hp = math.max(0, incoming.Hp - dmg)
+		push({
+			Kind = "Damage",
+			Side = side,
+			FieldSlot = fieldSlot,
+			Amount = dmg,
+			Hp = incoming.Hp,
+			MaxHp = incoming.MaxHp,
+			Hazard = "Spikes",
+			Text = incoming.Name .. " pisou nos estrepes e perdeu " .. dmg .. " de HP!",
+		})
+		if incoming.Hp <= 0 then
+			self:_Faint(side, fieldSlot, push)
+			return
+		end
+	end
+	if h.ToxicSpikes > 0 and incoming.Hp > 0 then
+		self:_SetStatus(side, fieldSlot, "Poison", push, false)
+		if h.ToxicSpikes >= 2 then
+			local chip = math.max(1, math.floor(incoming.MaxHp / 16))
+			incoming.Hp = math.max(0, incoming.Hp - chip)
+			push({
+				Kind = "StatusDamage",
+				Side = side,
+				FieldSlot = fieldSlot,
+				Status = "Poison",
+				Amount = chip,
+				Hp = incoming.Hp,
+				MaxHp = incoming.MaxHp,
+				Text = incoming.Name .. " sofreu " .. chip .. " de dano dos estrepes t\u{f3}xicos!",
+			})
+			if incoming.Hp <= 0 then
+				self:_Faint(side, fieldSlot, push)
+				return
+			end
+		end
+	end
+	if h.StickyWeb and incoming.Hp > 0 then
+		local before = incoming.Stages.Speed or 0
+		local after = math.clamp(before - 1, DamageCalc.MIN_STAGE, DamageCalc.MAX_STAGE)
+		if after ~= before then
+			incoming.Stages.Speed = after
+			push({
+				Kind = "StatStage",
+				Side = side,
+				FieldSlot = fieldSlot,
+				Stat = "Speed",
+				Stage = after,
+				Text = "A rede aderente reduziu a Velocidade de " .. incoming.Name .. "!",
+			})
+		end
 	end
 end
 
@@ -1088,7 +1545,11 @@ function BattleEngine:_DoSwitch(side: string, fieldSlot: number, index: number, 
 	local incoming = sideState.Team[index]
 	if outgoing then
 		outgoing.Stages = freshStages()
+		outgoing.Protected = false
+		outgoing.ProtectStreak = 0
 	end
+	incoming.Protected = false
+	incoming.ProtectStreak = 0
 	sideState.ActiveSlots[fieldSlot] = index
 	self:SyncLegacyActive(side)
 	incoming.Participated = true
@@ -1108,6 +1569,8 @@ function BattleEngine:_DoSwitch(side: string, fieldSlot: number, index: number, 
 		Text = if side == "Player" then ownText else foeText,
 		TextEnemy = if self.EnemyHuman then (if side == "Enemy" then ownText else foeText) else nil,
 	})
+
+	self:_ApplyEntryHazards(side, fieldSlot, incoming, push)
 end
 
 -- Item da mochila: gasta o turno do slot. Pode mirar qualquer membro do time.
@@ -1211,7 +1674,7 @@ function BattleEngine:_Faint(side: string, fieldSlot: number, push)
 	end
 end
 
--- Fim do turno (GDD secao 5): queimadura, veneno e contagem de sono, de todos os ativos em campo
+-- Fim do turno (GDD secao 5): queimadura, veneno, sono e duracao de efeitos de campo (Barrier/Tailwind)
 function BattleEngine:_EndOfTurn(push)
 	for _, side in ipairs(SIDES) do
 		for fs = 1, self.SlotsPerSide do
@@ -1249,6 +1712,27 @@ function BattleEngine:_EndOfTurn(push)
 			end
 		end
 	end
+
+	-- Decrementa efeitos de campo por lado (Barrier e Tailwind)
+	for _, side in ipairs(SIDES) do
+		local se = self.Sides[side].SideEffects
+		if se.Barrier > 0 then
+			se.Barrier -= 1
+			if se.Barrier == 0 then
+				local ownTxt = "A barreira do seu time se dissipou."
+				local foeTxt = "A barreira do advers\u{e1}rio se dissipou."
+				self:_PushFieldUpdate(side, push, if side == "Player" then ownTxt else foeTxt, if side == "Enemy" then ownTxt else foeTxt)
+			end
+		end
+		if se.Tailwind > 0 then
+			se.Tailwind -= 1
+			if se.Tailwind == 0 then
+				local ownTxt = "O vento a favor do seu time cessou."
+				local foeTxt = "O vento a favor do advers\u{e1}rio cessou."
+				self:_PushFieldUpdate(side, push, if side == "Player" then ownTxt else foeTxt, if side == "Enemy" then ownTxt else foeTxt)
+			end
+		end
+	end
 end
 
 -- Informacao de um membro para o cliente (golpes so do proprio time)
@@ -1278,6 +1762,8 @@ function BattleEngine:_MemberInfo(b, withMoves: boolean)
 				Target = Moves.TargetMode(m),
 				Power = m.Power,
 				Accuracy = m.Accuracy,
+				Priority = m.Priority or 0,
+				EffectKind = m.Effect and m.Effect.Kind or nil,
 				Pp = slot.Pp,
 				MaxPp = slot.MaxPp,
 			}
@@ -1301,7 +1787,13 @@ function BattleEngine:Snapshot(view: string?)
 		for fs = 1, self.SlotsPerSide do
 			activeSlots[fs] = s.ActiveSlots[fs] or 0
 		end
-		return { Active = s.Active, ActiveSlots = activeSlots, Team = team }
+		return {
+			Active = s.Active,
+			ActiveSlots = activeSlots,
+			Team = team,
+			Hazards = table.clone(s.Hazards),
+			SideEffects = table.clone(s.SideEffects),
+		}
 	end
 	local function struggleSlots(side: string)
 		local out = {}

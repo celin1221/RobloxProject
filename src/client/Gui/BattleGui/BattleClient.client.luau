@@ -192,6 +192,29 @@ local playerCards = {
 }
 playerCards[2].Frame.Visible = false
 
+-- Faixas compactas de efeitos de campo/hazards por lado (visiveis apenas quando algum efeito esta ativo)
+local function makeFieldBar(name: string, anchor: Vector2, position: UDim2, vertical: boolean)
+	local bar = UI.frame(root, {
+		Name = name,
+		Size = if vertical then UDim2.fromScale(0.115, 0.19) else UDim2.fromScale(0.46, 0.036),
+		Position = position,
+		AnchorPoint = anchor,
+		Visible = false,
+		ZIndex = 3,
+	})
+	local ll = Instance.new("UIListLayout")
+	ll.FillDirection = if vertical then Enum.FillDirection.Vertical else Enum.FillDirection.Horizontal
+	ll.HorizontalAlignment = if vertical then Enum.HorizontalAlignment.Right else Enum.HorizontalAlignment.Left
+	ll.VerticalAlignment = if vertical then Enum.VerticalAlignment.Top else Enum.VerticalAlignment.Center
+	ll.Padding = UDim.new(0, 4)
+	ll.SortOrder = Enum.SortOrder.LayoutOrder
+	ll.Parent = bar
+	return { Frame = bar, Vertical = vertical }
+end
+
+local playerFieldBar = makeFieldBar("PlayerFieldBar", Vector2.new(0, 1), UDim2.fromScale(0.042, 0.72), false)
+local enemyFieldBar = makeFieldBar("EnemyFieldBar", Vector2.new(1, 0), UDim2.fromScale(0.658, 0.015), true)
+
 -- Mensagem do turno (topo a esquerda, no ceu)
 local logHolder, logFace = UI.panel(root, { Name = "Log", Size = UDim2.fromScale(0.55, 0.15), Position = UDim2.fromScale(0.015, 0.015), Color = "slot", Corner = 0.3, Transparency = 0.1, Shadow = false, MaxSize = Vector2.new(720, 90) })
 local logLabel = UI.text(logFace, "", { Name = "Text", Size = UDim2.fromScale(0.94, 0.8), Position = UDim2.fromScale(0.03, 0.1), Role = "Small", AlignX = Enum.TextXAlignment.Left, Rich = true, StrokeMult = 0.5 })
@@ -466,6 +489,8 @@ local function applyFormatLayout(double: boolean)
 		playerCards[1].Frame.Position = UDim2.fromScale(0.042, 0.975)
 		playerCards[2].Frame.Size = UDim2.fromScale(0.25, 0.16)
 		playerCards[2].Frame.Position = UDim2.fromScale(0.302, 0.975)
+		playerFieldBar.Frame.Position = UDim2.fromScale(0.042, 0.755)
+		enemyFieldBar.Frame.Position = UDim2.fromScale(0.682, 0.015)
 		for _, list in ipairs({ enemyCards, playerCards }) do
 			for _, card in ipairs(list) do
 				local sc = card.Frame:FindFirstChildOfClass("UISizeConstraint")
@@ -493,6 +518,8 @@ local function applyFormatLayout(double: boolean)
 		playerCards[1].Frame.Size = UDim2.fromScale(0.29, 0.2)
 		playerCards[1].Frame.Position = UDim2.fromScale(0.042, 0.975)
 		playerCards[2].Frame.Visible = false
+		playerFieldBar.Frame.Position = UDim2.fromScale(0.042, 0.72)
+		enemyFieldBar.Frame.Position = UDim2.fromScale(0.658, 0.015)
 		for _, card in ipairs({ enemyCards[1], playerCards[1] }) do
 			local sc = card.Frame:FindFirstChildOfClass("UISizeConstraint")
 			if sc then
@@ -631,10 +658,53 @@ local function setTeamPips(side: string, sideState)
 	end
 end
 
+-- Chips de efeitos de campo/hazards ativos no lado (Spikes, ToxicSpikes, StickyWeb, Barrier, Tailwind)
+local function setFieldBadges(side: string, sideState)
+	local bar = if side == "Player" then playerFieldBar else enemyFieldBar
+	UI.clear(bar.Frame)
+	if not sideState then
+		bar.Frame.Visible = false
+		return
+	end
+	local items = {}
+	local se = sideState.SideEffects
+	if se then
+		if (se.Barrier or 0) > 0 then
+			table.insert(items, { Text = "BARREIRA " .. se.Barrier .. "t", Color = "blue" })
+		end
+		if (se.Tailwind or 0) > 0 then
+			table.insert(items, { Text = "VENTO " .. se.Tailwind .. "t", Color = "teal" })
+		end
+	end
+	local h = sideState.Hazards
+	if h then
+		if (h.Spikes or 0) > 0 then
+			table.insert(items, { Text = "ESPINHOS x" .. h.Spikes, Color = "orange" })
+		end
+		if (h.ToxicSpikes or 0) > 0 then
+			table.insert(items, { Text = "T\u{d3}XICO x" .. h.ToxicSpikes, Color = "purple" })
+		end
+		if h.StickyWeb then
+			table.insert(items, { Text = "REDE", Color = "red" })
+		end
+	end
+	bar.Frame.Visible = #items > 0
+	for idx, item in ipairs(items) do
+		local chipSize = if bar.Vertical then UDim2.fromScale(0.98, 0.175) else UDim2.fromScale(0.21, 1)
+		local chip = UI.chip(bar.Frame, item.Text, item.Color, {
+			Name = "FieldChip" .. idx,
+			Size = chipSize,
+			LayoutOrder = idx,
+		})
+		chip.Face.Label.TextWrapped = false
+	end
+end
+
 local function refreshSide(side: string, instant: boolean?)
 	local sideState = current.State[side]
 	local count = slotsPerSide()
 	setTeamPips(side, sideState)
+	setFieldBadges(side, sideState)
 	for fs = 1, 2 do
 		local card = cardFor(side, fs)
 		local m = if fs <= count then memberAt(sideState, fs) else nil
@@ -785,17 +855,30 @@ function refreshMoves()
 			face.Pp.Text = string.format("PP %d/%d", move.Pp, move.MaxPp)
 			local scope = face:FindFirstChild("ScopeChip")
 			if scope then
-				local isSpread = double and (move.Target == "AllEnemies" or move.Target == "AllOthers")
-				local isSelf = double and move.Target == "Self"
-				local showScope = isSpread or isSelf
+				local chipText, chipColor = nil, nil
+				local effKind = move.EffectKind
+				local prio = move.Priority or 0
+				if effKind == "Protect" or effKind == "WideProtect" then
+					chipText, chipColor = "PROT.", "teal"
+				elseif move.Target == "EnemySide" or effKind == "Hazard" or effKind == "SideEffect" or effKind == "ClearHazards" then
+					chipText, chipColor = "CAMPO", "purple"
+				elseif move.Target == "AllAllies" then
+					chipText, chipColor = "TIME", "green"
+				elseif move.Target == "AllEnemies" or move.Target == "AllOthers" then
+					if double then
+						chipText, chipColor = "\u{c1}REA", "gold"
+					end
+				elseif prio > 0 then
+					chipText, chipColor = "R\u{c1}PIDO", "teal"
+				elseif double and move.Target == "Self" then
+					chipText, chipColor = "SI", "blue"
+				end
+				local showScope = chipText ~= nil
 				scope.Visible = showScope
 				face.MoveName.Size = UDim2.fromScale(if showScope then 0.65 else 0.9, 0.42)
-				if isSpread then
-					scope.Face.Label.Text = "\u{c1}REA"
-					UI.paint(scope, "gold")
-				elseif isSelf then
-					scope.Face.Label.Text = "SI"
-					UI.paint(scope, "blue")
+				if showScope then
+					scope.Face.Label.Text = chipText
+					UI.paint(scope, chipColor)
 				end
 			end
 		end
@@ -1114,6 +1197,8 @@ local function closeBattle()
 	replacePlan = nil
 	pendingMoveIndex = nil
 	timerHolder.Visible = false
+	setFieldBadges("Player", nil)
+	setFieldBadges("Enemy", nil)
 	VfxController.Cleanup()
 	setInBattle(false)
 	resultLabel.Visible = false
@@ -1505,6 +1590,19 @@ BattleUpdate.OnClientEvent:Connect(function(battleId, data)
 			local targetSide = ev.TargetSide or (if side == "Player" then "Enemy" else "Player")
 			local targetModel = slotModelFor(targetSide, ev.TargetFieldSlot or 1)
 			popNumber(targetModel, "Errou", Color3.fromRGB(210, 210, 225))
+		elseif ev.Kind == "Protected" then
+			popNumber(model, "Protegido!", T.Palette.teal)
+		elseif ev.Kind == "FieldUpdate" then
+			local sideState = side and current.State[side]
+			if sideState then
+				if ev.Hazards then
+					sideState.Hazards = ev.Hazards
+				end
+				if ev.SideEffects then
+					sideState.SideEffects = ev.SideEffects
+				end
+				setFieldBadges(side, sideState)
+			end
 		elseif ev.Kind == "Status" then
 			patchActive(side, fs, { Status = ev.Status })
 			setStatus(cardFor(side, fs), ev.Status)

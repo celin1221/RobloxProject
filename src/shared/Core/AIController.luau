@@ -30,11 +30,53 @@ local function usableMoves(battler)
 	return list
 end
 
+local function isProtectMove(move): boolean
+	return move ~= nil and move.Effect ~= nil and (move.Effect.Kind == "Protect" or move.Effect.Kind == "WideProtect")
+end
+
+-- Evita spam consecutivo de Protect/WideProtect se houver outro golpe com PP
+local function pickSmartRandom(battler, usable, rng: Random): number
+	if (battler.ProtectStreak or 0) > 0 and #usable > 1 then
+		local nonProtect = {}
+		for _, i in ipairs(usable) do
+			if not isProtectMove(Moves.Get(battler.Moves[i].Id)) then
+				table.insert(nonProtect, i)
+			end
+		end
+		if #nonProtect > 0 then
+			return nonProtect[rng:NextInteger(1, #nonProtect)]
+		end
+	end
+	return usable[rng:NextInteger(1, #usable)]
+end
+
+-- Procura um golpe de cura ou purificacao util para a IA Dificil
+local function pickSupportMove(battler, usable): number?
+	if battler.Hp / math.max(1, battler.MaxHp) < 0.45 then
+		for _, i in ipairs(usable) do
+			local move = Moves.Get(battler.Moves[i].Id)
+			if move and move.Category == "Status" and move.Effect and move.Effect.Kind == "Heal" then
+				return i
+			end
+		end
+	end
+	if battler.Status then
+		for _, i in ipairs(usable) do
+			local move = Moves.Get(battler.Moves[i].Id)
+			if move and move.Category == "Status" and move.Effect and move.Effect.Kind == "Cleanse" then
+				return i
+			end
+		end
+	end
+	return nil
+end
+
 -- Golpe de maior dano esperado (empate: o primeiro da lista)
 local function bestDamage(self, foe, usable)
 	local bestIndex, bestValue = usable[1], -1
 	for _, i in ipairs(usable) do
-		local value = DamageCalc.ExpectedDamage(self, foe, Moves.Get(self.Moves[i].Id))
+		local move = Moves.Get(self.Moves[i].Id)
+		local value = DamageCalc.ExpectedDamage(self, foe, move)
 		if value > bestValue then
 			bestIndex, bestValue = i, value
 		end
@@ -109,13 +151,17 @@ function AIController.ChooseAction(level: string, self, foe, rng: Random, team, 
 	end
 
 	local function randomPick()
-		return usable[rng:NextInteger(1, #usable)]
+		return pickSmartRandom(self, usable, rng)
 	end
 
 	local index
 	if level == "Facil" then
 		index = randomPick()
 	elseif level == "Dificil" then
+		local supportIdx = pickSupportMove(self, usable)
+		if supportIdx then
+			return { Kind = "Move", Index = supportIdx }
+		end
 		if not foe.Status then
 			for _, i in ipairs(usable) do
 				local move = Moves.Get(self.Moves[i].Id)
@@ -230,26 +276,31 @@ function AIController.ChooseActionsDouble(level: string, ownSide, foeSide, rng: 
 					return bestMoveIdx, bestSlot
 				end
 
-				local moveIdx, targetSlot = usable[rng:NextInteger(1, #usable)], defaultTargetSlot
+				local moveIdx, targetSlot = pickSmartRandom(battler, usable, rng), defaultTargetSlot
 				if level == "Dificil" then
-					local pickedStatus = false
-					for _, f in ipairs(foes) do
-						if not f.Battler.Status then
-							for _, mIdx in ipairs(usable) do
-								local move = Moves.Get(battler.Moves[mIdx].Id)
-								if move.Effect and move.Effect.Kind == "Status" and move.Effect.Target ~= "Self" and move.Category == "Status" then
-									moveIdx, targetSlot = mIdx, f.FieldSlot
-									pickedStatus = true
+					local supportIdx = pickSupportMove(battler, usable)
+					if supportIdx then
+						moveIdx, targetSlot = supportIdx, defaultTargetSlot
+					else
+						local pickedStatus = false
+						for _, f in ipairs(foes) do
+							if not f.Battler.Status then
+								for _, mIdx in ipairs(usable) do
+									local move = Moves.Get(battler.Moves[mIdx].Id)
+									if move.Effect and move.Effect.Kind == "Status" and move.Effect.Target ~= "Self" and move.Category == "Status" then
+										moveIdx, targetSlot = mIdx, f.FieldSlot
+										pickedStatus = true
+										break
+									end
+								end
+								if pickedStatus then
 									break
 								end
 							end
-							if pickedStatus then
-								break
-							end
 						end
-					end
-					if not pickedStatus then
-						moveIdx, targetSlot = pickBestMoveAndTarget()
+						if not pickedStatus then
+							moveIdx, targetSlot = pickBestMoveAndTarget()
+						end
 					end
 				elseif level == "Medio" and rng:NextNumber() < AIController.MEDIUM_BEST_CHANCE then
 					moveIdx, targetSlot = pickBestMoveAndTarget()

@@ -6,7 +6,7 @@ Le diretamente a fonte da verdade em:
   - src/shared/Data/Moves.luau
   - src/server_storage/Codes.luau
 
-E grava a planilha formatada com 4 abas (Personagens, Ataques, Golpes, Resumo) em:
+E grava a planilha formatada com 4 abas (Personagens, Ataques, Kit por Personagem, Resumo) em:
   - Blender/Planilha_Personagens.xlsx
   - Planilha_Personagens.xlsx (copia sincronizada na raiz do repositorio)
 
@@ -291,6 +291,7 @@ TARGET_DISPLAY = {
     "AllEnemies": "Todos Inimigos",
     "AllOthers": "Todos Outros",
     "AllAllies": "Aliados",
+    "EnemySide": "Campo Inimigo",
     "Self": "Próprio",
 }
 CATEGORY_DISPLAY = {
@@ -310,6 +311,15 @@ STAT_DISPLAY = {
     "Speed": "Velocidade",
     "Accuracy": "Precisão",
 }
+HAZARD_DISPLAY = {
+    "Spikes": "Estrepes (1/8, 1/6, 1/4 HP na entrada, até 3x)",
+    "ToxicSpikes": "Estrepes Tóxicos (1x Veneno / 2x Veneno + dano)",
+    "StickyWeb": "Rede Aderente (-1 Velocidade na entrada)",
+}
+SIDE_EFFECT_DISPLAY = {
+    "Barrier": "Barreira (reduz dano recebido no time)",
+    "Tailwind": "Vento a Favor (dobra Velocidade do time)",
+}
 CLASS_ORDER = {
     "Espadachim": 1,
     "Lutador": 2,
@@ -319,10 +329,11 @@ CLASS_ORDER = {
 }
 ORIGIN_ORDER = {
     "Genérico de Classe": 1,
-    "Assinatura": 2,
-    "Exclusivo": 3,
-    "Clássico": 4,
-    "Reserva (Sem PP)": 5,
+    "Genérico Universal": 2,
+    "Assinatura": 3,
+    "Exclusivo": 4,
+    "Clássico": 5,
+    "Reserva (Sem PP)": 6,
 }
 
 
@@ -332,30 +343,92 @@ def stage_pct_str(stages: int) -> str:
     return f"{pct:+d}%"
 
 
-def parse_effect_desc(body: str) -> str:
-    m_eff = re.search(r"Effect\s*=\s*\{", body)
-    if not m_eff:
-        return "Nenhum"
-    eff_block, _ = extract_braced_block(body, m_eff.end() - 1)
-    kind_m = re.search(r'Kind\s*=\s*"([^"]+)"', eff_block)
-    chance_m = re.search(r"Chance\s*=\s*(\d+)", eff_block)
-    tgt_m = re.search(r'Target\s*=\s*"([^"]+)"', eff_block)
-    chance = int(chance_m.group(1)) if chance_m else 100
-    tgt = "no Próprio" if (tgt_m and tgt_m.group(1) == "Self") else "no Alvo"
-    kind = kind_m.group(1) if kind_m else ""
+def strip_named_block(body: str, field_name: str) -> str:
+    m = re.search(rf"{field_name}\s*=\s*\{{", body)
+    if not m:
+        return body
+    _, end_idx = extract_braced_block(body, m.end() - 1)
+    return body[: m.start()] + body[end_idx:]
 
-    if kind == "Status":
-        st_m = re.search(r'Status\s*=\s*"([^"]+)"', eff_block)
-        st_name = STATUS_DISPLAY.get(st_m.group(1), st_m.group(1)) if st_m else "Status"
-        return f"Status: {st_name} {tgt} ({chance}%)"
-    if kind == "StatStage":
-        stat_m = re.search(r'Stat\s*=\s*"([^"]+)"', eff_block)
-        stg_m = re.search(r"Stages\s*=\s*(-?\d+)", eff_block)
-        stat_name = STAT_DISPLAY.get(stat_m.group(1), stat_m.group(1)) if stat_m else "Atributo"
-        stages = int(stg_m.group(1)) if stg_m else 1
-        tag = "Buff" if stages > 0 else "Debuff"
-        return f"{tag}: {stages:+d} {stat_name} ({stage_pct_str(stages)}) {tgt} ({chance}%)"
-    return eff_block.strip()
+
+def parse_effect_desc(body: str, move_target: str, drain: float | None, recoil: float | None, breaks_protect: bool) -> str:
+    parts: list[str] = []
+
+    if breaks_protect:
+        parts.append("Rompe Proteger / Guarda Ampla")
+    if drain is not None:
+        parts.append(f"Dreno: absorve {int(round(drain * 100))}% do dano em HP")
+    if recoil is not None:
+        parts.append(f"Recuo: sofre {int(round(recoil * 100))}% do dano")
+
+    m_eff = re.search(r"Effect\s*=\s*\{", body)
+    if m_eff:
+        eff_block, _ = extract_braced_block(body, m_eff.end() - 1)
+        eff_top = strip_named_block(eff_block, "Changes")
+        kind_m = re.search(r'Kind\s*=\s*"([^"]+)"', eff_top)
+        chance_m = re.search(r"Chance\s*=\s*(\d+)", eff_top)
+        tgt_m = re.search(r'Target\s*=\s*"([^"]+)"', eff_top)
+        chance = int(chance_m.group(1)) if chance_m else 100
+        if move_target == "AllAllies":
+            tgt = "no Time"
+        elif tgt_m and tgt_m.group(1) == "Self":
+            tgt = "no Próprio"
+        else:
+            tgt = "no Alvo"
+        kind = kind_m.group(1) if kind_m else ""
+
+        if kind == "Status":
+            st_m = re.search(r'Status\s*=\s*"([^"]+)"', eff_top)
+            st_name = STATUS_DISPLAY.get(st_m.group(1), st_m.group(1)) if st_m else "Status"
+            parts.append(f"Status: {st_name} {tgt} ({chance}%)")
+        elif kind == "StatStage":
+            stat_m = re.search(r'Stat\s*=\s*"([^"]+)"', eff_top)
+            stg_m = re.search(r"Stages\s*=\s*(-?\d+)", eff_top)
+            stat_name = STAT_DISPLAY.get(stat_m.group(1), stat_m.group(1)) if stat_m else "Atributo"
+            stages = int(stg_m.group(1)) if stg_m else 1
+            tag = "Buff" if stages > 0 else "Debuff"
+            parts.append(f"{tag}: {stages:+d} {stat_name} ({stage_pct_str(stages)}) {tgt} ({chance}%)")
+        elif kind == "MultiStat":
+            changes = re.findall(r'Stat\s*=\s*"([^"]+)"\s*,\s*Stages\s*=\s*(-?\d+)', eff_block)
+            ch_strs = [f"{int(st):+d} {STAT_DISPLAY.get(sn, sn)} ({stage_pct_str(int(st))})" for sn, st in changes]
+            all_pos = all(int(st) > 0 for _, st in changes) if changes else True
+            tag = "Buff" if all_pos else "Alteração"
+            parts.append(f"{tag}: {', '.join(ch_strs)} {tgt}")
+        elif kind == "Protect":
+            parts.append("Proteção: bloqueia ataques inimigos no turno")
+        elif kind == "WideProtect":
+            parts.append("Proteção: bloqueia golpes em área no time (2x2)")
+        elif kind == "Hazard":
+            hz_m = re.search(r'Hazard\s*=\s*"([^"]+)"', eff_top)
+            hz_name = HAZARD_DISPLAY.get(hz_m.group(1), hz_m.group(1)) if hz_m else "Hazard"
+            parts.append(f"Hazard: {hz_name}")
+        elif kind == "ClearHazards":
+            sc_m = re.search(r'Scope\s*=\s*"([^"]+)"', eff_top)
+            scope_txt = "ambos os campos" if (sc_m and sc_m.group(1) == "All") else "próprio campo"
+            desc = f"Limpeza: remove hazards ({scope_txt})"
+            bs_m = re.search(r'BonusStat\s*=\s*"([^"]+)"', eff_top)
+            bst_m = re.search(r"BonusStages\s*=\s*(-?\d+)", eff_top)
+            if bs_m:
+                st_n = STAT_DISPLAY.get(bs_m.group(1), bs_m.group(1))
+                st_v = int(bst_m.group(1)) if bst_m else 1
+                desc += f" + {st_v:+d} {st_n} no Próprio"
+            parts.append(desc)
+        elif kind == "SideEffect":
+            se_m = re.search(r'SideEffect\s*=\s*"([^"]+)"', eff_top)
+            tr_m = re.search(r"Turns\s*=\s*(\d+)", eff_top)
+            se_name = SIDE_EFFECT_DISPLAY.get(se_m.group(1), se_m.group(1)) if se_m else "Campo"
+            turns_txt = f" ({tr_m.group(1)}t)" if tr_m else ""
+            parts.append(f"Campo{turns_txt}: {se_name}")
+        elif kind == "Heal":
+            fr_m = re.search(r"Fraction\s*=\s*([0-9.]+)", eff_top)
+            pct = int(round(float(fr_m.group(1)) * 100)) if fr_m else 50
+            parts.append(f"Cura: recupera {pct}% HP {tgt}")
+        elif kind == "Cleanse":
+            parts.append(f"Purificação: remove status negativo {tgt}")
+        else:
+            parts.append(eff_block.strip())
+
+    return " | ".join(parts) if parts else "Nenhum"
 
 
 def parse_timing_desc(body: str) -> str:
@@ -440,7 +513,12 @@ def parse_moves() -> tuple[dict[str, dict[str, Any]], dict[str, list[str]]]:
         acc_m = re.search(r"Accuracy\s*=\s*(\d+|nil)", body)
         pp_m = re.search(r"PP\s*=\s*(\d+)", body)
         crit_m = re.search(r"CritChance\s*=\s*([0-9.]+)", body)
-        body_no_effect = re.sub(r"Effect\s*=\s*\{[^}]*\}", "", body)
+        prio_m = re.search(r"Priority\s*=\s*(-?\d+)", body)
+        lvl_m = re.search(r"LearnLevel\s*=\s*(\d+)", body)
+        drain_m = re.search(r"Drain\s*=\s*([0-9.]+)", body)
+        recoil_m = re.search(r"Recoil\s*=\s*([0-9.]+)", body)
+        breaks_protect = bool(re.search(r"BreaksProtect\s*=\s*true", body))
+        body_no_effect = strip_named_block(body, "Effect")
         target_m = re.search(r'Target\s*=\s*"([^"]+)"', body_no_effect)
         sig = bool(re.search(r"Signature\s*=\s*true", body))
         cutin = bool(re.search(r"CutIn\s*=\s*true", body))
@@ -454,7 +532,7 @@ def parse_moves() -> tuple[dict[str, dict[str, Any]], dict[str, list[str]]]:
         cat = cat_m.group(1) if cat_m else "Damage"
         if target_m:
             target = target_m.group(1)
-        elif cat == "Status" and re.search(r'Effect\s*=\s*\{[^}]*Target\s*=\s*"Self"', body):
+        elif cat == "Status" and re.search(r'Target\s*=\s*"Self"', body):
             target = "Self"
         else:
             target = "Single"
@@ -466,11 +544,18 @@ def parse_moves() -> tuple[dict[str, dict[str, Any]], dict[str, list[str]]]:
             acc_val = "Nunca erra"
 
         crit_chance = float(crit_m.group(1)) if crit_m else 0.0625
-        effect_desc = parse_effect_desc(body)
+        priority = int(prio_m.group(1)) if prio_m else 0
+        learn_level = int(lvl_m.group(1)) if lvl_m else None
+        drain = float(drain_m.group(1)) if drain_m else None
+        recoil = float(recoil_m.group(1)) if recoil_m else None
+        move_type = type_m.group(1) if type_m else "Universal"
+        effect_desc = parse_effect_desc(body, target, drain, recoil, breaks_protect)
         timing_desc = parse_timing_desc(body)
 
         if hidden:
             origin = "Reserva (Sem PP)"
+        elif generic and move_type == "Universal":
+            origin = "Genérico Universal"
         elif generic:
             origin = "Genérico de Classe"
         elif sig:
@@ -492,11 +577,13 @@ def parse_moves() -> tuple[dict[str, dict[str, Any]], dict[str, list[str]]]:
         moves[mid] = {
             "Id": mid,
             "Name": decode_luau_str(name_m.group(1)) if name_m else mid,
-            "Type": type_m.group(1) if type_m else "Universal",
+            "Type": move_type,
             "Category": cat,
             "Power": int(pow_m.group(1)) if pow_m else "-",
             "Accuracy": acc_val,
             "PP": int(pp_m.group(1)) if pp_m else 0,
+            "Priority": priority,
+            "LearnLevel": learn_level,
             "CritChance": crit_chance,
             "Target": target,
             "EffectDesc": effect_desc,
@@ -834,6 +921,7 @@ def build_workbook(
         key=lambda mv: (
             ORIGIN_ORDER.get(mv["Origin"], 99),
             CLASS_ORDER.get(mv["Type"], 99),
+            mv["LearnLevel"] if mv["LearnLevel"] is not None else 999,
             mv["Name"].lower(),
         ),
     )
@@ -843,13 +931,15 @@ def build_workbook(
         "Nome do Ataque",
         "Origem",
         "Classe",
+        "Nível Sugerido",
         "Categoria",
         "Poder",
         "Precisão",
         "PP",
+        "Prioridade",
         "Crítico",
         "Alvo (2x2)",
-        "Efeito / Status / Buff",
+        "Efeito / Mecânica Especial",
         "Assinatura?",
         "Cut-In?",
         "Animação 3D",
@@ -870,8 +960,9 @@ def build_workbook(
 
     ORIGIN_FILL = {
         "Genérico de Classe": BLUE,
+        "Genérico Universal": TEAL,
         "Assinatura": GOLD,
-        "Exclusivo": TEAL,
+        "Exclusivo": PURPLE,
         "Clássico": SLATE,
         "Reserva (Sem PP)": GRAY,
     }
@@ -889,10 +980,13 @@ def build_workbook(
         elif users:
             users_str = ", ".join(users)
         else:
-            users_str = "Nenhum (não atribuído)"
+            users_str = "Disponível p/ Progressão" if mv["Generic"] else "Nenhum (não atribuído)"
 
         cat_pt = CATEGORY_DISPLAY.get(mv["Category"], mv["Category"])
         acc_display = f"{mv['Accuracy']}%" if isinstance(mv["Accuracy"], int) else mv["Accuracy"]
+        lvl_display = f"Nv. {mv['LearnLevel']}" if mv["LearnLevel"] is not None else "-"
+        prio_val = mv["Priority"]
+        prio_display = f"+{prio_val}" if prio_val > 0 else str(prio_val)
         anim_display = f"Sim ({mv['AnimName']})" if mv["HasAnim"] else ("Não (Fallback)" if mv["Hidden"] else "Não (Padrão Classe)")
         vfx_display = f"Sim ({mv['VfxName']})" if mv["HasVfx"] else "Não"
 
@@ -902,10 +996,12 @@ def build_workbook(
                 mv["Name"],
                 mv["Origin"],
                 mv["Type"],
+                lvl_display,
                 cat_pt,
                 mv["Power"],
                 acc_display,
                 mv["PP"],
+                prio_display,
                 mv["CritChance"],
                 TARGET_DISPLAY.get(mv["Target"], mv["Target"]),
                 mv["EffectDesc"],
@@ -925,50 +1021,58 @@ def build_workbook(
             cell.border = CELL_BORDER
             cell.font = BOLD_FONT if c_idx in (1, 2) else BASE_FONT
             cell.alignment = Alignment(
-                horizontal="left" if c_idx in (1, 2, 11, 14, 15, 19) else "center",
+                horizontal="left" if c_idx in (1, 2, 13, 16, 17, 21) else "center",
                 vertical="center",
-                wrap_text=(c_idx in (11, 19)),
+                wrap_text=(c_idx in (13, 21)),
             )
 
-        ws_a.cell(r_idx, 9).number_format = "0.00%"
+        ws_a.cell(r_idx, 11).number_format = "0.00%"
+        if prio_val > 0:
+            ws_a.cell(r_idx, 10).fill = TEAL
+            ws_a.cell(r_idx, 10).font = BOLD_FONT
         if mv["CritChance"] > 0.0625:
-            ws_a.cell(r_idx, 9).fill = GOLD
-            ws_a.cell(r_idx, 9).font = BOLD_FONT
+            ws_a.cell(r_idx, 11).fill = GOLD
+            ws_a.cell(r_idx, 11).font = BOLD_FONT
         if mv["Origin"] in ORIGIN_FILL:
             ws_a.cell(r_idx, 3).fill = ORIGIN_FILL[mv["Origin"]]
         if mv["Type"] in CLASS_FILL:
             ws_a.cell(r_idx, 4).fill = CLASS_FILL[mv["Type"]]
-        ws_a.cell(r_idx, 5).fill = RED if cat_pt == "Dano" else BLUE
-        if mv["EffectDesc"].startswith("Buff:"):
-            ws_a.cell(r_idx, 11).fill = GREEN
-        elif mv["EffectDesc"].startswith("Debuff:"):
-            ws_a.cell(r_idx, 11).fill = RED
-        elif mv["EffectDesc"].startswith("Status:"):
-            ws_a.cell(r_idx, 11).fill = PURPLE
-        if mv["Signature"]:
-            ws_a.cell(r_idx, 12).fill = GOLD
-            ws_a.cell(r_idx, 12).font = BOLD_FONT
-        if mv["CutIn"]:
+        ws_a.cell(r_idx, 6).fill = RED if cat_pt == "Dano" else BLUE
+        eff = mv["EffectDesc"]
+        if eff.startswith("Buff:") or eff.startswith("Cura:") or eff.startswith("Purificação:"):
+            ws_a.cell(r_idx, 13).fill = GREEN
+        elif eff.startswith("Debuff:") or eff.startswith("Recuo:"):
+            ws_a.cell(r_idx, 13).fill = RED
+        elif eff.startswith("Status:") or eff.startswith("Hazard:"):
             ws_a.cell(r_idx, 13).fill = PURPLE
-            ws_a.cell(r_idx, 13).font = BOLD_FONT
-        ws_a.cell(r_idx, 14).fill = GREEN if mv["HasAnim"] else (SLATE if mv["Hidden"] else RED)
-        ws_a.cell(r_idx, 15).fill = GREEN if mv["HasVfx"] else (SLATE if mv["Hidden"] else RED)
+        elif eff.startswith("Proteção:") or eff.startswith("Campo") or eff.startswith("Limpeza:"):
+            ws_a.cell(r_idx, 13).fill = TEAL
+        elif eff.startswith("Dreno:") or eff.startswith("Rompe"):
+            ws_a.cell(r_idx, 13).fill = GOLD
+        if mv["Signature"]:
+            ws_a.cell(r_idx, 14).fill = GOLD
+            ws_a.cell(r_idx, 14).font = BOLD_FONT
+        if mv["CutIn"]:
+            ws_a.cell(r_idx, 15).fill = PURPLE
+            ws_a.cell(r_idx, 15).font = BOLD_FONT
+        ws_a.cell(r_idx, 16).fill = GREEN if mv["HasAnim"] else (SLATE if mv["Hidden"] else RED)
+        ws_a.cell(r_idx, 17).fill = GREEN if mv["HasVfx"] else (SLATE if mv["Hidden"] else RED)
         if mv["DevStatus"] in DEV_MOVE_FILL:
-            ws_a.cell(r_idx, 16).fill = DEV_MOVE_FILL[mv["DevStatus"]]
+            ws_a.cell(r_idx, 18).fill = DEV_MOVE_FILL[mv["DevStatus"]]
 
     col_widths_a = {
-        "A": 23, "B": 26, "C": 20, "D": 13, "E": 11, "F": 9, "G": 13, "H": 7,
-        "I": 11, "J": 16, "K": 36, "L": 12, "M": 10, "N": 24, "O": 24, "P": 21,
-        "Q": 26, "R": 14, "S": 44,
+        "A": 23, "B": 26, "C": 21, "D": 13, "E": 14, "F": 11, "G": 9, "H": 13, "I": 7,
+        "J": 11, "K": 11, "L": 16, "M": 46, "N": 12, "O": 10, "P": 24, "Q": 24, "R": 21,
+        "S": 26, "T": 14, "U": 44,
     }
     for col, w in col_widths_a.items():
         ws_a.column_dimensions[col].width = w
-    ws_a.auto_filter.ref = f"A1:S{len(sorted_moves) + 1}"
+    ws_a.auto_filter.ref = f"A1:U{len(sorted_moves) + 1}"
 
     # -----------------------------------------------------------------
-    # ABA 3: Golpes (vinculo Personagem x Golpe de todos os personagens ativos)
+    # ABA 3: Kit por Personagem (vinculo Personagem x Ataque de todos os personagens ativos)
     # -----------------------------------------------------------------
-    ws_m = wb.create_sheet("Golpes")
+    ws_m = wb.create_sheet("Kit por Personagem")
     ws_m.freeze_panes = "D2"
     m_headers = [
         "Personagem",
@@ -1072,10 +1176,10 @@ def build_workbook(
     p_cls = f"Personagens!$F$2:$F${last_p}"
     a_origin = f"Ataques!$C$2:$C${last_a}"
     a_cls = f"Ataques!$D$2:$D${last_a}"
-    a_cat = f"Ataques!$E$2:$E${last_a}"
-    a_sig = f"Ataques!$L$2:$L${last_a}"
-    a_cutin = f"Ataques!$M$2:$M${last_a}"
-    a_dev = f"Ataques!$P$2:$P${last_a}"
+    a_cat = f"Ataques!$F$2:$F${last_a}"
+    a_sig = f"Ataques!$N$2:$N${last_a}"
+    a_cutin = f"Ataques!$O$2:$O${last_a}"
+    a_dev = f"Ataques!$R$2:$R${last_a}"
 
     def add_summary_table(start_row: int, title: str, col_label: str, items: list[str], col_ref: str, exclude_test: bool = True) -> int:
         ws_r.merge_cells(start_row=start_row, start_column=1, end_row=start_row, end_column=3)
@@ -1272,7 +1376,7 @@ def build_workbook(
         a_row,
         "ATAQUES POR ORIGEM",
         "Origem",
-        ["Genérico de Classe", "Assinatura", "Exclusivo", "Clássico", "Reserva (Sem PP)"],
+        ["Genérico de Classe", "Genérico Universal", "Assinatura", "Exclusivo", "Clássico", "Reserva (Sem PP)"],
         a_origin,
     )
     a_row = add_attack_summary_table(
@@ -1309,17 +1413,24 @@ def main() -> None:
 
     OUT_BLENDER.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT_BLENDER)
-    shutil.copy2(OUT_BLENDER, OUT_ROOT)
+    root_synced = True
+    try:
+        shutil.copy2(OUT_BLENDER, OUT_ROOT)
+    except PermissionError:
+        root_synced = False
 
     active = [c for c in chars if not c["Prototype"]]
     protos = [c for c in chars if c["Prototype"]]
     print(
         f"Planilha atualizada com sucesso: {len(active)} personagens ativos + {len(protos)} prototipos "
         f"(total {len(chars)} linhas) | {wb['Ataques'].max_row - 1} ataques unicos | "
-        f"{wb['Golpes'].max_row - 1} vinculos personagem x golpe."
+        f"{wb['Kit por Personagem'].max_row - 1} vinculos kit por personagem."
     )
     print(f"  - {OUT_BLENDER}")
-    print(f"  - {OUT_ROOT}")
+    if root_synced:
+        print(f"  - {OUT_ROOT}")
+    else:
+        print(f"  ! AVISO: {OUT_ROOT} esta aberto no Excel; feche o arquivo e rode o script novamente para sincronizar a copia da raiz.")
 
 
 if __name__ == "__main__":

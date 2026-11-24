@@ -1155,6 +1155,34 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - Expandido `scripts/update_characters_sheet.py` para gerar **4 abas** em `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx`:
   - **`Personagens`** (23 ativos + 2 protótipos),
   - **`Ataques`** (nova tabela catálogo única com **todos os ataques** de `src/shared/Data/Moves.luau`: ID, Nome, Origem, Classe, Categoria, Poder, Precisão, PP, Crítico, Alvo 2x2, Efeito/Buff/Status detalhado, Assinatura, Cut-In, Animação 3D, VFX 3D, Status de Dev, Timing `C/R/I/Total`, Qtd. Usuários e lista de Personagens que usam),
-  - **`Golpes`** (vínculo `Personagem × Golpe` enriquecido com Crítico e Efeito),
+  - **`Kit por Personagem`** (vínculo `Personagem × Ataque` enriquecido com Crítico e Efeito, renomeado de `Golpes`),
   - **`Resumo`** (KPIs e tabelas dinâmicas de **Personagens** e de **Ataques** lado a lado).
-- Regra permanente atualizada em `AGENTS.md` e `Blender/REGRAS.md` garantindo atualização obrigatória de todas as abas (`Personagens`, `Ataques`, `Golpes`, `Resumo`) sempre que personagens ou ataques forem criados/modificados.
+- Regra permanente atualizada em `AGENTS.md` e `Blender/REGRAS.md` garantindo atualização obrigatória de todas as abas (`Personagens`, `Ataques`, `Kit por Personagem`, `Resumo`) sempre que personagens ou ataques forem criados/modificados.
+
+
+## Grande Pacote de Ataques Genéricos por Classe + Mecânicas Táticas no Motor de Combate (24/11/2026)
+
+**Feito**
+- **1. Motor de Batalha e IA (`src/shared/Core/DamageCalc.luau`, `BattleEngine.luau`, `AIController.luau`):**
+  - Implementado suporte completo guiado por dados (zero hardcode de nomes de golpes) para:
+    - **Prioridade (`Priority`)**: `Flee` (+10) > `Switch`/`Item` (+6) > `Proteger` (+4) > `Guarda Ampla` (+3) > ataques rápidos (+1) > normal (0).
+    - **`Protect` e `WideProtect`** (com decaimento consecutivo `1 / 2^streak`, reset em golpe comum/troca) + golpes perfurantes **`BreaksProtect`**.
+    - **Entry `Hazards`** (`Spikes` até 3 camadas: 1/8, 1/6, 1/4 HP; `ToxicSpikes` até 2 camadas: Veneno / Veneno + 1/16 HP; `StickyWeb`: -1 Velocidade) aplicados na troca/substituição com proteção contra KO em entrada + **`ClearHazards`** (`Own` / `All`, com bônus de atributo opcional).
+    - **Efeitos de Campo por Lado (`SideEffects`)**: `Barrier` (5 turnos, reduz dano não-crítico para 0.67x no 1x1 e 0.75x no 2x2) e `Tailwind` (4 turnos, dobra Velocidade do time).
+    - **`Heal`** (próprio ou `AllAllies`), **`Cleanse`** (purifica status próprio ou `AllAllies`), **`MultiStat`** (múltiplos atributos num só golpe), **`Drain`** (dreno de HP) e **`Recoil`** (dano de recuo).
+    - Espelhamento completo no PvP (`Snapshot("Enemy")` com `Hazards` e `SideEffects`) e IA atualizada (`AIController`: evita spam consecutivo de `Protect`/`WideProtect` e usa `Heal`/`Cleanse` na IA Difícil).
+- **2. Catálogo Expandido de Ataques Genéricos (`src/shared/Data/Moves.luau`):**
+  - Adicionados **55 novos ataques genéricos** (totalizando **71 ataques genéricos** e **93 ataques** no catálogo completo), todos com `Generic = true` e escada de progressão `LearnLevel` (Nv. 1 → 38), mais helper `Moves.GenericsByClass(classId, includeUniversal)` pronto para gerar Learnsets por nível:
+    - **Espadachim (15 genéricos):** STAB básico/médio/forte, prioridade (`EstocadaVeloz`), certeiro (`CorteCerteiro`), `MultiStat` (`LaminaAfiada`), dreno (`CorteDrenante`), quebra-proteção (`QuebraLamina`), veneno (`FioVenenoso`), `+2 ATQ` (`DancaDasEspadas`), hazard `Spikes` (`LaminasNoChao`), AoE avançado (`TempestadeDeCortes`) e recuo (`InvestidaCortante`).
+    - **Lutador (15 genéricos):** STAB prioridade (`SocoRelampago`), controle de velocidade (`Rasteira`), `MultiStat` (`CorpoDeFerro`), dreno (`SocoDrenante`), quebra-proteção (`PunhoDemolidor`), AoE (`OndaDeImpacto`), buff de time 2x2 (`GritoDeGuerra`), queimadura (`PunhoArdente`), limpeza de hazards + Velocidade (`GiroVarredor`), cura (`FocoInterior`) e recuo (`ImpactoTotal`).
+    - **Mago (16 genéricos):** STAB prioridade (`PulsoVeloz`), congelamento (`RaioCongelante`), queimadura garantida (`FogoFatuo`), `MultiStat` (`MenteCalma`), dreno (`SifaoArcano`), sono (`NevoaDoSono`), `Barrier` (`BarreiraArcana`), `ToxicSpikes` (`RunasToxicas`), cura em área (`CuraLuminosa`), purificação em área (`Purificacao`), AoE (`ExplosaoAstral`) e nuke com queda de ATQ (`MeteoroArcano`).
+    - **Atirador (15 genéricos):** STAB prioridade (`TiroRapido`), veneno (`DardoVenenoso`), `MultiStat` (`FocoDePrecisao`), `StickyWeb` (`DisparoDeRede`), controle de velocidade AoE (`TiroDeSupressao`), quebra-proteção (`DisparoRompeEscudo`), debuff de precisão AoE (`BombaDeFumaca`), `Spikes` (`MinaDeEstrepes`), paralisia (`DardoEletrico`), AoE (`RajadaTatica`) e alto crítico (`DisparoDeElite`).
+    - **Universal (10 genéricos táticos):** `AtaqueRapido`, `Proteger`, `OlharIntimidador`, `GuardaAmpla`, `VenenoPuro`, `Agilidade`, `Desobstruir`, `VentoAFavor`, `MuralhaDeFerro`, `Recuperacao`.
+- **3. HUD de Batalha e Planilha (`BattleClient`, `BattleService`, `scripts/update_characters_sheet.py`):**
+  - `BattleClient` exibe badges ativos de campo (`ESPINHOS xN`, `TÓXICO xN`, `REDE`, `BARREIRA Nt`, `VENTO Nt`), popup 3D `"Protegido!"` (com burst turquesa em `BattleService`) e chips claros nos botões de golpe (`PROT.`, `CAMPO`, `TIME`, `ÁREA`, `RÁPIDO`, `SI`).
+  - Planilha atualizada em `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` (93 ataques únicos na aba `Ataques` com novas colunas `Nível Sugerido` e `Prioridade`, ordenados por classe e nível de progressão).
+
+**Testado (Studio Edit + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS`).
+- Suíte dedicada no Studio validou todas as novas mecânicas (`93` golpes, `71` genéricos, `Priority`, `Protect`/`WideProtect`/`BreaksProtect`, `Spikes`/`ToxicSpikes`/`StickyWeb` + `ClearHazards` inclusive com KO em entrada, `Barrier`, `Tailwind`, `Drain`, `Recoil`, `Heal`, `Cleanse`, `MultiStat`, espelhamento PvP e stress test de IA `Facil`/`Medio`/`Dificil` em 2x2) sem nenhum erro.
+- Place salvo no Roblox Studio na **versão 317** (`TeamCreate`).

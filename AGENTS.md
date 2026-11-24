@@ -30,7 +30,7 @@ Este arquivo é lido automaticamente por qualquer Agente de IA que trabalhe nest
      6. Executar `git add`, `git commit` e `git push origin main`.
 5. **Planilha de Personagens e Ataques Sempre Atualizada (`Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx`):**
    * **OBRIGATÓRIO:** Sempre que um **personagem** OU um **ataque/golpe** for **adicionado, removido ou alterado** (atributos, classe, raridade, anime, poder, precisão, PP, crítico, alvo, efeito/buff/status, modelo 3D, animações, VFX, Cut-In, timing, variante brilhante ou código Dev), atualizar `DEV_META` (se aplicável) em `scripts/update_characters_sheet.py` e executar `python scripts/update_characters_sheet.py`.
-   * O script sincroniza automaticamente todas as **4 abas** (`Personagens`, `Ataques`, `Golpes` e `Resumo`) em `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` a partir de `src/shared/Data/Characters.luau`, `src/shared/Data/Moves.luau` e `src/server_storage/Codes.luau`.
+   * O script sincroniza automaticamente todas as **4 abas** (`Personagens`, `Ataques`, `Kit por Personagem` e `Resumo`) em `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` a partir de `src/shared/Data/Characters.luau`, `src/shared/Data/Moves.luau` e `src/server_storage/Codes.luau`.
 
 ---
 
@@ -60,7 +60,7 @@ Cada subagente ou tarefa deve respeitar o isolamento de camadas:
   * `python scripts/sync_studio.py push` — Atualiza o Studio com as mudanças feitas em `src/`.
   * `python scripts/sync_studio.py test` — Executa os testes de validação do GDD (fórmula de dano, 1x1, 2x2, Classes, Ginásios, Treino, Progressão e `AccountLevel`).
 * **Gerador da Planilha de Personagens e Ataques (`scripts/update_characters_sheet.py`):**
-  * `python scripts/update_characters_sheet.py` — Atualiza `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` (abas `Personagens`, `Ataques`, `Golpes` e `Resumo`) sempre que personagens ou ataques/golpes forem adicionados ou alterados no jogo.
+  * `python scripts/update_characters_sheet.py` — Atualiza `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` (abas `Personagens`, `Ataques`, `Kit por Personagem` e `Resumo`) sempre que personagens ou ataques/golpes forem adicionados ou alterados no jogo.
 
 ---
 

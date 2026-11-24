@@ -278,6 +278,8 @@ local function present(session, events)
 		elseif ev.Kind == "StatusDamage" and model then
 			CharacterLibrary.Play(model, "Hit")
 			ArenaManager.ImpactBurst(model, if ev.Status == "Burn" then Color3.fromRGB(255, 110, 40) else Color3.fromRGB(160, 70, 200))
+		elseif ev.Kind == "Protected" and model then
+			ArenaManager.ImpactBurst(model, Color3.fromRGB(64, 214, 230))
 		elseif ev.Kind == "Faint" and model then
 			model:SetAttribute("Fainted", true)
 			CharacterLibrary.Stop(model)

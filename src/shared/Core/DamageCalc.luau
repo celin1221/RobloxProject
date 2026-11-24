@@ -66,13 +66,15 @@ end
 
 -- Dano real de um golpe. Retorna { Damage, Crit, TypeMultiplier, SameType, Spread }
 -- spreadMult (opcional): 0.75 em golpes de area no 2x2 quando atingem 2+ alvos (padrao 1)
-function DamageCalc.Compute(attacker, defender, move, rng: Random, spreadMult: number?)
+-- barrierMult (opcional): reducao de dano de barreira ativa no lado defensor (padrao 1; critico ignora barreira)
+function DamageCalc.Compute(attacker, defender, move, rng: Random, spreadMult: number?, barrierMult: number?)
 	local typeMult = TypeChart.Multiplier(move.Type, defender.Type)
 	local sameType = move.Type == attacker.Type
 	local bonus = sameType and DamageCalc.SAME_TYPE_BONUS or 1
 	local spread = if typeof(spreadMult) == "number" then spreadMult else 1
 	local critChance = if typeof(move.CritChance) == "number" then move.CritChance else DamageCalc.CRIT_CHANCE
 	local crit = rng:NextNumber() < critChance
+	local barrier = if (not crit) and typeof(barrierMult) == "number" then barrierMult else 1
 	local luck = rng:NextNumber(DamageCalc.LUCK_MIN, DamageCalc.LUCK_MAX)
 
 	local base = DamageCalc.Base(
@@ -81,19 +83,20 @@ function DamageCalc.Compute(attacker, defender, move, rng: Random, spreadMult: n
 		DamageCalc.EffectiveStat(attacker, "Attack"),
 		DamageCalc.EffectiveStat(defender, "Defense")
 	)
-	local raw = base * bonus * typeMult * spread * (crit and DamageCalc.CRIT_MULTIPLIER or 1) * luck
+	local raw = base * bonus * typeMult * spread * barrier * (crit and DamageCalc.CRIT_MULTIPLIER or 1) * luck
 	local damage = if typeMult == 0 then 0 else math.max(1, math.floor(raw + 0.5))
 	return { Damage = damage, Crit = crit, TypeMultiplier = typeMult, SameType = sameType, Spread = spread }
 end
 
 -- Dano medio esperado (usado pela IA). Conta precisao, chance de critico, sorte media e spread (2x2).
-function DamageCalc.ExpectedDamage(attacker, defender, move, spreadMult: number?): number
-	if move.Category ~= "Damage" then
+function DamageCalc.ExpectedDamage(attacker, defender, move, spreadMult: number?, barrierMult: number?): number
+	if not move or move.Category ~= "Damage" or not move.Power then
 		return 0
 	end
 	local typeMult = TypeChart.Multiplier(move.Type, defender.Type)
 	local bonus = (move.Type == attacker.Type) and DamageCalc.SAME_TYPE_BONUS or 1
 	local spread = if typeof(spreadMult) == "number" then spreadMult else 1
+	local barrier = if typeof(barrierMult) == "number" then barrierMult else 1
 	local critChance = if typeof(move.CritChance) == "number" then move.CritChance else DamageCalc.CRIT_CHANCE
 	local critAvg = 1 + critChance * (DamageCalc.CRIT_MULTIPLIER - 1)
 	local luckAvg = (DamageCalc.LUCK_MIN + DamageCalc.LUCK_MAX) / 2
@@ -104,7 +107,7 @@ function DamageCalc.ExpectedDamage(attacker, defender, move, spreadMult: number?
 		DamageCalc.EffectiveStat(attacker, "Attack"),
 		DamageCalc.EffectiveStat(defender, "Defense")
 	)
-	return base * bonus * typeMult * spread * critAvg * luckAvg * hit
+	return base * bonus * typeMult * spread * barrier * critAvg * luckAvg * hit
 end
 
 return DamageCalc
