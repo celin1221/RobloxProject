@@ -1287,3 +1287,38 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
   - **75/75** golpes procedurais executados por completo (`Charge` → `Release` → `Impact` → expiração natural) com **`0` erros no Console** e **`0` vazamentos** (`BattleVfx=0`, `Katana/Attr=0`).
 - `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS: ... 93/93 Animated Moves + UI Guardrails`).
 - Place salvo no Roblox Studio na **versão 326** (`TeamCreate`).
+
+
+## Rebalanceamento de Economia (Gold/Gemas/Gacha), Curva de XP Nv. 1–50, Blindagem da Coleta e Fim dos Avisos Idle/Walk (24/11/2026)
+
+**Feito**
+- **1. Economia de Gold — Base moderada + Combate Ativo valorizado (`Base.luau`, `Tower.luau`, `Gyms.luau`, `Refuge.luau`, `Retention.luau`, `PvPRank.luau`, `AccountLevel.luau`):**
+  - **Base (`Base.luau`):** `GoldPerSecond` reduzido moderadamente para `{ Comum = 0.20, Raro = 0.35, Epico = 0.55, Lendario = 0.90 }` (`720 / 1.260 / 1.980 / 3.240 gold/h`), `LevelGoldBonus = 0.025`, `StarGoldBonus = 0.10` — ainda permite roletar com boa frequência sem esmagar o combate ativo.
+  - **Torre (`Tower.luau`):** `Fácil = 900`, `Médio = 3.200`, `Difícil = 9.000` (+ `DailyGems = 8`), `Infinito = 650/andar + 3.000 bônus` a cada 5 andares.
+  - **Ginásios (`Gyms.luau`):** 1ª vitória `2.500 / 4.500 / 7.500 gold` + `8 / 12 / 15 gemas`; repetição `1.200 / 2.200 / 3.500 gold`.
+  - **Refúgio, Retenção, PvP e Nível da Conta:** `Refuge.GoldPerLevel = 25`; `Login` `300..2.500 gold`; `Chests` `300 / 400 / 600 / 1.200 gold` + itens; `Daily` `600 gold + 120 XP` (`AllReward = 10 gemas`); `PvP` `1.500` (2x2) / `1.000` (1x1) / `350` (participação); `AccountLevel.RewardFor` escalado (~2× no Gold, Nv. 1 = `300 gold`, Marcos Épicos `1.000 + lv*75`, Marcos Lendários `2.500 + tier*1.500`).
+- **2. Taxas e Pity de Invocação preparados para alta rotação e futura categoria Mítico/Secreto (`Summon.luau`):**
+  - **Portal Comum (`300` / `2.700` gold):** `Comum 74,5%`, `Raro 21,5%`, `Épico 3,5%`, `Lendário 0,5%`, `PityAt = 300` (`SorteEmDobro` → `Épico 7%`, `Lendário 1%`).
+  - **Portal Premium (`25` / `225` gemas):** `Raro 78%`, `Épico 20%`, `Lendário 2%`, `PityAt = 75`.
+  - **Venda de duplicados (`SellPrice`):** `{ Comum = 50, Raro = 150, Epico = 600, Lendario = 4000 }`.
+  - **`San` (`DragonBall`) e `Setero` (`JujutsuKaisen`) mantidos bloqueados** (aguardando banners dedicados).
+- **3. Economia de Gemas saudável para F2P (`Base.luau`, `Characters.luau`, `Refuge.luau`, `Benefits.luau`):**
+  - `OrePerHour` elevado para `{ Comum = 15, Raro = 28, Epico = 45, Lendario = 75 }` (alinhado em `Base.luau` e `Characters.Rarities`).
+  - Forja do Refúgio (`Refuge.Upgrades`) reescalada para `25..800 gemas` (total `2.705` vs `6.450` antes).
+  - Benefícios em Gemas (`Benefits.List`) ajustados para `MochilaAmpliada = 500`, `GoldEmDobro = 1.600`, `CuraAutomatica = 2.500` (total `4.600` vs `14.500` antes; preços em Robux preservados).
+- **4. Curva de XP de Personagens Nv. 1–50 (`Progression.luau`):**
+  - Curva em 2 fases: Nv. `1..15` mantém `10 * L` (início ágil); Nv. `16..49` usa `math.floor(10 * L + 1.8 * (L - 15)^2)` (`Nv. 49 -> 50 = 2.570 XP`, total `Nv. 5 -> 50 = 36.769 XP`), dando peso real ao desbloqueio dos golpes finais dos Lendários (Nv. 42–50).
+- **5. Blindagem Anti-Exploit da Coleta da Base (`BaseService.luau`, `PlayerDataService.luau`, `AccountLevel.luau`):**
+  - Removido o piso artificial de `10 XP` em coletas minúsculas e adicionado cooldown persistente `data.Base.LastCollectXpAt` (`BaseCollectCooldown = 120s`, `BaseCollectMin = 5`, `BaseCollectGoldDivisor = 25`, imune até a reconexão). Coletar recursos e missões de coleta seguem funcionando normalmente, mas spam de cliques rende `0 XP` de conta.
+- **6. Fim dos Avisos de Permissão das Animações `Idle` (`82392963584557`) e `Walk` (`113228340758956`):**
+  - Substituídos em `Characters.luau` (`DefaultAnimations` e os 19 personagens) e nas **42 instâncias `Animation`** em `ServerStorage`/`Workspace` no Studio pelos IDs autorizados da experiência (`Idle = 95978454415689`, `Walk = 81539047602340`).
+  - `BattleClient.client.luau` (`preloadModel`) passa a ignorar `Idle`/`Walk`/`Mine` e animações procedurais do `CombatAnimator`; `CharacterLibrary.luau` (`Play`) evita sobrepor `Idle`/`Walk` em modelos já animados proceduralmente a 60 FPS pelo `BaseClient`.
+- **7. Suíte de Validação (`scripts/sync_studio.py`):**
+  - Adicionado **Test 12** cobrindo a curva quadrática de XP, taxas/pity de Invocação, prêmios rebalanceados da Torre/Refúgio/Benefícios/Retenção/PvP, `BaseCollectCooldown = 120` e garantia de `0` ocorrências dos IDs `82392963584557` / `113228340758956` em `ServerStorage/Characters`.
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS`).
+- Validado ao vivo no Play Mode:
+  - Coleta da Base ao vivo (`LiveRate = 3.78/s`, coleta legítima creditando XP e gravando `LastCollectXpAt`; segunda coleta imediata e coletas minúsculas rendendo `0 XP` de conta).
+  - Preload e execução de todas as `232` instâncias de `Animation` (`44` IDs únicos nos `25` modelos) e `121` animações no Workspace com **`0` avisos de permissão** no Console.
+- Place salvo no Roblox Studio na **versão 327** (`TeamCreate`).

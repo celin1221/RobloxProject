@@ -15,10 +15,10 @@ local Characters = {}
 
 Characters.MaxLevel = 50
 
--- Animacoes padrao compartilhadas (respiracao/vida no Idle e caminhada limpa no Walk)
+-- Animacoes padrao compartilhadas (IDs autorizados na experiencia; BaseClient anima Idle/Walk proceduralmente a 60 FPS)
 Characters.DefaultAnimations = {
-	Idle = 82392963584557,
-	Walk = 113228340758956,
+	Idle = 95978454415689,
+	Walk = 81539047602340,
 }
 
 Characters.Growth = { HP = 3, Attack = 1, Defense = 1, Speed = 1 }
@@ -36,10 +36,10 @@ Characters.Animes = {
 
 -- Tabela de raridade do GDD (secao 4)
 Characters.Rarities = {
-	Comum = { Name = "Comum", StatMultiplier = 1.00, EncounterChance = 0.60, OrePerHour = 10, CaptureRate = 0.60 },
-	Raro = { Name = "Raro", StatMultiplier = 1.10, EncounterChance = 0.28, OrePerHour = 18, CaptureRate = 0.40 },
-	Epico = { Name = "Épico", StatMultiplier = 1.20, EncounterChance = 0.10, OrePerHour = 30, CaptureRate = 0.20 },
-	Lendario = { Name = "Lendário", StatMultiplier = 1.35, EncounterChance = 0.02, OrePerHour = 50, CaptureRate = 0.08 },
+	Comum = { Name = "Comum", StatMultiplier = 1.00, EncounterChance = 0.60, OrePerHour = 15, CaptureRate = 0.60 },
+	Raro = { Name = "Raro", StatMultiplier = 1.10, EncounterChance = 0.28, OrePerHour = 28, CaptureRate = 0.40 },
+	Epico = { Name = "Épico", StatMultiplier = 1.20, EncounterChance = 0.10, OrePerHour = 45, CaptureRate = 0.20 },
+	Lendario = { Name = "Lendário", StatMultiplier = 1.35, EncounterChance = 0.02, OrePerHour = 75, CaptureRate = 0.08 },
 }
 
 --[[
@@ -203,7 +203,7 @@ Characters.List = {
 		},
 		-- Animacoes publicadas (copias em ServerStorage/Characters/San/Animations)
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			Kamehameha = 114895944226250, GenkiDama = 105158348948965,
 			ComboMarcial = 135688782086034, CargaDeKi = 94954698224565,
@@ -239,7 +239,7 @@ Characters.List = {
 		},
 		-- Animacoes padrao compartilhadas + 4 golpes exclusivos publicados
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			SocoSismico = 111193439375608, CeuETerra = 98016585283343,
 			CorteMurakumo = 136035334634731, HakiDoConquistador = 85577521631653,
@@ -274,7 +274,7 @@ Characters.List = {
 			{ Level = 42, Move = "ImpactoTotal" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			ComboMarcial = 135688782086034, SocoDireto = 135688782086034,
 			QuebraGuarda = 111193439375608, PosturaDeCombate = 94954698224565,
@@ -307,7 +307,7 @@ Characters.List = {
 			{ Level = 42, Move = "MeteoroArcano" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			Attack = 133310018588724, Special = 105158348948965,
 		},
@@ -339,7 +339,7 @@ Characters.List = {
 			{ Level = 38, Move = "DisparoDeElite" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			Attack = 105789525703577, Special = 105789525703577,
 		},
@@ -371,7 +371,7 @@ Characters.List = {
 			{ Level = 42, Move = "InvestidaCortante" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			CorteMurakumo = 136035334634731, ComboMarcial = 135688782086034,
 			Attack = 136035334634731, Special = 136035334634731,
@@ -403,7 +403,7 @@ Characters.List = {
 			{ Level = 38, Move = "ImpactoTotal" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			ComboMarcial = 135688782086034,
 			Attack = 135688782086034, Special = 135688782086034,
@@ -437,7 +437,7 @@ Characters.List = {
 			{ Level = 40, Move = "ImpactoTotal" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			ComboMarcial = 135688782086034,
 			Attack = 135688782086034, Special = 111193439375608,
@@ -469,7 +469,7 @@ Characters.List = {
 			{ Level = 40, Move = "ExplosaoAstral" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			Attack = 133310018588724, Special = 105158348948965,
 		},
@@ -500,7 +500,7 @@ Characters.List = {
 			{ Level = 40, Move = "MeteoroArcano" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			Attack = 133310018588724, Special = 105158348948965,
 		},
@@ -531,7 +531,7 @@ Characters.List = {
 			{ Level = 40, Move = "InvestidaCortante" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			Attack = 136035334634731, Special = 136035334634731,
 		},
@@ -565,7 +565,7 @@ Characters.List = {
 			{ Level = 42, Move = "ImpactoTotal" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			ComboMarcial = 135688782086034,
 			Attack = 135688782086034, Special = 111193439375608,
@@ -599,7 +599,7 @@ Characters.List = {
 			{ Level = 50, Move = "MeteoroArcano" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			Attack = 133310018588724, Special = 105158348948965,
 		},
@@ -632,7 +632,7 @@ Characters.List = {
 			{ Level = 40, Move = "ImpactoTotal" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			ComboMarcial = 135688782086034, Attack = 135688782086034, Special = 111193439375608,
 		},
@@ -663,7 +663,7 @@ Characters.List = {
 			{ Level = 40, Move = "DisparoDeElite" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			Attack = 105789525703577, Special = 105789525703577,
 		},
@@ -694,7 +694,7 @@ Characters.List = {
 			{ Level = 40, Move = "MeteoroArcano" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			Attack = 133310018588724, Special = 105158348948965,
 		},
@@ -725,7 +725,7 @@ Characters.List = {
 			{ Level = 40, Move = "InvestidaCortante" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			Attack = 136035334634731, Special = 136035334634731,
 		},
@@ -757,7 +757,7 @@ Characters.List = {
 			{ Level = 42, Move = "InvestidaCortante" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			Attack = 136035334634731, Special = 136035334634731,
 		},
@@ -790,7 +790,7 @@ Characters.List = {
 			{ Level = 50, Move = "SenbonzakuraKageyoshi" },
 		},
 		Animations = {
-			Idle = 82392963584557, Walk = 113228340758956, Hit = 103416185331712, Faint = 79648116867663,
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
 			Attack = 136035334634731, Special = 136035334634731,
 		},

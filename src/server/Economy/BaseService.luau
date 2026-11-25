@@ -679,12 +679,20 @@ function BaseService.Collect(player: Player)
 	for _, qty in pairs(attrTaken) do
 		attrTotal += qty
 	end
-	local xpAmt = math.clamp(
-		math.floor((gold + oreTaken + attrTotal * 5) / AccountLevel.XpSources.BaseCollectGoldDivisor),
-		AccountLevel.XpSources.BaseCollectMin,
-		AccountLevel.XpSources.BaseCollectMax
-	)
-	AccountLevelService.AddXp(player, xpAmt, "Coleta da Base", false)
+	-- Blindagem anti-exploit: exige valor real minimo + cooldown persistente (evita farm infinito clicando Coletar)
+	local tNow = now()
+	local lastXp = tonumber(data.Base.LastCollectXpAt) or 0
+	if lastXp > tNow then
+		lastXp = 0
+	end
+	local cooldown = AccountLevel.XpSources.BaseCollectCooldown or 120
+	local divisor = AccountLevel.XpSources.BaseCollectGoldDivisor or 25
+	local rawXp = math.floor((gold + oreTaken * 15 + attrTotal * 20) / divisor)
+	if rawXp >= (AccountLevel.XpSources.BaseCollectMin or 5) and (tNow - lastXp) >= cooldown then
+		local xpAmt = math.min(rawXp, AccountLevel.XpSources.BaseCollectMax or 90)
+		data.Base.LastCollectXpAt = tNow
+		AccountLevelService.AddXp(player, xpAmt, "Coleta da Base", false)
+	end
 	local parts = {}
 	if gold > 0 then
 		table.insert(parts, fmt(gold) .. " gold")

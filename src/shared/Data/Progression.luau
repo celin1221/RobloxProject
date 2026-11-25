@@ -1,9 +1,9 @@
 --[[
 	Progression (GDD secoes 4 e 7)
 	Niveis 1 a 50; por nivel +3 HP e +1 em Ataque, Defesa e Velocidade (Characters.StatsAt).
-	XP por vitoria. O GDD nao define a curva nem a quantidade de XP; foi usado o mais simples
-	(registrado em PROGRESSO.md):
-	  XP para passar do nivel N ao N+1 = 10 x N
+	XP por vitoria. Curva em 2 fases para manter o inicio agil e dar peso real aos niveis finais (42-50):
+	  Nv. 1..15:  XP para passar do nivel N ao N+1 = 10 * N
+	  Nv. 16..49: XP para passar do nivel N ao N+1 = floor(10 * N + 1.8 * (N - 15)^2)
 	  XP por vitoria = 3 x soma dos niveis dos inimigos, para cada personagem do time que entrou em campo
 	  Beneficio XP em Dobro (GDD secao 9) multiplica por 2
 ]]
@@ -34,7 +34,10 @@ function Progression.XpToNext(level: number): number
 	if level >= Progression.MaxLevel then
 		return 0
 	end
-	return 10 * level
+	if level <= 15 then
+		return 10 * level
+	end
+	return math.floor(10 * level + 1.8 * (level - 15) ^ 2)
 end
 
 function Progression.VictoryXp(enemyLevels: { number }, doubleXp: boolean?): number

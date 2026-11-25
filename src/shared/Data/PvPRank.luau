@@ -25,10 +25,10 @@ PvPRank.Tiers = {
 
 -- Recompensa diaria por vitoria (ate DailyRewardCap/dia; 1x por oponente/dia)
 PvPRank.WinReward = {
-	["2x2"] = { Gold = 450, Item = "DoceComum" },
-	["1x1"] = { Gold = 300 },
+	["2x2"] = { Gold = 1500, Item = "DoceComum" },
+	["1x1"] = { Gold = 1000 },
 }
-PvPRank.ParticipationGold = 100 -- premio de participacao ao perder sem abandonar imediatamente
+PvPRank.ParticipationGold = 350 -- premio de participacao ao perder sem abandonar imediatamente
 
 function PvPRank.Day(now: number): number
 	return now // 86400

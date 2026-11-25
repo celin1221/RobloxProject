@@ -32,8 +32,8 @@ Gyms.List = {
 		Color = "orange",
 		Accent = Color3.fromRGB(255, 138, 43),
 		RecommendedLevel = 16,
-		FirstReward = { Gold = 1000, Gems = 3, Items = { "DoceRaro" } },
-		RepeatReward = { Gold = 350 },
+		FirstReward = { Gold = 2500, Gems = 8, Items = { "DoceRaro" } },
+		RepeatReward = { Gold = 1200 },
 		Stages = {
 			{
 				Title = "Disc\u{ed}pulo Genin",
@@ -68,8 +68,8 @@ Gyms.List = {
 		Color = "blue",
 		Accent = Color3.fromRGB(56, 178, 255),
 		RecommendedLevel = 20,
-		FirstReward = { Gold = 1800, Gems = 3, Items = { "DoceRaro" } },
-		RepeatReward = { Gold = 550 },
+		FirstReward = { Gold = 4500, Gems = 12, Items = { "DoceRaro" } },
+		RepeatReward = { Gold = 2200 },
 		Stages = {
 			{
 				Title = "Tripulante Novato",
@@ -104,8 +104,8 @@ Gyms.List = {
 		Color = "teal",
 		Accent = Color3.fromRGB(48, 212, 232),
 		RecommendedLevel = 24,
-		FirstReward = { Gold = 2800, Gems = 4, Items = { "DoceEpico" } },
-		RepeatReward = { Gold = 800 },
+		FirstReward = { Gold = 7500, Gems = 15, Items = { "DoceEpico" } },
+		RepeatReward = { Gold = 3500 },
 		Stages = {
 			{
 				Title = "Oficial da Divis\u{e3}o",

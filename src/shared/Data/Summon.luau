@@ -33,8 +33,8 @@ Summon.Portals = {
 		Currency = "Gold",
 		Cost = 300,
 		Cost10 = 2700,
-		Rates = { Comum = 0.70, Raro = 0.23, Epico = 0.06, Lendario = 0.01 },
-		PityAt = 200, -- Lendario garantido na 200a seguida sem Lendario
+		Rates = { Comum = 0.745, Raro = 0.215, Epico = 0.035, Lendario = 0.005 },
+		PityAt = 300, -- Lendario garantido na 300a seguida sem Lendario (prepara terreno para futuro Mitico/Secreto)
 		PityKey = "Comum", -- campo em SummonPity no perfil
 	},
 	-- Item aleatorio pago: bloqueado por PolicyService (ArePaidRandomItemsRestricted) onde for restrito
@@ -43,8 +43,8 @@ Summon.Portals = {
 		Currency = "Gems",
 		Cost = 25,
 		Cost10 = 225,
-		Rates = { Comum = 0, Raro = 0.72, Epico = 0.25, Lendario = 0.03 },
-		PityAt = 60, -- Lendario garantido na 60a seguida sem Lendario
+		Rates = { Comum = 0, Raro = 0.78, Epico = 0.20, Lendario = 0.02 },
+		PityAt = 75, -- Lendario garantido na 75a seguida sem Lendario (4x mais chance que o Comum)
 		PityKey = "Premium",
 		PaidRandom = true,
 		-- Banner da semana: 1 Lendario em destaque fica com metade da chance de Lendario.
@@ -141,7 +141,7 @@ end
 Summon.ShinyChance = 0.01
 Summon.SummonLevel = 5
 Summon.Stars = { Max = 5, CopiesPerStar = 3, BonusPerStar = 0.05 }
-Summon.SellPrice = { Comum = 50, Raro = 150, Epico = 500, Lendario = 3000 }
+Summon.SellPrice = { Comum = 50, Raro = 150, Epico = 600, Lendario = 4000 }
 Summon.AlbumReward = { Gold = 1000, Gems = 10 }
 
 -- Sorteio puro. pity = invocacoes seguidas sem Lendario antes desta.

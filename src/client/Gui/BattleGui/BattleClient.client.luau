@@ -29,18 +29,28 @@ local TypeChart = require(ReplicatedStorage:WaitForChild("Data"):WaitForChild("T
 local Moves = require(ReplicatedStorage.Data:WaitForChild("Moves"))
 local DamageCalc = require(ReplicatedStorage:WaitForChild("Core"):WaitForChild("DamageCalc"))
 local VfxController = require(ReplicatedStorage:WaitForChild("VfxController"))
+local CombatAnimator = require(ReplicatedStorage:WaitForChild("CombatAnimator"))
 local UI = require(ReplicatedStorage:WaitForChild("UI"))
 local T = UI.Theme
 
 local BATTLE_FOV = 50
+local SKIP_PRELOAD_ANIMS = { Idle = true, Walk = true, Mine = true }
 
--- Carrega antes as animacoes do modelo em campo (golpes com marcadores)
+-- Carrega antes as animacoes do modelo em campo (ignora Idle/Walk/Mine e procedurais do CombatAnimator)
 local function preloadModel(model)
 	local folder = model and model:FindFirstChild("Animations")
 	if folder then
-		task.spawn(function()
-			pcall(ContentProvider.PreloadAsync, ContentProvider, folder:GetChildren())
-		end)
+		local list = {}
+		for _, child in ipairs(folder:GetChildren()) do
+			if child:IsA("Animation") and not SKIP_PRELOAD_ANIMS[child.Name] and not CombatAnimator.Has(child.Name) then
+				table.insert(list, child)
+			end
+		end
+		if #list > 0 then
+			task.spawn(function()
+				pcall(ContentProvider.PreloadAsync, ContentProvider, list)
+			end)
+		end
 	end
 end
 

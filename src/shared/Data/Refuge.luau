@@ -25,15 +25,15 @@ Refuge.MaxLevel = 10
 -- Tipos: TowerWin (Mode), WildDefeated (Count), Captures (Count), CharLevel (Count, Level),
 --        InfinitoFloor (Floor), Stars (Count, Stars), LegendaryLevel (Level), GymBadges (Count)
 Refuge.Upgrades = {
-	[2] = { Gems = 50, Req = { { Kind = "TowerWin", Mode = "Facil" }, { Kind = "WildDefeated", Count = 10 } } },
-	[3] = { Gems = 100, Req = { { Kind = "CharLevel", Count = 3, Level = 10 }, { Kind = "Captures", Count = 5 }, { Kind = "GymBadges", Count = 1 } } },
-	[4] = { Gems = 200, Req = { { Kind = "TowerWin", Mode = "Medio" }, { Kind = "WildDefeated", Count = 40 } } },
-	[5] = { Gems = 350, Req = { { Kind = "CharLevel", Count = 3, Level = 20 }, { Kind = "Captures", Count = 15 }, { Kind = "GymBadges", Count = 2 } } },
-	[6] = { Gems = 500, Req = { { Kind = "TowerWin", Mode = "Dificil" }, { Kind = "WildDefeated", Count = 100 } } },
-	[7] = { Gems = 750, Req = { { Kind = "InfinitoFloor", Floor = 10 }, { Kind = "CharLevel", Count = 6, Level = 25 }, { Kind = "GymBadges", Count = 3 } } },
-	[8] = { Gems = 1000, Req = { { Kind = "InfinitoFloor", Floor = 20 }, { Kind = "Stars", Count = 1, Stars = 3 } } },
-	[9] = { Gems = 1500, Req = { { Kind = "InfinitoFloor", Floor = 30 }, { Kind = "CharLevel", Count = 6, Level = 40 }, { Kind = "Captures", Count = 80 } } },
-	[10] = { Gems = 2000, Req = { { Kind = "InfinitoFloor", Floor = 50 }, { Kind = "LegendaryLevel", Level = 50 }, { Kind = "Captures", Count = 150 } } },
+	[2] = { Gems = 25, Req = { { Kind = "TowerWin", Mode = "Facil" }, { Kind = "WildDefeated", Count = 10 } } },
+	[3] = { Gems = 50, Req = { { Kind = "CharLevel", Count = 3, Level = 10 }, { Kind = "Captures", Count = 5 }, { Kind = "GymBadges", Count = 1 } } },
+	[4] = { Gems = 90, Req = { { Kind = "TowerWin", Mode = "Medio" }, { Kind = "WildDefeated", Count = 40 } } },
+	[5] = { Gems = 150, Req = { { Kind = "CharLevel", Count = 3, Level = 20 }, { Kind = "Captures", Count = 15 }, { Kind = "GymBadges", Count = 2 } } },
+	[6] = { Gems = 220, Req = { { Kind = "TowerWin", Mode = "Dificil" }, { Kind = "WildDefeated", Count = 100 } } },
+	[7] = { Gems = 320, Req = { { Kind = "InfinitoFloor", Floor = 10 }, { Kind = "CharLevel", Count = 6, Level = 25 }, { Kind = "GymBadges", Count = 3 } } },
+	[8] = { Gems = 450, Req = { { Kind = "InfinitoFloor", Floor = 20 }, { Kind = "Stars", Count = 1, Stars = 3 } } },
+	[9] = { Gems = 600, Req = { { Kind = "InfinitoFloor", Floor = 30 }, { Kind = "CharLevel", Count = 6, Level = 40 }, { Kind = "Captures", Count = 80 } } },
+	[10] = { Gems = 800, Req = { { Kind = "InfinitoFloor", Floor = 50 }, { Kind = "LegendaryLevel", Level = 50 }, { Kind = "Captures", Count = 150 } } },
 }
 
 local MODE_NAME = { Facil = "F\u{e1}cil", Medio = "M\u{e9}dio", Dificil = "Dif\u{ed}cil" }
@@ -84,8 +84,8 @@ function Refuge.DropPool(level: number)
 	return pool
 end
 
--- Gold por selvagem derrotado (rebalanceado para progressao agil de Gold)
-Refuge.GoldPerLevel = 12
+-- Gold por selvagem derrotado (rebalanceado para progressao ativa forte)
+Refuge.GoldPerLevel = 25
 
 -- Modelo da Forja por nivel (muda nos niveis 4, 7 e 10)
 function Refuge.ForgeModel(level: number): string

@@ -53,28 +53,28 @@ end
 
 -- Login diario: 7 dias, reinicia se pular um
 Retention.Login = {
-	{ Gold = 100 },
-	{ Gold = 200 },
 	{ Gold = 300 },
-	{ Gold = 400 },
-	{ Gold = 500 },
 	{ Gold = 600 },
+	{ Gold = 900 },
+	{ Gold = 1200 },
+	{ Gold = 1800 },
+	{ Gold = 2500 },
 	{ Tickets = { Premium = 1 } },
 }
 
 -- Baus por tempo online no dia (cada um 1 vez por dia)
 Retention.Chests = {
-	{ Minutes = 5, Gold = 100 },
-	{ Minutes = 15, Items = { Pocao = 2 } },
-	{ Minutes = 30, Items = { SeloContrato = 2 } },
-	{ Minutes = 60, Gold = 300, Items = { SeloSuperior = 1 } },
+	{ Minutes = 5, Gold = 300 },
+	{ Minutes = 15, Gold = 400, Items = { Pocao = 2 } },
+	{ Minutes = 30, Gold = 600, Items = { SeloContrato = 2 } },
+	{ Minutes = 60, Gold = 1200, Items = { SeloSuperior = 1 } },
 }
 
 -- Missoes. Event = o que o servidor conta.
 Retention.Daily = {
 	Count = 3,
-	Reward = { Gold = 200, Xp = 50 }, -- cada missao; Xp para cada personagem do time
-	AllReward = { Gems = 5 }, -- completar as 3
+	Reward = { Gold = 600, Xp = 120 }, -- cada missao; Xp para cada personagem do time
+	AllReward = { Gems = 10 }, -- completar as 3
 	Pool = {
 		Win3 = { Text = "Vencer %d batalhas", Goal = 3, Event = "Win" },
 		Tower3 = { Text = "Vencer %d batalhas na torre", Goal = 3, Event = "TowerWin" },

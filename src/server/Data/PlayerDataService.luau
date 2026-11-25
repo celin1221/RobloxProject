@@ -108,6 +108,7 @@ local function defaultProfile()
 			GoldCarry = 0,
 			MiningProgress = 0,
 			LastTick = 0,
+			LastCollectXpAt = 0,
 		},
 		-- maquina de treinamento (secao 8): nivel (eficiencia) e trabalho ativo na cupula
 		TrainingMachine = { Level = 1, Job = nil },

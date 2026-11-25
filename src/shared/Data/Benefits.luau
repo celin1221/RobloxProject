@@ -9,9 +9,9 @@
 local Benefits = {}
 
 Benefits.List = {
-	MochilaAmpliada = { Name = "Mochila Ampliada", Effect = "+20 espa\u{e7}os na mochila", Robux = 99, Gems = 1500, Order = 1 },
-	GoldEmDobro = { Name = "Gold em Dobro", Effect = "2x gold dos personagens passeando", Robux = 249, Gems = 4000, Order = 2 },
-	CuraAutomatica = { Name = "Cura Autom\u{e1}tica", Effect = "Time curado ap\u{f3}s cada batalha fora da torre", Robux = 399, Gems = 9000, Order = 3 },
+	MochilaAmpliada = { Name = "Mochila Ampliada", Effect = "+20 espa\u{e7}os na mochila", Robux = 99, Gems = 500, Order = 1 },
+	GoldEmDobro = { Name = "Gold em Dobro", Effect = "2x gold dos personagens passeando", Robux = 249, Gems = 1600, Order = 2 },
+	CuraAutomatica = { Name = "Cura Autom\u{e1}tica", Effect = "Time curado ap\u{f3}s cada batalha fora da torre", Robux = 399, Gems = 2500, Order = 3 },
 	XpEmDobro = { Name = "XP em Dobro", Effect = "2x XP", Robux = 299, Order = 4 },
 	VIP = { Name = "VIP", Effect = "Tag no chat, base dourada, +10% de gold", Robux = 349, Order = 5 },
 	MineradorExtra = { Name = "Minerador Extra", Effect = "+2 vagas de minera\u{e7}\u{e3}o (teto de gemas n\u{e3}o muda)", Robux = 499, Order = 6 },

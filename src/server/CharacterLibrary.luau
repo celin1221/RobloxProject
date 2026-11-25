@@ -16,8 +16,11 @@
 	  Characters.Play(kaen, "Attack")
 ]]
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
+
+local PROCEDURAL_IDLE_TAGS = { "BattleCharacter", "BaseCharacter", "RefugeWild", "PartyFollower", "CapsuleCharacter" }
 
 local Characters = {}
 
@@ -149,6 +152,13 @@ end
 
 -- Toca uma animacao pelo nome (Idle, Attack, Hit, Faint). Retorna o AnimationTrack.
 function Characters.Play(model: Model, animName: string, fadeTime: number?): AnimationTrack?
+	if animName == "Idle" or animName == "Walk" then
+		for _, tag in ipairs(PROCEDURAL_IDLE_TAGS) do
+			if CollectionService:HasTag(model, tag) then
+				return nil -- BaseClient anima Idle/Walk proceduralmente a 60 FPS
+			end
+		end
+	end
 	local folder = model:FindFirstChild("Animations")
 	local anim = folder and folder:FindFirstChild(animName)
 	if not anim and folder then

@@ -33,9 +33,10 @@ AccountLevel.XpSources = {
 	StarterStep = 60,
 	SummonComum = 15,
 	SummonPremium = 35,
-	BaseCollectGoldDivisor = 20,
-	BaseCollectMin = 10,
+	BaseCollectGoldDivisor = 25,
+	BaseCollectMin = 5,
 	BaseCollectMax = 90,
+	BaseCollectCooldown = 120, -- segundos entre creditos de XP de conta na coleta (evita spam/exploit)
 	TrainingClaim = 75,
 	DailyMission = 100,
 	AllDailyBonus = 150,
@@ -86,7 +87,7 @@ function AccountLevel.RewardFor(level: number): LevelReward
 			Level = 1,
 			Tier = "Normal",
 			Title = "Boas-Vindas de Aventureiro",
-			Gold = 150,
+			Gold = 300,
 			Items = { Pocao = 2 },
 		}
 	end
@@ -94,7 +95,7 @@ function AccountLevel.RewardFor(level: number): LevelReward
 	-- Marcos Lendarios (10, 20, 30, 40, 50, 60...)
 	if lv % 10 == 0 then
 		local tierIdx = lv // 10
-		local gold = 1000 + tierIdx * 750
+		local gold = 2500 + tierIdx * 1500
 		local gems = math.min(120, 20 + tierIdx * 10)
 		local premTickets = if tierIdx >= 5 then 3 elseif tierIdx >= 3 then 2 else 1
 		local doceEpico = math.min(5, tierIdx)
@@ -112,7 +113,7 @@ function AccountLevel.RewardFor(level: number): LevelReward
 	-- Marcos Epicos (5, 15, 25, 35, 45...)
 	if lv % 5 == 0 then
 		local step = (lv + 5) // 10
-		local gold = 450 + lv * 35
+		local gold = 1000 + lv * 75
 		local gems = math.min(45, 8 + step * 4)
 		local comumTickets = if lv >= 25 then 2 else 1
 		local doceRaro = math.min(4, 1 + step // 2)
@@ -128,7 +129,7 @@ function AccountLevel.RewardFor(level: number): LevelReward
 	end
 
 	-- Niveis comuns: rotacao em ciclo de 4 para toda subida de nivel parecer util e variada!
-	local goldBase = math.floor((120 + lv * 38) / 10) * 10
+	local goldBase = math.floor((250 + lv * 80) / 10) * 10
 	local mod4 = lv % 4
 	if mod4 == 2 then
 		-- Gold + Pocoes (evolui de Pocao -> Superpocao -> Hiperpocao conforme o nivel)

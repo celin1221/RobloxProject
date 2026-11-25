@@ -203,6 +203,10 @@ local ok, res = pcall(function()
     local PvPRank = require(dataClone:WaitForChild("PvPRank"))
     local Refuge = require(dataClone:WaitForChild("Refuge"))
     local AccountLevel = require(dataClone:WaitForChild("AccountLevel"))
+    local Summon = require(dataClone:WaitForChild("Summon"))
+    local Tower = require(dataClone:WaitForChild("Tower"))
+    local Benefits = require(dataClone:WaitForChild("Benefits"))
+    local Retention = require(dataClone:WaitForChild("Retention"))
 
 -- Test 1: GDD Section 5 Damage Conference (Kaen Corte Flamejante on Raiko at Lv 10 = 12 to 14 non-crit)
 local b = BattleEngine.New({
@@ -425,22 +429,23 @@ assert(gGym1.HP == 35 and tGym1.HP == 15, "Expected Gym 1 preset 35/15")
 assert(Progression.StarterKit and Progression.StarterKit.Gold == 600 and Progression.BenchXpRatio == 0.40, "Expected StarterKit & BenchXpRatio")
 local gps1 = Base.MemberGoldPerSecond({ Level = 1, Stars = 0 }, "Epico", false)
 local gps50 = Base.MemberGoldPerSecond({ Level = 50, Stars = 2 }, "Epico", false)
-assert(gps1 == 1.0 and gps50 > gps1 * 3.5, "Expected Base Gold/s scaling with Level & Stars")
+assert(gps1 == 0.55 and gps50 > gps1 * 2.5, "Expected Base Gold/s scaling with Level & Stars")
 assert(#StarterTrack.Steps == 7, "Expected 7 StarterTrack steps")
 local st0, h0, n0, d0 = StarterTrack.CurrentStep({ StarterTrack = { Claimed = {} }, Base = { Active = {} } })
 assert(st0 and st0.Id == "BaseActive" and h0 == 0 and n0 == 1 and not d0, "Expected first StarterTrack step BaseActive")
 local gain2x2, loss2x2 = PvPRank.Delta(1000, 1000, "2x2")
 local gain1x1, _ = PvPRank.Delta(1000, 1000, "1x1")
 assert(gain2x2 > gain1x1 and loss2x2 >= 6 and PvPRank.TierFor(1250).Id == "Ouro", "Expected PvPRank 2x2 Elo & Tiers")
-assert(Refuge.Upgrades[3].Gems == 100 and Refuge.Levels[1].Interval == 90, "Expected hard Forge gems & agile Lv1 Refuge")
+assert(Refuge.Upgrades[3].Gems == 50 and Refuge.GoldPerLevel == 25 and Refuge.Levels[1].Interval == 90, "Expected rebalanced Forge gems, GoldPerLevel & agile Lv1 Refuge")
 
--- Test 8: AccountLevel XP curve, milestones & unclaimed count
+-- Test 8: AccountLevel XP curve, milestones, BaseCollect anti-exploit & unclaimed count
 assert(AccountLevel.XpToNext(1) == 129 and AccountLevel.XpToNext(2) == 176, "Expected AccountLevel XpToNext(1)=129, (2)=176")
 assert(AccountLevel.XpToNext(31) > AccountLevel.XpToNext(30), "Expected monotonic AccountLevel XP curve")
+assert(AccountLevel.XpSources.BaseCollectCooldown == 120, "Expected BaseCollectCooldown = 120s anti-exploit")
 local r1 = AccountLevel.RewardFor(1)
 local r5 = AccountLevel.RewardFor(5)
 local r10 = AccountLevel.RewardFor(10)
-assert(r1.Gold == 150 and r5.Tier == "Epico" and r10.Tier == "Lendario" and r10.Tickets and r10.Tickets.Premium == 1, "Expected AccountLevel milestone rewards")
+assert(r1.Gold == 300 and r5.Tier == "Epico" and r10.Tier == "Lendario" and r10.Tickets and r10.Tickets.Premium == 1, "Expected AccountLevel milestone rewards")
 assert(AccountLevel.BattleVictoryXp({ 10, 10 }) == 60, "Expected BattleVictoryXp({10,10}) = 60")
 assert(AccountLevel.CountUnclaimed({ Level = 3, Claimed = { ["1"] = true } }) == 2, "Expected 2 unclaimed level rewards")
 assert(AccountLevel.FirstUnclaimedLevel({ Level = 3, Claimed = { ["1"] = true } }) == 2, "Expected first unclaimed = 2")
@@ -517,7 +522,36 @@ for mid, mv in pairs(Moves.List) do
 end
 assert(totalMoves >= 93, "Expected >= 93 animated moves, got " .. tostring(totalMoves))
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), Classes/Gyms/Practice + Progression Rebalance + AccountLevel + Learnsets Nv1-50 + %d/93 Animated Moves + UI Guardrails", b.Turn, simTurns, totalMoves)
+-- Test 12: Economy/XP Rebalance, Summon Rates & Clean Idle/Walk Animation Permissions
+assert(Progression.XpToNext(10) == 100 and Progression.XpToNext(15) == 150 and Progression.XpToNext(49) == 2570 and Progression.XpToNext(50) == 0,
+    "Expected two-phase Progression XP curve (Nv1-15 linear, Nv16-49 quadratic)")
+local prevXp = 0
+for lv = 1, 49 do
+    local x = Progression.XpToNext(lv)
+    assert(x > prevXp, "Expected strictly increasing Progression XP curve at Lv " .. lv)
+    prevXp = x
+end
+assert(Summon.Portals.Comum.PityAt == 300 and Summon.Portals.Comum.Rates.Lendario == 0.005 and Summon.Portals.Comum.Rates.Epico == 0.035,
+    "Expected rebalanced Common Portal rates (0.5% Leg / 3.5% Epic / Pity 300)")
+assert(Summon.Portals.Premium.PityAt == 75 and Summon.Portals.Premium.Rates.Lendario == 0.02 and Summon.SellPrice.Lendario == 4000,
+    "Expected rebalanced Premium Portal rates & Legendary sell price")
+assert(Tower.Modes.Facil.Reward.Gold == 900 and Tower.Modes.Dificil.Reward.Gold == 9000 and Tower.Modes.Dificil.Reward.DailyGems == 8,
+    "Expected rebalanced Tower rewards")
+assert(Benefits.List.CuraAutomatica.Gems == 2500 and Retention.Daily.AllReward.Gems == 10 and PvPRank.WinReward["2x2"].Gold == 1500,
+    "Expected rebalanced Benefits, Retention & PvP rewards")
+assert(Characters.DefaultAnimations.Idle == 95978454415689 and Characters.DefaultAnimations.Walk == 81539047602340,
+    "Expected authorized DefaultAnimations Idle/Walk IDs")
+if ssChars then
+    for _, inst in ipairs(ssChars:GetDescendants()) do
+        if inst:IsA("Animation") then
+            local aid = inst.AnimationId or ""
+            assert(not aid:find("82392963584557", 1, true) and not aid:find("113228340758956", 1, true),
+                "Unauthorized Idle/Walk AnimationId found on " .. inst:GetFullName())
+        end
+    end
+end
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), Economy/XP Rebalance + Summon Rates + BaseCollect Shield + Clean Idle/Walk IDs + %d/93 Animated Moves + UI Guardrails", b.Turn, simTurns, totalMoves)
 end)
 sandbox:Destroy()
 assert(ok, res)
