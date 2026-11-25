@@ -2409,6 +2409,376 @@ HANDLERS.SenbonzakuraKageyoshi = {
 }
 
 --------------------------------------------------------------------
+-- Tecnicas Elementais do Sarutobi Hiruzen (Naruto — 4 Elementos)
+-- 100% particulas fluidas, trilhas 3D em helice e orbiters de furacao.
+-- ZERO cones, ZERO cubos, ZERO circulos/decals engessados!
+--------------------------------------------------------------------
+
+local function setSwarmEnabled(fx: Model, count: number, on: boolean)
+	for i = 1, count do
+		local sw = fx:FindFirstChild("Swarm" .. i)
+		if sw then
+			for _, d in ipairs(sw:GetChildren()) do
+				if d:IsA("ParticleEmitter") or d:IsA("Trail") then
+					d.Enabled = on
+				end
+			end
+		end
+	end
+end
+
+local function setOrbitersEnabled(fx: Model, count: number, on: boolean)
+	for i = 1, count do
+		local orb = fx:FindFirstChild("Orbiter" .. i)
+		if orb then
+			for _, d in ipairs(orb:GetChildren()) do
+				if d:IsA("ParticleEmitter") or d:IsA("Trail") then
+					d.Enabled = on
+				end
+			end
+		end
+	end
+end
+
+-- Faz N cabecas fluidas viajarem em helice 3D organica do atacante ate o alvo
+local function runHelixSwarm(ctx, count: number, startPos: Vector3, endPos: Vector3, travel: number, cfg)
+	local fx = ctx.fx
+	local lookCF = CFrame.lookAt(startPos, endPos)
+	local right = lookCF.RightVector
+	local up = lookCF.UpVector
+	local radius = cfg.radius or 1.4
+	local twist = cfg.twist or 10
+	local swayAmp = cfg.sway or 1.2
+	local liftAmp = cfg.lift or 0.9
+
+	for i = 1, count do
+		local sw = fx["Swarm" .. i]
+		sw.CFrame = CFrame.new(startPos)
+	end
+	setSwarmEnabled(fx, count, true)
+
+	local t0 = os.clock()
+	ctx.follow = RunService.RenderStepped:Connect(function()
+		if not ctx.alive then return end
+		local elapsed = os.clock() - t0
+		local a = math.clamp(elapsed / travel, 0, 1)
+		local eased = if cfg.smooth then (a * a * (3 - 2 * a)) else (1 - (1 - a) * (1 - a))
+		local basePos = startPos:Lerp(endPos, eased)
+			+ right * (math.sin(a * math.pi * 2.2) * swayAmp * (1 - a * 0.3))
+			+ Vector3.new(0, math.sin(a * math.pi * 1.6) * liftAmp, 0)
+		local rNow = radius * math.sin(math.clamp(a, 0.05, 0.98) * math.pi)
+		for i = 1, count do
+			local sw = fx["Swarm" .. i]
+			local ang = elapsed * twist + (i - 1) * (math.pi * 2 / count)
+			local radial = if i == 1 then (rNow * 0.35) else rNow
+			local pos = basePos + right * (math.cos(ang) * radial) + up * (math.sin(ang) * radial)
+			sw.CFrame = CFrame.new(pos)
+		end
+		if a >= 1 and ctx.follow then
+			ctx.follow:Disconnect()
+			ctx.follow = nil
+		end
+	end)
+end
+
+-- Faz N orbiters girarem em espiral ascendente real 3D ao redor de um ponto (furacao de particulas sem circulos duros!)
+local function runVortexOrbiters(ctx, count: number, centerPos: Vector3, dur: number, cfg)
+	local fx = ctx.fx
+	local baseR = cfg.startR or 2.6
+	local endR = cfg.endR or 4.8
+	local spinSpd = cfg.spin or 13
+	local riseH = cfg.riseH or 5.5
+	local startYOff = cfg.startY or -0.6
+
+	for i = 1, count do
+		local orb = fx["Orbiter" .. i]
+		local ang = (i - 1) * (math.pi * 2 / count)
+		orb.CFrame = CFrame.new(centerPos + Vector3.new(math.cos(ang) * baseR, startYOff, math.sin(ang) * baseR))
+	end
+	setOrbitersEnabled(fx, count, true)
+
+	local t0 = os.clock()
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		if not ctx.alive then
+			conn:Disconnect()
+			setOrbitersEnabled(fx, count, false)
+			return
+		end
+		local elapsed = os.clock() - t0
+		local a = math.clamp(elapsed / dur, 0, 1)
+		local r = baseR + (endR - baseR) * a
+		for i = 1, count do
+			local orb = fx["Orbiter" .. i]
+			local ang = elapsed * spinSpd + (i - 1) * (math.pi * 2 / count)
+			local hOff = startYOff + a * riseH + ((i - 1) * (cfg.staggerY or 0.9))
+			orb.CFrame = CFrame.new(centerPos + Vector3.new(math.cos(ang) * r, hOff, math.sin(ang) * r))
+		end
+		if a >= 1 then
+			conn:Disconnect()
+			setOrbitersEnabled(fx, count, false)
+		end
+	end)
+	return conn
+end
+
+-- 1. TERRA (Doton: Dragao de Terra): poeira e faiscas sismicas nas palmas -> enxame fluido rente ao chao -> erupcao espiral de terra!
+HANDLERS.DotonMuralhaTerrestre = {
+	Charge = function(ctx)
+		local fx = ctx.fx
+		playSfx(fx.Origin, "ChargeSfx")
+		local handsMid = (leftHandPos(ctx.attacker) + handPos(ctx.attacker)) * 0.5
+		fx.Origin.CFrame = CFrame.new(handsMid)
+		emit(fx.Origin, "ChargeDust", 18)
+		emit(fx.Origin, "ChargeSparks", 28)
+		pulseLight(fx.Origin:FindFirstChild("OriginLight"), 3.0, 14)
+	end,
+	Release = function(ctx)
+		local fx = ctx.fx
+		playSfx(fx.Origin, "ReleaseSfx")
+		local aRoot, tRoot = rootOf(ctx.attacker), rootOf(ctx.target)
+		local sFloor = Vector3.new(aRoot.Position.X, groundY(ctx.attacker) + 0.5, aRoot.Position.Z)
+		local eFloor = Vector3.new(tRoot.Position.X, groundY(ctx.target) + 0.6, tRoot.Position.Z)
+		local dir = flat(eFloor - sFloor)
+		dir = if dir.Magnitude > 0.1 then dir.Unit else aRoot.CFrame.LookVector
+		local slamPos = sFloor + dir * 1.4
+
+		fx.Origin.CFrame = CFrame.new(slamPos)
+		emit(fx.Origin, "SlamPlume", 28)
+		emit(fx.Origin, "ChargeSparks", 24)
+		springShake(0.28, 0.28, 38, 11, 0.7)
+
+		local travel = math.max(0.24, (ctx.timing.Impact or 1.12) - (ctx.timing.Release or 0.68))
+		runHelixSwarm(ctx, 3, slamPos, eFloor, travel, { radius = 1.4, twist = 11, sway = 1.5, lift = 0.7, smooth = false })
+	end,
+	Impact = function(ctx)
+		local fx = ctx.fx
+		if ctx.follow then ctx.follow:Disconnect(); ctx.follow = nil end
+		setSwarmEnabled(fx, 3, false)
+
+		local tRoot = rootOf(ctx.target)
+		local floorCenter = Vector3.new(tRoot.Position.X, groundY(ctx.target) + 0.35, tRoot.Position.Z)
+		fx.Hit.CFrame = CFrame.new(floorCenter)
+		playSfx(fx.Hit, "ImpactSfx")
+		CombatAnimator.Hitstop(ctx.attacker, 0.055)
+		animeImpactFrame(Color3.fromRGB(255, 224, 175), 0.04, 0.18, false)
+		fovPunch(-4.2, 0.055, 0.24)
+		springShake(0.58, 0.40, 42, 10, 1.7)
+		pulseLight(fx.Hit:FindFirstChild("HitLight"), 3.8, 22)
+
+		-- Explosao sismica em multi-ondas + 2 orbiters 3D jogando poeira e faiscas em espiral!
+		emit(fx.Hit, "EruptionPlume", 36)
+		emit(fx.Hit, "DebrisArcs", 46)
+		task.delay(0.10, function()
+			if not ctx.alive then return end
+			emit(fx.Hit, "EruptionPlume", 24)
+			emit(fx.Hit, "DebrisArcs", 32)
+		end)
+		task.delay(0.30, function()
+			if not ctx.alive then return end
+			emit(fx.Hit, "GoldenResidue", 24)
+		end)
+		runVortexOrbiters(ctx, 2, floorCenter + Vector3.new(0, 0.5, 0), 0.58, { startR = 2.0, endR = 4.6, spin = 12, riseH = 4.8, startY = 0, staggerY = 0.8 })
+	end,
+	Duration = 1.75,
+}
+
+-- 2. FOGO (Katon: Dragao de Fogo): brasas na boca -> 3 espirais de fogo vivo -> turbilhao de chamas envolvendo o alvo!
+HANDLERS.KatonDragaoDeFogo = {
+	Charge = function(ctx)
+		local fx = ctx.fx
+		playSfx(fx.Origin, "ChargeSfx")
+		local aRoot = rootOf(ctx.attacker)
+		local mouthPos = aRoot.CFrame:PointToWorldSpace(Vector3.new(0, 1.45, -1.25))
+		fx.Origin.CFrame = CFrame.new(mouthPos)
+		emit(fx.Origin, "BreathFire", 18)
+		emit(fx.Origin, "BreathSparks", 30)
+		pulseLight(fx.Origin:FindFirstChild("OriginLight"), 3.4, 15)
+
+		ctx.follow = RunService.RenderStepped:Connect(function()
+			if not ctx.alive or not alive(ctx.attacker) then return end
+			local r = rootOf(ctx.attacker)
+			fx.Origin.CFrame = CFrame.new(r.CFrame:PointToWorldSpace(Vector3.new(0, 1.45, -1.25)))
+		end)
+	end,
+	Release = function(ctx)
+		local fx = ctx.fx
+		if ctx.follow then ctx.follow:Disconnect(); ctx.follow = nil end
+		playSfx(fx.Origin, "ReleaseSfx")
+		local aRoot = rootOf(ctx.attacker)
+		local startPos = aRoot.CFrame:PointToWorldSpace(Vector3.new(0, 1.45, -1.5))
+		local endPos = targetCenter(ctx.target)
+		local travel = math.max(0.24, (ctx.timing.Impact or 1.18) - (ctx.timing.Release or 0.72))
+
+		springShake(0.28, 0.30, 42, 11, 0.8)
+		runHelixSwarm(ctx, 3, startPos, endPos, travel, { radius = 1.6, twist = 13, sway = 1.8, lift = 1.1, smooth = false })
+	end,
+	Impact = function(ctx)
+		local fx = ctx.fx
+		if ctx.follow then ctx.follow:Disconnect(); ctx.follow = nil end
+		setSwarmEnabled(fx, 3, false)
+
+		local hitPos = targetCenter(ctx.target)
+		fx.Hit.CFrame = CFrame.new(hitPos)
+		playSfx(fx.Hit, "ImpactSfx")
+		CombatAnimator.Hitstop(ctx.attacker, 0.06)
+		animeImpactFrame(Color3.fromRGB(255, 198, 140), 0.045, 0.22, false)
+		fovPunch(-5.0, 0.055, 0.26)
+		springShake(0.62, 0.42, 44, 10, 1.9)
+		pulseLight(fx.Hit:FindFirstChild("HitLight"), 4.0, 24)
+
+		-- Multi-ondas de chamas vivas + 2 orbiters envolvendo o inimigo em espiral flamejante!
+		emit(fx.Hit, "FlameBloom", 42)
+		emit(fx.Hit, "FireStreaks", 48)
+		emit(fx.Hit, "HeatSmoke", 24)
+		task.delay(0.10, function()
+			if not ctx.alive then return end
+			emit(fx.Hit, "FlameBloom", 30)
+			emit(fx.Hit, "FireStreaks", 34)
+		end)
+		task.delay(0.32, function()
+			if not ctx.alive then return end
+			emit(fx.Hit, "ResidueEmbers", 28)
+		end)
+		runVortexOrbiters(ctx, 2, hitPos, 0.65, { startR = 1.9, endR = 4.5, spin = 14, riseH = 5.6, startY = -0.8, staggerY = 1.0 })
+	end,
+	Duration = 1.85,
+}
+
+-- 3. AGUA (Suiton: Dragao de Agua): agua gira ao redor do Sarutobi -> 3 correntes fluidas serpenteiam -> turbilhao de mare e espuma!
+HANDLERS.SuitonDragaoDeAgua = {
+	Charge = function(ctx)
+		local fx = ctx.fx
+		playSfx(fx.Origin, "ChargeSfx")
+		local aRoot = rootOf(ctx.attacker)
+		fx.Origin.CFrame = CFrame.new(aRoot.Position + Vector3.new(0, 0.6, 0))
+		emit(fx.Origin, "WaterMistCharge", 22)
+		emit(fx.Origin, "DropletCharge", 30)
+		pulseLight(fx.Origin:FindFirstChild("OriginLight"), 3.0, 15)
+		-- Orbiters giram ao redor do Sarutobi acumulando agua durante os selos!
+		ctx.chargeOrb = runVortexOrbiters(ctx, 2, aRoot.Position, 0.44, { startR = 3.2, endR = 1.8, spin = 10, riseH = 1.8, startY = -0.6, staggerY = 0.6 })
+	end,
+	Release = function(ctx)
+		local fx = ctx.fx
+		if ctx.chargeOrb then ctx.chargeOrb:Disconnect(); ctx.chargeOrb = nil end
+		setOrbitersEnabled(fx, 2, false)
+		playSfx(fx.Origin, "ReleaseSfx")
+
+		local aRoot = rootOf(ctx.attacker)
+		local startPos = aRoot.CFrame:PointToWorldSpace(Vector3.new(0, 1.1, -1.8))
+		local endPos = targetCenter(ctx.target)
+		local travel = math.max(0.26, (ctx.timing.Impact or 1.22) - (ctx.timing.Release or 0.74))
+
+		springShake(0.24, 0.30, 36, 10, 0.8)
+		runHelixSwarm(ctx, 3, startPos, endPos, travel, { radius = 1.8, twist = 11, sway = 2.4, lift = 2.0, smooth = true })
+	end,
+	Impact = function(ctx)
+		local fx = ctx.fx
+		if ctx.follow then ctx.follow:Disconnect(); ctx.follow = nil end
+		setSwarmEnabled(fx, 3, false)
+
+		local targets = if typeof(ctx.targets) == "table" and #ctx.targets > 0 then ctx.targets else { ctx.target }
+		local primaryPos = targetCenter(ctx.target)
+
+		fx.Hit.CFrame = CFrame.new(primaryPos)
+		playSfx(fx.Hit, "ImpactSfx")
+		CombatAnimator.Hitstop(ctx.attacker, 0.055)
+		animeImpactFrame(Color3.fromRGB(182, 240, 255), 0.04, 0.20, false)
+		fovPunch(-4.8, 0.055, 0.26)
+		springShake(0.58, 0.40, 40, 9.5, 1.7)
+		pulseLight(fx.Hit:FindFirstChild("HitLight"), 3.9, 24)
+
+		for idx, tgt in ipairs(targets) do
+			if not alive(tgt) then continue end
+			local tp = targetCenter(tgt)
+			local mult = if idx == 1 then 1 else 0.65
+			fx.Hit.CFrame = CFrame.new(tp)
+			emit(fx.Hit, "SplashBurst", math.floor(42 * mult))
+			emit(fx.Hit, "SeaMist", math.floor(28 * mult))
+			emit(fx.Hit, "WaterStreaks", math.floor(44 * mult))
+		end
+		task.delay(0.12, function()
+			if not ctx.alive then return end
+			fx.Hit.CFrame = CFrame.new(primaryPos)
+			emit(fx.Hit, "SplashBurst", 28)
+			emit(fx.Hit, "WaterStreaks", 32)
+		end)
+		runVortexOrbiters(ctx, 2, primaryPos, 0.68, { startR = 2.2, endR = 5.4, spin = 13, riseH = 5.2, startY = -0.9, staggerY = 1.0 })
+	end,
+	Duration = 1.90,
+}
+
+-- 4. VENTO (Futon: Tempestade Celeste — Assinatura): vendaval 3D sobe ao redor -> 3 helices aceleradas -> furacao vivo de 3 Orbiters!
+HANDLERS.FutonTempestadeCeleste = {
+	Charge = function(ctx)
+		local fx = ctx.fx
+		playSfx(fx.Origin, "ChargeSfx")
+		local aRoot = rootOf(ctx.attacker)
+		fx.Origin.CFrame = CFrame.new(aRoot.Position + Vector3.new(0, 0.6, 0))
+		emit(fx.Origin, "WindChargeStreaks", 34)
+		emit(fx.Origin, "KonohaLeaves", 22)
+		pulseLight(fx.Origin:FindFirstChild("OriginLight"), 3.3, 16)
+		ctx.chargeOrb = runVortexOrbiters(ctx, 3, aRoot.Position, 0.60, { startR = 3.8, endR = 1.6, spin = 14, riseH = 3.2, startY = -0.8, staggerY = 0.8 })
+	end,
+	Release = function(ctx)
+		local fx = ctx.fx
+		if ctx.chargeOrb then ctx.chargeOrb:Disconnect(); ctx.chargeOrb = nil end
+		setOrbitersEnabled(fx, 3, false)
+		playSfx(fx.Origin, "ReleaseSfx")
+
+		local aRoot = rootOf(ctx.attacker)
+		local startPos = aRoot.CFrame:PointToWorldSpace(Vector3.new(0, 1.35, -2.0))
+		local endPos = targetCenter(ctx.target)
+		local travel = math.max(0.28, (ctx.timing.Impact or 1.48) - (ctx.timing.Release or 0.92))
+
+		springShake(0.34, 0.38, 42, 9.5, 1.2)
+		runHelixSwarm(ctx, 3, startPos, endPos, travel, { radius = 2.2, twist = 16, sway = 2.0, lift = 1.3, smooth = true })
+	end,
+	Impact = function(ctx)
+		local fx = ctx.fx
+		if ctx.follow then ctx.follow:Disconnect(); ctx.follow = nil end
+		setSwarmEnabled(fx, 3, false)
+
+		local targets = if typeof(ctx.targets) == "table" and #ctx.targets > 0 then ctx.targets else { ctx.target }
+		local primaryPos = targetCenter(ctx.target)
+
+		fx.Hit.CFrame = CFrame.new(primaryPos)
+		playSfx(fx.Hit, "ImpactSfx")
+		CombatAnimator.Hitstop(ctx.attacker, 0.065)
+		animeImpactFrame(Color3.fromRGB(205, 255, 232), 0.055, 0.26, true)
+		fovPunch(-6.0, 0.06, 0.32)
+		springShake(0.68, 0.46, 46, 9.5, 2.3)
+		pulseLight(fx.Hit:FindFirstChild("HitLight"), 4.0, 26)
+
+		for idx, tgt in ipairs(targets) do
+			if not alive(tgt) then continue end
+			local tp = targetCenter(tgt)
+			local mult = if idx == 1 then 1 else 0.65
+			fx.Hit.CFrame = CFrame.new(tp)
+			emit(fx.Hit, "TempestMist", math.floor(34 * mult))
+			emit(fx.Hit, "TempestStreaks", math.floor(54 * mult))
+			emit(fx.Hit, "TempestLeaves", math.floor(34 * mult))
+		end
+		task.delay(0.14, function()
+			if not ctx.alive then return end
+			fx.Hit.CFrame = CFrame.new(primaryPos + Vector3.new(0, 1.2, 0))
+			emit(fx.Hit, "TempestMist", 24)
+			emit(fx.Hit, "TempestStreaks", 42)
+		end)
+		task.delay(0.36, function()
+			if not ctx.alive then return end
+			fx.Hit.CFrame = CFrame.new(primaryPos + Vector3.new(0, 1.8, 0))
+			emit(fx.Hit, "ResidueWind", 28)
+			emit(fx.Hit, "TempestLeaves", 18)
+		end)
+
+		-- Furacao 3D REAL subindo ao redor do alvo com 3 orbiters de particulas e trilhas!
+		runVortexOrbiters(ctx, 3, primaryPos, 0.78, { startR = 2.0, endR = 6.2, spin = 17, riseH = 7.4, startY = -1.0, staggerY = 1.1 })
+	end,
+	Duration = 2.30,
+}
+
+--------------------------------------------------------------------
 -- Sistema Procedural de VFX para Golpes Genericos e Classicos
 -- (Leve, sem cilindros finais, 100% versionado em codigo, suporte 1x1 e 2x2)
 --------------------------------------------------------------------

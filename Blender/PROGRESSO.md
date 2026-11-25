@@ -1322,3 +1322,25 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
   - Coleta da Base ao vivo (`LiveRate = 3.78/s`, coleta legítima creditando XP e gravando `LastCollectXpAt`; segunda coleta imediata e coletas minúsculas rendendo `0 XP` de conta).
   - Preload e execução de todas as `232` instâncias de `Animation` (`44` IDs únicos nos `25` modelos) e `121` animações no Workspace com **`0` avisos de permissão** no Console.
 - Place salvo no Roblox Studio na **versão 327** (`TeamCreate`).
+
+
+## Sarutobi: Aura 100% Partículas Puras + 4 Ataques Elementais Fluidos (Terra, Fogo, Água e Vento) (25/11/2026)
+
+**Feito**
+- **1. Nova Aura 100% Partículas Puras (`ServerStorage.Characters.Sarutobi.AuraVfx`, backup em `_SarutobiOldAuraBackup`):**
+  - Removidas todas as imagens/stickers (`SurfaceGui`, `ImageLabel`, estrelas chapadas e orbes sólidos orbitais).
+  - Reconstruída em 5 camadas leves e limpas de partículas fluidas: `ChakraFlowFlame` (`fire_main.dds`, fluxo dourado-âmbar orgânico subindo ao redor do corpo), `ChakraBackHalo` (brilho suave de fundo), `HokageGoldenMotes` + `FourElementMotes` (partículas luminosas douradas + 4 elementos Terra/Fogo/Água/Vento), `RisingChakraWisps` (filamentos finos subindo na base sem disco no chão), `AuraLight` e contorno dourado `AnimeOutline3D`.
+- **2. 4 Golpes Elementais Exclusivos (`src/shared/Data/Moves.luau`, `Characters.luau`, `Codes.luau`):**
+  - `DotonMuralhaTerrestre` (*Doton: Dragão de Terra*, Nv. 34), `KatonDragaoDeFogo` (*Katon: Dragão de Fogo*, Nv. 40), `SuitonDragaoDeAgua` (*Suiton: Dragão de Água*, Nv. 45, `AllEnemies`) e `FutonTempestadeCeleste` (*Futon: Tempestade Celeste*, Nv. 50, `Signature`, `AllEnemies`).
+  - Learnset Nv. 1–50 do `Sarutobi` atualizado em `Characters.luau` e códigos dev `SARUTOBI50` / `DEVSARUTOBI50` adicionados em `Codes.luau`.
+  - Planilhas `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` regeneradas via `scripts/update_characters_sheet.py` (`97` golpes únicos, `269` vínculos).
+- **3. 4 Animações Ninja Próprias + VFX 100% Fluidos (`CombatAnimator.luau`, `VfxController.luau`, `ReplicatedStorage/Vfx`):**
+  - Criadas as animações `SarutobiDoton`, `SarutobiKaton`, `SarutobiSuiton` e `SarutobiFuton`.
+  - Reconstruídos os 4 VFX com **zero cones, zero cubos e zero círculos planos engessados**: enxames 3D em hélice (`runHelixSwarm` com `Swarm1..3`), vórtices orbitais 3D ao redor dos alvos (`runVortexOrbiters` com `Orbiter1..3`), rastros `Trail`, múltiplas ondas de partículas, `Hitstop`, `animeImpactFrame`, `springShake`, `fovPunch` e suporte multi-alvo `2x2`.
+- **4. Documentação Atualizada (`AGENTS.md`, `Blender/REGRAS.md`, `Blender/PROGRESSO.md`):**
+  - Registradas permanentemente as regras de auras 100% partículas puras (zero stickers/imagens/discos no chão) e VFX fluidos (zero cones/cubos/círculos duros).
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS: ... 97/93 Animated Moves + UI Guardrails`).
+- Validado ao vivo no Play Mode (aura pura visível e limpa + 4 golpes elementais rodando sem erros no console) e aprovado pelo usuário.
+- Place salvo no Roblox Studio na **versão 336** (`TeamCreate`).

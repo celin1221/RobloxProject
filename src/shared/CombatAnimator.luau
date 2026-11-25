@@ -1488,6 +1488,244 @@ local ANIMATIONS: { [string]: any } = {
 			kf(0.84, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
 		},
 	},
+
+	--------------------------------------------------------------------
+	-- Animacoes Exclusivas do Sarutobi Hiruzen (4 Elementos Shinobi)
+	--------------------------------------------------------------------
+
+	-- 1. SARUTOBI DOTON (Terra): selos shinobi rapidos -> golpeia o chao com as duas palmas -> canalizacao sismica
+	SarutobiDoton = {
+		Duration = 1.65,
+		UseSword = false,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(8, 0, 5), LeftUpperArm = degCF(8, 0, -5) }),
+			-- Selo 1 (peito)
+			kf(0.16, "QuadOut", {
+				LowerTorso = degCF(-3, -8, 0, Vector3.new(0, -0.06, 0)),
+				UpperTorso = degCF(-4, -10, 0),
+				Head = degCF(2, 14, 0),
+				RightUpperArm = degCF(68, 16, -28),
+				RightLowerArm = degCF(46, 0, 0),
+				LeftUpperArm = degCF(64, -16, 26),
+				LeftLowerArm = degCF(46, 0, 0),
+			}),
+			-- Selo 2 (troca agil de maos)
+			kf(0.32, "QuadOut", {
+				LowerTorso = degCF(-3, 8, 0, Vector3.new(0, -0.08, 0)),
+				UpperTorso = degCF(-4, 10, 0),
+				Head = degCF(2, -14, 0),
+				RightUpperArm = degCF(78, 12, -22),
+				RightLowerArm = degCF(52, 0, 0),
+				LeftUpperArm = degCF(58, -12, 30),
+				LeftLowerArm = degCF(40, 0, 0),
+			}),
+			-- Impulso breve para cima antes de bater no chao
+			kf(0.50, "QuadOut", {
+				LowerTorso = degCF(8, 0, 0, Vector3.new(0, 0.24, 0.10)),
+				UpperTorso = degCF(12, 0, 0),
+				Head = degCF(-8, 0, 0),
+				RightUpperArm = degCF(118, 6, 18),
+				RightLowerArm = degCF(26, 0, 0),
+				LeftUpperArm = degCF(118, -6, -18),
+				LeftLowerArm = degCF(26, 0, 0),
+				LeftUpperLeg = degCF(14, 0, -5),
+				RightUpperLeg = degCF(-12, 0, 5),
+			}),
+			-- IMPACTO DAS PALMAS NO CHAO! Agachamento firme + ambos os bracos cravados para baixo/frente
+			kf(0.68, "ExpoOut", {
+				LowerTorso = degCF(-20, 0, 0, Vector3.new(0, -0.68, -0.34)),
+				UpperTorso = degCF(-34, 0, 0),
+				Head = degCF(28, 0, 0),
+				RightUpperArm = degCF(42, 10, -14),
+				RightLowerArm = degCF(8, 0, 0),
+				LeftUpperArm = degCF(42, -10, 14),
+				LeftLowerArm = degCF(8, 0, 0),
+				LeftUpperLeg = degCF(32, 0, -8),
+				RightUpperLeg = degCF(-30, 0, 8),
+			}),
+			-- Mantem palmas firmes canalizando o terremoto ate o impacto no inimigo
+			kf(1.16, "SineInOut", {
+				LowerTorso = degCF(-18, 0, 0, Vector3.new(0, -0.62, -0.30)),
+				UpperTorso = degCF(-30, 0, 0),
+				Head = degCF(24, 0, 0),
+				RightUpperArm = degCF(46, 8, -12),
+				LeftUpperArm = degCF(46, -8, 12),
+				LeftUpperLeg = degCF(28, 0, -8),
+				RightUpperLeg = degCF(-26, 0, 8),
+			}),
+			-- Ergue-se com postura serena de Hokage
+			kf(1.65, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
+
+	-- 2. SARUTOBI KATON (Fogo): selo do Tigre -> inspiracao profunda com peito aberto -> exalacao explosiva do Dragao de Fogo!
+	SarutobiKaton = {
+		Duration = 1.72,
+		UseSword = false,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(8, 0, 5), LeftUpperArm = degCF(8, 0, -5) }),
+			-- Selo rapido do Tigre
+			kf(0.18, "QuadOut", {
+				LowerTorso = degCF(-2, -12, 0),
+				UpperTorso = degCF(-2, -14, 0),
+				Head = degCF(0, 20, 0),
+				RightUpperArm = degCF(76, 18, -28),
+				RightLowerArm = degCF(48, 0, 0),
+				LeftUpperArm = degCF(76, -18, 28),
+				LeftLowerArm = degCF(48, 0, 0),
+			}),
+			-- Inspiracao profunda: arqueia tronco para tras e leva as duas maos em concha na altura da boca
+			kf(0.54, "CubicOut", {
+				LowerTorso = degCF(10, 0, 0, Vector3.new(0, 0.12, 0.24)),
+				UpperTorso = degCF(18, 0, 0),
+				Head = degCF(-14, 0, 0),
+				RightUpperArm = degCF(104, 20, -28),
+				RightLowerArm = degCF(62, 0, 0),
+				LeftUpperArm = degCF(104, -20, 28),
+				LeftLowerArm = degCF(62, 0, 0),
+				LeftUpperLeg = degCF(12, 0, -5),
+				RightUpperLeg = degCF(-16, 0, 5),
+			}),
+			-- EXALACAO DO DRAGAO DE FOGO! Avanco vigoroso para frente projetando o sopro de chamas
+			kf(0.74, "ExpoOut", {
+				LowerTorso = degCF(-10, 0, 0, Vector3.new(0, -0.18, -0.38)),
+				UpperTorso = degCF(-20, 0, 0),
+				Head = degCF(14, 0, 0),
+				RightUpperArm = degCF(96, 14, -22),
+				RightLowerArm = degCF(48, 0, 0),
+				LeftUpperArm = degCF(96, -14, 22),
+				LeftLowerArm = degCF(48, 0, 0),
+				LeftUpperLeg = degCF(-18, 0, -6),
+				RightUpperLeg = degCF(20, 0, 6),
+			}),
+			-- Sustentacao intensa do sopro de fogo ate o impacto
+			kf(1.24, "SineInOut", {
+				LowerTorso = degCF(-8, 0, 0, Vector3.new(0, -0.14, -0.32)),
+				UpperTorso = degCF(-16, 0, 0),
+				Head = degCF(10, 0, 0),
+				RightUpperArm = degCF(92, 10, -18),
+				RightLowerArm = degCF(42, 0, 0),
+				LeftUpperArm = degCF(92, -10, 18),
+				LeftLowerArm = degCF(42, 0, 0),
+				LeftUpperLeg = degCF(-14, 0, -5),
+				RightUpperLeg = degCF(16, 0, 5),
+			}),
+			-- Retorno composto
+			kf(1.72, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
+
+	-- 3. SARUTOBI SUITON (Agua): selos fluidos -> varredura circular estilo tai-chi reunindo correntes -> empurrao duplo liberando o Dragao de Agua!
+	SarutobiSuiton = {
+		Duration = 1.78,
+		UseSword = false,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(8, 0, 5), LeftUpperArm = degCF(8, 0, -5) }),
+			-- Selo inicial
+			kf(0.20, "QuadOut", {
+				LowerTorso = degCF(-2, 10, 0),
+				UpperTorso = degCF(0, 14, 0),
+				Head = degCF(0, -18, 0),
+				RightUpperArm = degCF(72, 16, -24),
+				RightLowerArm = degCF(44, 0, 0),
+				LeftUpperArm = degCF(72, -16, 24),
+				LeftLowerArm = degCF(44, 0, 0),
+			}),
+			-- Varredura circular ampla para a direita acumulando o vortice de agua
+			kf(0.56, "SineInOut", {
+				LowerTorso = degCF(-4, -28, -4, Vector3.new(0, -0.14, 0.14)),
+				UpperTorso = degCF(4, -36, -6),
+				Head = degCF(-2, 48, 4),
+				RightUpperArm = degCF(68, -22, 48),
+				RightLowerArm = degCF(24, 0, 0),
+				LeftUpperArm = degCF(112, 18, -14),
+				LeftLowerArm = degCF(34, 0, 0),
+				LeftUpperLeg = degCF(14, 0, -5),
+				RightUpperLeg = degCF(-16, 0, 5),
+			}),
+			-- EMPURRAO DUPLO DAS PALMAS! Chicote do tronco para frente disparando a torrente do Dragao de Agua
+			kf(0.78, "ExpoOut", {
+				LowerTorso = degCF(-8, 22, 3, Vector3.new(0, -0.20, -0.44)),
+				UpperTorso = degCF(-14, 28, 4),
+				Head = degCF(8, -38, -2),
+				RightUpperArm = degCF(102, 12, 12),
+				RightLowerArm = degCF(10, 0, 0),
+				LeftUpperArm = degCF(102, -12, -12),
+				LeftLowerArm = degCF(10, 0, 0),
+				LeftUpperLeg = degCF(-20, 0, -6),
+				RightUpperLeg = degCF(22, 0, 6),
+			}),
+			-- Direciona o dragao de agua com as maos estendidas
+			kf(1.30, "SineInOut", {
+				LowerTorso = degCF(-5, 16, 2, Vector3.new(0, -0.14, -0.34)),
+				UpperTorso = degCF(-10, 20, 3),
+				Head = degCF(6, -28, -2),
+				RightUpperArm = degCF(96, 8, 18),
+				LeftUpperArm = degCF(96, -8, -18),
+				LeftUpperLeg = degCF(-14, 0, -5),
+				RightUpperLeg = degCF(16, 0, 5),
+			}),
+			-- Retorno sereno
+			kf(1.78, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
+
+	-- 4. SARUTOBI FUTON (Vento — Assinatura): bracos cruzados comprimindo chakra -> abertura majestosa liberando ventos -> comando duplo da Tempestade Celeste!
+	SarutobiFuton = {
+		Duration = 2.15,
+		UseSword = false,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(8, 0, 5), LeftUpperArm = degCF(8, 0, -5) }),
+			-- Comprime o chakra do vento cruzando os bracos firmemente a frente do peito
+			kf(0.28, "CubicOut", {
+				LowerTorso = degCF(-6, 0, 0, Vector3.new(0, -0.22, 0.14)),
+				UpperTorso = degCF(-10, 0, 0),
+				Head = degCF(8, 0, 0),
+				RightUpperArm = degCF(76, 28, -42),
+				RightLowerArm = degCF(56, 0, 0),
+				LeftUpperArm = degCF(76, -28, 42),
+				LeftLowerArm = degCF(56, 0, 0),
+				LeftUpperLeg = degCF(14, 0, -6),
+				RightUpperLeg = degCF(-14, 0, 6),
+			}),
+			-- Abertura explosiva dos bracos erguendo o furacao de vento ao redor do Hokage!
+			kf(0.76, "BackOut", {
+				LowerTorso = degCF(6, 0, 0, Vector3.new(0, 0.16, 0.08)),
+				UpperTorso = degCF(12, 0, 0),
+				Head = degCF(-10, 0, 0),
+				RightUpperArm = degCF(112, -24, 66),
+				RightLowerArm = degCF(12, 0, 0),
+				LeftUpperArm = degCF(112, 24, -66),
+				LeftLowerArm = degCF(12, 0, 0),
+				LeftUpperLeg = degCF(8, 0, -8),
+				RightUpperLeg = degCF(8, 0, 8),
+			}),
+			-- VARREDURA DUPLA PARA FRENTE! Comanda a Tempestade Celeste contra todos os inimigos!
+			kf(1.04, "ExpoOut", {
+				LowerTorso = degCF(-10, 0, 0, Vector3.new(0, -0.22, -0.46)),
+				UpperTorso = degCF(-18, 0, 0),
+				Head = degCF(12, 0, 0),
+				RightUpperArm = degCF(104, 16, 14),
+				RightLowerArm = degCF(8, 0, 0),
+				LeftUpperArm = degCF(104, -16, -14),
+				LeftLowerArm = degCF(8, 0, 0),
+				LeftUpperLeg = degCF(-20, 0, -6),
+				RightUpperLeg = degCF(22, 0, 6),
+			}),
+			-- Sustenta o comando durante o apice da tempestade
+			kf(1.58, "QuadOut", {
+				LowerTorso = degCF(-6, 0, 0, Vector3.new(0, -0.14, -0.34)),
+				UpperTorso = degCF(-12, 0, 0),
+				Head = degCF(8, 0, 0),
+				RightUpperArm = degCF(96, 10, 22),
+				LeftUpperArm = degCF(96, -10, -22),
+				LeftUpperLeg = degCF(-14, 0, -5),
+				RightUpperLeg = degCF(16, 0, 5),
+			}),
+			-- Retorno sereno
+			kf(2.15, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
 }
 
 --------------------------------------------------------------------

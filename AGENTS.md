@@ -83,8 +83,12 @@ Qualquer Agente de IA trabalhando neste projeto **DEVE preservar integralmente**
    * Brilho diagonal de 3 bandas a 38° (`UI.sheen`), afundamento físico 3D nos botões (`pressFace`), contorno de texto `Bevel` e centralização matemática dinâmica (`TextBounds.X`) de `[Moeda + Preço]` dentro dos botões `INVOCAR 1` e `INVOCAR 10` (e `Icon.ZIndex = baseZ + 3` em `UI.pill`).
    * **PROIBIDO usar emojis ou símbolos Unicode (`★`, `✦`, `✓`, `→`, `■`, `—`)** em textos de UI: usar sempre os ícones personalizados de `UI.Icons`.
 5. **Auras 3D dos Personagens (`AuraVfx` / `CharacterAuraClient`):**
-   * **REGRA PERMANENTE (Minimalismo):** Toda aura de personagem deve ser **bonita e minimalista**, nunca poluindo a tela (poucas partículas leves e elegantes, luz suave de alcance curto, sem fitas/orbes/halos gigantes).
-   * **PROIBIDO** colocar círculos, discos ou vórtices de aura no chão/pé dos personagens (`Byakuya`, `San`, `Setero`, `BarbaBranca` e futuros personagens).
-6. **Ataques Básicos Compartilhados da Classe `Espadachim` (`Moves.luau` / `CombatAnimator.luau` / `VfxController.luau`):**
+   * **REGRA PERMANENTE (Minimalismo + 100% Partículas Puras):** Toda aura de personagem deve ser **bonita, limpa, visível e minimalista**, feita **exclusivamente com partículas suaves/fluidas** (nunca poluindo a tela e **PROIBIDO** usar imagens chapadas/stickers/`SurfaceGui`/`BillboardGui`/estrelas coladas ou orbes sólidos orbitais).
+   * **PROIBIDO** colocar círculos, discos ou vórtices de aura no chão/pé dos personagens (`Byakuya`, `Sarutobi`, `San`, `Setero`, `BarbaBranca` e futuros personagens).
+6. **VFX de Ataques (`VfxController.luau` / `ReplicatedStorage/Vfx`):**
+   * **REGRA PERMANENTE (Fluidez + Zero Formatos Duros):** Priorizar VFX **fluidos e ricos em partículas** (enxames 3D em hélice, vórtices orbitais, rastros `Trail`, múltiplas ondas de partículas e impacto cinematográfico). **PROIBIDO** usar cones, cubos, cilindros rígidos ou círculos/decals planos engessados em golpes novos ou retrabalhados.
+7. **Ataques Básicos Compartilhados da Classe `Espadachim` (`Moves.luau` / `CombatAnimator.luau` / `VfxController.luau`):**
    * **REGRA PERMANENTE:** Os **2 ataques básicos de Espadachim** (`CorteBasico` — *Corte Rápido*, e `CorteCruzado` — *Corte Cruzado*) possuem **animações e VFX idênticos compartilhados por TODOS os espadachins** (`Byakuya`, `Zoro`, `Ichigo`, `Renji`, `Sasuke`, `Kaen`, etc.).
    * Cada espadachim de destaque adiciona suas **2 habilidades especiais / assinatura próprias** (ex.: `Byakuya` = `Senbonzakura` + `SenbonzakuraKageyoshi`).
+8. **Kit Elemental do `Sarutobi` (4 Elementos — Terra, Fogo, Água e Vento):**
+   * `DotonMuralhaTerrestre` (*Doton: Dragão de Terra*, Nv. 34), `KatonDragaoDeFogo` (*Katon: Dragão de Fogo*, Nv. 40), `SuitonDragaoDeAgua` (*Suiton: Dragão de Água*, Nv. 45, `AllEnemies`) e `FutonTempestadeCeleste` (*Futon: Tempestade Celeste*, Nv. 50, `Signature`, `AllEnemies`), todos com animações próprias (`SarutobiDoton`, `SarutobiKaton`, `SarutobiSuiton`, `SarutobiFuton`) e VFX 100% fluidos em partículas. Código Dev: `SARUTOBI50` / `DEVSARUTOBI50`.

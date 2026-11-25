@@ -58,6 +58,8 @@ return {
 
 	SARUTOBI = { Character = "Sarutobi", Level = 10, Repeatable = true },
 	DEVSARUTOBI = { Character = "Sarutobi", Level = 10, Repeatable = true },
+	SARUTOBI50 = { Character = "Sarutobi", Level = 50, Repeatable = true },
+	DEVSARUTOBI50 = { Character = "Sarutobi", Level = 50, Repeatable = true },
 
 	KONOHA = {
 		Characters = { "Sakura", "Shikamaru", "Kakashi", "Sasuke", "Naruto", "Sarutobi" },

@@ -746,6 +746,65 @@ Moves.List = {
 		Timing = { Charge = 0.26, Release = 1.16, Impact = 1.66, Length = 2.25 },
 	},
 
+	-- Sarutobi Hiruzen (Naruto, Mago, Lendario — 4 Elementos: Terra, Fogo, Agua e Vento)
+	DotonMuralhaTerrestre = {
+		Name = "Doton: Drag\u{e3}o de Terra", Type = "Mago", Category = "Damage", Power = 56, Accuracy = 100, PP = 15,
+		Effect = { Kind = "StatStage", Stat = "Defense", Stages = -1, Chance = 30, Target = "Target" },
+		CutIn = true, CutInFocusY = 1.6, CutInFov = 45, Anim = "SarutobiDoton", Vfx = "DotonMuralhaTerrestre",
+		CutInColors = {
+			Bg = Color3.fromRGB(36, 22, 12),
+			Grad1 = Color3.fromRGB(196, 128, 46),
+			Grad2 = Color3.fromRGB(54, 30, 14),
+			Stroke = Color3.fromRGB(255, 224, 148),
+			Text = Color3.fromRGB(255, 246, 224),
+			TextStroke = Color3.fromRGB(34, 18, 8),
+		},
+		Timing = { Charge = 0.22, Release = 0.68, Impact = 1.12, Length = 1.65 },
+	},
+	KatonDragaoDeFogo = {
+		Name = "Katon: Drag\u{e3}o de Fogo", Type = "Mago", Category = "Damage", Power = 62, Accuracy = 95, PP = 15,
+		Effect = { Kind = "Status", Status = "Burn", Chance = 35, Target = "Target" },
+		CutIn = true, CutInFocusY = 1.65, CutInFov = 44, Anim = "SarutobiKaton", Vfx = "KatonDragaoDeFogo",
+		CutInColors = {
+			Bg = Color3.fromRGB(46, 12, 10),
+			Grad1 = Color3.fromRGB(238, 88, 28),
+			Grad2 = Color3.fromRGB(82, 16, 14),
+			Stroke = Color3.fromRGB(255, 212, 118),
+			Text = Color3.fromRGB(255, 248, 228),
+			TextStroke = Color3.fromRGB(46, 10, 8),
+		},
+		Timing = { Charge = 0.24, Release = 0.72, Impact = 1.18, Length = 1.72 },
+	},
+	SuitonDragaoDeAgua = {
+		Name = "Suiton: Drag\u{e3}o de \u{c1}gua", Type = "Mago", Category = "Damage", Power = 60, Accuracy = 100, PP = 15,
+		Target = "AllEnemies",
+		CutIn = true, CutInFocusY = 1.65, CutInFov = 44, Anim = "SarutobiSuiton", Vfx = "SuitonDragaoDeAgua",
+		CutInColors = {
+			Bg = Color3.fromRGB(10, 28, 54),
+			Grad1 = Color3.fromRGB(24, 152, 226),
+			Grad2 = Color3.fromRGB(12, 42, 86),
+			Stroke = Color3.fromRGB(156, 244, 255),
+			Text = Color3.fromRGB(244, 253, 255),
+			TextStroke = Color3.fromRGB(8, 22, 46),
+		},
+		Timing = { Charge = 0.24, Release = 0.74, Impact = 1.22, Length = 1.78 },
+	},
+	FutonTempestadeCeleste = {
+		Name = "Futon: Tempestade Celeste", Type = "Mago", Category = "Damage", Power = 74, Accuracy = 95, PP = 10,
+		Target = "AllEnemies",
+		Signature = true, CutIn = true, Anim = "SarutobiFuton", Vfx = "FutonTempestadeCeleste",
+		CutInFocusY = 1.85, CutInFov = 45, CutInBannerY = 0.16,
+		CutInColors = {
+			Bg = Color3.fromRGB(10, 36, 32),
+			Grad1 = Color3.fromRGB(46, 198, 148),
+			Grad2 = Color3.fromRGB(12, 54, 48),
+			Stroke = Color3.fromRGB(210, 255, 228),
+			Text = Color3.fromRGB(246, 255, 250),
+			TextStroke = Color3.fromRGB(8, 30, 26),
+		},
+		Timing = { Charge = 0.26, Release = 0.92, Impact = 1.48, Length = 2.15 },
+	},
+
 	-- Golpe reserva usado so quando todos os golpes estao sem PP
 	Esforco = {
 		Name = "Esfor\u{e7}o", Type = "Universal", Category = "Damage", Power = 30, Accuracy = 100, PP = 0, Hidden = true,
@@ -936,6 +995,10 @@ local SPECIAL_DESCRIPTIONS = {
 	CorteMurakumo = "Golpe largo e poderoso desferido com a l\u{e2}mina gigante Murakumogiri.",
 	HakiDoConquistador = "Libera press\u{e3}o espiritual avassaladora, aumentando o Ataque (+50%) do usu\u{e1}rio.",
 	CargaDeKi = "Eleva o Ki interior ao m\u{e1}ximo, aumentando o Ataque (+50%) do usu\u{e1}rio.",
+	DotonMuralhaTerrestre = "Canaliza chakra de Terra com as palmas no ch\u{e3}o e libera uma onda s\u{ed}smica com 30% de chance de reduzir a Defesa do alvo (Especial Elemental com Cut-In).",
+	KatonDragaoDeFogo = "Exala um drag\u{e3}o de chamas intensas com 35% de chance de causar Queimadura no alvo (Especial Elemental com Cut-In).",
+	SuitonDragaoDeAgua = "Invoca uma torrente espiral de \u{e1}gua que varre todos os inimigos em campo (Especial Elemental com Cut-In).",
+	FutonTempestadeCeleste = "Libera um ciclone cortante de ventos celestes que devasta todos os inimigos (Assinatura Elemental).",
 }
 
 function Moves.TargetDisplay(move): string
