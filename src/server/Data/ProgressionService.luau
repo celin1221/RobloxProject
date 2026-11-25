@@ -49,15 +49,15 @@ local SOURCE_INFO = {
 	Reward = { Verb = "conseguiu", Place = "" },
 }
 
--- Notifica todo o servidor quando um jogador consegue um personagem Lendario (ou Brilhante)
+-- Notifica todo o servidor quando um jogador consegue um personagem Lendario, Secreto (ou Brilhante)
 function ProgressionService.AnnounceRareDrop(player: Player, characterId: string, variant: string?, sourceKey: string?)
 	local def = Characters.Get(characterId)
 	if not def or def.Prototype then
 		return
 	end
-	local isLegendary = def.Rarity == "Lendario"
+	local isRareTier = def.Rarity == "Lendario" or def.Rarity == "Secreto"
 	local isShiny = variant == "Brilhante"
-	if not isLegendary and not isShiny then
+	if not isRareTier and not isShiny then
 		return
 	end
 	local src = SOURCE_INFO[sourceKey or "Reward"] or SOURCE_INFO.Reward

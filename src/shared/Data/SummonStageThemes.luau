@@ -59,6 +59,12 @@ Themes.RarityColors = {
 		Badge = Color3.fromRGB(218, 146, 18),
 		Label = "LENDÁRIO",
 	},
+	Secreto = {
+		Main = Color3.fromRGB(16, 16, 22),
+		Glow = Color3.fromRGB(224, 32, 62),
+		Badge = Color3.fromRGB(10, 10, 14),
+		Label = "SECRETO",
+	},
 }
 
 -- Layout dos 3 pedestais no palco (relativo ao STAGE_ORIGIN)
@@ -416,6 +422,7 @@ end
 
 -- Ranking para escolha deterministica dos 3 personagens principais do banner
 local RARITY_RANK: { [string]: number } = {
+	Secreto = 5,
 	Lendario = 4,
 	Epico = 3,
 	Raro = 2,
@@ -424,6 +431,7 @@ local RARITY_RANK: { [string]: number } = {
 
 -- Preferencia de desempate dentro da MESMA raridade (Epicos sempre vencem Raros automaticamente)
 local PREFERRED_ORDER: { [string]: number } = {
+	Sukuna = 120,
 	San = 100,
 	BarbaBranca = 95,
 	Setero = 90,

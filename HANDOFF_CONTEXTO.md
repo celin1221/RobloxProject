@@ -11,7 +11,7 @@
 * **Open Cloud Creator UserId (conta logada no MCP):** `12009032821` *(usar `userId: "12009032821"` ao fazer upload via `open_cloud_invoke` e inserir via `insert_asset`)*.
 * **Blender:** `D:\Blender\blender.exe` (versão **5.3.0**, usado em modo `--background --python ...`).
 * **Sincronizador Disk-First (`src/` <-> Studio):**
-  * `python scripts/sync_studio.py status` — valida se os 92 scripts em `src/` estão 100% em sync.
+  * `python scripts/sync_studio.py status` — valida se os 106 scripts em `src/` estão 100% em sync.
   * `python scripts/sync_studio.py push` — envia alterações de `src/` para o Studio.
   * `python scripts/sync_studio.py test` — roda validação do GDD (`DamageCalc`, `BattleEngine` 1x1/2x2, Classes, Ginásios, Treino, Progressão e `AccountLevel`).
 
@@ -86,6 +86,10 @@ Consulte o detalhamento completo em [`Blender/PROGRESSO.md`](./Blender/PROGRESSO
   * Barra minimalista `AccountLevelBar` (`[ Nv. X ] [=== XP / Meta XP ===]`) posicionada diretamente embaixo da `TeamBar` em `TeamBarClient.client.luau`.
   * Selo circular minimalista do Bônus de Fim de Semana no canto inferior direito do `HudClient.client.luau` (`2x de Moedas` / `2x de XP` no hover/toque).
   * Tema `Midnight-Blue Anime` em `UITheme.luau` (`Blender/UI/tema.json`), textura diagonal `UI.sheen` a 38°, afundamento físico 3D nos botões, contornos `Bevel`, centralização matemática dos preços em `INVOCAR 1` / `INVOCAR 10` e **100% ícones personalizados (`UI.Icons`)** com zero emojis/símbolos Unicode nas 16 GUIs.
+* **Passivas, Despertar, Vazio Roxo (`HollowPurple`) e Nova Raridade `Secreto` + `Sukuna` (25/11/2026 · Place v345):**
+  * **21 Passivas** (`Passives.luau`), Crafting de Despertar Nv. 35+ (`Awakening.luau`, `SecretAwakeningAltar`, `AwakeningGui`) e sistema modular AAA `HollowPurple` (`Setero` / tecla `R` + `TudoRoxo`).
+  * **Nova Raridade `Secreto`** (cor preta `#101016`, `StatMultiplier = 1.50`, `0,001%` global em qualquer banner a partir do Nv. 15 da conta, anúncio global `SECRETO NO SERVIDOR`).
+  * **`Sukuna` (`JujutsuKaisen`, `Mago`, `Secreto`, BST `162`):** modelo Tripo R6-on-R15 (`Asset ID 124539709567438`), aura 100% partículas puras obsidiana-carmesim, passiva `ReiDasMaldicoes`, 4 golpes exclusivos (`Fortificacao`, `Desmantelar`, `Clivar`, `SantuarioMalevolente`) e códigos Dev **`SUKUNA`/`DEVSUKUNA`** (Nv. 10) e **`SUKUNA50`/`SUKUNAMAX`/`DEVSUKUNA50`** (Nv. 50). **106 scripts** sincronizados (`PASS`).
 
 ---
 

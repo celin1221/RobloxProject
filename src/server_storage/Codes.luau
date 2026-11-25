@@ -114,6 +114,13 @@ return {
 	GOJO50 = { Character = "Setero", Level = 50, Repeatable = true },
 	DEVSETERO50 = { Character = "Setero", Level = 50, Repeatable = true },
 
+	-- Codigos de Dev — Secreto: Sukuna (Normal Nv. 10 e Nivel Maximo Nv. 50)
+	SUKUNA = { Character = "Sukuna", Level = 10, Repeatable = true },
+	DEVSUKUNA = { Character = "Sukuna", Level = 10, Repeatable = true },
+	SUKUNA50 = { Character = "Sukuna", Level = 50, Repeatable = true },
+	SUKUNAMAX = { Character = "Sukuna", Level = 50, Repeatable = true },
+	DEVSUKUNA50 = { Character = "Sukuna", Level = 50, Repeatable = true },
+
 	KAEN = { Character = "Kaen", Level = 10, Repeatable = true },
 	DEVKAEN = { Character = "Kaen", Level = 10, Repeatable = true },
 
@@ -159,7 +166,7 @@ return {
 			"Nami", "Usopp", "Zoro", "Sanji", "Luffy", "BarbaBranca",
 			"Sakura", "Shikamaru", "Kakashi", "Sasuke", "Naruto", "Sarutobi",
 			"Chad", "Uryu", "Rukia", "Renji", "Ichigo", "Byakuya",
-			"San", "Setero", "Kaen", "Raiko", "Yomogi",
+			"San", "Setero", "Sukuna", "Kaen", "Raiko", "Yomogi",
 		},
 		Level = 10,
 		Repeatable = true,

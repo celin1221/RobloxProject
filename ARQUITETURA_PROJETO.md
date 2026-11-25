@@ -39,7 +39,7 @@ flowchart TD
 
 ## 2. Mapa Completo da Árvore de Código (`src/` ↔ Roblox Studio)
 
-Todos os **92 scripts ativos** do projeto estão extraídos, modularizados e sincronizados na pasta `src/`:
+Todos os **106 scripts ativos** do projeto estão extraídos, modularizados e sincronizados na pasta `src/`:
 
 ### 2.1. `src/shared/` → `ReplicatedStorage`
 | Caminho em `src/shared/` | Instância no Studio | Papel Arquitetural |
@@ -60,7 +60,7 @@ Todos os **92 scripts ativos** do projeto estão extraídos, modularizados e sin
 | **`Battle/BattleConfig.luau`** | `ServerScriptService.Battle.BattleConfig` | Tempos de apresentação de cada evento (`EventDelay`), cooldown de gatilho e configuração padrão. |
 | **`Battle/PvPService.luau`** | `ServerScriptService.Battle.PvPService` | Convites de desafio por proximidade na praça (`1x1` e `2x2`), nivelamento em nível 50, ranking ELO (`PvPRank`) e início de partida PvP. |
 | **`Tower/TowerService.luau`** | `ServerScriptService.Tower.TowerService` | Progressão nos modos `Facil`, `Medio`, `Dificil` e `Infinito` (`1x1` e `2x2`), Ginásios de Anime (`Gyms`), Modo Treino (`Practice`), chefes a cada 5 andares e placares. |
-| **`Economy/SummonService.luau`** | `ServerScriptService.Economy.SummonService` | Portais Comum (gold) e Premium (gemas), bloqueio de banners por Ginásio, garantia (*pity* 200 e 60), bloqueio regional via `PolicyService`, fusão de estrelas e venda de repetidos. |
+| **`Economy/SummonService.luau`** | `ServerScriptService.Economy.SummonService` | Portais Comum (gold) e Premium (gemas), bloqueio de banners por Ginásio, raridade global **`Secreto`** (`0,001%` em qualquer banner para conta `Nv. 15+`), garantia (*pity* 200 e 60), bloqueio regional via `PolicyService`, fusão de estrelas e venda de repetidos. |
 | **`Economy/BaseService.luau` & `TrainingService.luau`** | `ServerScriptService.Economy.*` | Terrenos (`Plots`), passeio (`Gold/s` ao vivo), mineração (gold + minério bruto + 4 minérios de atributo com nível 1..10) e Cúpula de Vidro (Treino de +20 em +20, cronômetro, upgrade e bloqueios). |
 | **`Economy/InventoryService.luau`** | `ServerScriptService.Economy.InventoryService` | Compra e uso de itens (Poções, Cura-Status, Éter, Reviver, Selos) dentro e fora de batalha. |
 | **`Economy/MonetizationService.luau`** | `ServerScriptService.Economy.MonetizationService` | `MarketplaceService.ProcessReceipt`, compra de Game Passes / Benefícios por Robux ou Gemas. |

@@ -2088,6 +2088,186 @@ local ANIMATIONS: { [string]: any } = {
 			kf(2.80, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
 		},
 	},
+
+	--------------------------------------------------------------------
+	-- Animacoes Exclusivas: SUKUNA (Jujutsu Kaisen — Secreto)
+	--------------------------------------------------------------------
+
+	-- 42. SUKUNA FORTIFICACAO: cruza bracos com arrogancia -> abre explosivamente liberando pressao amaldicoada
+	SukunaFortificacao = {
+		Duration = 1.28,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+			kf(0.28, "CubicOut", {
+				LowerTorso = degCF(-4, 0, 0, Vector3.new(0, -0.18, 0.08)),
+				UpperTorso = degCF(-8, 0, 0),
+				Head = degCF(12, 0, 0),
+				RightUpperArm = degCF(62, 26, -34),
+				RightLowerArm = degCF(76, 0, 0),
+				LeftUpperArm = degCF(62, -26, 34),
+				LeftLowerArm = degCF(76, 0, 0),
+				LeftUpperLeg = degCF(10, 0, -8),
+				RightUpperLeg = degCF(10, 0, 8),
+			}),
+			kf(0.58, "ExpoOut", {
+				LowerTorso = degCF(6, 0, 0, Vector3.new(0, 0.34, -0.10)),
+				UpperTorso = degCF(16, 0, 0),
+				Head = degCF(-14, 0, 0),
+				RightUpperArm = degCF(92, -22, 64),
+				RightLowerArm = degCF(14, 0, 0),
+				LeftUpperArm = degCF(92, 22, -64),
+				LeftLowerArm = degCF(14, 0, 0),
+				LeftUpperLeg = degCF(-8, 0, -10),
+				RightUpperLeg = degCF(-8, 0, 10),
+			}),
+			kf(0.92, "SineInOut", {
+				LowerTorso = degCF(3, 0, 0, Vector3.new(0, 0.16, -0.06)),
+				UpperTorso = degCF(8, 0, 0),
+				Head = degCF(-6, 0, 0),
+				RightUpperArm = degCF(76, -16, 48),
+				LeftUpperArm = degCF(76, 16, -48),
+			}),
+			kf(1.28, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
+
+	-- 43. SUKUNA DESMANTELAR: postura casual arrogante -> gesto seco cortante da mao direita rasgando o ar
+	SukunaDesmantelar = {
+		Duration = 1.44,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+			kf(0.28, "CubicOut", {
+				LowerTorso = degCF(2, -28, 0, Vector3.new(0, -0.06, 0.14)),
+				UpperTorso = degCF(4, -32, -4),
+				Head = degCF(-4, 48, 0),
+				RightUpperArm = degCF(104, -18, 44),
+				RightLowerArm = degCF(46, 0, 0),
+				LeftUpperArm = degCF(14, 6, -16),
+				LeftLowerArm = degCF(22, 0, 0),
+			}),
+			kf(0.56, "ExpoOut", {
+				LowerTorso = degCF(-6, 26, 0, Vector3.new(0, -0.10, -0.32)),
+				UpperTorso = degCF(-10, 34, 6),
+				Head = degCF(4, -46, 0),
+				RightUpperArm = degCF(96, 28, -32),
+				RightLowerArm = degCF(8, 0, 0),
+				LeftUpperArm = degCF(-8, -10, -24),
+				LeftUpperLeg = degCF(-14, 0, -6),
+				RightUpperLeg = degCF(16, 0, 6),
+			}),
+			kf(0.76, "ExpoOut", {
+				LowerTorso = degCF(-4, -14, 0, Vector3.new(0, -0.08, -0.22)),
+				UpperTorso = degCF(-6, -18, -4),
+				Head = degCF(2, 24, 0),
+				RightUpperArm = degCF(112, -16, 36),
+				RightLowerArm = degCF(10, 0, 0),
+				LeftUpperArm = degCF(10, 4, -14),
+			}),
+			kf(1.06, "QuadOut", {
+				LowerTorso = degCF(-2, -6, 0, Vector3.new(0, -0.04, -0.10)),
+				RightUpperArm = degCF(88, -6, 22),
+				LeftUpperArm = degCF(8, 2, -10),
+			}),
+			kf(1.44, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
+
+	-- 44. SUKUNA CLIVAR: agacha predatorio -> avancada brutal com retalhamento duplo em X com as duas maos
+	SukunaClivar = {
+		Duration = 1.62,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+			kf(0.32, "CubicOut", {
+				LowerTorso = degCF(-14, -18, 0, Vector3.new(0, -0.42, 0.28)),
+				UpperTorso = degCF(-16, -16, 0),
+				Head = degCF(16, 26, 0),
+				RightUpperArm = degCF(128, -22, 46),
+				RightLowerArm = degCF(58, 0, 0),
+				LeftUpperArm = degCF(128, 22, -46),
+				LeftLowerArm = degCF(58, 0, 0),
+				LeftUpperLeg = degCF(28, 0, -10),
+				LeftLowerLeg = degCF(-26, 0, 0),
+				RightUpperLeg = degCF(-24, 0, 10),
+			}),
+			kf(0.64, "ExpoOut", {
+				LowerTorso = degCF(-16, 24, 0, Vector3.new(0, -0.22, -0.82)),
+				UpperTorso = degCF(-22, 28, 6),
+				Head = degCF(14, -34, 0),
+				RightUpperArm = degCF(64, 34, -36),
+				RightLowerArm = degCF(18, 0, 0),
+				LeftUpperArm = degCF(112, -26, 28),
+				LeftLowerArm = degCF(14, 0, 0),
+				LeftUpperLeg = degCF(-26, 0, -8),
+				RightUpperLeg = degCF(32, 0, 8),
+			}),
+			kf(0.86, "ExpoOut", {
+				LowerTorso = degCF(-10, -24, 0, Vector3.new(0, -0.14, -0.64)),
+				UpperTorso = degCF(-14, -28, -6),
+				Head = degCF(8, 34, 0),
+				RightUpperArm = degCF(112, -24, 48),
+				RightLowerArm = degCF(12, 0, 0),
+				LeftUpperArm = degCF(64, 32, -42),
+				LeftLowerArm = degCF(14, 0, 0),
+			}),
+			kf(1.18, "QuadOut", {
+				LowerTorso = degCF(-4, -10, 0, Vector3.new(0, -0.06, -0.30)),
+				UpperTorso = degCF(-6, -12, -2),
+				RightUpperArm = degCF(84, -12, 28),
+				LeftUpperArm = degCF(54, 14, -22),
+			}),
+			kf(1.62, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
+
+	-- 45. SUKUNA SANTUARIO MALEVOLENTE: selo de maos Enmaten diante do peito -> levitacao soberana -> dominio absoluto!
+	SukunaSantuario = {
+		Duration = 2.30,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+			-- Fase 1: Junta as duas maos no icone selo Enmaten diante do rosto/peito
+			kf(0.38, "CubicOut", {
+				LowerTorso = degCF(2, 0, 0, Vector3.new(0, 0.14, 0.06)),
+				UpperTorso = degCF(6, 0, 0),
+				Head = degCF(-6, 0, 0),
+				RightUpperArm = degCF(78, 28, -32),
+				RightLowerArm = degCF(82, 0, 0),
+				LeftUpperArm = degCF(78, -28, 32),
+				LeftLowerArm = degCF(82, 0, 0),
+			}),
+			-- Fase 2: Levita suavemente sustentando o selo do Santuario Malevolente
+			kf(1.04, "SineInOut", {
+				LowerTorso = degCF(6, 0, 0, Vector3.new(0, 0.56, 0)),
+				UpperTorso = degCF(10, 0, 0),
+				Head = degCF(-12, 0, 0),
+				RightUpperArm = degCF(86, 32, -36),
+				RightLowerArm = degCF(86, 0, 0),
+				LeftUpperArm = degCF(86, -32, 36),
+				LeftLowerArm = degCF(86, 0, 0),
+				LeftUpperLeg = degCF(-10, 0, -6),
+				RightUpperLeg = degCF(-10, 0, 6),
+			}),
+			-- Fase 3: Libera o Dominio abrindo os bracos com imponencia absoluta!
+			kf(1.36, "ExpoOut", {
+				LowerTorso = degCF(8, 0, 0, Vector3.new(0, 0.42, -0.18)),
+				UpperTorso = degCF(14, 0, 0),
+				Head = degCF(-14, 0, 0),
+				RightUpperArm = degCF(104, -24, 58),
+				RightLowerArm = degCF(10, 0, 0),
+				LeftUpperArm = degCF(104, 24, -58),
+				LeftLowerArm = degCF(10, 0, 0),
+				LeftUpperLeg = degCF(-8, 0, -8),
+				RightUpperLeg = degCF(-8, 0, 8),
+			}),
+			kf(1.82, "QuadOut", {
+				LowerTorso = degCF(4, 0, 0, Vector3.new(0, 0.16, -0.08)),
+				UpperTorso = degCF(6, 0, 0),
+				Head = degCF(-6, 0, 0),
+				RightUpperArm = degCF(78, -14, 42),
+				LeftUpperArm = degCF(78, 14, -42),
+			}),
+			kf(2.30, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
 }
 
 --------------------------------------------------------------------

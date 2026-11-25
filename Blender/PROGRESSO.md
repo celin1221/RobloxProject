@@ -1427,3 +1427,36 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
   - Ultimate `TudoRoxo` do `Setero` executada com sucesso (`ok = true`, `0` sobras).
   - **Stress test de 50 disparos consecutivos/sobrepostos:** `Children = 0`, `Desc = 0`, `Lighting` 100% limpo (`CC=false`, `Bloom=false`, `Blur=false`), `FinalFOV = 70.00` e **`0` erros/avisos no Console**.
 - Place salvo no Roblox Studio na **versão 343** (`TeamCreate`).
+
+
+## Nova Raridade `Secreto` (Preto, `0,001%` a partir do Nv. 15) + Sukuna Completo (Modelo 3D, Aura Pura, 4 Golpes, Passiva e Códigos Dev) (25/11/2026)
+
+**Feito**
+- **1. Modelo 3D & Rig R6-on-R15 + Aura Minimalista 100% Partículas (`Blender/Sukuna/`, `ServerStorage/Characters/Sukuna`):**
+  - Processado `sukuna.fbx` + textura (`d:\Downloads\sukuna.zip`) via `scripts/auto_rig_tripo.py --char Sukuna --max-tris 7500` → `Blender/Sukuna/modelo/Sukuna_R6_Auto.{blend,fbx}` e texturas `Sukuna_Tex{,_Brilhante}.png`, validado visualmente nas 5 prévias (cortes limpos, sem ocos, sem fragmentos).
+  - Enviado via Open Cloud (**Asset ID `124539709567438`**), importado em `ServerStorage.Imported.Sukuna_R6_Import` e montado em `ServerStorage.Characters.Sukuna` (`Tex=6/6`, animações autorizadas do Place).
+  - Criada aura `AuraVfx` (tag `CharacterAura`) minimalista em **100% partículas puras** (névoa obsidiana-carmesim + brilhos de maldição ascendentes + `AuraLight` + `AnimeOutline3D` obsidiana/carmesim; zero discos/círculos no chão, zero decals/SurfaceGui/BillboardGui/orbes sólidos).
+- **2. Nova Raridade `Secreto` (Cor Preta `#101016`, Global `0,001%` no Nv. 15+, BST Superior aos Lendários):**
+  - `UITheme.luau`, `TeamCards.luau`, `CharacterFilter.luau`, `SummonStageThemes.luau`, `BagClient`, `CharacterDetailClient`, `RefugeClient`, `TeamBarClient`: cor preta (`Color3.fromRGB(16, 16, 22)`), borda obsidiana/prata, filtros e ordenação `Secreto` (tier 5, acima de Lendário).
+  - `Characters.luau`, `Base.luau`, `Genetics.luau`, `Training.luau`: `Characters.Rarities.Secreto` (`StatMultiplier = 1.50` vs `1.35` dos Lendários, `OrePerHour = 110`, `GoldPerSecond = 1.40` / `5040/h`, Genética curva média `~77%` / 100% perfeito `0,100%`, Treino `4,50×` custo / `1,90×` tempo).
+  - `Summon.luau`, `SummonService.luau`, `SummonClient.client.luau`: chance independente de **`0,001%` (`0.00001`)** em **qualquer banner** (Portal Comum e Portal Premium, ignorando `animeFilter` e Ginásios) desde que `Account.Level >= 15` (`0` abaixo do Nv. 15, preservando integralmente as taxas normais e a garantia de Lendário). Painel `RatesRail` exibe `SECRETO 0.001%` (ou `Nv.15+` abaixo do nível 15), com animação de revelação preta/carmesim.
+  - `ProgressionService.luau` & `HudClient.client.luau`: anúncio global no servidor (`SECRETO NO SERVIDOR` / `[SECRETO]`) sempre que um jogador obtém um Secreto.
+- **3. Personagem `Sukuna` (`JujutsuKaisen`, `Mago`, `Secreto`), Passiva Única, 4 Golpes Exclusivos e Códigos Dev:**
+  - Atributos base **`78 HP / 31 ATQ / 26 DEF / 27 VEL`** (**BST `162`**, acima de todos os Lendários `134–144`) + multiplicador `1,50×` da raridade `Secreto`.
+  - Passiva única **`ReiDasMaldicoes`** (`Passives.luau`, 21ª passiva): `+18%` dano em golpes de `Mago`, `+10%` chance de crítico e ignora bônus positivos de Defesa do alvo.
+  - 4 golpes exclusivos em `Moves.luau` + 4 animações 60 FPS em `CombatAnimator.luau` + 4 VFX 100% fluidos em partículas puras em `VfxController.luau`:
+    - `Fortificacao` (*Fortificação*, Nv. 34): `+1` Ataque e `+1` Defesa (`MultiStat`).
+    - `Desmantelar` (*Desmantelar*, Nv. 40): Poder `58`, Crítico `18%`, rajada de cortes invisíveis com Cut-In.
+    - `Clivar` (*Clivar*, Nv. 45): Poder `68`, `BreaksProtect = true`, `45%` de `-1` Defesa, corte adaptativo com Cut-In.
+    - `SantuarioMalevolente` (*Santuário Malevolente*, Nv. 50, `Signature`, `Target = "AllEnemies"`, `BreaksProtect = true`): Poder `82`, expansão de domínio com selo Enmaten, chuva de cortes em área 1x1/2x2 e Cut-In.
+  - Códigos Dev em `src/server_storage/Codes.luau`: **`SUKUNA` / `DEVSUKUNA`** (Nv. 10) e **`SUKUNA50` / `SUKUNAMAX` / `DEVSUKUNA50`** (Nv. 50 — nível máximo com os 4 golpes já equipados), além da inclusão no `DEVALL`.
+- **4. Planilhas Excel & Suíte de Validação (`scripts/update_characters_sheet.py`, `scripts/sync_studio.py`):**
+  - `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` regeneradas com estilo preto para `Secreto` (**24 personagens ativos + 2 protótipos | 101 ataques únicos | 21 passivas | 282 vínculos**).
+  - Adicionado **Test 15 (`Secreto/Sukuna`)** em `scripts/sync_studio.py` validando BST > todos os Lendários, trava Nv. 15+, taxa `0,001%` no Comum e Premium, cor preta, os 4 golpes, aura 100% partículas, códigos Dev e execução no `BattleEngine` (`Fortificacao` + `Clivar` quebrando `Proteger`).
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos **106 scripts**) e `python scripts/sync_studio.py test` (`PASS: ... 21 Passives + Awakening + HollowPurple + Secreto/Sukuna + 101 Animated Moves + UI Guardrails`).
+- Validado ao vivo no Play Mode:
+  - `CharacterPreviews` (`26`, Sukuna `HeadMesh=true`, `NoAura=true`) e `SummonShowcaseModels` (`24`, Sukuna `Aura=true`, `Outline=true`).
+  - Inspeção visual em tempo real do modelo `Sukuna` + aura obsidiana-carmesim pulsando (`AuraLight`), todos os 4 golpes disparados ao vivo (`Fortificacao=true, Desmantelar=true, Clivar=true, SantuarioMalevolente=true`, `BattleVfxLeftover=0`), linha `Rate_Secreto` alinhada sem sobreposição na `SummonGui` e **`0` erros/avisos no Console**.
+- Place salvo no Roblox Studio na **versão 345** (`TeamCreate`).

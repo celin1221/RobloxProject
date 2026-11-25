@@ -89,6 +89,7 @@ Training.RarityCostMult = {
 	Raro = 1.50,
 	Epico = 2.25,
 	Lendario = 3.50,
+	Secreto = 4.50,
 }
 
 Training.RarityTimeMult = {
@@ -96,6 +97,7 @@ Training.RarityTimeMult = {
 	Raro = 1.20,
 	Epico = 1.40,
 	Lendario = 1.65,
+	Secreto = 1.90,
 }
 
 -- Adicional de custo por treinar varios atributos juntos na mesma sessao

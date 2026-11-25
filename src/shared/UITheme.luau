@@ -17,6 +17,7 @@ T.Palette = {
 	raro = Color3.fromRGB(56, 152, 255),
 	epico = Color3.fromRGB(176, 92, 255),
 	lendario = Color3.fromRGB(255, 180, 31),
+	secreto = Color3.fromRGB(16, 16, 22),
 	green = Color3.fromRGB(46, 224, 110),
 	red = Color3.fromRGB(255, 71, 87),
 	blue = Color3.fromRGB(46, 144, 255),
@@ -48,7 +49,7 @@ T.Types = {
 	Neutro = Color3.fromRGB(185, 180, 201),
 }
 T.Currency = { Gold = T.Palette.gold, Gems = T.Palette.gems, Ore = T.Palette.ore }
-T.Rarity = { Comum = T.Palette.comum, Raro = T.Palette.raro, Epico = T.Palette.epico, Lendario = T.Palette.lendario }
+T.Rarity = { Comum = T.Palette.comum, Raro = T.Palette.raro, Epico = T.Palette.epico, Lendario = T.Palette.lendario, Secreto = T.Palette.secreto }
 T.Text = {
 	Title = { Scale = 0.075, Min = 20, Max = 46 },
 	Heading = { Scale = 0.055, Min = 16, Max = 34 },

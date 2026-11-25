@@ -553,13 +553,13 @@ if ssChars then
     end
 end
 
--- Test 13: Passives System (20 passives, battle triggers) + Awakening Crafting & Secret Cave Altar
-assert(#Passives.Order == 20, "Expected 20 passives in Passives.Order, got " .. tostring(#Passives.Order))
+-- Test 13: Passives System (21+ passives, battle triggers) + Awakening Crafting & Secret Cave Altar
+assert(#Passives.Order >= 21, "Expected >= 21 passives in Passives.Order, got " .. tostring(#Passives.Order))
 for cid, def in pairs(Characters.List) do
     local p = Characters.PassiveOf(cid, false)
     assert(p ~= nil, "Missing base passive on character " .. cid)
-    if def.Rarity == "Lendario" then
-        assert(p.Tier == "Unique", "Legendary " .. cid .. " must have Unique passive, got " .. tostring(p.Tier))
+    if def.Rarity == "Lendario" or def.Rarity == "Secreto" then
+        assert(p.Tier == "Unique", def.Rarity .. " " .. cid .. " must have Unique passive, got " .. tostring(p.Tier))
     end
 end
 for _, sid in ipairs({ "Luffy", "Naruto", "Ichigo" }) do
@@ -653,7 +653,56 @@ assert(game:GetService("StarterPlayer"):WaitForChild("StarterPlayerScripts"):Fin
 local hpCfg = require(hpFolder.Config)
 assert(hpCfg.ActivationKey == Enum.KeyCode.R and hpCfg.Combat.ProjectileSpeed == 140, "Invalid HollowPurple Config")
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), 20 Passives + Awakening + HollowPurple 5-Phase + %d/93 Animated Moves + UI Guardrails", b.Turn, simTurns, totalMoves)
+-- Test 15: Secreto Rarity (black, 0.001% at Lv 15+ in any banner, BST > Legendaries) & Sukuna (model, pure-particle aura, 4 moves, codes)
+local secRar = Characters.Rarities.Secreto
+local legRar = Characters.Rarities.Lendario
+assert(secRar and secRar.StatMultiplier > legRar.StatMultiplier, "Expected Secreto StatMultiplier > Lendario")
+assert(Summon.SecretChance == 0.00001 and Summon.SecretMinAccountLevel == 15, "Expected Secreto 0.001% chance & Lv 15+ requirement")
+assert(Summon.RatesFor("Comum", nil, 14).Secreto == 0 and Summon.RatesFor("Comum", nil, 15).Secreto == 0.00001, "Expected Secreto gated at Account Lv 15 on Comum")
+assert(Summon.RatesFor("Premium", nil, 14).Secreto == 0 and Summon.RatesFor("Premium", nil, 15).Secreto == 0.00001, "Expected Secreto gated at Account Lv 15 on Premium")
+local secCol = Summon.RarityColor.Secreto
+assert(secCol and secCol.R < 0.15 and secCol.G < 0.15 and secCol.B < 0.15, "Expected black color for Secreto rarity")
+local sukDef = Characters.Get("Sukuna")
+assert(sukDef and sukDef.Rarity == "Secreto", "Expected Sukuna with Rarity = Secreto")
+local function bstOf(s) return (s.HP or 0) + (s.Attack or 0) + (s.Defense or 0) + (s.Speed or 0) end
+local sukBst = bstOf(sukDef.BaseStats)
+local sukBst50 = bstOf(Characters.StatsAt("Sukuna", 50))
+for cid, def in pairs(Characters.List) do
+    if def.Rarity == "Lendario" and not def.Prototype then
+        assert(sukBst > bstOf(def.BaseStats), "Expected Sukuna Base BST (" .. sukBst .. ") > Legendary " .. cid)
+        assert(sukBst50 > bstOf(Characters.StatsAt(cid, 50)), "Expected Sukuna Lv50 BST (" .. sukBst50 .. ") > Legendary " .. cid)
+    end
+end
+assert(Characters.LearnLevelOf("Sukuna", "Fortificacao") == 34 and Characters.LearnLevelOf("Sukuna", "Desmantelar") == 40
+    and Characters.LearnLevelOf("Sukuna", "Clivar") == 45 and Characters.LearnLevelOf("Sukuna", "SantuarioMalevolente") == 50,
+    "Expected Sukuna exclusive moves at Nv 34/40/45/50")
+local sukActive50 = Characters.DefaultActive("Sukuna", 50)
+assert(table.find(sukActive50, "Fortificacao") and table.find(sukActive50, "Desmantelar")
+    and table.find(sukActive50, "Clivar") and table.find(sukActive50, "SantuarioMalevolente"),
+    "Expected all 4 Sukuna moves in DefaultActive(50)")
+local sukModel = ssChars and ssChars:FindFirstChild("Sukuna")
+assert(sukModel and sukModel:FindFirstChild("Head_Mesh") and sukModel:FindFirstChild("AuraVfx"), "Missing ServerStorage.Characters.Sukuna model/AuraVfx")
+for _, d in ipairs(sukModel.AuraVfx:GetDescendants()) do
+    assert(not d:IsA("SurfaceGui") and not d:IsA("BillboardGui") and not d:IsA("Decal"),
+        "Sukuna AuraVfx must be 100% pure particles (no SurfaceGui/BillboardGui/Decal)")
+end
+local codesMod = require(game:GetService("ServerStorage"):WaitForChild("Codes"))
+assert(codesMod.SUKUNA and codesMod.SUKUNA.Character == "Sukuna" and codesMod.SUKUNA.Level == 10, "Missing SUKUNA dev code")
+assert(codesMod.SUKUNA50 and codesMod.SUKUNA50.Character == "Sukuna" and codesMod.SUKUNA50.Level == 50, "Missing SUKUNA50 max-level dev code")
+assert(codesMod.SUKUNAMAX and codesMod.SUKUNAMAX.Character == "Sukuna" and codesMod.SUKUNAMAX.Level == 50, "Missing SUKUNAMAX max-level dev code")
+-- BattleEngine verification for Sukuna Fortificacao (+1 ATK/+1 DEF) & Clivar (BreaksProtect!)
+local bSuk = BattleEngine.New({
+    Player = { Team = { { CharacterId = "Sukuna", Level = 50, Moves = { "Fortificacao", "Desmantelar", "Clivar", "SantuarioMalevolente" } } } },
+    Enemy = { Team = { { CharacterId = "Byakuya", Level = 50, Moves = { "Proteger", "CorteBasico" } } }, AI = "Facil" },
+    Mode = "PvP", EnemyHuman = true, Seed = 77,
+})
+bSuk:ResolveTurn({ Kind = "Move", Index = 1 }, { Kind = "Move", Index = 1 }) -- Fortificacao vs Proteger
+assert(bSuk:Active("Player").Stages.Attack == 1 and bSuk:Active("Player").Stages.Defense == 1, "Expected Fortificacao +1 ATK and +1 DEF")
+local hpBefore = bSuk:Active("Enemy").Hp
+bSuk:ResolveTurn({ Kind = "Move", Index = 3 }, { Kind = "Move", Index = 1 }) -- Clivar (BreaksProtect) vs Proteger
+assert(bSuk:Active("Enemy").Hp < hpBefore, "Expected Sukuna Clivar to break Proteger and deal damage")
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, totalMoves)
 end)
 sandbox:Destroy()
 assert(ok, res)

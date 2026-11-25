@@ -72,6 +72,7 @@ Todos os personagens são originais. Personagens e técnicas de animes existente
 | Raro | 1,10 | 28% | 18 |
 | Épico | 1,20 | 10% | 30 |
 | Lendário | 1,35 | 2% | 50 |
+| Secreto | 1,50 | 0% (0,001% em qualquer banner a partir do Nv. 15) | 110 |
 
 **Personagens do protótipo (nível 10)**
 
@@ -97,12 +98,14 @@ Todos os personagens são originais. Personagens e técnicas de animes existente
   - Raro: média esperada ~53% · chance de 100% perfeito: **0,012%** (~1 em 8.333)
   - Épico: média esperada ~65% · chance de 100% perfeito: **0,025%** (~1 em 4.000)
   - Lendário: média esperada ~74% · chance de 100% perfeito: **0,050%** (~1 em 2.000)
+  - Secreto: média esperada ~77% · chance de 100% perfeito: **0,100%** (~1 em 1.000)
 - **Treino inicial:** todo personagem obtido pelo jogador (inicial, invocação, captura no Refúgio/selvagens e chefe da Torre) sempre começa com **Treino 0%** nos 4 atributos (métodos de evolução de Treino entrarão em atualização futura).
 
-**Elenco por Anime (atualização Naruto, sem modelo próprio ainda / ataques padrão):**
+**Elenco por Anime:**
 - **One Piece:** Comum (`Nami`, `Usopp`), Raro (`Zoro`, `Sanji`), Épico (`Luffy`), Lendário (`Barba Branca`).
-- **Naruto:** Comum (`Sakura`, `Shikamaru`), Raro (`Kakashi`, `Sasuke`), Épico (`Naruto`), Lendário (`Sarutobi`) — utilizando rig provisório colorido via `CharacterLibrary.CloneSource` e golpes padrão existentes até a entrada dos modelos dedicados.
-- **Dragon Ball / Jujutsu Kaisen / Genéricos:** `San` (Lendário), `Setero` (Lendário), `Kaen`, `Raiko`, `Yomogi`.
+- **Naruto:** Comum (`Sakura`, `Shikamaru`), Raro (`Kakashi`, `Sasuke`), Épico (`Naruto`), Lendário (`Sarutobi`).
+- **Bleach:** Comum (`Chad`, `Uryu`), Raro (`Rukia`, `Renji`), Épico (`Ichigo`), Lendário (`Byakuya`).
+- **Dragon Ball / Jujutsu Kaisen / Genéricos:** `San` (Lendário), `Setero` (Lendário), `Sukuna` (**Secreto**, cor preta, BST 162), `Kaen`, `Raiko`, `Yomogi`.
 
 ## 5. Combate por turnos
 
@@ -245,7 +248,7 @@ Terreno de 40 x 40 studs por jogador; até 6 personagens ativos na base, cada um
 **Máquina de Treinamento (Cúpula de Vidro na Base):** cápsula física instalada no terreno de cada jogador (acessível pelo painel na Base ou no menu Base) para evoluir os atributos de **Treino** (`0%` a `100%`).
 
 - **Regras de crafting e seleção:** evolução estritamente de **20 em 20** (`+20`, `+40`...) gastando o minério correspondente a cada atributo escolhido (`Vital/HP = 8`, `Férreo/DEF = 6`, `Veloz/VEL = 5`, `Rubro/ATQ = 4` base por `+20`). Enquanto treina, o personagem permanece visível levitando dentro da cúpula de vidro e não pode minerar, passear, lutar no time ou ser fundido/vendido (cancelar devolve 50% dos minérios).
-- **Raridade e multi-atributo:** personagens mais raros custam mais minério (`1,00×` Comum, `1,50×` Raro, `2,25×` Épico, `3,50×` Lendário) e levam um pouco mais de tempo (`1,00×`, `1,20×`, `1,40×`, `1,65×`). Treinar vários atributos na mesma sessão executa em paralelo (economizando tempo, `+20%` por passo adicional) porém encarece o crafting (`+25%` com 2, `+50%` com 3, `+80%` com 4 atributos).
+- **Raridade e multi-atributo:** personagens mais raros custam mais minério (`1,00×` Comum, `1,50×` Raro, `2,25×` Épico, `3,50×` Lendário, `4,50×` Secreto) e levam um pouco mais de tempo (`1,00×`, `1,20×`, `1,40×`, `1,65×`, `1,90×`). Treinar vários atributos na mesma sessão executa em paralelo (economizando tempo, `+20%` por passo adicional) porém encarece o crafting (`+25%` com 2, `+50%` com 3, `+80%` com 4 atributos).
 - **Eficiência (Níveis 1 a 10 em Gold):** no nível 1, subir 1 atributo uma vez (`+20`) num Comum leva **1 minuto (`60s`)**. Melhorar a Máquina com Gold (`500` até `220.000`) eleva a eficiência de `1,00×` até **`4,00×`** (`15s` por `+20` básico no nível 10).
 
 **Conversão e teto:** 100 de minério = 1 gema. Teto de venda: 50 gemas por dia por jogador; excedente fica guardado (máximo 10.000). Outras fontes grátis: 5 gemas da torre Difícil e 5 das missões diárias. Máximo grátis: 60 gemas por dia.
@@ -357,6 +360,7 @@ Decisões em aberto: nome do jogo; troca de personagens entre jogadores; validar
 | Raro | 23% | 72% |
 | Épico | 6% | 25% |
 | Lendário | 1% | 3% |
+| Secreto (cor preta, Nv. 15+ da conta) | 0,001% (global em qualquer banner) | 0,001% (global em qualquer banner) |
 | Garantia | Lendário na 200ª seguida sem Lendário | Lendário na 60ª |
 
 - Variante Brilhante: 1% em toda invocação; outras variantes por evento.
@@ -364,7 +368,7 @@ Decisões em aberto: nome do jogo; troca de personagens entre jogadores; validar
 - **Animação e Som ao Roletar:** além do raio no portal do mapa, o cliente exibe na frente da tela um palco de destaque rápido (`~1,45–1,85s`, pulável com `PULAR` e ignorado por `Invocação Rápida`) com o personagem 3D completo girando sob raios radiais na cor da raridade, clarão/partículas, badge de raridade/anime e efeitos sonoros estimulantes (`summon_charge`, `summon_shimmer`, `summon_reveal`, `summon_epic`, `summon_legendary`), seguidos pela grade de cartas com prévias 3D. Lendário e Brilhante continuam anunciados no chat do servidor.
 - Chances sempre visíveis na tela.
 - Banner da semana: 1 Lendário em destaque fica com metade da chance de Lendário do Portal Premium.
-- Repetidos: 3 iguais viram +1 estrela (até 5, +5% de atributos cada); sobras vendidas por gold (Comum 50, Raro 150, Épico 500, Lendário 3.000).
+- Repetidos: 3 iguais viram +1 estrela (até 5, +5% de atributos cada); sobras vendidas por gold (Comum 50, Raro 150, Épico 500, Lendário 3.000, Secreto 12.000).
 - Álbum: completar cada tipo e cada raridade paga gold e gemas uma vez.
 
 | Mecânica | Como funciona | Recompensa |

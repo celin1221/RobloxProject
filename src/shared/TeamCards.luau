@@ -19,12 +19,14 @@ local TeamCards = {}
 local RARITY_TOP = {
 	Comum = Color3.fromRGB(196, 203, 218), Raro = Color3.fromRGB(120, 180, 255),
 	Epico = Color3.fromRGB(205, 140, 255), Lendario = Color3.fromRGB(255, 222, 110),
+	Secreto = Color3.fromRGB(64, 66, 78),
 }
 local RARITY_INNER = {
 	Comum = { Color3.fromRGB(152, 166, 192), Color3.fromRGB(58, 66, 88) },
 	Raro = { Color3.fromRGB(72, 160, 255), Color3.fromRGB(22, 58, 148) },
 	Epico = { Color3.fromRGB(184, 100, 255), Color3.fromRGB(68, 24, 134) },
 	Lendario = { Color3.fromRGB(255, 206, 72), Color3.fromRGB(156, 76, 10) },
+	Secreto = { Color3.fromRGB(32, 32, 40), Color3.fromRGB(8, 8, 12) },
 }
 local EMPTY_INNER_TOP = Color3.fromRGB(36, 44, 96)
 local EMPTY_INNER_BOT = Color3.fromRGB(16, 20, 48)
@@ -34,6 +36,7 @@ local RARITY_SHORT = {
 	Raro = "RARO",
 	Epico = "\u{c9}PICO",
 	Lendario = "LEND\u{c1}RIO",
+	Secreto = "SECRETO",
 }
 local LOCKED_BORDER_TOP = Color3.fromRGB(76, 94, 168)
 local LOCKED_BORDER_BOT = Color3.fromRGB(32, 40, 84)
@@ -428,14 +431,15 @@ function TeamCards.new(parent: Instance, p)
 		hpFill.Size = UDim2.fromScale(math.max(0.04, frac), 1)
 		hpFill.BackgroundColor3 = if frac > 0.5 then T.Palette.hpHigh elseif frac > 0.2 then T.Palette.hpMid else T.Palette.hpLow
 		-- (a posicao da faixa de HP e fixa: borda de baixo)
-		-- brilho (Lendario, Brilhante ou Desperto)
+		-- brilho (Secreto, Lendario, Brilhante ou Desperto)
 		local shiny = m.Variant == "Brilhante"
 		local awakened = m.Awakened == true
 		sparkle.Visible = shiny or awakened
-		local wantShine = def.Rarity == "Lendario" or shiny or awakened
+		local wantShine = def.Rarity == "Lendario" or def.Rarity == "Secreto" or shiny or awakened
 		if wantShine and not shine then
 			local shineCol = if shiny
 				then Color3.fromRGB(255, 255, 255)
+				elseif def.Rarity == "Secreto" then Color3.fromRGB(230, 232, 245)
 				elseif awakened then Color3.fromRGB(245, 165, 255)
 				else Color3.fromRGB(255, 240, 170)
 			shine = UI.shine(border, shineCol)
@@ -529,15 +533,19 @@ function TeamCards.new(parent: Instance, p)
 			nameText.Text = def.Name
 			nameGrad.Color = ColorSequence.new(Color3.new(1, 1, 1), light:Lerp(Color3.new(1, 1, 1), 0.25))
 			lvl.Visible = true
-			lvlText.TextColor3 = light
+			lvlText.TextColor3 = if def.Rarity == "Secreto" then Color3.fromRGB(235, 236, 244) else light
 			lvlText.Text = RARITY_SHORT[def.Rarity] or def.Rarity
 			lockIcon.Visible = false
 			typeIcon.ImageTransparency = 0
 			typeIcon.ImageColor3 = Color3.new(1, 1, 1)
 			sparkle.Visible = hasAnyVariant
-			local wantShine = def.Rarity == "Lendario" or hasShiny
+			local wantShine = def.Rarity == "Lendario" or def.Rarity == "Secreto" or hasShiny
 			if wantShine and not shine then
-				shine = UI.shine(border, if hasShiny then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(255, 240, 170))
+				local sCol = if hasShiny
+					then Color3.fromRGB(255, 255, 255)
+					elseif def.Rarity == "Secreto" then Color3.fromRGB(230, 232, 245)
+					else Color3.fromRGB(255, 240, 170)
+				shine = UI.shine(border, sCol)
 				shine.ZIndex = z + 3
 			elseif not wantShine and shine then
 				shine:Destroy()

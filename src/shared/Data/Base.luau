@@ -23,11 +23,11 @@ Base.OreMax = 10000
 -- Producao base de gold por segundo (ao vivo enquanto online!) e minerio por hora.
 -- Rebalanceado: Base entrega fluxo gostoso para roletar, sem ofuscar o combate (Torre/Ginasios pagam mais/h).
 -- Gold escala com nivel (+2.5%/nv) e estrelas (+10%/estrela); minerio permite encostar no teto de 50 gemas/dia no late-game.
-Base.GoldPerSecond = { Comum = 0.20, Raro = 0.35, Epico = 0.55, Lendario = 0.90 }
-Base.GoldPerHour = { Comum = 720, Raro = 1260, Epico = 1980, Lendario = 3240 }
+Base.GoldPerSecond = { Comum = 0.20, Raro = 0.35, Epico = 0.55, Lendario = 0.90, Secreto = 1.40 }
+Base.GoldPerHour = { Comum = 720, Raro = 1260, Epico = 1980, Lendario = 3240, Secreto = 5040 }
 Base.LevelGoldBonus = 0.025 -- +2.5% de gold por nivel acima do 1 (Nv. 50 = 2.225x)
 Base.StarGoldBonus = 0.10 -- +10% de gold por estrela (5 estrelas = 1.50x)
-Base.OrePerHour = { Comum = 15, Raro = 28, Epico = 45, Lendario = 75 }
+Base.OrePerHour = { Comum = 15, Raro = 28, Epico = 45, Lendario = 75, Secreto = 110 }
 Base.MiningGoldRatio = 0.50 -- mineracao tambem fornece 50% do Gold/s alem dos minerios
 
 Base.States = { Walk = "Passeando", Mine = "Minerando" }

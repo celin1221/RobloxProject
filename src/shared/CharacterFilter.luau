@@ -11,8 +11,8 @@ local Progression = require(Data:WaitForChild("Progression"))
 
 local CharacterFilter = {}
 
-CharacterFilter.RarityOrder = { Comum = 1, Raro = 2, Epico = 3, Lendario = 4 }
-CharacterFilter.Rarities = { "Todas", "Comum", "Raro", "Epico", "Lendario" }
+CharacterFilter.RarityOrder = { Comum = 1, Raro = 2, Epico = 3, Lendario = 4, Secreto = 5 }
+CharacterFilter.Rarities = { "Todas", "Comum", "Raro", "Epico", "Lendario", "Secreto" }
 CharacterFilter.Types = { "Todos", "Espadachim", "Lutador", "Mago", "Atirador" }
 CharacterFilter.Sorts = { "Raridade", "Geral", "HP", "Attack", "Defense", "Speed", "Nivel", "Recente" }
 
@@ -23,7 +23,7 @@ end
 CharacterFilter.Animes = animes
 
 local labels = {
-	Todas = "TODAS", Comum = "COMUM", Raro = "RARO", Epico = "\u{c9}PICO", Lendario = "LEND\u{c1}RIO",
+	Todas = "TODAS", Comum = "COMUM", Raro = "RARO", Epico = "\u{c9}PICO", Lendario = "LEND\u{c1}RIO", Secreto = "SECRETO",
 	Todos = "CLASSE: TODAS", Espadachim = "ESPADACHIM", Lutador = "LUTADOR", Mago = "MAGO", Atirador = "ATIRADOR",
 	Raridade = "RARIDADE", Nivel = "N\u{cd}VEL", Recente = "RECENTE",
 	Geral = "STATUS GERAL", HP = "STATUS: HP", Attack = "STATUS: ATQ", Defense = "STATUS: DEF", Speed = "STATUS: VEL",

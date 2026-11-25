@@ -25,8 +25,8 @@ local selected = nil -- item escolhido
 local activeTab = "Itens"
 
 local ITEM_ICON = { Pocao = "potion", Superpocao = "potion", Hiperpocao = "potion", CuraStatus = "heal", Eter = "potion", Reviver = "heal", SeloContrato = "seal", SeloSuperior = "seal", DoceComum = "doce_comum", DoceRaro = "doce_raro", DoceEpico = "doce_epico" }
-local RARITY_COLOR = { Comum = "comum", Raro = "raro", Epico = "epico", Lendario = "lendario" }
-local RARITY_TEXT = { Comum = "COMUM", Raro = "RARO", Epico = "\u{c9}PICO", Lendario = "LEND\u{c1}RIO" }
+local RARITY_COLOR = { Comum = "comum", Raro = "raro", Epico = "epico", Lendario = "lendario", Secreto = "secreto" }
+local RARITY_TEXT = { Comum = "COMUM", Raro = "RARO", Epico = "\u{c9}PICO", Lendario = "LEND\u{c1}RIO", Secreto = "SECRETO" }
 
 local canvas = UI.screen(gui)
 gui.DisplayOrder = 9

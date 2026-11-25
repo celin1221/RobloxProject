@@ -41,6 +41,7 @@ Characters.Rarities = {
 	Raro = { Name = "Raro", StatMultiplier = 1.10, EncounterChance = 0.28, OrePerHour = 28, CaptureRate = 0.40 },
 	Epico = { Name = "Épico", StatMultiplier = 1.20, EncounterChance = 0.10, OrePerHour = 45, CaptureRate = 0.20 },
 	Lendario = { Name = "Lendário", StatMultiplier = 1.35, EncounterChance = 0.02, OrePerHour = 75, CaptureRate = 0.08 },
+	Secreto = { Name = "Secreto", StatMultiplier = 1.50, EncounterChance = 0, OrePerHour = 110, CaptureRate = 0.03 },
 }
 
 --[[
@@ -180,6 +181,40 @@ Characters.List = {
 		-- Paleta da variante Brilhante: branco platina com azul glacial e energia celeste
 		ShinyPalette = { Primary = Color3.fromRGB(230, 238, 252), Secondary = Color3.fromRGB(70, 180, 255) },
 		KeepTextureParts = { "Head", "Blindfold_Acc", "LeftHand", "RightHand" },
+	},
+	Sukuna = {
+		Name = "Sukuna",
+		ModelName = "Sukuna",
+		Anime = "JujutsuKaisen",
+		Type = "Mago",
+		Rarity = "Secreto",
+		Passive = "ReiDasMaldicoes",
+		Concept = "Rei das Maldi\u{e7}\u{f5}es da era Heian, soberano dos cortes amaldi\u{e7}oados e do Santu\u{e1}rio Malevolente",
+		BaseLevel = 10,
+		BaseStats = { HP = 78, Attack = 31, Defense = 26, Speed = 27 }, -- BST 162 (> todos os Lendarios: 134..144)
+		Learnset = {
+			{ Level = 1, Move = "EsferaArcana" },
+			{ Level = 1, Move = "ChamaMistica" },
+			{ Level = 5, Move = "SeloParalisante" },
+			{ Level = 8, Move = "PulsoVeloz" },
+			{ Level = 12, Move = "OndaArcana" },
+			{ Level = 16, Move = "OlharIntimidador" },
+			{ Level = 20, Move = "SifaoArcano" },
+			{ Level = 24, Move = "Proteger" },
+			{ Level = 28, Move = "ExplosaoAstral" },
+			{ Level = 34, Move = "Fortificacao" },
+			{ Level = 40, Move = "Desmantelar" },
+			{ Level = 45, Move = "Clivar" },
+			{ Level = 50, Move = "SantuarioMalevolente" },
+		},
+		Animations = {
+			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
+			Victory = 107803042519026, Mine = 88262424470805,
+			Attack = 133310018588724, Special = 105158348948965,
+		},
+		Variants = Variants,
+		ShinyPalette = { Primary = Color3.fromRGB(22, 18, 28), Secondary = Color3.fromRGB(255, 58, 86) },
+		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	San = {
 		Name = "San",
@@ -849,7 +884,7 @@ for id, def in pairs(Characters.List) do
 	def.Anime = def.Anime or "Generico"
 	-- Herda automaticamente o kit generico de golpes da classe quando o personagem nao define Learnset proprio
 	if not def.Learnset then
-		local sigLevel = if def.Rarity == "Lendario" then 50 else 45
+		local sigLevel = if def.Rarity == "Lendario" or def.Rarity == "Secreto" then 50 else 45
 		def.Learnset = Moves.ClassKit(def.Type, def.SignatureMove, sigLevel)
 	end
 	table.sort(def.Learnset, function(a, b)

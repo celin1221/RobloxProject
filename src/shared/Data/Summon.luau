@@ -17,15 +17,20 @@
 
 local Summon = {}
 
-Summon.RarityOrder = { "Comum", "Raro", "Epico", "Lendario" }
-Summon.RarityName = { Comum = "Comum", Raro = "Raro", Epico = "\u{c9}pico", Lendario = "Lend\u{e1}rio" }
--- Cor do raio na animacao: cinza, azul, roxo, dourado
+Summon.RarityOrder = { "Comum", "Raro", "Epico", "Lendario", "Secreto" }
+Summon.RarityName = { Comum = "Comum", Raro = "Raro", Epico = "\u{c9}pico", Lendario = "Lend\u{e1}rio", Secreto = "Secreto" }
+-- Cor do raio na animacao: cinza, azul, roxo, dourado, preto (Secreto)
 Summon.RarityColor = {
 	Comum = Color3.fromRGB(190, 195, 205),
 	Raro = Color3.fromRGB(70, 150, 255),
 	Epico = Color3.fromRGB(170, 80, 255),
 	Lendario = Color3.fromRGB(255, 200, 50),
+	Secreto = Color3.fromRGB(16, 16, 22),
 }
+
+-- Regra da raridade Secreto: 0,001% (1 em 100.000) em qualquer banner a partir do Nivel da Conta 15
+Summon.SecretChance = 0.00001
+Summon.SecretMinAccountLevel = 15
 
 Summon.Portals = {
 	Comum = {
@@ -126,7 +131,8 @@ function Summon.BannerOf(portalId: string, t: number, legendaries: { string }): 
 end
 
 -- Chances do portal para o jogador. Sorte em Dobro (Portal Comum): Epico e Lendario em dobro, o extra sai do Comum.
-function Summon.RatesFor(portalId: string, benefits): { [string]: number }
+-- Secreto: 0,001% em qualquer banner quando o jogador esta no Nivel da Conta >= 15.
+function Summon.RatesFor(portalId: string, benefits, accountLevel: number?): { [string]: number }
 	local portal = Summon.Portals[portalId]
 	local rates = table.clone(portal.Rates)
 	if portalId == "Comum" and benefits and benefits.SorteEmDobro then
@@ -135,29 +141,41 @@ function Summon.RatesFor(portalId: string, benefits): { [string]: number }
 		rates.Lendario *= 2
 		rates.Comum -= extra
 	end
+	if accountLevel ~= nil then
+		rates.Secreto = if accountLevel >= Summon.SecretMinAccountLevel then Summon.SecretChance else 0
+	end
 	return rates
 end
 
 Summon.ShinyChance = 0.01
 Summon.SummonLevel = 5
 Summon.Stars = { Max = 5, CopiesPerStar = 3, BonusPerStar = 0.05 }
-Summon.SellPrice = { Comum = 50, Raro = 150, Epico = 600, Lendario = 4000 }
+Summon.SellPrice = { Comum = 50, Raro = 150, Epico = 600, Lendario = 4000, Secreto = 12000 }
 Summon.AlbumReward = { Gold = 1000, Gems = 10 }
 
 -- Sorteio puro. pity = invocacoes seguidas sem Lendario antes desta.
 -- Retorna raridade, se foi pela garantia, novo valor de pity e se saiu Brilhante.
-function Summon.Roll(portalId: string, rng: Random, pity: number, rates: { [string]: number }?)
+function Summon.Roll(portalId: string, rng: Random, pity: number, rates: { [string]: number }?, accountLevel: number?)
 	local portal = assert(Summon.Portals[portalId], "Portal desconhecido")
 	rates = rates or portal.Rates
 	local rarity
 	local forced = false
-	if pity + 1 >= portal.PityAt then
+	local secretChance = if rates.Secreto ~= nil
+		then rates.Secreto
+		elseif accountLevel ~= nil and accountLevel >= Summon.SecretMinAccountLevel then Summon.SecretChance
+		else 0
+	if secretChance > 0 and rng:NextNumber() < secretChance then
+		rarity = "Secreto"
+	elseif pity + 1 >= portal.PityAt then
 		rarity = "Lendario"
 		forced = true
 	else
 		local r = rng:NextNumber()
 		local acc = 0
 		for _, id in ipairs(Summon.RarityOrder) do
+			if id == "Secreto" then
+				continue
+			end
 			acc += rates[id] or 0
 			if r < acc then
 				rarity = id
@@ -166,7 +184,10 @@ function Summon.Roll(portalId: string, rng: Random, pity: number, rates: { [stri
 		end
 		rarity = rarity or "Lendario" -- arredondamento no fim da soma
 	end
-	local newPity = if rarity == "Lendario" then 0 else pity + 1
+	local newPity = if rarity == "Lendario"
+		then 0
+		elseif rarity == "Secreto" then math.min(pity, math.max(0, portal.PityAt - 1))
+		else pity + 1
 	local shiny = rng:NextNumber() < Summon.ShinyChance
 	return rarity, forced, newPity, shiny
 end

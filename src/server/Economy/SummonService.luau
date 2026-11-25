@@ -109,6 +109,13 @@ function SummonService.BannerOf(portalId: string, bannerId: string?, allowedAnim
 end
 
 local function pickCharacter(rarity: string, banner: string?, share: number?, animeFilter: string?, allowedAnimes: { [string]: boolean }?)
+	-- Secreto: pool global independente de banner/anime (pode sair em qualquer banner a partir do Nivel 15)
+	if rarity == "Secreto" then
+		local secrets = byRarity(nil, nil).Secreto or {}
+		if #secrets > 0 then
+			return secrets[rng:NextInteger(1, #secrets)]
+		end
+	end
 	local map = byRarity(animeFilter, if animeFilter then nil else allowedAnimes)
 	-- banner: o Lendario em destaque leva metade das vezes que sai Lendario; a outra metade e dos demais
 	if rarity == "Lendario" and banner and Characters.Get(banner) then
@@ -185,11 +192,12 @@ function SummonService.Summon(player: Player, portalId: string, count: number, b
 
 	local results = {}
 	local pity = data.SummonPity[portal.PityKey] or 0
-	local rates = Summon.RatesFor(portalId, data.Benefits)
+	local accountLevel = (data.Account and data.Account.Level) or 1
+	local rates = Summon.RatesFor(portalId, data.Benefits, accountLevel)
 	local allowedAnimes = if not animeFilter then unlockedAnimeSet(data) else nil
 	local banner = SummonService.BannerOf(portalId, bannerCfg.Id, allowedAnimes)
 	for i = 1, count do
-		local rarity, forced, newPity, shiny = Summon.Roll(portalId, rng, pity, rates)
+		local rarity, forced, newPity, shiny = Summon.Roll(portalId, rng, pity, rates, accountLevel)
 		pity = newPity
 		local charId = pickCharacter(rarity, banner, portal.Banner and portal.Banner.Share, animeFilter, allowedAnimes)
 		local def = Characters.Get(charId)

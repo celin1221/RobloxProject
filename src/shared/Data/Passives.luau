@@ -206,6 +206,18 @@ Passives.List = {
 			BlockAllEnemyStatDrops = true,
 		},
 	},
+	ReiDasMaldicoes = {
+		Name = "Rei das Maldições",
+		Tier = "Unique",
+		Owner = "Sukuna",
+		Short = "+18% dano Mago · +10% Crítico · Ignora buffs de Defesa",
+		Description = "Supremacia amaldiçoada: golpes de Mago causam +18% de dano, têm +10% de chance crítica e ignoram aumentos positivos de Defesa do alvo.",
+		Effect = {
+			ClassDamageBonus = { Type = "Mago", Mult = 1.18 },
+			CritChanceBonus = 0.10,
+			IgnorePositiveDefStages = true,
+		},
+	},
 
 	--------------------------------------------------------------------
 	-- 3 PASSIVAS SECRETAS UNICAS (Epicos Iniciais — Despertar Nv. 35+)
@@ -277,6 +289,7 @@ Passives.Order = {
 	"MestreDosElementos",
 	"InstintoZenkai",
 	"InfinitoAbsoluto",
+	"ReiDasMaldicoes",
 	-- Secretas (Epicos Despertos)
 	"VontadeDeD",
 	"MantoDaRaposa",

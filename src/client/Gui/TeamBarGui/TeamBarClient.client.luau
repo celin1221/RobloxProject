@@ -298,7 +298,7 @@ local function openPop(i: number)
 	popUid, popSlot = uid, i
 	local rarity = Characters.Rarities[def.Rarity]
 	popName.Text = def.Name
-	popName.TextColor3 = T.Rarity[def.Rarity] or T.Palette.onDark
+	popName.TextColor3 = if def.Rarity == "Secreto" then Color3.fromRGB(240, 240, 248) else (T.Rarity[def.Rarity] or T.Palette.onDark)
 	local starNum = m.Stars or 0
 	popStarBox.Visible = starNum > 0
 	if starNum > 0 then

@@ -507,20 +507,27 @@ local function startBannerTurn()
 end
 
 local function postSystemChat(text: string, meta)
+	local isSecret = meta and meta.Rarity == "Secreto"
 	local isLeg = meta and meta.Rarity == "Lendario"
 	local isShiny = meta and meta.Variant == "Brilhante"
 	local richMsg
 	if meta and meta.PlayerName and meta.CharacterName then
-		local tagColor = if isShiny then "#73F5FF" else "#FFD84A"
-		local tagText = if isLeg and isShiny then "[LEND\u{c1}RIO BRILHANTE]" elseif isLeg then "[LEND\u{c1}RIO]" else "[BRILHANTE]"
+		local tagColor = if isSecret then "#FF4D6D" elseif isShiny then "#73F5FF" else "#FFD84A"
+		local tagText = if isSecret and isShiny
+			then "[SECRETO BRILHANTE]"
+			elseif isSecret then "[SECRETO]"
+			elseif isLeg and isShiny then "[LEND\u{c1}RIO BRILHANTE]"
+			elseif isLeg then "[LEND\u{c1}RIO]"
+			else "[BRILHANTE]"
+		local nameCol = if isSecret then "#FF5E7A" else "#FFB41F"
 		local pName = escapeRich(meta.PlayerName)
 		local cName = escapeRich(meta.CharacterName)
 		local verb = escapeRich(meta.Verb or "conseguiu")
 		local place = if meta.Place and #meta.Place > 0 then (" " .. escapeRich(meta.Place)) else ""
 		local shinyTxt = if isShiny then " Brilhante" else ""
 		richMsg = string.format(
-			'<font color="%s"><b>%s</b></font> <font color="#FFFFFF"><b>%s</b></font> <font color="#FFE79A">%s</font> <font color="#FFB41F"><b>%s%s</b></font><font color="#FFE79A">%s!</font>',
-			tagColor, tagText, pName, verb, cName, shinyTxt, place
+			'<font color="%s"><b>%s</b></font> <font color="#FFFFFF"><b>%s</b></font> <font color="#FFE79A">%s</font> <font color="%s"><b>%s%s</b></font><font color="#FFE79A">%s!</font>',
+			tagColor, tagText, pName, verb, nameCol, cName, shinyTxt, place
 		)
 	else
 		richMsg = '<font color="#FFD84A">' .. escapeRich(text) .. "</font>"
@@ -539,7 +546,7 @@ local function postSystemChat(text: string, meta)
 		pcall(function()
 			StarterGui:SetCore("ChatMakeSystemMessage", {
 				Text = text,
-				Color = if isShiny then Color3.fromRGB(115, 245, 255) else Color3.fromRGB(255, 216, 74),
+				Color = if isSecret then Color3.fromRGB(255, 77, 109) elseif isShiny then Color3.fromRGB(115, 245, 255) else Color3.fromRGB(255, 216, 74),
 			})
 		end)
 	end
@@ -554,15 +561,27 @@ local function drainAnnounceQueue()
 		while #announceQueue > 0 do
 			local item = table.remove(announceQueue, 1)
 			local text, meta = item.Text, item.Meta
+			local isSecret = meta and meta.Rarity == "Secreto"
 			local isLeg = meta and meta.Rarity == "Lendario"
 			local isShiny = meta and meta.Variant == "Brilhante"
 
 			local stroke = bannerFace:FindFirstChildOfClass("UIStroke")
 			if stroke then
-				stroke.Color = if isShiny then Color3.fromRGB(115, 245, 255) else T.Palette.lendario
+				stroke.Color = if isSecret
+					then Color3.fromRGB(235, 42, 74)
+					elseif isShiny then Color3.fromRGB(115, 245, 255)
+					else T.Palette.lendario
 			end
 
-			if isLeg and isShiny then
+			if isSecret and isShiny then
+				UI.setIcon(bannerTagIcon, "sparkle")
+				bannerTagLabel.Text = "SECRETO BRILHANTE NO SERVIDOR"
+				bannerTagLabel.TextColor3 = Color3.fromRGB(255, 92, 122)
+			elseif isSecret then
+				UI.setIcon(bannerTagIcon, "sparkle")
+				bannerTagLabel.Text = "SECRETO NO SERVIDOR"
+				bannerTagLabel.TextColor3 = Color3.fromRGB(240, 240, 248)
+			elseif isLeg and isShiny then
 				UI.setIcon(bannerTagIcon, "sparkle")
 				bannerTagLabel.Text = "LEND\u{c1}RIO BRILHANTE NO SERVIDOR"
 				bannerTagLabel.TextColor3 = Color3.fromRGB(115, 245, 255)

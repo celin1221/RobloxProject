@@ -74,6 +74,15 @@ DEV_META: dict[str, dict[str, str]] = {
         "Shiny": "Sim (Tex Platina)",
         "Notes": "2 golpes exclusivos (Atração, Tudo Roxo com Cut-In) + 2 base",
     },
+    "Sukuna": {
+        "Stage": "Concluído (100%)",
+        "HasModel": "Sim",
+        "Rig": "R6-on-R15 (Auto-Tripo + Aura Partículas Puras)",
+        "Anim": "Sim (CombatAnimator 60 FPS + 4 golpes)",
+        "VfxCutIn": "Sim / Sim (3 Cut-Ins)",
+        "Shiny": "Sim (Paleta + Aura)",
+        "Notes": "Raridade SECRETO (0,001% em qualquer banner Nv. 15+); BST 162 (> Lendários); Fortificação, Desmantelar, Clivar e Santuário Malevolente (Nv. 50)",
+    },
     "San": {
         "Stage": "Concluído (100%)",
         "HasModel": "Sim",
@@ -286,8 +295,9 @@ RARITY_DISPLAY = {
     "Raro": "Raro",
     "Epico": "Épico",
     "Lendario": "Lendário",
+    "Secreto": "Secreto",
 }
-RARITY_ORDER = {"Comum": 1, "Raro": 2, "Epico": 3, "Lendario": 4}
+RARITY_ORDER = {"Comum": 1, "Raro": 2, "Epico": 3, "Lendario": 4, "Secreto": 5}
 TARGET_DISPLAY = {
     "Single": "1 Alvo",
     "AllEnemies": "Todos Inimigos",
@@ -810,6 +820,8 @@ def build_workbook(
     GOLD = PatternFill("solid", fgColor="FEF3C7")
     GRAY = PatternFill("solid", fgColor="E2E8F0")
     TEAL = PatternFill("solid", fgColor="CCFBF1")
+    BLACK = PatternFill("solid", fgColor="14141C")
+    WHITE_BOLD_FONT = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
 
     STAGE_FILL = {
         "Concluído (100%)": GREEN,
@@ -823,6 +835,7 @@ def build_workbook(
         "Raro": BLUE,
         "Épico": PURPLE,
         "Lendário": GOLD,
+        "Secreto": BLACK,
     }
     CLASS_FILL = {
         "Espadachim": RED,
@@ -978,6 +991,8 @@ def build_workbook(
             ws.cell(r_idx, 4).fill = STAGE_FILL[stage]
         if rarity_name in RARITY_FILL:
             ws.cell(r_idx, 5).fill = RARITY_FILL[rarity_name]
+            if rarity_name == "Secreto":
+                ws.cell(r_idx, 5).font = WHITE_BOLD_FONT
         if ch["Class"] in CLASS_FILL:
             ws.cell(r_idx, 6).fill = CLASS_FILL[ch["Class"]]
         if ch["Starter"]:
@@ -1498,7 +1513,7 @@ def build_workbook(
         next_row,
         "POR RARIDADE (Elenco Ativo)",
         "Raridade",
-        ["Comum", "Raro", "Épico", "Lendário"],
+        ["Comum", "Raro", "Épico", "Lendário", "Secreto"],
         p_rar,
         exclude_test=True,
     )

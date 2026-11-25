@@ -25,7 +25,7 @@ local T = UI.Theme
 local canvas = UI.screen(gui)
 gui.DisplayOrder = 9
 
-local RARITY_COLOR = { Comum = "comum", Raro = "raro", Epico = "epico", Lendario = "lendario" }
+local RARITY_COLOR = { Comum = "comum", Raro = "raro", Epico = "epico", Lendario = "lendario", Secreto = "secreto" }
 local ITEM_ICON = { Pocao = "potion", Superpocao = "potion", CuraStatus = "heal", SeloContrato = "seal_basic", SeloSuperior = "seal_superior", Eter = "potion", Ore = "ore", DoceComum = "doce_comum", DoceRaro = "doce_raro", DoceEpico = "doce_epico" }
 
 local function pct(x: number): string

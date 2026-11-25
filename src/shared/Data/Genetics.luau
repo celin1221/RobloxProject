@@ -62,6 +62,7 @@ Genetics.RarityCurves = {
 	Raro = { A = 1.70, B = 1.65, PerfectAllChance = 0.00012, ExpectedAvg = 53 },
 	Epico = { A = 2.35, B = 1.35, PerfectAllChance = 0.00025, ExpectedAvg = 65 },
 	Lendario = { A = 3.15, B = 1.15, PerfectAllChance = 0.00050, ExpectedAvg = 74 },
+	Secreto = { A = 3.55, B = 1.05, PerfectAllChance = 0.00100, ExpectedAvg = 77 },
 }
 
 local function clampStat(v: number?): number

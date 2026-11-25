@@ -22,8 +22,8 @@ local TeamCards = require(ReplicatedStorage:WaitForChild("TeamCards"))
 local RadarChart = require(ReplicatedStorage:WaitForChild("RadarChart"))
 local T = UI.Theme
 
-local RARITY_NAME = { Comum = "Comum", Raro = "Raro", Epico = "\u{c9}pico", Lendario = "Lend\u{e1}rio" }
-local RARITY_COLOR = { Comum = "comum", Raro = "raro", Epico = "epico", Lendario = "lendario" }
+local RARITY_NAME = { Comum = "Comum", Raro = "Raro", Epico = "\u{c9}pico", Lendario = "Lend\u{e1}rio", Secreto = "Secreto" }
+local RARITY_COLOR = { Comum = "comum", Raro = "raro", Epico = "epico", Lendario = "lendario", Secreto = "secreto" }
 
 local profile = nil
 local currentUid = nil

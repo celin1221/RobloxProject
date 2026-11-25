@@ -44,7 +44,12 @@ local profile = nil
 local busy = false
 
 local function pct(x)
-	local s = string.format("%.1f", x * 100):gsub("%.0$", "")
+	local p = x * 100
+	if p > 0 and p < 0.05 then
+		local s = string.format("%.3f", p):gsub("0+$", ""):gsub("%.$", "")
+		return s .. "%"
+	end
+	local s = string.format("%.1f", p):gsub("%.0$", "")
 	return s .. "%"
 end
 
@@ -658,20 +663,24 @@ UI.text(rightRail, "CHANCES", {
 	ZIndex = 26,
 })
 local rateRows = {}
+local rateCount = #Summon.RarityOrder
+local rowStep = if rateCount >= 5 then 0.114 else 0.142
+local rowHeight = if rateCount >= 5 then 0.104 else 0.125
+local rowStartY = if rateCount >= 5 then 0.118 else 0.125
 for i, r in ipairs(Summon.RarityOrder) do
 	local row, rface = UI.panel(rightRail, {
 		Name = "Rate_" .. r,
-		Size = UDim2.fromScale(0.90, 0.125),
-		Position = UDim2.fromScale(0.05, 0.125 + (i - 1) * 0.142),
+		Size = UDim2.fromScale(0.90, rowHeight),
+		Position = UDim2.fromScale(0.05, rowStartY + (i - 1) * rowStep),
 		Color = rarityColor(r),
 		Corner = T.Corner.Pill,
 		Shadow = false,
 		ZIndex = 26,
 	})
-	local nameLbl = UI.text(rface, UI.upper(Summon.RarityName[r]), { Name = "Name", Size = UDim2.fromScale(0.50, 0.78), Position = UDim2.fromScale(0.06, 0.11), Role = "Small", AlignX = Enum.TextXAlignment.Left, ZIndex = 27 })
-	local valLbl = UI.text(rface, "", { Name = "Value", Size = UDim2.fromScale(0.36, 0.78), Position = UDim2.fromScale(0.94, 0.11), AnchorPoint = Vector2.new(1, 0), Role = "Small", AlignX = Enum.TextXAlignment.Right, ZIndex = 27 })
-	if r == "Lendario" then
-		UI.shine(row)
+	local nameLbl = UI.text(rface, UI.upper(Summon.RarityName[r]), { Name = "Name", Size = UDim2.fromScale(0.48, 0.78), Position = UDim2.fromScale(0.06, 0.11), Role = "Small", AlignX = Enum.TextXAlignment.Left, ZIndex = 27 })
+	local valLbl = UI.text(rface, "", { Name = "Value", Size = UDim2.fromScale(0.42, 0.78), Position = UDim2.fromScale(0.94, 0.11), AnchorPoint = Vector2.new(1, 0), Role = "Small", AlignX = Enum.TextXAlignment.Right, ZIndex = 27 })
+	if r == "Lendario" or r == "Secreto" then
+		UI.shine(row, if r == "Secreto" then Color3.fromRGB(230, 232, 245) else nil)
 	end
 	rateRows[r] = { Name = nameLbl, Value = valLbl }
 end
@@ -1081,12 +1090,22 @@ refreshMain = function()
 	UI.countTo(hudWalletLabel, amount)
 
 	-- Chances
-	local ratesNow = Summon.RatesFor(PORTAL, profile.Benefits)
+	local accLevel = (profile.Account and profile.Account.Level) or 1
+	local ratesNow = Summon.RatesFor(PORTAL, profile.Benefits, accLevel)
 	local lucky = PORTAL == "Comum" and Benefits.Has(profile, "SorteEmDobro")
 	for _, r in ipairs(Summon.RarityOrder) do
-		local text = pct(ratesNow[r] or 0)
-		if lucky and (r == "Epico" or r == "Lendario") then
-			text ..= " x2"
+		local text
+		if r == "Secreto" then
+			if accLevel >= (Summon.SecretMinAccountLevel or 15) then
+				text = pct(ratesNow.Secreto or Summon.SecretChance or 0.00001)
+			else
+				text = "Nv." .. tostring(Summon.SecretMinAccountLevel or 15) .. "+"
+			end
+		else
+			text = pct(ratesNow[r] or 0)
+			if lucky and (r == "Epico" or r == "Lendario") then
+				text ..= " x2"
+			end
 		end
 		rateRows[r].Value.Text = text
 	end
@@ -1457,6 +1476,7 @@ local function playShowcase(results)
 		return
 	end
 	local rCol = rarityColor(hero.Rarity)
+	local fxCol = if hero.Rarity == "Secreto" then Color3.fromRGB(228, 32, 62) else rCol
 	local shiny = hero.Variant ~= nil
 	local tierIdx = table.find(Summon.RarityOrder, hero.Rarity) or 1
 
@@ -1466,10 +1486,10 @@ local function playShowcase(results)
 	showFlash.BackgroundTransparency = 1
 	showBurstBg.ImageTransparency = 1
 	showBurstBg.Rotation = 0
-	showBurstBg.ImageColor3 = if shiny then Color3.fromRGB(255, 240, 140) else rCol
+	showBurstBg.ImageColor3 = if shiny then Color3.fromRGB(255, 240, 140) else fxCol
 	showRing.Visible = false
 	orbCore.Visible = true
-	orbCore.BackgroundColor3 = rCol
+	orbCore.BackgroundColor3 = fxCol
 	orbScale.Scale = 0.1
 	heroHolder.Visible = true
 	heroScale.Scale = 0.01
@@ -1517,13 +1537,13 @@ local function playShowcase(results)
 			playControlledSfx("summon_epic")
 		end
 
-		showFlash.BackgroundColor3 = if shiny then Color3.fromRGB(255, 250, 200) else rCol:Lerp(Color3.new(1, 1, 1), 0.45)
+		showFlash.BackgroundColor3 = if shiny then Color3.fromRGB(255, 250, 200) else fxCol:Lerp(Color3.new(1, 1, 1), 0.45)
 		showFlash.BackgroundTransparency = 0.22
 		TweenService:Create(showFlash, TweenInfo.new(0.36, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
 
 		showRing.Visible = true
 		showRing.Size = UDim2.fromScale(0.2, 0.2)
-		showRingStroke.Color = rCol
+		showRingStroke.Color = fxCol
 		showRingStroke.Transparency = 0
 		TweenService:Create(showRing, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.fromScale(0.9, 0.9) }):Play()
 		TweenService:Create(showRingStroke, TweenInfo.new(0.6), { Transparency = 1 }):Play()
@@ -1536,7 +1556,7 @@ local function playShowcase(results)
 		end)
 		heroScale.Scale = 0.14
 		TweenService:Create(heroScale, TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-		spawnUiSparkles(rCol, if tierIdx >= 3 or shiny then 16 else 10)
+		spawnUiSparkles(fxCol, if tierIdx >= 3 or shiny then 16 else 10)
 
 		UI.paint(rarityBanner, hero.Rarity:lower())
 		UI.setIcon(rarityIconL, if shiny then "sparkle" else "star")
@@ -1662,7 +1682,7 @@ local function showCards(results)
 	grid.CellSize = if #results <= 3 then UDim2.fromScale(0.26, 0.92) else UDim2.fromScale(0.18, 0.45)
 	reveal.Open()
 	for i, r in ipairs(results) do
-		local rare = r.Rarity == "Epico" or r.Rarity == "Lendario" or r.Variant ~= nil
+		local rare = r.Rarity == "Epico" or r.Rarity == "Lendario" or r.Rarity == "Secreto" or r.Variant ~= nil
 		local card, face = UI.panel(cardsBox, { Name = "Card" .. i, Color = rarityColor(r.Rarity), Corner = T.Corner.Card, LayoutOrder = i, Visible = false })
 		if r.Variant then
 			UI.stroke(face, Color3.fromRGB(255, 245, 170), 1.4)

@@ -811,6 +811,66 @@ Moves.List = {
 		Timing = { Charge = 0.26, Release = 0.92, Impact = 1.48, Length = 2.15 },
 	},
 
+	-- Sukuna (Jujutsu Kaisen, Mago, Secreto — Rei das Maldicoes)
+	Fortificacao = {
+		Name = "Fortifica\u{e7}\u{e3}o", Type = "Mago", Category = "Status", Accuracy = nil, PP = 15,
+		Target = "Self",
+		Effect = {
+			Kind = "MultiStat",
+			Changes = {
+				{ Stat = "Attack", Stages = 1 },
+				{ Stat = "Defense", Stages = 1 },
+			},
+			Target = "Self",
+		},
+		Anim = "SukunaFortificacao", Vfx = "SukunaFortificacao",
+		Timing = { Charge = 0.16, Release = 0.56, Impact = 0.72, Length = 1.28 },
+	},
+	Desmantelar = {
+		Name = "Desmantelar", Type = "Mago", Category = "Damage", Power = 58, Accuracy = 100, PP = 20,
+		CritChance = 0.18,
+		CutIn = true, CutInFocusY = 1.65, CutInFov = 44, Anim = "SukunaDesmantelar", Vfx = "SukunaDesmantelar",
+		CutInColors = {
+			Bg = Color3.fromRGB(14, 10, 16),
+			Grad1 = Color3.fromRGB(196, 20, 46),
+			Grad2 = Color3.fromRGB(26, 8, 16),
+			Stroke = Color3.fromRGB(255, 198, 210),
+			Text = Color3.fromRGB(255, 246, 248),
+			TextStroke = Color3.fromRGB(14, 6, 12),
+		},
+		Timing = { Charge = 0.18, Release = 0.56, Impact = 0.92, Length = 1.44 },
+	},
+	Clivar = {
+		Name = "Clivar", Type = "Mago", Category = "Damage", Power = 68, Accuracy = 95, PP = 15,
+		BreaksProtect = true,
+		Effect = { Kind = "StatStage", Stat = "Defense", Stages = -1, Chance = 45, Target = "Target" },
+		CutIn = true, CutInFocusY = 1.65, CutInFov = 44, Anim = "SukunaClivar", Vfx = "SukunaClivar",
+		CutInColors = {
+			Bg = Color3.fromRGB(18, 6, 12),
+			Grad1 = Color3.fromRGB(232, 26, 54),
+			Grad2 = Color3.fromRGB(38, 6, 16),
+			Stroke = Color3.fromRGB(255, 224, 230),
+			Text = Color3.fromRGB(255, 246, 248),
+			TextStroke = Color3.fromRGB(18, 4, 10),
+		},
+		Timing = { Charge = 0.22, Release = 0.64, Impact = 1.06, Length = 1.62 },
+	},
+	SantuarioMalevolente = {
+		Name = "Santu\u{e1}rio Malevolente", Type = "Mago", Category = "Damage", Power = 82, Accuracy = 95, PP = 10,
+		Target = "AllEnemies", BreaksProtect = true,
+		Signature = true, CutIn = true, Anim = "SukunaSantuario", Vfx = "SukunaSantuario",
+		CutInFocusY = 1.85, CutInFov = 45, CutInBannerY = 0.16,
+		CutInColors = {
+			Bg = Color3.fromRGB(8, 6, 10),
+			Grad1 = Color3.fromRGB(218, 18, 44),
+			Grad2 = Color3.fromRGB(18, 4, 10),
+			Stroke = Color3.fromRGB(255, 118, 142),
+			Text = Color3.fromRGB(255, 244, 246),
+			TextStroke = Color3.fromRGB(8, 4, 8),
+		},
+		Timing = { Charge = 0.28, Release = 1.08, Impact = 1.62, Length = 2.30 },
+	},
+
 	-- Golpe reserva usado so quando todos os golpes estao sem PP
 	Esforco = {
 		Name = "Esfor\u{e7}o", Type = "Universal", Category = "Damage", Power = 30, Accuracy = 100, PP = 0, Hidden = true,
@@ -1005,6 +1065,10 @@ local SPECIAL_DESCRIPTIONS = {
 	KatonDragaoDeFogo = "Exala um drag\u{e3}o de chamas intensas com 35% de chance de causar Queimadura no alvo (Especial Elemental com Cut-In).",
 	SuitonDragaoDeAgua = "Invoca uma torrente espiral de \u{e1}gua que varre todos os inimigos em campo (Especial Elemental com Cut-In).",
 	FutonTempestadeCeleste = "Libera um ciclone cortante de ventos celestes que devasta todos os inimigos (Assinatura Elemental).",
+	Fortificacao = "Condensa energia amaldi\u{e7}oada ao redor do corpo, aumentando Ataque (+50%) e Defesa (+50%) do Rei das Maldi\u{e7}\u{f5}es.",
+	Desmantelar = "Dispara cortes invis\u{ed}veis de energia amaldi\u{e7}oada em alta velocidade com 18% de chance cr\u{ed}tica (Especial com Cut-In).",
+	Clivar = "Retalha o alvo de perto rompendo Proteger/Guarda Ampla com 45% de chance de reduzir a Defesa (-1) (Especial com Cut-In).",
+	SantuarioMalevolente = "Expans\u{e3}o de Dom\u{ed}nio suprema: chuva implac\u{e1}vel de cortes que rompe prote\u{e7}\u{f5}es e devasta todos os inimigos (Assinatura Secreta).",
 }
 
 function Moves.TargetDisplay(move): string
