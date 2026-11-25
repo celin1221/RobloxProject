@@ -110,6 +110,9 @@ return {
 	SETERO = { Character = "Setero", Level = 10, Repeatable = true },
 	GOJO = { Character = "Setero", Level = 10, Repeatable = true },
 	DEVSETERO = { Character = "Setero", Level = 10, Repeatable = true },
+	SETERO50 = { Character = "Setero", Level = 50, Repeatable = true },
+	GOJO50 = { Character = "Setero", Level = 50, Repeatable = true },
+	DEVSETERO50 = { Character = "Setero", Level = 50, Repeatable = true },
 
 	KAEN = { Character = "Kaen", Level = 10, Repeatable = true },
 	DEVKAEN = { Character = "Kaen", Level = 10, Repeatable = true },

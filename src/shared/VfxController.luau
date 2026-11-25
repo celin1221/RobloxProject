@@ -900,125 +900,49 @@ HANDLERS.Atracao = {
 	Duration = 1.5,
 }
 
--- Tudo Roxo (Setero, Lendario assinatura): Azul (mao esq) + Vermelho (mao dir) se fundem e disparam Vazio Roxo
+-- Tudo Roxo / Vazio Roxo (Setero - Gojo Satoru, Lendario assinatura):
+-- Delegado ao motor AAA de 5 fases ReplicatedStorage/HollowPurple/HollowPurpleVFX
 HANDLERS.TudoRoxo = {
 	Charge = function(ctx)
 		local fx = ctx.fx
-		playSfx(fx.Origin, "ChargeSfx")
-		local t0 = os.clock()
-		local dur = math.max(0.4, (ctx.timing.Release or 0.95) - (ctx.timing.Charge or 0.25))
-		fx.BlueOrb.Size = Vector3.new(0.25, 0.25, 0.25)
-		fx.BlueShell.Size = Vector3.new(0.45, 0.45, 0.45)
-		fx.RedOrb.Size = Vector3.new(0.25, 0.25, 0.25)
-		fx.RedShell.Size = Vector3.new(0.45, 0.45, 0.45)
-		fx.BlueOrb.Transparency = 0.05
-		fx.BlueShell.Transparency = 0.3
-		fx.RedOrb.Transparency = 0.05
-		fx.RedShell.Transparency = 0.3
-		tween(fx.BlueOrb, 0.35, { Size = Vector3.new(0.95, 0.95, 0.95) }, Enum.EasingStyle.Back)
-		tween(fx.BlueShell, 0.35, { Size = Vector3.new(1.5, 1.5, 1.5) }, Enum.EasingStyle.Back)
-		tween(fx.RedOrb, 0.35, { Size = Vector3.new(0.95, 0.95, 0.95) }, Enum.EasingStyle.Back)
-		tween(fx.RedShell, 0.35, { Size = Vector3.new(1.5, 1.5, 1.5) }, Enum.EasingStyle.Back)
-		emit(fx.BlueOrb, "GatherBlue", 18)
-		emit(fx.RedOrb, "GatherRed", 18)
-		tween(fx.Origin:FindFirstChild("ChargeLight"), 0.55, { Brightness = 6 })
-
-		ctx.follow = RunService.RenderStepped:Connect(function()
-			if not ctx.alive or not alive(ctx.attacker) then
-				return
+		-- Esconde as pecas antigas do pool legado e usa 100% o novo sistema HollowPurpleVFX de 5 fases!
+		for _, d in ipairs(fx:GetDescendants()) do
+			if d:IsA("BasePart") then
+				d.Transparency = 1
+			elseif d:IsA("Beam") or d:IsA("Trail") or d:IsA("ParticleEmitter") then
+				d.Enabled = false
+			elseif d:IsA("Decal") then
+				d.Transparency = 1
 			end
-			local a = math.clamp((os.clock() - t0) / dur, 0, 1)
-			local root = rootOf(ctx.attacker)
-			local meet = root.CFrame:PointToWorldSpace(Vector3.new(0, 0.5, -2.6))
-			local lPos = leftHandPos(ctx.attacker)
-			local rPos = handPos(ctx.attacker)
-			local merge = math.clamp((a - 0.35) / 0.65, 0, 1)
-			merge = merge * merge
-			local orbL = lPos:Lerp(meet, merge)
-			local orbR = rPos:Lerp(meet, merge)
-			fx.Origin.CFrame = CFrame.new(meet)
-			fx.BlueOrb.Position = orbL
-			fx.BlueShell.Position = orbL
-			fx.RedOrb.Position = orbR
-			fx.RedShell.Position = orbR
-		end)
+		end
+		playSfx(fx.Origin, "ChargeSfx")
+
+		local hpFolder = ReplicatedStorage:FindFirstChild("HollowPurple")
+		local hpModule = hpFolder and hpFolder:FindFirstChild("HollowPurpleVFX")
+		if hpModule and hpModule:IsA("ModuleScript") then
+			local ok, hpVfx = pcall(require, hpModule)
+			if ok and hpVfx and typeof(hpVfx.PlayBattleUltimate) == "function" then
+				ctx.hpHandle = hpVfx.PlayBattleUltimate(
+					ctx.attacker,
+					ctx.target,
+					ctx.targets,
+					(ctx.timing and ctx.timing.Impact) or 2.15
+				)
+			end
+		end
 	end,
 	Release = function(ctx)
 		local fx = ctx.fx
-		if ctx.follow then
-			ctx.follow:Disconnect()
-			ctx.follow = nil
-		end
-		fx.BlueOrb.Transparency = 1
-		fx.BlueShell.Transparency = 1
-		fx.RedOrb.Transparency = 1
-		fx.RedShell.Transparency = 1
-
-		local root = rootOf(ctx.attacker)
-		local startPos = root.CFrame:PointToWorldSpace(Vector3.new(0, 0.5, -2.6))
-		local endPos = targetCenter(ctx.target)
-		fx.Origin.CFrame = CFrame.lookAt(startPos, endPos)
-		fx.VoidOrb.CFrame = fx.Origin.CFrame
-		fx.VoidShell.CFrame = fx.Origin.CFrame
-		fx.VoidOrb.Size = Vector3.new(0.6, 0.6, 0.6)
-		fx.VoidOrb.Transparency = 0.02
-		fx.VoidShell.Size = Vector3.new(1.0, 1.0, 1.0)
-		fx.VoidShell.Transparency = 0.25
-		tween(fx.VoidOrb, 0.14, { Size = Vector3.new(2.0, 2.0, 2.0) }, Enum.EasingStyle.Back)
-		tween(fx.VoidShell, 0.14, { Size = Vector3.new(3.2, 3.2, 3.2) }, Enum.EasingStyle.Back)
-		setDisc(fx.VoidRing1, fx.Origin.CFrame * CFrame.Angles(0.4, 0, 0.5), 4.2, 0.1)
-		setDisc(fx.VoidRing2, fx.Origin.CFrame * CFrame.Angles(-0.5, 0.4, -0.4), 3.4, 0.15)
-		emit(fx.VoidOrb, "FuseFlash", 6)
-		emit(fx.VoidOrb, "VoidSparks", 22)
-		fx.VoidOrb.VoidTrail.Enabled = true
-		fx.Origin.VoidBeam.Enabled = true
 		playSfx(fx.Origin, "ReleaseSfx")
-		tween(fx.Origin:FindFirstChild("ChargeLight"), 0.25, { Brightness = 0 })
-
-		local travel = math.max(0.22, (ctx.timing.Impact or 1.45) - (ctx.timing.Release or 0.95) - 0.02)
-		local t0 = os.clock()
-		ctx.follow = RunService.RenderStepped:Connect(function()
-			local a = math.clamp((os.clock() - t0) / travel, 0, 1)
-			local eased = a * a * a
-			local pos = startPos:Lerp(endPos, eased)
-			fx.VoidOrb.Position = pos
-			fx.VoidShell.Position = pos
-			fx.VoidRing1.CFrame = CFrame.new(pos) * CFrame.Angles(0.4 + a * 6, a * 8, 0.5)
-			fx.VoidRing2.CFrame = CFrame.new(pos) * CFrame.Angles(-0.5, -a * 9, -0.4 + a * 5)
-			if a >= 1 and ctx.follow then
-				ctx.follow:Disconnect()
-				ctx.follow = nil
-			end
-		end)
 	end,
 	Impact = function(ctx)
 		local fx = ctx.fx
-		if ctx.follow then
-			ctx.follow:Disconnect()
-			ctx.follow = nil
-		end
 		local hitPos = targetCenter(ctx.target)
-		fx.VoidOrb.VoidTrail.Enabled = false
-		fx.Origin.VoidBeam.Enabled = false
-		tween(fx.VoidOrb, 0.12, { Size = Vector3.new(4.2, 4.2, 4.2), Transparency = 1 })
-		tween(fx.VoidShell, 0.14, { Size = Vector3.new(6.0, 6.0, 6.0), Transparency = 1 })
-		tweenDisc(fx.VoidRing1, 0.14, 7.0, 1)
-		tweenDisc(fx.VoidRing2, 0.14, 6.0, 1)
-
 		fx.Hit.CFrame = CFrame.new(hitPos)
+		CombatAnimator.Hitstop(ctx.attacker, 0.065)
 		playSfx(fx.Hit, "ImpactSfx")
-		impactFrame(0.06, 0.26)
-		emit(fx.Hit, "FlashStar", 8)
-		emit(fx.Hit, "VoidSmoke", 38)
-		emit(fx.Hit, "DebrisSparks", 42)
-		setDisc(fx.ShockRing1, CFrame.new(hitPos) * CFrame.Angles(0.3, 0, -0.25), 2.4, 0.05)
-		setDisc(fx.ShockRing2, CFrame.new(hitPos) * CFrame.Angles(-0.35, 0.4, 0.35), 2.0, 0.08)
-		tweenDisc(fx.ShockRing1, 0.42, 13.5, 1)
-		tweenDisc(fx.ShockRing2, 0.48, 11.5, 1)
-		pulseLight(fx.Hit:FindFirstChild("HitLight"), 12, 24)
-		shake(0.24, 0.55)
 	end,
-	Duration = 2.0,
+	Duration = 2.95,
 }
 
 -- Kamehameha (San, Luz especial): carga de Ki entre as duas maos no quadril -> disparo de canhao de plasma azul-celeste

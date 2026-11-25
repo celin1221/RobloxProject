@@ -633,10 +633,16 @@ Moves.List = {
 		Timing = { Charge = 0.20, Release = 0.55, Impact = 0.90, Length = 1.25 },
 	},
 	TudoRoxo = {
-		Name = "Tudo Roxo", Type = "Mago", Category = "Damage", Power = 65, Accuracy = 95, PP = 10,
+		Name = "Vazio Roxo", Type = "Mago", Category = "Damage", Power = 65, Accuracy = 95, PP = 10,
 		Target = "AllEnemies",
 		Signature = true, CutIn = true, Anim = "TudoRoxo", Vfx = "TudoRoxo",
-		Timing = { Charge = 0.25, Release = 0.95, Impact = 1.45, Length = 2.00 },
+		CutInColors = {
+			Bg = Color3.fromRGB(16, 4, 36),
+			Grad1 = Color3.fromRGB(145, 25, 255),
+			Grad2 = Color3.fromRGB(28, 6, 58),
+			Stroke = Color3.fromRGB(235, 190, 255),
+		},
+		Timing = { Charge = 0.10, Release = 1.65, Impact = 2.15, Length = 2.80 },
 	},
 
 	-- San (Lutador, Lendario)

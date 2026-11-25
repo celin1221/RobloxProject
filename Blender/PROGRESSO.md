@@ -1402,3 +1402,28 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - `python scripts/sync_studio.py status` (`100% in sync` nos 97 scripts) e `python scripts/sync_studio.py test` (`PASS`).
 - Validado ao vivo no Play Mode (com backup e restauração limpa do perfil): abertura remota do `AwakeningGui` pelo servidor, 5 linhas de requisitos, despertar real de `Luffy` (`Vontade de D`, `-10.000 Gold`, `-8/-5/-2` materiais, rejeição de despertar duplicado) e `Ichigo` (`Despertar Hollow`), `PartyFollower` exibindo `AwakenedAuraAttachment` no `UpperTorso` com 2 `ParticleEmitter`s puros (`0` decals/discos) e **`0` erros/avisos no Console**.
 - Place salvo no Roblox Studio na **versão 340** (`TeamCreate`).
+
+
+## Sistema Completo de VFX AAA — "Vazio Roxo" (`HollowPurple` — `Setero` / Gojo Satoru) (25/11/2026)
+
+**Feito**
+- **1. Arquitetura Modular Completa de 9 Scripts em `--!strict` (`src/shared/HollowPurple/*`, `HollowPurpleServer`, `HollowPurpleClient`):**
+  - `ReplicatedStorage/HollowPurple/Config.luau`: tempos exatos das 5 fases, cores RGB, escalas, velocidade (`140 studs/s`), alcance (`350 studs`), hitbox, tecla `R`, culling e tabela opcional `Config.Assets` (`""` com fallbacks procedurais nativos — zero assets quebrados).
+  - `ReplicatedStorage/HollowPurple/Janitor.luau`: gerenciamento de instâncias, conexões, tweens, threads (`task.delay`/`task.spawn`) e callbacks com limpeza reversa garantida.
+  - `ReplicatedStorage/HollowPurple/LightningModule.luau`: raios 3D jagged via *midpoint displacement* recursivo com núcleo branco + casca `Neon`, ramificações e fade-out suave.
+  - `ReplicatedStorage/HollowPurple/DebrisModule.luau`: amostragem de cor e material reais do piso/terreno via `Raycast`, pedras de sucção (Fase 1), anel levitante de 20 pedras arremessado no disparo (Fases 3–4), *Ground Carving* contínuo com fissuras violetas ardentes de `3s` + fumaça/pedras laterais (Fase 4) e cratera radial gigante (Fase 5).
+  - `ReplicatedStorage/HollowPurple/CameraEffects.luau`: shake com `Trauma^2` + Perlin Noise (`math.noise`), recuo direcional em mola amortecida, `FOV Punch` suave, atenuação por distância e restauração segura de `Camera.FieldOfView` multi-sessão.
+  - `ReplicatedStorage/HollowPurple/LightingEffects.luau`: Impact Frame mangá P&B/invertido (`0.07s`, `Saturation = -1`, `Contrast = 2.8`, `Bloom = 3.5`) + flash violeta (`0.08s`), mini Impact Frame na detonação e restauração exata do `Lighting` por contagem de sessões.
+  - `ReplicatedStorage/HollowPurple/HollowPurpleVFX.luau`: coreografia completa das **5 Fases** (`0.00s–9.00s`: Lapso Azul à esquerda → Reversão Vermelho à direita → Órbita Espiral + Impact Frame + Esfera Vazio Roxo de 5 camadas → Disparo com anéis de Mach, tripla hélice e rasgo no chão → Implosão + Cataclismo Roxo com Pilar Celestial, cratera e brasas), além de poses procedurais estilo Gojo e modo compacto para batalhas por turnos (`PlayBattleUltimate`).
+  - `ServerScriptService/HollowPurpleServer.server.luau` & `StarterPlayerScripts/HollowPurpleClient.client.luau`: input `R` (ignorando chat e `BattleGui`), validação de cooldown no servidor, sincronização autoritativa `StartCast` / `LaunchSync` / `HitTarget`, hitbox segura `Spherecast` + `GetPartBoundsInRadius` (zero `.Touched`), knockback `LinearVelocity`, proteção total a seguidores/bases/arenas do RPG e Dummy de teste automático no Studio (`Workspace.HollowPurpleDummy`).
+- **2. Integração Direta com `Setero` (`TudoRoxo` / *Vazio Roxo*) + Planilhas e Testes:**
+  - Ultimate Nv. 50 `TudoRoxo` (*Vazio Roxo*) do `Setero` atualizada em `Moves.luau`, `CombatAnimator.luau` (`TudoRoxo`) e `VfxController.luau` (`HANDLERS.TudoRoxo` delegando para `HollowPurpleVFX.PlayBattleUltimate`), mais códigos dev `SETERO50` / `GOJO50` / `DEVSETERO50` em `Codes.luau`.
+  - Planilhas `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` regeneradas e **Test 14** adicionado em `scripts/sync_studio.py`.
+
+**Testado (Play Mode ao vivo + Stress Test 50x + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos **106 scripts**) e `python scripts/sync_studio.py test` (`PASS`).
+- Validado ao vivo no Play Mode:
+  - Fluxo completo em tempo real (`CastRequest` → 5 Fases): pico de `500` instâncias procedurais na singularidade, dano real + knockback de `45.4 studs` no `HollowPurpleDummy` e limpeza final **`0` instâncias em `workspace.HollowPurpleVFX`**.
+  - Ultimate `TudoRoxo` do `Setero` executada com sucesso (`ok = true`, `0` sobras).
+  - **Stress test de 50 disparos consecutivos/sobrepostos:** `Children = 0`, `Desc = 0`, `Lighting` 100% limpo (`CC=false`, `Bloom=false`, `Blur=false`), `FinalFOV = 70.00` e **`0` erros/avisos no Console**.
+- Place salvo no Roblox Studio na **versão 343** (`TeamCreate`).

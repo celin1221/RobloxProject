@@ -2032,6 +2032,62 @@ local ANIMATIONS: { [string]: any } = {
 			kf(0.96, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
 		},
 	},
+
+	-- 41. TUDO ROXO / VAZIO ROXO (Setero - Gojo Satoru assinatura): Lapso Azul (esq) -> Reversao Vermelho (dir) -> Convergencia -> Estalo de Dedos!
+	TudoRoxo = {
+		Duration = 2.80,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(8, 0, 6), LeftUpperArm = degCF(8, 0, -6) }),
+			-- Fase 1: Mao esquerda erguida conjurando Lapso Azul
+			kf(0.42, "CubicOut", {
+				LowerTorso = degCF(2, -16, 0, Vector3.new(0, 0.12, 0.08)),
+				UpperTorso = degCF(6, -18, 0),
+				Head = degCF(-4, 22, 0),
+				LeftUpperArm = degCF(88, 24, -26),
+				LeftLowerArm = degCF(14, 0, 0),
+				RightUpperArm = degCF(14, 0, 10),
+			}),
+			-- Fase 2: Mao direita sobe conjurando Reversao Vermelho enquanto esquerda sustenta Azul
+			kf(0.92, "BackOut", {
+				LowerTorso = degCF(4, 0, 0, Vector3.new(0, 0.24, 0.12)),
+				UpperTorso = degCF(8, 0, 0),
+				Head = degCF(-6, 0, 0),
+				LeftUpperArm = degCF(88, 24, -28),
+				LeftLowerArm = degCF(14, 0, 0),
+				RightUpperArm = degCF(88, -24, 28),
+				RightLowerArm = degCF(14, 0, 0),
+			}),
+			-- Fase 3: Levitacao sutil + maos convergem unindo Azul e Vermelho diante do peito
+			kf(1.52, "SineInOut", {
+				LowerTorso = degCF(4, 0, 0, Vector3.new(0, 0.48, 0.06)),
+				UpperTorso = degCF(12, -8, 0),
+				Head = degCF(-8, 10, 0),
+				LeftUpperArm = degCF(76, -18, 22),
+				LeftLowerArm = degCF(54, 0, 0),
+				RightUpperArm = degCF(94, 16, -16),
+				RightLowerArm = degCF(42, 0, 0),
+				LeftUpperLeg = degCF(-8, 0, -6),
+				RightUpperLeg = degCF(-8, 0, 6),
+			}),
+			-- Fase 4: Estalo de dedos / disparo explosivo do Vazio Roxo!
+			kf(1.82, "ExpoOut", {
+				LowerTorso = degCF(-8, 18, 0, Vector3.new(0, 0.18, -0.38)),
+				UpperTorso = degCF(-14, 24, 4),
+				Head = degCF(8, -26, 0),
+				RightUpperArm = degCF(106, 6, 8),
+				RightLowerArm = degCF(4, 0, 0),
+				LeftUpperArm = degCF(30, -14, -38),
+				LeftLowerArm = degCF(24, 0, 0),
+			}),
+			kf(2.30, "QuadOut", {
+				LowerTorso = degCF(-4, 12, 0, Vector3.new(0, 0.08, -0.22)),
+				UpperTorso = degCF(-6, 14, 2),
+				RightUpperArm = degCF(96, 4, 12),
+				LeftUpperArm = degCF(20, -10, -24),
+			}),
+			kf(2.80, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
 }
 
 --------------------------------------------------------------------

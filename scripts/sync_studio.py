@@ -642,7 +642,18 @@ local mapAltar = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChil
 assert(mapAltar and mapAltar:FindFirstChild("AwakeningPrompt", true), "Missing Workspace.Map.SecretAwakeningAltar with AwakeningPrompt")
 assert(sg:FindFirstChild("AwakeningGui") and sg.AwakeningGui:IsA("ScreenGui"), "Missing StarterGui.AwakeningGui ScreenGui")
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), 20 Passives + Awakening Crafting + Secret Altar + Economy/XP Rebalance + %d/93 Animated Moves + UI Guardrails", b.Turn, simTurns, totalMoves)
+-- Test 14: HollowPurple ("Vazio Roxo" - Setero / Gojo) 9-script modular system guardrail
+local hpFolder = rs:FindFirstChild("HollowPurple")
+assert(hpFolder, "Missing ReplicatedStorage.HollowPurple folder")
+for _, modName in ipairs({ "Config", "Janitor", "LightningModule", "DebrisModule", "CameraEffects", "LightingEffects", "HollowPurpleVFX" }) do
+    assert(hpFolder:FindFirstChild(modName), "Missing ReplicatedStorage.HollowPurple." .. modName)
+end
+assert(game:GetService("ServerScriptService"):FindFirstChild("HollowPurpleServer"), "Missing ServerScriptService.HollowPurpleServer")
+assert(game:GetService("StarterPlayer"):WaitForChild("StarterPlayerScripts"):FindFirstChild("HollowPurpleClient"), "Missing StarterPlayerScripts.HollowPurpleClient")
+local hpCfg = require(hpFolder.Config)
+assert(hpCfg.ActivationKey == Enum.KeyCode.R and hpCfg.Combat.ProjectileSpeed == 140, "Invalid HollowPurple Config")
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), 20 Passives + Awakening + HollowPurple 5-Phase + %d/93 Animated Moves + UI Guardrails", b.Turn, simTurns, totalMoves)
 end)
 sandbox:Destroy()
 assert(ok, res)
