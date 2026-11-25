@@ -52,6 +52,7 @@ Genetics.GymPresets = {
 	[1] = { Genetics = 35, Training = 15 }, -- Konoha (1o Ginasio): 1.185x
 	[2] = { Genetics = 50, Training = 45 }, -- Grand Line (2o Ginasio): 1.335x
 	[3] = { Genetics = 65, Training = 75 }, -- Soul Society (3o Ginasio): 1.485x
+	[4] = { Genetics = 70, Training = 85 }, -- Toquio Jujutsu (4o Ginasio): 1.535x
 }
 
 -- Parametros por raridade:

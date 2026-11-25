@@ -440,10 +440,13 @@ local PREFERRED_ORDER: { [string]: number } = {
 	Luffy = 80,
 	Naruto = 78,
 	Ichigo = 77,
+	Nanami = 76,
 	Zoro = 75,
 	Sasuke = 72,
 	Renji = 71,
+	Fushiguro = 71,
 	Kakashi = 70,
+	Todo = 70,
 	Rukia = 69,
 	Sanji = 68,
 }

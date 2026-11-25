@@ -417,21 +417,21 @@ local shelfPanel, shelfFace = UI.panel(gymTopBar, {
 	Corner = 0.24,
 	Shadow = false,
 })
-local badgesTitle = UI.text(shelfFace, "INS\u{cd}GNIAS 0/3", {
+local badgesTitle = UI.text(shelfFace, "INS\u{cd}GNIAS 0/" .. tostring(#Gyms.Order), {
 	Name = "Title",
-	Size = UDim2.fromScale(0.42, 0.78),
+	Size = UDim2.fromScale(0.38, 0.78),
 	Position = UDim2.fromScale(0.03, 0.11),
 	Role = "Small",
 	Color = "gold",
 	AlignX = Enum.TextXAlignment.Left,
 })
-local badgesRow = UI.frame(shelfFace, { Name = "BadgesRow", Size = UDim2.fromScale(0.52, 0.86), Position = UDim2.fromScale(0.46, 0.07) })
+local badgesRow = UI.frame(shelfFace, { Name = "BadgesRow", Size = UDim2.fromScale(0.57, 0.86), Position = UDim2.fromScale(0.41, 0.07) })
 do
 	local hl = Instance.new("UIListLayout")
 	hl.FillDirection = Enum.FillDirection.Horizontal
 	hl.HorizontalAlignment = Enum.HorizontalAlignment.Right
 	hl.VerticalAlignment = Enum.VerticalAlignment.Center
-	hl.Padding = UDim.new(0.04, 0)
+	hl.Padding = UDim.new(0.03, 0)
 	hl.SortOrder = Enum.SortOrder.LayoutOrder
 	hl.Parent = badgesRow
 end
@@ -441,7 +441,7 @@ for idx, gymId in ipairs(Gyms.Order) do
 	local gym = Gyms.List[gymId]
 	local slot, slotFace = UI.panel(badgesRow, {
 		Name = "Badge_" .. gymId,
-		Size = UDim2.fromScale(0.28, 1),
+		Size = UDim2.fromScale(0.22, 1),
 		Aspect = 1,
 		AspectAxis = Enum.DominantAxis.Height,
 		Color = "panelAlt",

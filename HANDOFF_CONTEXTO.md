@@ -90,6 +90,10 @@ Consulte o detalhamento completo em [`Blender/PROGRESSO.md`](./Blender/PROGRESSO
   * **21 Passivas** (`Passives.luau`), Crafting de Despertar Nv. 35+ (`Awakening.luau`, `SecretAwakeningAltar`, `AwakeningGui`) e sistema modular AAA `HollowPurple` (`Setero` / tecla `R` + `TudoRoxo`).
   * **Nova Raridade `Secreto`** (cor preta `#101016`, `StatMultiplier = 1.50`, `0,001%` global em qualquer banner a partir do Nv. 15 da conta, anúncio global `SECRETO NO SERVIDOR`).
   * **`Sukuna` (`JujutsuKaisen`, `Mago`, `Secreto`, BST `162`):** modelo Tripo R6-on-R15 (`Asset ID 124539709567438`), aura 100% partículas puras obsidiana-carmesim, passiva `ReiDasMaldicoes`, 4 golpes exclusivos (`Fortificacao`, `Desmantelar`, `Clivar`, `SantuarioMalevolente`) e códigos Dev **`SUKUNA`/`DEVSUKUNA`** (Nv. 10) e **`SUKUNA50`/`SUKUNAMAX`/`DEVSUKUNA50`** (Nv. 50). **106 scripts** sincronizados (`PASS`).
+* **Banner Jujutsu Kaisen (6 Personagens + Substituição do Gojo) & Passagem Secreta nos Montes (25/11/2026 · Place v349):**
+  * 5 novos personagens Tripo R6-on-R15 (`Nobara` & `Itadori` Comum; `Fushiguro` & `Todo` Raro; `Nanami` Épico) + **substituição completa do modelo de `Gojo`** (`Setero`, Lendário, Asset `84694141738157`) com nova aura Limitless 100% partículas puras e correção de `VfxController.HANDLERS.Atracao.Impact`.
+  * Novo Banner `JujutsuKaisen` (`banner_jujutsu` `140680943806077`) + 4º Ginásio (`Ginásio Jujutsu de Tóquio`, `insignia_jujutsu` `82094936324685`) + códigos Dev (`NOBARA`, `ITADORI`, `FUSHIGURO`, `TODO`, `NANAMI`, `GOJO`/`GOJO50`, `JUJUTSU`/`DEVJUJUTSU`).
+  * `SecretAwakeningAltar` removido da invasão da `Plot01` e relocado para uma **passagem secreta esculpida nos montes Noroeste** (`X=-172, Z=-148..-196`, atrás do Pavilhão, `78,8` studs da base mais próxima, `PlotOverlaps=0`).
 
 ---
 

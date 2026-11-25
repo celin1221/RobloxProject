@@ -12,7 +12,7 @@ local Awakening = {}
 Awakening.StatBonus = 0.10 -- +10% em todos os atributos finais quando Desperto
 Awakening.MinLevel = 35
 Awakening.MaxMaterialStack = 999
-Awakening.SecretHint = "Desbloqueie no Nv. 35 em um altar oculto na floresta..."
+Awakening.SecretHint = "Desbloqueie no Nv. 35 em uma passagem secreta nos montes..."
 
 -- Mapeamento automatico de classe/anime -> material correspondente (escala para futuros personagens)
 Awakening.ClassEssence = {

@@ -1460,3 +1460,38 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
   - `CharacterPreviews` (`26`, Sukuna `HeadMesh=true`, `NoAura=true`) e `SummonShowcaseModels` (`24`, Sukuna `Aura=true`, `Outline=true`).
   - Inspeção visual em tempo real do modelo `Sukuna` + aura obsidiana-carmesim pulsando (`AuraLight`), todos os 4 golpes disparados ao vivo (`Fortificacao=true, Desmantelar=true, Clivar=true, SantuarioMalevolente=true`, `BattleVfxLeftover=0`), linha `Rate_Secreto` alinhada sem sobreposição na `SummonGui` e **`0` erros/avisos no Console**.
 - Place salvo no Roblox Studio na **versão 345** (`TeamCreate`).
+
+
+## Novo Banner Jujutsu Kaisen (6 Personagens + Substituição do Gojo) & Passagem Secreta nos Montes para o Santuário de Evolução (25/11/2026)
+
+**Feito**
+- **1. Elenco Completo Jujutsu Kaisen — 6 Modelos Tripo Auto-Rigged & Validados Visualmente (`Blender/{Nobara,Itadori,Fushiguro,Todo,Nanami,Gojo}/`):**
+  - Processados todos os 6 `.zip` do Tripo (`nobara`, `itadori`, `fushiguro`, `todo`, `nanami`, `gojo`) via `scripts/auto_rig_tripo.py --max-tris 7500` e inspecionados nas 5 prévias (cortes limpos, sem fragmentos e sem partes ocas).
+  - Enviados via Open Cloud e montados em `ServerStorage.Characters` (`Tex=6/6`, animações autorizadas R6-on-R15):
+    - **Comum:** `Nobara` (`Atirador`, Asset `115047396782159`, `GolpeCerteiro`) e `Itadori` (`Lutador`, Asset `109882137693693`, `EspiritoGuerreiro`).
+    - **Raro:** `Fushiguro` (`Mago`, Asset `71327504850621`, `MenteTatica`) e `Todo` (`Lutador`, Asset `108331811669347`, `ContraEspinhos`).
+    - **Épico:** `Nanami` (`Espadachim`, Asset `111479277003006`, `GolpeCerteiro`).
+    - **Lendário (Substituição):** **`Gojo`** (ID `Setero`, `Name = "Gojo"`, Asset **`84694141738157`**) — modelo anterior substituído integralmente pelo novo modelo Tripo R6-on-R15 + nova **Aura Limitless / Seis Olhos** (`AuraVfx`, tag `CharacterAura`) **100% partículas puras** azul-ciano e violeta (zero `SurfaceGui`/`BillboardGui`/`Decal`/orbes sólidos).
+  - Adicionada animação procedural 60 FPS `CombatAnimator.ANIMATIONS.Atracao` e corrigido bug latente em `VfxController.HANDLERS.Atracao.Impact` (chamada órfã `setBackBisentoHidden` removida), garantindo `Atracao` e `TudoRoxo` (`HollowPurpleVFX`) 100% fluidos e sem erros no novo modelo do Gojo.
+- **2. Novo Banner `JujutsuKaisen`, 4º Ginásio de Anime (`Ginásio Jujutsu de Tóquio`) e Artes Customizadas:**
+  - Geradas e aprovadas no Open Cloud as artes customizadas [`Blender/UI/banners/banner_jujutsu.png`](./UI/banners/banner_jujutsu.png) (**Image ID `140680943806077`**) e [`Blender/UI/icones/insignia_jujutsu.png`](./UI/icones/insignia_jujutsu.png) (**Image ID `82094936324685`**), registradas em `src/shared/UI.luau`.
+  - Registrado `JujutsuKaisen` em `Summon.BannerOrder`/`Summon.Banners`, `SummonStageThemes.luau` (Palco 3D destacando **Gojo** no centro + **Nanami** e **Fushiguro** nas laterais), **4º Ginásio** (`Gyms.luau`, Tier 4, Nv. 24–28, `Insígnia Amaldiçoada`, `Genetics.GymPresets[4] = 70/85`), `TowerClient.client.luau` (porta-insígnias dinâmico para 4 insígnias) e códigos Dev em `Codes.luau` (`NOBARA`, `ITADORI`, `FUSHIGURO`, `TODO`, `NANAMI`, `GOJO`/`DEVGOJO`/`GOJO50`/`DEVGOJO50`, lote `JUJUTSU`/`DEVJUJUTSU` e `DEVALL`).
+- **3. Relocação do Santuário Secreto de Evolução (`SecretAwakeningAltar`) para Passagem Secreta nos Montes (Zero Invasão de Base):**
+  - Removido completamente o antigo `SecretAwakeningAltar` que invadia `Plot01` (`(-125, -132)`).
+  - Esculpida passagem secreta real dentro das **montanhas do canto Noroeste** (`X = -172, Z = -148..-196`, atrás do `Pavilhao (-164, -122)` — **`78,8` studs distante** da base mais próxima, **`PlotOverlaps = 0`**):
+    - `Map.Bounds.ParedeN` dividida exatamente na fenda oculta (`X = -176.5..-167.5`) + paredes invisíveis protetoras ao redor da caverna (impossível escapar para fora do mapa).
+    - Entrada camuflada entre rochas musgosas, cortina de folhagem atravessável (`CanCollide = false`) e fragmento rúnico sutil (`EntranceRuneShard`).
+    - Túnel de pedra serpenteante (`Z = -150 -> -174`) com piso contínuo de ardósia (`Y = 8.0`), arcos de pedra e cristais luminosos levando à **Caverna Secreta do Santuário de Evolução** (`(-172, 8.3, -186)`, teto rochoso natural de `40..72` studs acima) com o `SecretAwakeningAltar` e `AwakeningPrompt` intactos.
+  - Dica atualizada em `Awakening.luau` (`"Desbloqueie no Nv. 35 em uma passagem secreta nos montes..."`).
+- **4. Planilhas Excel & Suíte de Testes (`scripts/update_characters_sheet.py`, `scripts/sync_studio.py`):**
+  - `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` regeneradas (**29 personagens ativos + 2 protótipos | 101 ataques únicos | 21 passivas | 337 vínculos**).
+  - Adicionado **Test 16** em `scripts/sync_studio.py` validando Banner/Ginásio Jujutsu, os 6 modelos R6-on-R15, aura pura do Gojo, códigos Dev e **zero sobreposição** do `SecretAwakeningAltar` com todas as 10 bases (`Plot01..Plot10`).
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos **106 scripts**) e `python scripts/sync_studio.py test` (`PASS`).
+- Validado ao vivo no Play Mode:
+  - `CharacterPreviews` (`31`) e `SummonShowcaseModels` (`29`) gerados para todos os 6 de Jujutsu (`Head_Mesh=true`, `Setero` com `AuraVfx=true` pulsando `1.056 -> 0.864`).
+  - Golpes do novo Gojo testados ao vivo (`Atracao=true`, `TudoRoxo=true`, `BattleVfxLeft=0`, `HollowPurpleLeft=0`) com **`0` erros de jogo/VFX no Console**.
+  - `SummonGui.BannerTab_JujutsuKaisen=true`, `JujutsuStageFeatured=Nanami, Gojo, Fushiguro`, `TowerGui.Gym_JujutsuKaisen=true`.
+  - Avatar do jogador caminhou ao vivo de fora (`Z=-141`) atravessando toda a passagem secreta até o altar na caverna (`FinalDistToAltarPedestal=8.3 <= 12`, zero bloqueios/travamentos).
+- Place salvo no Roblox Studio na **versão 349** (`TeamCreate`).

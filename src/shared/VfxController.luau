@@ -871,7 +871,6 @@ HANDLERS.Atracao = {
 	end,
 	Impact = function(ctx)
 		local fx = ctx.fx
-		setBackBisentoHidden(ctx.attacker, false)
 		if ctx.follow then
 			ctx.follow:Disconnect()
 			ctx.follow = nil

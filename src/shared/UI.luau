@@ -38,12 +38,12 @@ UI.Icons = {
 	doce_comum = 135488822674293, doce_raro = 132697637242766, doce_epico = 140556027915418, gear = 80957102713866,
 	ore_hp = 98190850262557, ore_def = 81379071551950, ore_vel = 131534143692832, ore_atq = 94276779585364,
 	music = 95544281526372, speaker = 136399284995956, sparkle = 84255360310628,
-	summon_sunburst = 139837721546408, banner_todos = 80124787437807, banner_onepiece = 88088550646321, banner_naruto = 90282977605958, banner_bleach = 77274797232236,
+	summon_sunburst = 139837721546408, banner_todos = 80124787437807, banner_onepiece = 88088550646321, banner_naruto = 90282977605958, banner_bleach = 77274797232236, banner_jujutsu = 140680943806077,
 	-- classes (selos redondos: Blender/UI/icones/classe_*.png)
 	classe_espadachim = 107664037444284, classe_lutador = 116069555686683,
 	classe_mago = 139698755747879, classe_atirador = 123518987490984,
 	-- insignias dos ginasios de anime (Blender/UI/icones/insignia_*.png)
-	insignia_naruto = 78965692677391, insignia_onepiece = 112911216601734, insignia_bleach = 102949134179674,
+	insignia_naruto = 78965692677391, insignia_onepiece = 112911216601734, insignia_bleach = 102949134179674, insignia_jujutsu = 82094936324685,
 	-- tipos antigos (mantidos por compatibilidade visual)
 	tipo_fogo = 75267357253313, tipo_agua = 80328198116962, tipo_natureza = 114992050529106,
 	tipo_raio = 72227189979725, tipo_luz = 109203429684282, tipo_trevas = 109541332454865,

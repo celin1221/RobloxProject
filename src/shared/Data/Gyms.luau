@@ -16,7 +16,7 @@
 
 local Gyms = {}
 
-Gyms.Order = { "Naruto", "OnePiece", "Bleach" }
+Gyms.Order = { "Naruto", "OnePiece", "Bleach", "JujutsuKaisen" }
 
 Gyms.List = {
 	Naruto = {
@@ -124,6 +124,42 @@ Gyms.List = {
 				AI = "Dificil",
 				Level = 24,
 				Team = { "Byakuya", "Ichigo", "Renji", "Rukia", "Uryu", "Chad" },
+			},
+		},
+	},
+	JujutsuKaisen = {
+		Id = "JujutsuKaisen",
+		Tier = 4,
+		Anime = "JujutsuKaisen",
+		BannerId = "JujutsuKaisen",
+		Name = "Gin\u{e1}sio Jujutsu de T\u{f3}quio",
+		AnimeName = "Jujutsu Kaisen",
+		LeaderName = "Satoru Gojo",
+		BadgeName = "Ins\u{ed}gnia Amaldi\u{e7}oada",
+		BadgeIcon = "insignia_jujutsu",
+		Color = "purple",
+		Accent = Color3.fromRGB(178, 72, 255),
+		RecommendedLevel = 28,
+		FirstReward = { Gold = 11000, Gems = 20, Items = { "DoceEpico" } },
+		RepeatReward = { Gold = 5000 },
+		Stages = {
+			{
+				Title = "Calouro de T\u{f3}quio",
+				AI = "Facil",
+				Level = 24,
+				Team = { "Nobara", "Itadori" },
+			},
+			{
+				Title = "Feiticeiro Grau 1",
+				AI = "Medio",
+				Level = 26,
+				Team = { "Nobara", "Itadori", "Fushiguro", "Todo" },
+			},
+			{
+				Title = "L\u{ed}der do Infinito",
+				AI = "Dificil",
+				Level = 28,
+				Team = { "Setero", "Nanami", "Fushiguro", "Todo", "Itadori", "Nobara" },
 			},
 		},
 	},

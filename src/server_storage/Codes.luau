@@ -107,12 +107,41 @@ return {
 	GOKU = { Character = "San", Level = 10, Repeatable = true },
 	DEVSAN = { Character = "San", Level = 10, Repeatable = true },
 
+	-- Codigos de Dev — Tag: Jujutsu Kaisen (Repeatable = true)
+	NOBARA = { Character = "Nobara", Level = 10, Repeatable = true },
+	DEVNOBARA = { Character = "Nobara", Level = 10, Repeatable = true },
+
+	ITADORI = { Character = "Itadori", Level = 10, Repeatable = true },
+	DEVITADORI = { Character = "Itadori", Level = 10, Repeatable = true },
+
+	FUSHIGURO = { Character = "Fushiguro", Level = 10, Repeatable = true },
+	DEVFUSHIGURO = { Character = "Fushiguro", Level = 10, Repeatable = true },
+
+	TODO = { Character = "Todo", Level = 10, Repeatable = true },
+	DEVTODO = { Character = "Todo", Level = 10, Repeatable = true },
+
+	NANAMI = { Character = "Nanami", Level = 10, Repeatable = true },
+	DEVNANAMI = { Character = "Nanami", Level = 10, Repeatable = true },
+
 	SETERO = { Character = "Setero", Level = 10, Repeatable = true },
 	GOJO = { Character = "Setero", Level = 10, Repeatable = true },
 	DEVSETERO = { Character = "Setero", Level = 10, Repeatable = true },
+	DEVGOJO = { Character = "Setero", Level = 10, Repeatable = true },
 	SETERO50 = { Character = "Setero", Level = 50, Repeatable = true },
 	GOJO50 = { Character = "Setero", Level = 50, Repeatable = true },
 	DEVSETERO50 = { Character = "Setero", Level = 50, Repeatable = true },
+	DEVGOJO50 = { Character = "Setero", Level = 50, Repeatable = true },
+
+	JUJUTSU = {
+		Characters = { "Nobara", "Itadori", "Fushiguro", "Todo", "Nanami", "Setero" },
+		Level = 10,
+		Repeatable = true,
+	},
+	DEVJUJUTSU = {
+		Characters = { "Nobara", "Itadori", "Fushiguro", "Todo", "Nanami", "Setero" },
+		Level = 10,
+		Repeatable = true,
+	},
 
 	-- Codigos de Dev — Secreto: Sukuna (Normal Nv. 10 e Nivel Maximo Nv. 50)
 	SUKUNA = { Character = "Sukuna", Level = 10, Repeatable = true },
@@ -166,7 +195,8 @@ return {
 			"Nami", "Usopp", "Zoro", "Sanji", "Luffy", "BarbaBranca",
 			"Sakura", "Shikamaru", "Kakashi", "Sasuke", "Naruto", "Sarutobi",
 			"Chad", "Uryu", "Rukia", "Renji", "Ichigo", "Byakuya",
-			"San", "Setero", "Sukuna", "Kaen", "Raiko", "Yomogi",
+			"Nobara", "Itadori", "Fushiguro", "Todo", "Nanami", "Setero",
+			"San", "Sukuna", "Kaen", "Raiko", "Yomogi",
 		},
 		Level = 10,
 		Repeatable = true,

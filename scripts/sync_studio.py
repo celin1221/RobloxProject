@@ -404,7 +404,7 @@ for _, bid in ipairs({ "Chad", "Uryu", "Rukia", "Renji", "Ichigo", "Byakuya" }) 
     assert(def and def.Anime == "Bleach", "Missing Bleach character " .. bid)
     assert(def.Learnset and #def.Learnset >= 4, "Expected class kit learnset on " .. bid)
 end
-assert(#Gyms.Order == 3, "Expected 3 Gyms")
+assert(#Gyms.Order == 4, "Expected 4 Gyms (Naruto, OnePiece, Bleach, JujutsuKaisen)")
 for _, gid in ipairs(Gyms.Order) do
     local g = Gyms.Get(gid)
     assert(g and #g.Stages == 3, "Expected 3 stages in Gym " .. gid)
@@ -686,7 +686,9 @@ for _, d in ipairs(sukModel.AuraVfx:GetDescendants()) do
     assert(not d:IsA("SurfaceGui") and not d:IsA("BillboardGui") and not d:IsA("Decal"),
         "Sukuna AuraVfx must be 100% pure particles (no SurfaceGui/BillboardGui/Decal)")
 end
-local codesMod = require(game:GetService("ServerStorage"):WaitForChild("Codes"))
+local codesClone = game:GetService("ServerStorage"):WaitForChild("Codes"):Clone()
+codesClone.Parent = sandbox
+local codesMod = require(codesClone)
 assert(codesMod.SUKUNA and codesMod.SUKUNA.Character == "Sukuna" and codesMod.SUKUNA.Level == 10, "Missing SUKUNA dev code")
 assert(codesMod.SUKUNA50 and codesMod.SUKUNA50.Character == "Sukuna" and codesMod.SUKUNA50.Level == 50, "Missing SUKUNA50 max-level dev code")
 assert(codesMod.SUKUNAMAX and codesMod.SUKUNAMAX.Character == "Sukuna" and codesMod.SUKUNAMAX.Level == 50, "Missing SUKUNAMAX max-level dev code")
@@ -702,7 +704,39 @@ local hpBefore = bSuk:Active("Enemy").Hp
 bSuk:ResolveTurn({ Kind = "Move", Index = 3 }, { Kind = "Move", Index = 1 }) -- Clivar (BreaksProtect) vs Proteger
 assert(bSuk:Active("Enemy").Hp < hpBefore, "Expected Sukuna Clivar to break Proteger and deal damage")
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, totalMoves)
+-- Test 16: Jujutsu Kaisen Banner, Gym Tier 4, 6 Tripo R6-on-R15 Models (Gojo replaced + pure aura) & Secret Mountain Passage Altar (zero Plot overlap)
+assert(table.find(Summon.BannerOrder, "JujutsuKaisen") and Summon.Banners.JujutsuKaisen, "Missing JujutsuKaisen banner")
+local jjkGym = Gyms.Get("JujutsuKaisen")
+assert(jjkGym and jjkGym.Tier == 4 and Gyms.ForBanner("JujutsuKaisen") == jjkGym, "Missing JujutsuKaisen Tier 4 Gym")
+local expectedJjk = { Nobara = "Comum", Itadori = "Comum", Fushiguro = "Raro", Todo = "Raro", Nanami = "Epico", Setero = "Lendario" }
+for cid, expRar in pairs(expectedJjk) do
+    local d = Characters.Get(cid)
+    assert(d and d.Anime == "JujutsuKaisen" and d.Rarity == expRar, "Invalid Jujutsu character " .. cid)
+    local cm = ssChars and ssChars:FindFirstChild(cid)
+    assert(cm and cm:FindFirstChild("Head_Mesh") and cm:FindFirstChild("Torso_Mesh"), "Missing Tripo R6-on-R15 model for " .. cid)
+end
+local gojoModel = ssChars and ssChars:FindFirstChild("Setero")
+assert(gojoModel and gojoModel:FindFirstChild("AuraVfx"), "Missing Gojo(Setero) AuraVfx")
+for _, d in ipairs(gojoModel.AuraVfx:GetDescendants()) do
+    assert(not d:IsA("SurfaceGui") and not d:IsA("BillboardGui") and not d:IsA("Decal"),
+        "Gojo(Setero) AuraVfx must be 100% pure particles (no SurfaceGui/BillboardGui/Decal)")
+end
+assert(codesMod.JUJUTSU and codesMod.NOBARA and codesMod.ITADORI and codesMod.FUSHIGURO and codesMod.TODO and codesMod.NANAMI and codesMod.GOJO,
+    "Missing Jujutsu Kaisen dev codes")
+-- Verify SecretAwakeningAltar is in mountain secret passage with ZERO overlap against all 10 Plots
+local altarCF, altarSz = mapAltar:GetBoundingBox()
+local aMin, aMax = altarCF.Position - altarSz * 0.5, altarCF.Position + altarSz * 0.5
+local plotsFolder = workspace:FindFirstChild("Plots")
+assert(plotsFolder, "Missing Workspace.Plots")
+for _, pl in ipairs(plotsFolder:GetChildren()) do
+    local pcf, psz = pl:GetBoundingBox()
+    local pMin, pMax = pcf.Position - psz * 0.5, pcf.Position + psz * 0.5
+    local overlaps = (aMin.X <= pMax.X and aMax.X >= pMin.X) and (aMin.Z <= pMax.Z and aMax.Z >= pMin.Z)
+    assert(not overlaps, "SecretAwakeningAltar must NOT overlap " .. pl.Name)
+end
+assert(mapAltar:FindFirstChild("MountainSecretPassage"), "Missing MountainSecretPassage inside SecretAwakeningAltar")
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + JujutsuBanner + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, totalMoves)
 end)
 sandbox:Destroy()
 assert(ok, res)

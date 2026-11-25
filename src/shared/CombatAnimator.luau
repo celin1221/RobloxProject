@@ -2033,6 +2033,38 @@ local ANIMATIONS: { [string]: any } = {
 		},
 	},
 
+	-- 40B. ATRACAO (Gojo / Setero — Lapso Azul): ergue mao direita com calma -> puxa centro gravitacional para o alvo
+	Atracao = {
+		Duration = 1.25,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(8, 0, 6), LeftUpperArm = degCF(8, 0, -6) }),
+			kf(0.24, "CubicOut", {
+				LowerTorso = degCF(2, -12, 0, Vector3.new(0, 0.08, 0.05)),
+				UpperTorso = degCF(5, -14, 0),
+				Head = degCF(-3, 14, 0),
+				RightUpperArm = degCF(86, -12, 16),
+				RightLowerArm = degCF(22, 0, 0),
+				LeftUpperArm = degCF(-12, 6, -10),
+				LeftLowerArm = degCF(24, 0, 0),
+			}),
+			kf(0.56, "ExpoOut", {
+				LowerTorso = degCF(-4, 14, 0, Vector3.new(0, 0.14, -0.18)),
+				UpperTorso = degCF(-6, 18, 2),
+				Head = degCF(4, -18, 0),
+				RightUpperArm = degCF(102, 10, 6),
+				RightLowerArm = degCF(6, 0, 0),
+				LeftUpperArm = degCF(-18, -8, -16),
+			}),
+			kf(0.92, "QuadOut", {
+				LowerTorso = degCF(-2, 8, 0, Vector3.new(0, 0.06, -0.10)),
+				UpperTorso = degCF(-3, 10, 0),
+				RightUpperArm = degCF(92, 6, 10),
+				RightLowerArm = degCF(18, 0, 0),
+			}),
+			kf(1.25, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
+
 	-- 41. TUDO ROXO / VAZIO ROXO (Setero - Gojo Satoru assinatura): Lapso Azul (esq) -> Reversao Vermelho (dir) -> Convergencia -> Estalo de Dedos!
 	TudoRoxo = {
 		Duration = 2.80,
