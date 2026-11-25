@@ -1338,17 +1338,57 @@ HANDLERS.GenkiDama = {
 	Duration = 2.2,
 }
 
--- Combo Marcial (San, Neutro): rajada veloz de socos + chute alto giratorio com ondas de impacto
+-- Combo Marcial (Lutador basico #2 compartilhado): Jab Esquerdo -> Cruzado Direito -> Chute Giratorio 360
+-- 100% particulas fluidas + trilhas cineticas + impactos em 3 estagios (zero discos planos ou blocos rigidos)
 HANDLERS.ComboMarcial = {
 	Charge = function(ctx)
 		local fx = ctx.fx
 		playSfx(fx.Origin, "ChargeSfx")
 		local aRoot = rootOf(ctx.attacker)
-		local gy = groundY(ctx.attacker)
 		fx.Origin.CFrame = CFrame.new(handPos(ctx.attacker))
-		emit(fx.Origin, "FistFlash", 3)
-		setDisc(fx.DashRing, CFrame.new(aRoot.Position.X, gy + 0.08, aRoot.Position.Z), 1.6, 0.15)
-		tweenDisc(fx.DashRing, 0.28, 5.2, 1)
+		-- Pulso fluido de energia marcial nos punhos e na base
+		local function quickBurst(pos: Vector3, tex: string, c1: Color3, c2: Color3, count: number, sMin: number, sMax: number, sz0: number, sz1: number, life: number, stretch: boolean?)
+			local anchor = Instance.new("Part")
+			anchor.Anchored = true
+			anchor.CanCollide = false
+			anchor.CanQuery = false
+			anchor.CanTouch = false
+			anchor.Transparency = 1
+			anchor.Size = Vector3.new(0.2, 0.2, 0.2)
+			anchor.CFrame = CFrame.new(pos)
+			anchor.Parent = fx
+			local pe = Instance.new("ParticleEmitter")
+			pe.Texture = tex
+			pe.Color = ColorSequence.new(c1, c2)
+			pe.Size = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, sz0),
+				NumberSequenceKeypoint.new(0.4, sz0 * 0.7 + sz1 * 0.3),
+				NumberSequenceKeypoint.new(1, sz1),
+			})
+			pe.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0.05),
+				NumberSequenceKeypoint.new(0.65, 0.30),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+			pe.Speed = NumberRange.new(sMin, sMax)
+			pe.Lifetime = NumberRange.new(life * 0.7, life)
+			pe.SpreadAngle = Vector2.new(180, 180)
+			pe.LightEmission = 0.95
+			pe.Brightness = 2.4
+			pe.Drag = 3.2
+			if stretch then
+				pe.Orientation = Enum.ParticleOrientation.VelocityParallel
+				pe.Squash = NumberSequence.new(1.1)
+			end
+			pe.Rate = 0
+			pe.Parent = anchor
+			pe:Emit(if lowQuality() then math.max(2, math.floor(count / 2)) else count)
+			Debris:AddItem(anchor, life + 0.5)
+		end
+		ctx._martialBurst = quickBurst
+		quickBurst(handPos(ctx.attacker), "rbxassetid://83184852649242", Color3.fromRGB(255, 245, 200), Color3.fromRGB(255, 165, 62), 14, 3, 9, 0.45, 0.05, 0.30, true)
+		quickBurst(leftHandPos(ctx.attacker), "rbxassetid://83184852649242", Color3.fromRGB(255, 245, 200), Color3.fromRGB(255, 165, 62), 14, 3, 9, 0.45, 0.05, 0.30, true)
+		quickBurst(Vector3.new(aRoot.Position.X, groundY(ctx.attacker) + 0.3, aRoot.Position.Z), "rbxasset://textures/particles/smoke_main.dds", Color3.fromRGB(255, 224, 158), Color3.fromRGB(210, 175, 125), 14, 5, 12, 0.9, 2.2, 0.38, false)
 	end,
 	Release = function(ctx)
 		local fx = ctx.fx
@@ -1356,48 +1396,111 @@ HANDLERS.ComboMarcial = {
 		local aPos = rootOf(ctx.attacker).Position
 		local look = CFrame.lookAt(hitPos, Vector3.new(aPos.X, hitPos.Y, aPos.Z))
 		fx.Hit.CFrame = look
+		local burst = ctx._martialBurst
+
+		local function launchStrikeRibbon(fromPos: Vector3, toPos: Vector3, dur: number, curveSide: number, c1: Color3, c2: Color3)
+			local anchor = Instance.new("Part")
+			anchor.Anchored = true
+			anchor.CanCollide = false
+			anchor.CanQuery = false
+			anchor.CanTouch = false
+			anchor.Transparency = 1
+			anchor.Size = Vector3.new(0.2, 0.2, 0.2)
+			anchor.CFrame = CFrame.new(fromPos)
+			anchor.Parent = fx
+			local a0 = Instance.new("Attachment")
+			a0.Position = Vector3.new(0, 0.45, 0)
+			a0.Parent = anchor
+			local a1 = Instance.new("Attachment")
+			a1.Position = Vector3.new(0, -0.45, 0)
+			a1.Parent = anchor
+			local tr = Instance.new("Trail")
+			tr.Attachment0 = a0
+			tr.Attachment1 = a1
+			tr.Texture = "rbxassetid://115075243133786"
+			tr.Color = ColorSequence.new(c2, c1)
+			tr.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.05), NumberSequenceKeypoint.new(0.6, 0.4), NumberSequenceKeypoint.new(1, 1) })
+			tr.Lifetime = 0.16
+			tr.LightEmission = 0.95
+			tr.FaceCamera = true
+			tr.Parent = anchor
+			local pe = Instance.new("ParticleEmitter")
+			pe.Texture = "rbxassetid://83184852649242"
+			pe.Color = ColorSequence.new(c2, c1)
+			pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.48), NumberSequenceKeypoint.new(1, 0) })
+			pe.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.05), NumberSequenceKeypoint.new(1, 1) })
+			pe.Speed = NumberRange.new(1, 4)
+			pe.Lifetime = NumberRange.new(0.16, 0.28)
+			pe.Rate = if lowQuality() then 24 else 48
+			pe.LightEmission = 1
+			pe.Brightness = 2.6
+			pe.Orientation = Enum.ParticleOrientation.VelocityParallel
+			pe.Squash = NumberSequence.new(0.9)
+			pe.Parent = anchor
+			local right = look.RightVector
+			local t0 = os.clock()
+			local conn
+			conn = RunService.RenderStepped:Connect(function()
+				if not ctx.alive or not anchor.Parent then conn:Disconnect(); return end
+				local a = math.clamp((os.clock() - t0) / dur, 0, 1)
+				local p = fromPos:Lerp(toPos, a) + right * (math.sin(a * math.pi) * curveSide) + Vector3.new(0, math.sin(a * math.pi) * 0.55, 0)
+				anchor.CFrame = CFrame.new(p)
+				if a >= 1 then
+					conn:Disconnect()
+					pe.Enabled = false
+					tr.Enabled = false
+					Debris:AddItem(anchor, 0.45)
+				end
+			end)
+		end
+
+		-- Hit 1: Jab Esquerdo (t = 0.00s do Release)
 		playSfx(fx.Hit, "ReleaseSfx")
-
-		setDisc(fx.PunchShock1, look * CFrame.new(-0.5, 0.3, -0.8) * CFrame.Angles(math.pi / 2, 0.2, 0), 1.1, 0.08)
-		tweenDisc(fx.PunchShock1, 0.22, 4.6, 1)
-		emit(fx.Hit, "ImpactSparks", 12)
-
-		task.delay(0.16, function()
-			if not ctx.alive then return end
-			playSfx(fx.Hit, "ReleaseSfx")
-			setDisc(fx.PunchShock2, look * CFrame.new(0.6, 0.5, -0.7) * CFrame.Angles(math.pi / 2, -0.25, 0), 1.2, 0.08)
-			tweenDisc(fx.PunchShock2, 0.24, 5.0, 1)
+		launchStrikeRibbon(leftHandPos(ctx.attacker), hitPos + Vector3.new(0, 0.3, 0), 0.14, -1.6, Color3.fromRGB(255, 195, 78), Color3.fromRGB(255, 252, 224))
+		task.delay(0.10, function()
+			if not ctx.alive or not burst then return end
+			burst(hitPos + Vector3.new(0, 0.3, 0), "rbxassetid://83184852649242", Color3.fromRGB(255, 250, 215), Color3.fromRGB(255, 178, 62), 20, 8, 22, 0.52, 0.04, 0.28, true)
 			emit(fx.Hit, "ImpactSparks", 12)
 		end)
 
-		for i = 1, 4 do
-			local st = fx["Streak" .. i]
-			task.delay((i - 1) * 0.06, function()
-				if not ctx.alive then return end
-				local ox = ((i % 2 == 0) and 1 or -1) * (0.55 + (i - 1) * 0.18)
-				local oy = -0.3 + i * 0.28
-				st.CFrame = look * CFrame.new(ox, oy, -2.4)
-				st.Size = Vector3.new(0.18, 0.18, 0.6)
-				st.Transparency = 0.05
-				tween(st, 0.14, { CFrame = look * CFrame.new(ox * 0.4, oy, 0.4), Size = Vector3.new(0.08, 0.08, 3.6), Transparency = 1 })
+		-- Hit 2: Cruzado Direito (t = +0.20s)
+		task.delay(0.20, function()
+			if not ctx.alive or not alive(ctx.attacker) then return end
+			playSfx(fx.Hit, "ReleaseSfx")
+			launchStrikeRibbon(handPos(ctx.attacker), hitPos + Vector3.new(0, 0.15, 0), 0.15, 1.9, Color3.fromRGB(255, 138, 46), Color3.fromRGB(255, 245, 200))
+			task.delay(0.11, function()
+				if not ctx.alive or not burst then return end
+				burst(hitPos + Vector3.new(0, 0.15, 0), "rbxassetid://83184852649242", Color3.fromRGB(255, 242, 196), Color3.fromRGB(255, 118, 38), 24, 10, 26, 0.62, 0.05, 0.32, true)
+				burst(hitPos, "rbxasset://textures/particles/fire_main.dds", Color3.fromRGB(255, 192, 84), Color3.fromRGB(255, 96, 36), 14, 4, 12, 0.9, 2.2, 0.34, false)
+				emit(fx.Hit, "ImpactSparks", 16)
 			end)
-		end
+		end)
+
+		-- Preparo do Chute Giratorio 360 (t = +0.42s)
+		task.delay(0.42, function()
+			if not ctx.alive or not alive(ctx.attacker) then return end
+			launchStrikeRibbon(rootOf(ctx.attacker).Position + Vector3.new(0, 0.5, 0), hitPos + Vector3.new(0, 0.5, 0), 0.16, -2.4, Color3.fromRGB(255, 104, 38), Color3.fromRGB(255, 248, 210))
+			launchStrikeRibbon(rootOf(ctx.attacker).Position + Vector3.new(0, 0.3, 0), hitPos + Vector3.new(0, 0.4, 0), 0.16, 2.4, Color3.fromRGB(255, 204, 82), Color3.fromRGB(255, 255, 235))
+		end)
 	end,
 	Impact = function(ctx)
 		local fx = ctx.fx
 		local hitPos = targetCenter(ctx.target)
 		fx.Hit.CFrame = CFrame.new(hitPos)
+		CombatAnimator.Hitstop(ctx.attacker, 0.055)
 		playSfx(fx.Hit, "ImpactSfx")
-		emit(fx.Hit, "HitStar", 5)
-		emit(fx.Hit, "ImpactSparks", 26)
+		emit(fx.Hit, "ImpactSparks", 28)
 		emit(fx.Hit, "DustPuff", 18)
-		pulseLight(fx.Hit:FindFirstChild("HitLight"), 8, 16)
-		shake(0.16, 0.32)
-
-		setDisc(fx.KickShock, CFrame.new(hitPos) * CFrame.Angles(0.35, 0.2, -0.45), 1.6, 0.04)
-		tweenDisc(fx.KickShock, 0.32, 8.6, 1)
+		pulseLight(fx.Hit:FindFirstChild("HitLight"), 6, 16)
+		springShake(0.36, 0.26, 46, 12, 1.1)
+		fovPunch(-3.0, 0.05, 0.22)
+		if ctx._martialBurst then
+			ctx._martialBurst(hitPos, "rbxassetid://83184852649242", Color3.fromRGB(255, 252, 224), Color3.fromRGB(255, 128, 42), 34, 12, 32, 0.72, 0.04, 0.38, true)
+			ctx._martialBurst(hitPos, "rbxasset://textures/particles/fire_main.dds", Color3.fromRGB(255, 214, 108), Color3.fromRGB(255, 92, 32), 22, 6, 16, 1.1, 3.0, 0.42, false)
+			ctx._martialBurst(hitPos, "rbxasset://textures/particles/smoke_main.dds", Color3.fromRGB(255, 228, 178), Color3.fromRGB(190, 155, 120), 16, 6, 15, 1.3, 3.6, 0.48, false)
+		end
 	end,
-	Duration = 1.1,
+	Duration = 1.25,
 }
 
 -- Carga de Ki (San, suporte +1 Ataque): postura concentrada com explosao dourada-celeste de aura
@@ -2798,6 +2901,9 @@ local TEX = {
 	Shock = "rbxassetid://83043634785289",
 	Trail = "rbxassetid://115075243133786",
 	Leaves = "rbxassetid://134973377891827",
+	Fire = "rbxasset://textures/particles/fire_main.dds",
+	Smoke = "rbxasset://textures/particles/smoke_main.dds",
+	SoftGlow = "rbxassetid://83184852649242",
 }
 
 local SFX = {
@@ -2859,70 +2965,112 @@ local function genLight(parent: Instance, pos: Vector3, color: Color3, peak: num
 	return a
 end
 
-local function genBurst(parent: Instance, pos: Vector3, tex: string, c1: Color3, c2: Color3?, count: number, sMin: number, sMax: number, sz0: number, sz1: number, life: number?, spread: number?, rotSpd: number?, accel: Vector3?)
+local function genBurst(parent: Instance, pos: Vector3, tex: string, c1: Color3, c2: Color3?, count: number, sMin: number, sMax: number, sz0: number, sz1: number, life: number?, spread: number?, rotSpd: number?, accel: Vector3?, stretch: number?)
 	local a = genAnchor(parent, CFrame.new(pos))
 	local pe = Instance.new("ParticleEmitter")
 	pe.Texture = tex
 	pe.Color = ColorSequence.new(c1, c2 or c1)
 	pe.Size = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, sz0),
-		NumberSequenceKeypoint.new(0.65, sz0 * 0.7 + sz1 * 0.3),
+		NumberSequenceKeypoint.new(0.55, sz0 * 0.72 + sz1 * 0.28),
 		NumberSequenceKeypoint.new(1, sz1),
 	})
 	pe.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.05),
-		NumberSequenceKeypoint.new(0.7, 0.35),
+		NumberSequenceKeypoint.new(0, 0.04),
+		NumberSequenceKeypoint.new(0.68, 0.30),
 		NumberSequenceKeypoint.new(1, 1),
 	})
 	pe.Speed = NumberRange.new(sMin, sMax)
-	pe.Lifetime = NumberRange.new((life or 0.36) * 0.7, life or 0.36)
+	pe.Lifetime = NumberRange.new((life or 0.38) * 0.7, life or 0.38)
 	pe.SpreadAngle = Vector2.new(spread or 180, spread or 180)
 	pe.RotSpeed = NumberRange.new(-(rotSpd or 120), rotSpd or 120)
 	pe.Rotation = NumberRange.new(0, 360)
-	pe.LightEmission = 0.85
-	pe.Drag = 3.5
+	pe.LightEmission = if tex == TEX.Smoke then 0.35 else 0.92
+	pe.Brightness = if tex == TEX.SoftGlow then 2.8 else 1.9
+	pe.Drag = 3.2
+	if stretch and stretch > 0 then
+		pe.Orientation = Enum.ParticleOrientation.VelocityParallel
+		pe.Squash = NumberSequence.new(stretch)
+	end
 	if accel then
 		pe.Acceleration = accel
 	end
 	pe.Rate = 0
 	pe.Parent = a
-	pe:Emit(if lowQuality() then math.max(1, math.floor(count / 2)) else count)
+	pe:Emit(if lowQuality() then math.max(2, math.floor(count / 2)) else count)
 	return a
 end
 
-local function genShockDisc(parent: Instance, cf: CFrame, color: Color3, startSz: number, endSz: number, dur: number, tex: string?)
-	local p = genPart(parent, Vector3.new(startSz, 0.05, startSz), color, Enum.Material.SmoothPlastic, Enum.PartType.Block, 1)
-	p.CFrame = cf
-	local decals = {}
-	for _, face in ipairs({ Enum.NormalId.Top, Enum.NormalId.Bottom }) do
-		local d = Instance.new("Decal")
-		d.Face = face
-		d.Texture = tex or TEX.Ring
-		d.Color3 = color
-		d.Transparency = 0.06
-		d.Parent = p
-		table.insert(decals, d)
+-- Onda fluida 100% em particulas (substitui discos planos de decal por faiscas radiais + nevoa organica)
+local function genFluidRing(parent: Instance, cf: CFrame, c1: Color3, c2: Color3?, radius: number, dur: number, useSmoke: boolean?)
+	local pos = cf.Position
+	local count = math.clamp(math.floor(radius * 3.4), 16, 36)
+	local spd = math.clamp(radius * 2.4, 8, 28)
+	genBurst(parent, pos, TEX.SoftGlow, c2 or Color3.new(1, 1, 1), c1, count, spd * 0.55, spd, 0.55, 0.05, dur, 180, 0, nil, 1.15)
+	if useSmoke then
+		genBurst(parent, pos, TEX.Smoke, c1, c2 or c1, math.max(10, math.floor(count * 0.5)), spd * 0.28, spd * 0.65, 1.1, math.clamp(radius * 0.42, 2.2, 4.8), dur * 1.25, 180, 90)
+	else
+		genBurst(parent, pos, TEX.Fire, c1, c2 or c1, math.max(12, math.floor(count * 0.55)), spd * 0.32, spd * 0.72, 0.95, math.clamp(radius * 0.36, 1.8, 4.0), dur * 1.1, 180, 120)
 	end
-	tween(p, dur, { Size = Vector3.new(endSz, 0.05, endSz) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	for _, d in ipairs(decals) do
-		tween(d, dur, { Transparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	end
-	return p
 end
 
+-- Corte luminoso fluido em particulas e rastro (zero barras retangulares rigidas)
 local function genSlashMark(parent: Instance, lookCF: CFrame, offset: Vector3, angleDeg: number, len: number, thick: number, c1: Color3, c2: Color3?)
-	local core = genPart(parent, Vector3.new(thick, 0.4, 0.10), c2 or Color3.new(1, 1, 1), Enum.Material.Neon, Enum.PartType.Block, 0)
-	core.CFrame = lookCF * CFrame.new(offset) * CFrame.Angles(0, 0, math.rad(angleDeg))
-	local outer = genPart(parent, Vector3.new(thick * 1.9, 0.4, 0.08), c1, Enum.Material.Neon, Enum.PartType.Block, 0.25)
-	outer.CFrame = core.CFrame * CFrame.new(0, 0, 0.03)
-	tween(core, 0.065, { Size = Vector3.new(thick, len, 0.10) }, Enum.EasingStyle.Exponential)
-	tween(outer, 0.075, { Size = Vector3.new(thick * 1.85, len * 1.06, 0.08) }, Enum.EasingStyle.Exponential)
-	task.delay(0.09, function()
-		if core.Parent then
-			tween(core, 0.18, { Size = Vector3.new(0.03, len * 1.15, 0.04), Transparency = 1 })
-		end
-		if outer.Parent then
-			tween(outer, 0.20, { Size = Vector3.new(0.05, len * 1.2, 0.04), Transparency = 1 })
+	local centerCF = lookCF * CFrame.new(offset) * CFrame.Angles(0, 0, math.rad(angleDeg))
+	local p0 = (centerCF * CFrame.new(0, -len * 0.5, 0)).Position
+	local p1 = (centerCF * CFrame.new(0, len * 0.5, 0)).Position
+	local a = genAnchor(parent, CFrame.new(p0))
+	local a0 = Instance.new("Attachment")
+	a0.Position = Vector3.new(0, thick * 1.6, 0)
+	a0.Parent = a
+	local a1 = Instance.new("Attachment")
+	a1.Position = Vector3.new(0, -thick * 1.6, 0)
+	a1.Parent = a
+	local tr = Instance.new("Trail")
+	tr.Attachment0 = a0
+	tr.Attachment1 = a1
+	tr.Texture = TEX.Trail
+	tr.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, c2 or Color3.new(1, 1, 1)),
+		ColorSequenceKeypoint.new(0.45, c1),
+		ColorSequenceKeypoint.new(1, c1),
+	})
+	tr.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.02),
+		NumberSequenceKeypoint.new(0.65, 0.32),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	tr.Lifetime = 0.22
+	tr.MinLength = 0.04
+	tr.LightEmission = 1
+	tr.FaceCamera = true
+	tr.Parent = a
+
+	local pe = Instance.new("ParticleEmitter")
+	pe.Texture = TEX.SoftGlow
+	pe.Color = ColorSequence.new(c2 or Color3.new(1, 1, 1), c1)
+	pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, thick * 2.2), NumberSequenceKeypoint.new(1, 0) })
+	pe.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.05), NumberSequenceKeypoint.new(1, 1) })
+	pe.Speed = NumberRange.new(2, 7)
+	pe.Lifetime = NumberRange.new(0.16, 0.28)
+	pe.Rate = if lowQuality() then 35 else 75
+	pe.LightEmission = 1
+	pe.Brightness = 2.8
+	pe.Orientation = Enum.ParticleOrientation.VelocityParallel
+	pe.Squash = NumberSequence.new(1.1)
+	pe.Parent = a
+
+	local t0 = os.clock()
+	local dur = 0.11
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		if not parent.Parent or not a.Parent then conn:Disconnect(); return end
+		local alpha = math.clamp((os.clock() - t0) / dur, 0, 1)
+		a.CFrame = CFrame.new(p0:Lerp(p1, alpha))
+		if alpha >= 1 then
+			conn:Disconnect()
+			pe.Enabled = false
+			tr.Enabled = false
 		end
 	end)
 end
@@ -2944,16 +3092,171 @@ local function attachGenTrail(part: BasePart, c1: Color3, c2: Color3?, width: nu
 		ColorSequenceKeypoint.new(1, c1),
 	})
 	tr.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.06),
-		NumberSequenceKeypoint.new(0.6, 0.4),
+		NumberSequenceKeypoint.new(0, 0.05),
+		NumberSequenceKeypoint.new(0.6, 0.38),
 		NumberSequenceKeypoint.new(1, 1),
 	})
-	tr.Lifetime = life or 0.18
-	tr.MinLength = 0.08
-	tr.LightEmission = 0.9
+	tr.Lifetime = life or 0.20
+	tr.MinLength = 0.06
+	tr.LightEmission = 0.95
 	tr.FaceCamera = true
 	tr.Parent = part
 	return tr
+end
+
+-- Enxame fluido 3D em helice/arco: ancoras invisiveis com Trail + particulas organicas (zero esferas/blocos solidos!)
+local function genFluidSwarm(ctx, fromPos: Vector3, toPos: Vector3, travel: number, c1: Color3, c2: Color3?, opts: { [string]: any }?)
+	local o = opts or {}
+	local strands = o.strands or 2
+	local radius = o.radius or 0.9
+	local turns = o.turns or 1.4
+	local arcUp = o.arcUp or 0.55
+	local trailW = o.trailW or 0.65
+	local flowTex = o.flowTex or TEX.Fire
+	local moteTex = o.moteTex or TEX.SoftGlow
+	local flowRate = if lowQuality() then math.floor((o.flowRate or 46) * 0.5) else (o.flowRate or 46)
+	local moteRate = if lowQuality() then math.floor((o.moteRate or 54) * 0.5) else (o.moteRate or 54)
+	local flowSz = o.flowSz or 1.25
+	local moteSz = o.moteSz or 0.45
+
+	local dir = toPos - fromPos
+	local lookCF = if dir.Magnitude > 0.1 then CFrame.lookAt(fromPos, toPos) else CFrame.new(fromPos)
+	local right = lookCF.RightVector
+	local up = lookCF.UpVector
+
+	for s = 1, strands do
+		local phase = ((s - 1) / math.max(1, strands)) * math.pi * 2 + (o.phaseOffset or 0)
+		local anchor = genAnchor(ctx.fx, CFrame.new(fromPos))
+		local tr = attachGenTrail(anchor, c1, c2, trailW, o.trailLife or 0.22)
+
+		local flow = Instance.new("ParticleEmitter")
+		flow.Texture = flowTex
+		flow.Color = ColorSequence.new(c2 or Color3.new(1, 1, 1), c1)
+		flow.Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, flowSz * 0.55),
+			NumberSequenceKeypoint.new(0.45, flowSz),
+			NumberSequenceKeypoint.new(1, flowSz * 0.2),
+		})
+		flow.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.18),
+			NumberSequenceKeypoint.new(0.65, 0.48),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+		flow.Speed = NumberRange.new(0.6, 2.6)
+		flow.Lifetime = NumberRange.new(0.22, 0.38)
+		flow.SpreadAngle = Vector2.new(180, 180)
+		flow.RotSpeed = NumberRange.new(-110, 110)
+		flow.Rotation = NumberRange.new(0, 360)
+		flow.LightEmission = if flowTex == TEX.Smoke then 0.35 else 0.90
+		flow.Brightness = 2.0
+		flow.Drag = 2.6
+		flow.Rate = flowRate
+		flow.Parent = anchor
+
+		local motes = Instance.new("ParticleEmitter")
+		motes.Texture = moteTex
+		motes.Color = ColorSequence.new(c2 or Color3.new(1, 1, 1), c1)
+		motes.Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, moteSz),
+			NumberSequenceKeypoint.new(0.5, moteSz * 0.65),
+			NumberSequenceKeypoint.new(1, 0),
+		})
+		motes.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.04),
+			NumberSequenceKeypoint.new(0.7, 0.28),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+		motes.Speed = NumberRange.new(1.5, 5.5)
+		motes.Lifetime = NumberRange.new(0.18, 0.34)
+		motes.SpreadAngle = Vector2.new(180, 180)
+		motes.LightEmission = 1
+		motes.Brightness = 2.8
+		motes.Orientation = Enum.ParticleOrientation.VelocityParallel
+		motes.Squash = NumberSequence.new(1.0)
+		motes.Drag = 2.8
+		motes.Rate = moteRate
+		motes.Parent = anchor
+
+		local t0 = os.clock()
+		local conn
+		conn = RunService.RenderStepped:Connect(function()
+			if not ctx.alive or not anchor.Parent then conn:Disconnect(); return end
+			local a = math.clamp((os.clock() - t0) / math.max(0.08, travel), 0, 1)
+			local env = math.sin(a * math.pi)
+			local ang = phase + a * math.pi * 2 * turns
+			local radial = (right * math.cos(ang) + up * math.sin(ang)) * (radius * env)
+			local pos = fromPos:Lerp(toPos, a) + radial + Vector3.new(0, env * arcUp, 0)
+			anchor.CFrame = CFrame.new(pos)
+			if a >= 1 then
+				conn:Disconnect()
+				flow.Enabled = false
+				motes.Enabled = false
+				tr.Enabled = false
+			end
+		end)
+	end
+end
+
+-- Vortice orbital 3D fluido ao redor de um ponto/personagem (para Buff, Cura, Escudo, Vento, Hex, Impacto)
+local function genFluidVortex(ctx, centerPos: Vector3, c1: Color3, c2: Color3?, opts: { [string]: any }?)
+	local o = opts or {}
+	local count = o.count or 2
+	local radius = o.radius or 2.8
+	local height = o.height or 4.6
+	local dur = o.dur or 0.56
+	local turns = o.turns or 2.0
+	local flowTex = o.flowTex or TEX.Fire
+	local trailW = o.trailW or 0.55
+
+	for i = 1, count do
+		local baseAng = ((i - 1) / math.max(1, count)) * math.pi * 2
+		local startP = centerPos + Vector3.new(math.cos(baseAng) * radius, 0, math.sin(baseAng) * radius)
+		local anchor = genAnchor(ctx.fx, CFrame.new(startP))
+		local tr = attachGenTrail(anchor, c1, c2, trailW, 0.24)
+
+		local pe = Instance.new("ParticleEmitter")
+		pe.Texture = flowTex
+		pe.Color = ColorSequence.new(c2 or Color3.new(1, 1, 1), c1)
+		pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.65), NumberSequenceKeypoint.new(0.5, 1.15), NumberSequenceKeypoint.new(1, 0.1) })
+		pe.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.22), NumberSequenceKeypoint.new(0.7, 0.55), NumberSequenceKeypoint.new(1, 1) })
+		pe.Speed = NumberRange.new(1.0, 3.2)
+		pe.Lifetime = NumberRange.new(0.24, 0.42)
+		pe.SpreadAngle = Vector2.new(180, 180)
+		pe.LightEmission = if flowTex == TEX.Smoke then 0.4 else 0.92
+		pe.Brightness = 2.1
+		pe.Rate = if lowQuality() then 18 else 36
+		pe.Parent = anchor
+
+		local sparks = Instance.new("ParticleEmitter")
+		sparks.Texture = TEX.SoftGlow
+		sparks.Color = ColorSequence.new(c2 or Color3.new(1, 1, 1), c1)
+		sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.42), NumberSequenceKeypoint.new(1, 0) })
+		sparks.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.04), NumberSequenceKeypoint.new(1, 1) })
+		sparks.Speed = NumberRange.new(1.2, 4.5)
+		sparks.Lifetime = NumberRange.new(0.22, 0.40)
+		sparks.SpreadAngle = Vector2.new(180, 180)
+		sparks.LightEmission = 1
+		sparks.Brightness = 2.9
+		sparks.Rate = if lowQuality() then 22 else 44
+		sparks.Parent = anchor
+
+		local t0 = os.clock()
+		local conn
+		conn = RunService.RenderStepped:Connect(function()
+			if not ctx.alive or not anchor.Parent then conn:Disconnect(); return end
+			local a = math.clamp((os.clock() - t0) / dur, 0, 1)
+			local ang = baseAng + a * math.pi * 2 * turns
+			local r = radius * (1.0 - a * (o.taper or 0.22))
+			local y = a * height
+			anchor.CFrame = CFrame.new(centerPos + Vector3.new(math.cos(ang) * r, y, math.sin(ang) * r))
+			if a >= 1 then
+				conn:Disconnect()
+				pe.Enabled = false
+				sparks.Enabled = false
+				tr.Enabled = false
+			end
+		end)
+	end
 end
 
 local function genDrainOrbs(parent: Instance, fromPos: Vector3, attacker: Model, c1: Color3, c2: Color3?)
@@ -2962,9 +3265,20 @@ local function genDrainOrbs(parent: Instance, fromPos: Vector3, attacker: Model,
 			if not parent.Parent or not alive(attacker) then
 				return
 			end
-			local orb = genPart(parent, Vector3.new(0.46, 0.46, 0.46), c1, Enum.Material.Neon, Enum.PartType.Ball, 0.08)
-			orb.CFrame = CFrame.new(fromPos)
-			attachGenTrail(orb, c1, c2 or Color3.fromRGB(220, 255, 225), 0.42, 0.18)
+			local anchor = genAnchor(parent, CFrame.new(fromPos))
+			local tr = attachGenTrail(anchor, c1, c2 or Color3.fromRGB(220, 255, 225), 0.48, 0.20)
+			local pe = Instance.new("ParticleEmitter")
+			pe.Texture = TEX.SoftGlow
+			pe.Color = ColorSequence.new(c2 or Color3.fromRGB(225, 255, 235), c1)
+			pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(1, 0) })
+			pe.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.04), NumberSequenceKeypoint.new(1, 1) })
+			pe.Speed = NumberRange.new(0.8, 2.5)
+			pe.Lifetime = NumberRange.new(0.18, 0.30)
+			pe.Rate = if lowQuality() then 24 else 48
+			pe.LightEmission = 1
+			pe.Brightness = 3.0
+			pe.Parent = anchor
+
 			local arcSide = (i - 2) * 2.1
 			local arcUp = 1.4 + (i % 2) * 1.1
 			local t0 = os.clock()
@@ -2980,12 +3294,13 @@ local function genDrainOrbs(parent: Instance, fromPos: Vector3, attacker: Model,
 				local dir = flat(toPos - fromPos)
 				local right = if dir.Magnitude > 0.1 then dir.Unit:Cross(Vector3.yAxis) else Vector3.xAxis
 				local pos = fromPos:Lerp(toPos, a) + right * (math.sin(a * math.pi) * arcSide) + Vector3.new(0, math.sin(a * math.pi) * arcUp, 0)
-				orb.CFrame = CFrame.new(pos)
+				anchor.CFrame = CFrame.new(pos)
 				if a >= 1 then
 					conn:Disconnect()
-					orb.Transparency = 1
+					pe.Enabled = false
+					tr.Enabled = false
 					if i == 1 then
-						genBurst(parent, toPos, TEX.Diamond, c1, Color3.fromRGB(235, 255, 235), 14, 3, 8, 0.55, 0.05, 0.32)
+						genBurst(parent, toPos, TEX.SoftGlow, c1, Color3.fromRGB(235, 255, 235), 22, 4, 11, 0.55, 0.05, 0.36, 180, 0, nil, 0.8)
 					end
 				end
 			end)
@@ -2994,17 +3309,8 @@ local function genDrainOrbs(parent: Instance, fromPos: Vector3, attacker: Model,
 end
 
 local function genShieldShatter(parent: Instance, pos: Vector3)
-	for i = 1, 6 do
-		local ang = (i / 6) * math.pi * 2
-		local shard = genPart(parent, Vector3.new(0.55, 0.72, 0.10), Color3.fromRGB(115, 240, 255), Enum.Material.Neon, Enum.PartType.Block, 0.18)
-		shard.CFrame = CFrame.new(pos) * CFrame.Angles(math.random() * 3, ang, math.random() * 3)
-		local out = pos + Vector3.new(math.cos(ang) * 3.4, 0.8 + (i % 3) * 0.7, math.sin(ang) * 3.4)
-		tween(shard, 0.32, {
-			CFrame = CFrame.new(out) * CFrame.Angles(math.random() * 6, ang + 2, math.random() * 6),
-			Size = Vector3.new(0.14, 0.22, 0.04),
-			Transparency = 1,
-		})
-	end
+	genBurst(parent, pos, TEX.Diamond, Color3.fromRGB(165, 248, 255), Color3.fromRGB(95, 212, 255), 24, 10, 26, 0.65, 0.06, 0.40, 180, 220, Vector3.new(0, -14, 0))
+	genBurst(parent, pos, TEX.SoftGlow, Color3.fromRGB(235, 255, 255), Color3.fromRGB(115, 240, 255), 20, 8, 22, 0.55, 0.05, 0.34, 180, 0, nil, 1.2)
 end
 
 local function ctxTargets(ctx): { Model }
@@ -3125,13 +3431,13 @@ local GENERIC_STYLES: { [string]: any } = {
 
 local PROC_HANDLERS: { [string]: any } = {}
 
--- 1. GenSlash: cortes, estocadas, giros 360 e golpes pesados de Espadachim
+-- 1. GenSlash: cortes, estocadas, giros 360 e golpes pesados de Espadachim (100% particulas e rastros fluidos)
 PROC_HANDLERS.GenSlash = {
 	Charge = function(ctx)
 		local cfg = ctx.cfg
 		local hp = handPos(ctx.attacker)
 		genSound(ctx.fx, SFX.Charge, 0.28, cfg.pitch or 1.1)
-		genBurst(ctx.fx, hp, TEX.Glint, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 6, 1, 4, 0.9, 0.1, 0.24)
+		genBurst(ctx.fx, hp, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 14, 2, 7, 0.50, 0.04, 0.26, 180, 0, nil, 0.9)
 		genLight(ctx.fx, hp, cfg.c1, 2.2, 10)
 	end,
 	Release = function(ctx)
@@ -3139,45 +3445,32 @@ PROC_HANDLERS.GenSlash = {
 		local aRoot = rootOf(ctx.attacker)
 		local startPos = aRoot.CFrame:PointToWorldSpace(Vector3.new(0, 0.6, -1.8))
 		local endPos = ctxCenterOfTargets(ctx)
-		local lookCF = CFrame.lookAt(startPos, endPos)
-		local travel = math.max(0.09, (ctx.timing.Impact or 0.38) - (ctx.timing.Release or 0.24))
+		local travel = math.max(0.10, (ctx.timing.Impact or 0.38) - (ctx.timing.Release or 0.24))
 		genSound(ctx.fx, if cfg.heavy then SFX.ReleaseHeavy else SFX.Release, 0.36, cfg.pitch or 1.05)
 
 		if cfg.variant == "spin" then
-			genShockDisc(ctx.fx, CFrame.new(aRoot.Position + Vector3.new(0, 0.2, 0)), cfg.c1, 2.8, 11.5, 0.32, TEX.Ring)
-			genBurst(ctx.fx, aRoot.Position, TEX.Streak, cfg.c1, cfg.c2, 16, 10, 22, 0.7, 0.1, 0.26)
+			genFluidVortex(ctx, aRoot.Position + Vector3.new(0, -0.4, 0), cfg.c1, cfg.c2, {
+				count = 3, radius = 3.4, height = 2.6, dur = 0.42, turns = 1.6, flowTex = TEX.Fire, trailW = 0.65, taper = -0.35,
+			})
+			genFluidSwarm(ctx, startPos, endPos, travel, cfg.c1, cfg.c2, {
+				strands = 2, radius = 1.6, turns = 1.2, arcUp = 0.2, trailW = 0.65, flowTex = TEX.Fire, flowRate = 48, moteRate = 64,
+			})
 		elseif cfg.variant == "thrust" then
-			local lance = genPart(ctx.fx, Vector3.new(0.28, 0.28, 1.4), cfg.c2 or Color3.new(1, 1, 1), Enum.Material.Neon, Enum.PartType.Block, 0.05)
-			lance.CFrame = lookCF
-			attachGenTrail(lance, cfg.c1, cfg.c2, 0.55, 0.16)
-			tween(lance, travel, { CFrame = CFrame.lookAt(endPos, endPos + lookCF.LookVector), Size = Vector3.new(0.18, 0.18, 4.6) })
-			task.delay(travel + 0.05, function()
-				if lance.Parent then tween(lance, 0.12, { Transparency = 1 }) end
-			end)
+			genFluidSwarm(ctx, startPos, endPos, travel, cfg.c1, cfg.c2, {
+				strands = 2, radius = 0.42, turns = 2.0, arcUp = 0.1, trailW = 0.55, flowTex = TEX.Fire, flowRate = 40, moteRate = 70, flowSz = 0.9,
+			})
 		else
-			local roll = if cfg.variant == "heavy" then 90 elseif cfg.variant == "dash" then 36 else -28
-			local arc = genPart(ctx.fx, Vector3.new(4.4, 0.06, 4.4), cfg.c1, Enum.Material.SmoothPlastic, Enum.PartType.Block, 1)
-			arc.CFrame = lookCF * CFrame.Angles(0, 0, math.rad(roll))
-			local dec = Instance.new("Decal")
-			dec.Face = Enum.NormalId.Top
-			dec.Texture = TEX.Shock
-			dec.Color3 = cfg.c1
-			dec.Transparency = 0.05
-			dec.Parent = arc
-			local t0 = os.clock()
-			local conn
-			conn = RunService.RenderStepped:Connect(function()
-				if not ctx.alive or not arc.Parent then conn:Disconnect(); return end
-				local a = math.clamp((os.clock() - t0) / travel, 0, 1)
-				local p = startPos:Lerp(endPos, 1 - (1 - a) * (1 - a))
-				local sz = 4.4 + a * (if cfg.heavy then 3.2 else 2.2)
-				arc.CFrame = CFrame.lookAt(p, p + lookCF.LookVector) * CFrame.Angles(0, 0, math.rad(roll))
-				arc.Size = Vector3.new(sz, 0.06, sz)
-				if a >= 1 then
-					conn:Disconnect()
-					tween(dec, 0.14, { Transparency = 1 })
-				end
-			end)
+			genFluidSwarm(ctx, startPos, endPos, travel, cfg.c1, cfg.c2, {
+				strands = if cfg.heavy then 3 else 2,
+				radius = if cfg.heavy then 1.35 else 0.95,
+				turns = 1.1,
+				arcUp = 0.45,
+				trailW = if cfg.heavy then 0.85 else 0.65,
+				flowTex = if cfg.tex == TEX.Flame then TEX.Fire elseif cfg.tex == TEX.Puff then TEX.Smoke else TEX.Fire,
+				flowRate = if cfg.heavy then 62 else 46,
+				moteRate = if cfg.heavy then 75 else 56,
+				flowSz = if cfg.heavy then 1.55 else 1.15,
+			})
 		end
 	end,
 	Impact = function(ctx)
@@ -3192,66 +3485,73 @@ PROC_HANDLERS.GenSlash = {
 			local hitPos = targetCenter(tModel)
 			local hitLook = CFrame.lookAt(hitPos, Vector3.new(aPos.X, hitPos.Y, aPos.Z))
 			if cfg.variant == "thrust" then
-				genSlashMark(ctx.fx, hitLook, Vector3.new(0, 0.1, -0.7), 0, 5.2, 0.20, cfg.c1, cfg.c2)
-				genBurst(ctx.fx, hitPos, TEX.Star, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 6, 4, 12, 1.4, 0.1, 0.28)
+				genSlashMark(ctx.fx, hitLook, Vector3.new(0, 0.1, -0.7), 0, 5.4, 0.24, cfg.c1, cfg.c2)
 			elseif cfg.variant == "spin" then
-				genSlashMark(ctx.fx, hitLook, Vector3.new(0, 0.35, -0.7), 78, 5.8, 0.20, cfg.c1, cfg.c2)
-				genSlashMark(ctx.fx, hitLook, Vector3.new(0, -0.25, -0.7), -78, 5.4, 0.18, cfg.c1, cfg.c2)
+				genSlashMark(ctx.fx, hitLook, Vector3.new(0, 0.35, -0.7), 72, 6.0, 0.24, cfg.c1, cfg.c2)
+				genSlashMark(ctx.fx, hitLook, Vector3.new(0, -0.25, -0.7), -72, 5.6, 0.22, cfg.c1, cfg.c2)
 			elseif cfg.variant == "heavy" then
-				genSlashMark(ctx.fx, hitLook, Vector3.new(0, 0.15, -0.7), 4, 7.2, 0.28, cfg.c1, cfg.c2)
-				genShockDisc(ctx.fx, CFrame.new(Vector3.new(hitPos.X, groundY(tModel) + 0.08, hitPos.Z)), cfg.c1, 1.8, 9.4, 0.34, TEX.Shock)
+				genSlashMark(ctx.fx, hitLook, Vector3.new(0, 0.15, -0.7), 12, 7.2, 0.32, cfg.c1, cfg.c2)
+				genFluidRing(ctx.fx, CFrame.new(hitPos.X, groundY(tModel) + 0.3, hitPos.Z), cfg.c1, cfg.c2, 7.5, 0.42, true)
 			else
-				genSlashMark(ctx.fx, hitLook, Vector3.new(0, 0.1, -0.7), -40, 6.2, 0.22, cfg.c1, cfg.c2)
+				genSlashMark(ctx.fx, hitLook, Vector3.new(0, 0.1, -0.7), -40, 6.2, 0.26, cfg.c1, cfg.c2)
 			end
-			genShockDisc(ctx.fx, hitLook * CFrame.Angles(math.pi / 2, 0, 0), cfg.c1, 1.2, if cfg.heavy then 8.2 else 6.4, 0.26, TEX.Ring)
-			genBurst(ctx.fx, hitPos, cfg.tex or TEX.Spark, cfg.c1, cfg.c2, if cfg.heavy then 24 else 16, 8, 22, 0.75, 0.08, 0.36)
+			genFluidRing(ctx.fx, CFrame.new(hitPos), cfg.c1, cfg.c2, if cfg.heavy then 7.2 else 5.2, 0.34, false)
+			genBurst(ctx.fx, hitPos, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, if cfg.heavy then 32 else 22, 10, 26, 0.62, 0.04, 0.38, 180, 0, nil, 1.15)
 			genLight(ctx.fx, hitPos, cfg.c1, if cfg.heavy then 3.4 else 2.6, 14)
 			if cfg.drain then genDrainOrbs(ctx.fx, hitPos, ctx.attacker, cfg.c1, cfg.c2) end
 			if cfg.breaksProtect then genShieldShatter(ctx.fx, hitPos) end
 		end
 		if cfg.recoil and alive(ctx.attacker) then
-			genBurst(ctx.fx, targetCenter(ctx.attacker), TEX.Puff, cfg.c1, Color3.fromRGB(255, 220, 200), 10, 4, 10, 0.9, 0.2, 0.30)
+			genBurst(ctx.fx, targetCenter(ctx.attacker), TEX.Smoke, cfg.c1, Color3.fromRGB(255, 220, 200), 14, 4, 10, 1.0, 2.4, 0.36)
 		end
 	end,
-	Duration = 0.85,
+	Duration = 0.90,
 }
 
--- 2. GenMelee: socos, chutes varredores e investidas marciais
+-- 2. GenMelee: socos, chutes varredores e investidas marciais (100% particulas e rastros cineticos)
 PROC_HANDLERS.GenMelee = {
 	Charge = function(ctx)
 		local cfg = ctx.cfg
 		local hp = handPos(ctx.attacker)
-		genBurst(ctx.fx, hp, cfg.tex or TEX.Glint, cfg.c1, cfg.c2, 10, 2, 7, 0.75, 0.1, 0.24)
-		genLight(ctx.fx, hp, cfg.c1, 2.2, 9)
+		genBurst(ctx.fx, hp, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 16, 3, 9, 0.52, 0.04, 0.28, 180, 0, nil, 1.0)
+		genBurst(ctx.fx, hp, TEX.Fire, cfg.c1, cfg.c2, 10, 2, 6, 0.65, 1.2, 0.28)
+		genLight(ctx.fx, hp, cfg.c1, 2.4, 10)
 	end,
 	Release = function(ctx)
 		local cfg = ctx.cfg
 		local aRoot = rootOf(ctx.attacker)
 		genSound(ctx.fx, if cfg.heavy then SFX.ReleaseHeavy else SFX.Release, 0.34, cfg.pitch or 1.05)
+		local startPos = handPos(ctx.attacker)
+		local endPos = ctxCenterOfTargets(ctx)
+		local travel = math.max(0.09, (ctx.timing.Impact or 0.34) - (ctx.timing.Release or 0.22))
 		if cfg.variant == "sweep" then
 			local gy = groundY(ctx.attacker) + 0.35
-			genShockDisc(ctx.fx, CFrame.new(aRoot.Position.X, gy, aRoot.Position.Z), cfg.c1, 2.0, 9.6, 0.30, TEX.Ring)
-			if cfg.clearGust then
-				genShockDisc(ctx.fx, CFrame.new(aRoot.Position.X, gy + 0.5, aRoot.Position.Z), cfg.c2 or Color3.new(1, 1, 1), 3.0, 14.0, 0.38, TEX.Shock)
-			end
+			genFluidVortex(ctx, Vector3.new(aRoot.Position.X, gy, aRoot.Position.Z), cfg.c1, cfg.c2, {
+				count = 2, radius = 3.2, height = 1.4, dur = 0.38, turns = 1.5, flowTex = TEX.Smoke, trailW = 0.65, taper = -0.35,
+			})
+			genFluidSwarm(ctx, Vector3.new(aRoot.Position.X, gy + 0.6, aRoot.Position.Z), endPos, travel, cfg.c1, cfg.c2, {
+				strands = 2, radius = 1.2, turns = 1.0, arcUp = 0.15, flowTex = TEX.Smoke, trailW = 0.6,
+			})
 		elseif cfg.variant == "rush" then
-			genBurst(ctx.fx, aRoot.Position, TEX.Streak, cfg.c1, cfg.c2, 14, 10, 22, 0.75, 0.1, 0.24)
+			genFluidSwarm(ctx, aRoot.Position, endPos, travel, cfg.c1, cfg.c2, {
+				strands = 2, radius = 0.85, turns = 1.2, arcUp = 0.25, flowTex = TEX.Fire, trailW = 0.7,
+			})
 		else
-			local startPos = handPos(ctx.attacker)
-			local endPos = ctxCenterOfTargets(ctx)
-			local travel = math.max(0.08, (ctx.timing.Impact or 0.34) - (ctx.timing.Release or 0.22))
-			local fist = genPart(ctx.fx, Vector3.new(0.75, 0.75, 0.75), cfg.c1, Enum.Material.Neon, Enum.PartType.Ball, 0.22)
-			fist.CFrame = CFrame.new(startPos)
-			attachGenTrail(fist, cfg.c1, cfg.c2, 0.75, 0.15)
-			tween(fist, travel, { CFrame = CFrame.new(endPos), Size = Vector3.new(1.15, 1.15, 1.15) })
-			task.delay(travel + 0.04, function()
-				if fist.Parent then tween(fist, 0.12, { Transparency = 1 }) end
-			end)
+			genFluidSwarm(ctx, startPos, endPos, travel, cfg.c1, cfg.c2, {
+				strands = if cfg.heavy then 3 else 2,
+				radius = if cfg.heavy then 1.05 else 0.55,
+				turns = 1.6,
+				arcUp = 0.20,
+				trailW = if cfg.heavy then 0.82 else 0.58,
+				flowTex = TEX.Fire,
+				flowRate = if cfg.heavy then 65 else 48,
+				moteRate = if cfg.heavy then 75 else 56,
+				flowSz = if cfg.heavy then 1.45 else 1.05,
+			})
 		end
 	end,
 	Impact = function(ctx)
 		local cfg = ctx.cfg
-		local aPos = rootOf(ctx.attacker).Position
 		CombatAnimator.Hitstop(ctx.attacker, if cfg.heavy then 0.055 else 0.036)
 		genSound(ctx.fx, if cfg.heavy then SFX.ImpactHeavy else SFX.Impact, if cfg.heavy then 0.45 else 0.38, cfg.pitch or 1.0)
 		springShake(if cfg.heavy then 0.38 else 0.22, 0.24, 46, 12, if cfg.heavy then 1.2 else 0.6)
@@ -3259,34 +3559,42 @@ PROC_HANDLERS.GenMelee = {
 
 		for _, tModel in ipairs(ctxTargets(ctx)) do
 			local hitPos = targetCenter(tModel)
-			local hitLook = CFrame.lookAt(hitPos, Vector3.new(aPos.X, hitPos.Y, aPos.Z))
-			genShockDisc(ctx.fx, hitLook * CFrame.Angles(math.pi / 2, 0, 0), cfg.c1, 1.2, if cfg.heavy then 8.8 else 6.2, 0.28, TEX.Shock)
-			genBurst(ctx.fx, hitPos, TEX.Star, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 5, 2, 8, if cfg.heavy then 2.2 else 1.5, 0.1, 0.22)
-			genBurst(ctx.fx, hitPos, cfg.tex or TEX.Spark, cfg.c1, cfg.c2, if cfg.heavy then 26 else 16, 8, 22, 0.85, 0.08, 0.36)
+			genFluidRing(ctx.fx, CFrame.new(hitPos), cfg.c1, cfg.c2, if cfg.heavy then 7.8 else 5.4, 0.36, cfg.variant == "sweep")
+			genBurst(ctx.fx, hitPos, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, if cfg.heavy then 34 else 22, 10, 28, 0.68, 0.04, 0.38, 180, 0, nil, 1.2)
+			genBurst(ctx.fx, hitPos, TEX.Fire, cfg.c1, cfg.c2, if cfg.heavy then 22 else 14, 5, 16, 1.0, 2.8, 0.40)
+			if cfg.heavy then
+				genBurst(ctx.fx, hitPos, TEX.Smoke, cfg.c1, cfg.c2, 14, 6, 14, 1.2, 3.6, 0.46)
+			end
 			genLight(ctx.fx, hitPos, cfg.c1, if cfg.heavy then 3.5 else 2.6, 14)
 			if cfg.drain then genDrainOrbs(ctx.fx, hitPos, ctx.attacker, cfg.c1, cfg.c2) end
 			if cfg.breaksProtect then genShieldShatter(ctx.fx, hitPos) end
 		end
 		if cfg.recoil and alive(ctx.attacker) then
-			genBurst(ctx.fx, targetCenter(ctx.attacker), TEX.Puff, cfg.c1, Color3.fromRGB(255, 220, 200), 10, 4, 10, 0.9, 0.2, 0.30)
+			genBurst(ctx.fx, targetCenter(ctx.attacker), TEX.Smoke, cfg.c1, Color3.fromRGB(255, 220, 200), 12, 4, 10, 1.0, 2.5, 0.34)
 		end
 	end,
-	Duration = 0.82,
+	Duration = 0.88,
 }
 
--- 3. GenGroundWave: soco no chao enviando ondas sismicas ate todos os inimigos
+-- 3. GenGroundWave: soco no chao enviando ondas sismicas fluidas de poeira e energia ate os inimigos
 PROC_HANDLERS.GenGroundWave = {
 	Charge = function(ctx)
 		local cfg = ctx.cfg
-		genBurst(ctx.fx, rootOf(ctx.attacker).Position + Vector3.new(0, 1.2, 0), TEX.Gather, cfg.c1, cfg.c2, 14, 3, 9, 0.8, 0.1, 0.26)
+		genBurst(ctx.fx, rootOf(ctx.attacker).Position + Vector3.new(0, 1.2, 0), TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 18, 3, 10, 0.55, 0.05, 0.30, 180, 0, nil, 0.9)
 	end,
 	Release = function(ctx)
 		local cfg = ctx.cfg
 		local aRoot = rootOf(ctx.attacker)
-		local floorPos = Vector3.new(aRoot.Position.X, groundY(ctx.attacker) + 0.08, aRoot.Position.Z)
+		local floorPos = Vector3.new(aRoot.Position.X, groundY(ctx.attacker) + 0.35, aRoot.Position.Z)
+		local travel = math.max(0.14, (ctx.timing.Impact or 0.52) - (ctx.timing.Release or 0.34))
 		genSound(ctx.fx, SFX.ReleaseHeavy, 0.42, cfg.pitch or 0.85)
-		genShockDisc(ctx.fx, CFrame.new(floorPos), cfg.c1, 1.8, 12.5, 0.38, TEX.Shock)
-		genBurst(ctx.fx, floorPos + Vector3.new(0, 0.4, 0), TEX.Puff, cfg.c1, cfg.c2, 16, 6, 16, 1.1, 0.2, 0.36, 80)
+		genFluidRing(ctx.fx, CFrame.new(floorPos), cfg.c1, cfg.c2, 8.5, 0.44, true)
+		for _, tModel in ipairs(ctxTargets(ctx)) do
+			local tPos = Vector3.new(targetCenter(tModel).X, groundY(tModel) + 0.4, targetCenter(tModel).Z)
+			genFluidSwarm(ctx, floorPos, tPos, travel, cfg.c1, cfg.c2, {
+				strands = 2, radius = 1.15, turns = 1.2, arcUp = 0.35, flowTex = TEX.Smoke, trailW = 0.85, flowRate = 60, moteRate = 60, flowSz = 1.8,
+			})
+		end
 		springShake(0.24, 0.22, 38, 10, 0.6)
 	end,
 	Impact = function(ctx)
@@ -3295,209 +3603,169 @@ PROC_HANDLERS.GenGroundWave = {
 		springShake(0.36, 0.28, 42, 10, 1.0)
 		for _, tModel in ipairs(ctxTargets(ctx)) do
 			local hitPos = targetCenter(tModel)
-			local gy = groundY(tModel) + 0.08
-			genShockDisc(ctx.fx, CFrame.new(hitPos.X, gy, hitPos.Z), cfg.c1, 1.6, 10.2, 0.36, TEX.Shock)
-			genBurst(ctx.fx, Vector3.new(hitPos.X, gy + 0.6, hitPos.Z), TEX.Spark, cfg.c1, cfg.c2, 22, 8, 22, 0.9, 0.1, 0.40, 65, 160, Vector3.new(0, 14, 0))
+			local gy = groundY(tModel) + 0.25
+			genFluidVortex(ctx, Vector3.new(hitPos.X, gy, hitPos.Z), cfg.c1, cfg.c2, {
+				count = 2, radius = 2.8, height = 5.2, dur = 0.48, turns = 1.6, flowTex = TEX.Smoke, trailW = 0.75,
+			})
+			genBurst(ctx.fx, Vector3.new(hitPos.X, gy + 0.6, hitPos.Z), TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 30, 10, 26, 0.70, 0.05, 0.44, 65, 0, Vector3.new(0, 12, 0), 1.2)
+			genBurst(ctx.fx, Vector3.new(hitPos.X, gy + 0.5, hitPos.Z), TEX.Smoke, cfg.c1, cfg.c2, 22, 6, 18, 1.6, 4.4, 0.52, 85, 110, Vector3.new(0, 8, 0))
 			genLight(ctx.fx, hitPos, cfg.c1, 3.2, 15)
 		end
 	end,
-	Duration = 0.90,
+	Duration = 0.96,
 }
 
--- 4. GenProjectile: orbes arcanos, dardos velozes e feixes finos de precisao/gelo
+-- 4. GenProjectile: cometas arcanos, flechas de luz e feixes espiralados 100% fluidos (zero blocos/esferas rigidas)
 PROC_HANDLERS.GenProjectile = {
 	Charge = function(ctx)
 		local cfg = ctx.cfg
 		local hp = handPos(ctx.attacker)
 		genSound(ctx.fx, SFX.Charge, 0.26, cfg.pitch or 1.15)
-		local chargeOrb = genPart(ctx.fx, Vector3.new(0.25, 0.25, 0.25), cfg.c2 or Color3.new(1, 1, 1), Enum.Material.Neon, Enum.PartType.Ball, 0.08)
-		chargeOrb.CFrame = CFrame.new(hp)
-		tween(chargeOrb, 0.16, { Size = Vector3.new(0.95, 0.95, 0.95) }, Enum.EasingStyle.Back)
-		ctx.chargeOrb = chargeOrb
-		genBurst(ctx.fx, hp, TEX.Gather, cfg.c1, cfg.c2, 10, 2, 6, 0.6, 0.08, 0.22)
-		genLight(ctx.fx, hp, cfg.c1, 2.2, 9)
+		genBurst(ctx.fx, hp, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 18, 2, 7, 0.60, 0.04, 0.28, 180, 0, nil, 0.7)
+		genBurst(ctx.fx, hp, TEX.Fire, cfg.c1, cfg.c2, 12, 1, 4, 0.75, 1.4, 0.26)
+		genLight(ctx.fx, hp, cfg.c1, 2.4, 10)
 	end,
 	Release = function(ctx)
 		local cfg = ctx.cfg
-		if ctx.chargeOrb and ctx.chargeOrb.Parent then
-			ctx.chargeOrb:Destroy()
-		end
 		local fromPos = handPos(ctx.attacker)
 		local toPos = ctxCenterOfTargets(ctx)
-		local travel = math.max(0.10, (ctx.timing.Impact or 0.44) - (ctx.timing.Release or 0.28))
+		local travel = math.max(0.11, (ctx.timing.Impact or 0.44) - (ctx.timing.Release or 0.28))
 		genSound(ctx.fx, if cfg.heavy then SFX.ReleaseHeavy else SFX.Release, 0.36, cfg.pitch or 1.15)
 
 		if cfg.variant == "beam" then
-			local dist = (toPos - fromPos).Magnitude
-			local mid = fromPos:Lerp(toPos, 0.5)
-			local beamCF = CFrame.lookAt(mid, toPos)
-			local core = genPart(ctx.fx, Vector3.new(0.26, 0.26, dist), cfg.c2 or Color3.new(1, 1, 1), Enum.Material.Neon, Enum.PartType.Block, 0.02)
-			local glow = genPart(ctx.fx, Vector3.new(0.68, 0.68, dist), cfg.c1, Enum.Material.Neon, Enum.PartType.Block, 0.38)
-			core.CFrame = beamCF
-			glow.CFrame = beamCF
-			genShockDisc(ctx.fx, CFrame.lookAt(fromPos, toPos) * CFrame.Angles(math.pi / 2, 0, 0), cfg.c1, 0.8, 3.6, 0.22, TEX.Ring)
-			task.delay(math.min(0.16, travel + 0.04), function()
-				if core.Parent then tween(core, 0.16, { Size = Vector3.new(0.04, 0.04, dist), Transparency = 1 }) end
-				if glow.Parent then tween(glow, 0.18, { Size = Vector3.new(0.08, 0.08, dist), Transparency = 1 }) end
-			end)
+			-- Feixe perfurante espiralado em 3 fios fluidos (TiroPerfurante, RaioCongelante, DisparoDeElite)
+			genFluidSwarm(ctx, fromPos, toPos, travel, cfg.c1, cfg.c2, {
+				strands = 3, radius = 0.58, turns = 2.6, arcUp = 0.08, trailW = 0.72, flowTex = TEX.Fire,
+				flowRate = 65, moteRate = 85, flowSz = 1.15, moteSz = 0.50, trailLife = 0.26,
+			})
+			genFluidRing(ctx.fx, CFrame.new(fromPos), cfg.c1, cfg.c2, 3.6, 0.26, false)
+		elseif cfg.variant == "dart" then
+			-- Flecha/dardo de luz fluido de alta velocidade (DisparoPreciso, TiroRapido, Dardos)
+			genFluidSwarm(ctx, fromPos, toPos, travel, cfg.c1, cfg.c2, {
+				strands = 2, radius = 0.32, turns = 2.2, arcUp = 0.22, trailW = 0.48,
+				flowTex = if cfg.tex == TEX.Puff then TEX.Smoke else TEX.Fire,
+				flowRate = 48, moteRate = 76, flowSz = 0.85, moteSz = 0.42, trailLife = 0.22,
+			})
 		else
-			local isDart = cfg.variant == "dart"
-			local proj = genPart(
-				ctx.fx,
-				if isDart then Vector3.new(0.24, 0.24, 1.65) else Vector3.new(0.95, 0.95, 0.95),
-				cfg.c1,
-				Enum.Material.Neon,
-				if isDart then Enum.PartType.Block else Enum.PartType.Ball,
-				0.04
-			)
-			proj.CFrame = CFrame.lookAt(fromPos, toPos)
-			attachGenTrail(proj, cfg.c1, cfg.c2, if isDart then 0.38 else 0.85, 0.18)
-			local t0 = os.clock()
-			local conn
-			conn = RunService.RenderStepped:Connect(function()
-				if not ctx.alive or not proj.Parent then conn:Disconnect(); return end
-				local a = math.clamp((os.clock() - t0) / travel, 0, 1)
-				local p = fromPos:Lerp(toPos, a) + Vector3.new(0, math.sin(a * math.pi) * (if isDart then 0.35 else 0.9), 0)
-				proj.CFrame = CFrame.lookAt(p, toPos + Vector3.new(0, 0.05, 0))
-				if a >= 1 then
-					conn:Disconnect()
-					proj.Transparency = 1
-				end
-			end)
+			-- Cometa arcano espiralado (EsferaArcana, PulsoVeloz, SifaoArcano)
+			genFluidSwarm(ctx, fromPos, toPos, travel, cfg.c1, cfg.c2, {
+				strands = 3, radius = 0.82, turns = 2.0, arcUp = 0.65, trailW = 0.68, flowTex = TEX.Fire,
+				flowRate = 64, moteRate = 74, flowSz = 1.35, moteSz = 0.48, trailLife = 0.26,
+			})
 		end
 	end,
 	Impact = function(ctx)
 		local cfg = ctx.cfg
-		local aPos = rootOf(ctx.attacker).Position
 		genSound(ctx.fx, if cfg.heavy then SFX.ImpactHeavy else SFX.Impact, if cfg.heavy then 0.44 else 0.36, cfg.pitch or 1.1)
 		springShake(if cfg.heavy then 0.34 else 0.20, 0.22, 46, 12, if cfg.heavy then 1.0 else 0.5)
 		if cfg.heavy then fovPunch(-2.8, 0.05, 0.20) end
 
 		for _, tModel in ipairs(ctxTargets(ctx)) do
 			local hitPos = targetCenter(tModel)
-			local hitLook = CFrame.lookAt(hitPos, Vector3.new(aPos.X, hitPos.Y, aPos.Z))
-			genShockDisc(ctx.fx, hitLook * CFrame.Angles(math.pi / 2, 0, 0), cfg.c1, 1.0, if cfg.heavy then 8.4 else 6.0, 0.28, TEX.Ring)
-			genBurst(ctx.fx, hitPos, TEX.Star, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 5, 3, 10, if cfg.heavy then 2.2 else 1.4, 0.1, 0.24)
-			genBurst(ctx.fx, hitPos, cfg.tex or TEX.Spark, cfg.c1, cfg.c2, if cfg.heavy then 26 else 18, 8, 22, 0.85, 0.08, 0.36)
+			genFluidRing(ctx.fx, CFrame.new(hitPos), cfg.c1, cfg.c2, if cfg.heavy then 7.8 else 5.6, 0.34, false)
+			genBurst(ctx.fx, hitPos, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, if cfg.heavy then 34 else 24, 10, 28, 0.68, 0.04, 0.38, 180, 0, nil, 1.2)
+			genBurst(ctx.fx, hitPos, if cfg.tex == TEX.Puff then TEX.Smoke else TEX.Fire, cfg.c1, cfg.c2, if cfg.heavy then 22 else 16, 5, 16, 1.1, 2.9, 0.40)
 			genLight(ctx.fx, hitPos, cfg.c1, if cfg.heavy then 3.4 else 2.6, 14)
 			if cfg.drain then genDrainOrbs(ctx.fx, hitPos, ctx.attacker, cfg.c1, cfg.c2) end
 			if cfg.breaksProtect then genShieldShatter(ctx.fx, hitPos) end
 		end
 	end,
-	Duration = 0.85,
+	Duration = 0.90,
 }
 
--- 5. GenVolley: chuvas de projeteis, rajadas, ondas arcanas e leques de fogo em todos os alvos
+-- 5. GenVolley: chuvas de projeteis, rajadas, ondas arcanas e leques de fogo 100% fluidos em particulas
 PROC_HANDLERS.GenVolley = {
 	Charge = function(ctx)
 		local cfg = ctx.cfg
 		local hp = handPos(ctx.attacker)
 		genSound(ctx.fx, SFX.Charge, 0.26, cfg.pitch or 1.1)
-		genBurst(ctx.fx, hp, TEX.Gather, cfg.c1, cfg.c2, 12, 2, 7, 0.7, 0.1, 0.24)
+		genBurst(ctx.fx, hp, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 16, 3, 9, 0.55, 0.04, 0.28, 180, 0, nil, 0.8)
+		genBurst(ctx.fx, leftHandPos(ctx.attacker), TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 14, 3, 9, 0.50, 0.04, 0.28, 180, 0, nil, 0.8)
 		genLight(ctx.fx, hp, cfg.c1, 2.4, 10)
 	end,
 	Release = function(ctx)
 		local cfg = ctx.cfg
 		local ts = ctxTargets(ctx)
 		local aRoot = rootOf(ctx.attacker)
-		local travel = math.max(0.14, (ctx.timing.Impact or 0.50) - (ctx.timing.Release or 0.26))
+		local travel = math.max(0.15, (ctx.timing.Impact or 0.54) - (ctx.timing.Release or 0.30))
 		genSound(ctx.fx, if cfg.heavy then SFX.ReleaseHeavy else SFX.Release, 0.36, cfg.pitch or 1.12)
 
 		local shotsCount = if cfg.variant == "wave" then 3 else 5
 		for i = 1, shotsCount do
-			task.delay((i - 1) * 0.04, function()
+			task.delay((i - 1) * 0.045, function()
 				if not ctx.alive or not alive(ctx.attacker) then return end
 				local tModel = ts[((i - 1) % math.max(1, #ts)) + 1]
 				if not tModel or not alive(tModel) then return end
 				local fromPos = if i % 2 == 0 then leftHandPos(ctx.attacker) else handPos(ctx.attacker)
-				local toPos = targetCenter(tModel) + Vector3.new((math.random() - 0.5) * 1.4, (math.random() - 0.5) * 1.1, 0)
-				local isWave = cfg.variant == "wave"
-				local pSize = if isWave then Vector3.new(2.2, 0.22, 0.9) elseif cfg.variant == "flames" or cfg.variant == "stars" then Vector3.new(0.8, 0.8, 0.8) else Vector3.new(0.22, 0.22, 1.45)
-				local bolt = genPart(ctx.fx, pSize, cfg.c1, Enum.Material.Neon, if isWave or cfg.variant == "shots" then Enum.PartType.Block else Enum.PartType.Ball, 0.06)
-				bolt.CFrame = CFrame.lookAt(fromPos, toPos)
-				attachGenTrail(bolt, cfg.c1, cfg.c2, if isWave then 0.9 else 0.45, 0.16)
-				local arcY = if cfg.variant == "shots" then (0.4 + (i % 3) * 0.45) else (0.7 + (i % 2) * 0.5)
-				local sideOff = ((i % 3) - 1) * 1.1
-				local look = CFrame.lookAt(fromPos, toPos)
-				local t0 = os.clock()
-				local segDur = math.max(0.11, travel - (i - 1) * 0.025)
-				local conn
-				conn = RunService.RenderStepped:Connect(function()
-					if not ctx.alive or not bolt.Parent then conn:Disconnect(); return end
-					local a = math.clamp((os.clock() - t0) / segDur, 0, 1)
-					local pos = fromPos:Lerp(toPos, a) + look.RightVector * (math.sin(a * math.pi) * sideOff) + Vector3.new(0, math.sin(a * math.pi) * arcY, 0)
-					bolt.CFrame = CFrame.lookAt(pos, toPos + look.LookVector)
-					if a >= 1 then
-						conn:Disconnect()
-						bolt.Transparency = 1
-					end
-				end)
+				local toPos = targetCenter(tModel) + Vector3.new((math.random() - 0.5) * 1.4, (math.random() - 0.5) * 1.0, 0)
+				local segDur = math.max(0.12, travel - (i - 1) * 0.025)
+				genFluidSwarm(ctx, fromPos, toPos, segDur, cfg.c1, cfg.c2, {
+					strands = 1,
+					radius = 0.75 + (i % 2) * 0.55,
+					turns = 0.85,
+					phaseOffset = i * 1.25,
+					arcUp = 0.5 + (i % 3) * 0.45,
+					trailW = if cfg.variant == "wave" then 0.85 else 0.55,
+					flowTex = TEX.Fire,
+					flowRate = 48,
+					moteRate = 58,
+					flowSz = if cfg.variant == "flames" or cfg.variant == "wave" then 1.45 else 1.0,
+					moteSz = 0.42,
+				})
 			end)
 		end
 		if cfg.variant == "flames" then
-			genBurst(ctx.fx, aRoot.CFrame:PointToWorldSpace(Vector3.new(0, 0.6, -1.8)), TEX.Flame, cfg.c1, cfg.c2, 14, 8, 18, 1.1, 0.2, 0.30)
+			genBurst(ctx.fx, aRoot.CFrame:PointToWorldSpace(Vector3.new(0, 0.6, -1.8)), TEX.Fire, cfg.c1, cfg.c2, 18, 6, 16, 1.1, 2.5, 0.34)
 		end
 	end,
 	Impact = function(ctx)
 		local cfg = ctx.cfg
 		genSound(ctx.fx, if cfg.heavy then SFX.ImpactHeavy else SFX.Impact, if cfg.heavy then 0.44 else 0.36, cfg.pitch or 1.08)
 		springShake(if cfg.heavy then 0.34 else 0.22, 0.24, 44, 11, 0.9)
-		local hitTex = if cfg.variant == "flames" then TEX.Flame elseif cfg.variant == "stars" then TEX.Star else TEX.Spark
 		for _, tModel in ipairs(ctxTargets(ctx)) do
 			local hitPos = targetCenter(tModel)
-			genShockDisc(ctx.fx, CFrame.new(hitPos), cfg.c1, 1.4, if cfg.heavy then 8.6 else 6.6, 0.30, TEX.Ring)
-			genBurst(ctx.fx, hitPos, hitTex, cfg.c1, cfg.c2, if cfg.heavy then 24 else 16, 7, 20, 1.1, 0.1, 0.38)
-			genBurst(ctx.fx, hitPos, TEX.Glint, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 8, 5, 14, 0.85, 0.08, 0.28)
+			genFluidVortex(ctx, hitPos + Vector3.new(0, -1.5, 0), cfg.c1, cfg.c2, {
+				count = 2, radius = 2.4, height = 3.8, dur = 0.42, turns = 1.4, flowTex = TEX.Fire, trailW = 0.55,
+			})
+			genBurst(ctx.fx, hitPos, TEX.Fire, cfg.c1, cfg.c2, if cfg.heavy then 26 else 18, 6, 18, 1.2, 3.0, 0.42)
+			genBurst(ctx.fx, hitPos, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, if cfg.heavy then 30 else 20, 8, 24, 0.62, 0.04, 0.38, 180, 0, nil, 1.15)
 			genLight(ctx.fx, hitPos, cfg.c1, 3.0, 14)
 		end
 	end,
-	Duration = 0.90,
+	Duration = 0.95,
 }
 
--- 6. GenSkyStrike: raios celestes (Descarga) e meteoros arcanos (MeteoroArcano)
+-- 6. GenSkyStrike: raios celestes (Descarga) e meteoros arcanos (MeteoroArcano) 100% fluidos em enxames celestes
 PROC_HANDLERS.GenSkyStrike = {
 	Charge = function(ctx)
 		local cfg = ctx.cfg
 		local hp = handPos(ctx.attacker)
 		genSound(ctx.fx, SFX.Charge, 0.34, cfg.pitch or 0.95)
-		genBurst(ctx.fx, hp + Vector3.new(0, 1.2, 0), TEX.Gather, cfg.c1, cfg.c2, 14, 3, 9, 0.85, 0.1, 0.28)
+		genBurst(ctx.fx, hp + Vector3.new(0, 1.2, 0), TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 20, 3, 10, 0.60, 0.05, 0.32, 180, 0, nil, 0.9)
 		for _, tModel in ipairs(ctxTargets(ctx)) do
 			local skyPos = targetCenter(tModel) + Vector3.new(0, 13.5, 0)
-			genShockDisc(ctx.fx, CFrame.new(skyPos), cfg.c1, 1.2, 6.8, 0.42, TEX.Ring)
+			genFluidVortex(ctx, skyPos, cfg.c1, cfg.c2, {
+				count = 2, radius = 4.2, height = -1.2, dur = 0.42, turns = 1.5, flowTex = TEX.Fire, trailW = 0.75, taper = 0.45,
+			})
 		end
 	end,
 	Release = function(ctx)
 		local cfg = ctx.cfg
-		local travel = math.max(0.14, (ctx.timing.Impact or 0.56) - (ctx.timing.Release or 0.32))
+		local travel = math.max(0.15, (ctx.timing.Impact or 0.56) - (ctx.timing.Release or 0.32))
 		genSound(ctx.fx, SFX.ReleaseHeavy, 0.40, cfg.pitch or 0.95)
 		for _, tModel in ipairs(ctxTargets(ctx)) do
 			local hitPos = targetCenter(tModel)
-			local skyPos = hitPos + Vector3.new(if cfg.variant == "meteor" then 4.5 else 0, 14.5, 0)
+			local skyPos = hitPos + Vector3.new(if cfg.variant == "meteor" then 5.2 else 0.8, 15.0, 0)
 			if cfg.variant == "meteor" then
-				local meteor = genPart(ctx.fx, Vector3.new(2.2, 2.2, 2.2), cfg.c1, Enum.Material.Neon, Enum.PartType.Ball, 0.05)
-				meteor.CFrame = CFrame.new(skyPos)
-				attachGenTrail(meteor, cfg.c2 or Color3.fromRGB(255, 175, 65), cfg.c1, 2.0, 0.24)
-				tween(meteor, travel, { CFrame = CFrame.new(hitPos), Size = Vector3.new(2.7, 2.7, 2.7) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-				task.delay(travel + 0.03, function()
-					if meteor.Parent then tween(meteor, 0.14, { Transparency = 1, Size = Vector3.new(0.4, 0.4, 0.4) }) end
-				end)
+				genFluidSwarm(ctx, skyPos, hitPos, travel, cfg.c1, cfg.c2, {
+					strands = 3, radius = 1.15, turns = 1.8, arcUp = 0, trailW = 1.35, flowTex = TEX.Fire,
+					flowRate = 85, moteRate = 90, flowSz = 2.4, moteSz = 0.65, trailLife = 0.30,
+				})
 			else
-				-- Raio em zigue-zague (3 segmentos neon finos, some em 0.22s — nunca cilindro grosso!)
-				local pts = {
-					skyPos,
-					skyPos:Lerp(hitPos, 0.35) + Vector3.new(1.1, 0, -0.8),
-					skyPos:Lerp(hitPos, 0.70) + Vector3.new(-1.0, 0, 0.7),
-					hitPos,
-				}
-				for s = 1, 3 do
-					local p0, p1 = pts[s], pts[s + 1]
-					local dist = (p1 - p0).Magnitude
-					local seg = genPart(ctx.fx, Vector3.new(0.26, 0.26, dist), cfg.c2 or Color3.new(1, 1, 1), Enum.Material.Neon, Enum.PartType.Block, 0.02)
-					seg.CFrame = CFrame.lookAt(p0:Lerp(p1, 0.5), p1)
-					task.delay(0.12, function()
-						if seg.Parent then tween(seg, 0.16, { Size = Vector3.new(0.04, 0.04, dist), Transparency = 1 }) end
-					end)
-				end
+				genFluidSwarm(ctx, skyPos, hitPos, math.min(travel, 0.16), cfg.c1, cfg.c2, {
+					strands = 3, radius = 1.45, turns = 2.4, arcUp = 0, trailW = 0.52, flowTex = TEX.Fire,
+					flowRate = 55, moteRate = 95, flowSz = 1.1, moteSz = 0.52, trailLife = 0.22,
+				})
 			end
 		end
 	end,
@@ -3506,77 +3774,72 @@ PROC_HANDLERS.GenSkyStrike = {
 		genSound(ctx.fx, SFX.ImpactHeavy, 0.46, cfg.pitch or 0.90)
 		springShake(0.42, 0.30, 46, 10, 1.4)
 		fovPunch(-3.5, 0.055, 0.24)
-		local hitTex = if cfg.variant == "meteor" then TEX.Flame else TEX.Bolt
 		for _, tModel in ipairs(ctxTargets(ctx)) do
 			local hitPos = targetCenter(tModel)
-			local gy = groundY(tModel) + 0.08
-			genShockDisc(ctx.fx, CFrame.new(hitPos.X, gy, hitPos.Z), cfg.c1, 2.0, 11.5, 0.38, TEX.Shock)
-			genBurst(ctx.fx, hitPos, hitTex, cfg.c1, cfg.c2, 26, 8, 24, 1.4, 0.1, 0.42)
-			genBurst(ctx.fx, hitPos, TEX.Star, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 8, 4, 14, 1.8, 0.1, 0.28)
+			local gy = groundY(tModel) + 0.25
+			genFluidVortex(ctx, Vector3.new(hitPos.X, gy, hitPos.Z), cfg.c1, cfg.c2, {
+				count = 3, radius = 3.4, height = 6.2, dur = 0.54, turns = 2.0, flowTex = TEX.Fire, trailW = 0.85,
+			})
+			genFluidRing(ctx.fx, CFrame.new(hitPos.X, gy + 0.3, hitPos.Z), cfg.c1, cfg.c2, 9.5, 0.44, cfg.variant == "meteor")
+			genBurst(ctx.fx, hitPos, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 38, 12, 32, 0.78, 0.05, 0.44, 180, 0, nil, 1.25)
+			genBurst(ctx.fx, hitPos, TEX.Fire, cfg.c1, cfg.c2, 28, 7, 22, 1.5, 4.2, 0.48)
 			genLight(ctx.fx, hitPos, cfg.c1, 3.6, 18)
 		end
 	end,
-	Duration = 0.95,
+	Duration = 1.00,
 }
 
--- 7. GenHex: maldicoes, selos de status, nevoas, fumaca e olhar intimidador
+-- 7. GenHex: maldicoes, selos de status, nevoas, fumaca e olhar intimidador (100% particulas fluidas)
 PROC_HANDLERS.GenHex = {
 	Charge = function(ctx)
 		local cfg = ctx.cfg
 		local hp = handPos(ctx.attacker)
 		genSound(ctx.fx, SFX.Charge, 0.26, cfg.pitch or 1.05)
-		genBurst(ctx.fx, hp, TEX.Diamond, cfg.c1, cfg.c2, 10, 2, 6, 0.65, 0.08, 0.24)
+		genBurst(ctx.fx, hp, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 14, 2, 7, 0.50, 0.04, 0.28, 180, 0, nil, 0.7)
 	end,
 	Release = function(ctx)
 		local cfg = ctx.cfg
 		genSound(ctx.fx, SFX.Release, 0.30, cfg.pitch or 1.0)
 		local fromPos = handPos(ctx.attacker)
 		local toPos = ctxCenterOfTargets(ctx)
-		local travel = math.max(0.12, (ctx.timing.Impact or 0.48) - (ctx.timing.Release or 0.28))
+		local travel = math.max(0.14, (ctx.timing.Impact or 0.48) - (ctx.timing.Release or 0.28))
 		if cfg.variant == "glare" then
-			genBurst(ctx.fx, rootOf(ctx.attacker).Position + Vector3.new(0, 1.5, 0), TEX.Star, cfg.c1, cfg.c2, 6, 2, 6, 1.8, 0.1, 0.26)
+			genBurst(ctx.fx, rootOf(ctx.attacker).Position + Vector3.new(0, 1.5, 0), TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 22, 6, 18, 0.65, 0.04, 0.34, 180, 0, nil, 1.2)
 			return
 		end
-		local orb = genPart(ctx.fx, Vector3.new(0.68, 0.68, 0.68), cfg.c1, Enum.Material.Neon, Enum.PartType.Ball, 0.14)
-		orb.CFrame = CFrame.new(fromPos)
-		attachGenTrail(orb, cfg.c1, cfg.c2, 0.65, 0.18)
-		local t0 = os.clock()
-		local conn
-		conn = RunService.RenderStepped:Connect(function()
-			if not ctx.alive or not orb.Parent then conn:Disconnect(); return end
-			local a = math.clamp((os.clock() - t0) / travel, 0, 1)
-			orb.CFrame = CFrame.new(fromPos:Lerp(toPos, a) + Vector3.new(0, math.sin(a * math.pi) * 1.4, 0))
-			if a >= 1 then conn:Disconnect(); orb.Transparency = 1 end
-		end)
+		local isCloud = cfg.variant == "smoke" or cfg.variant == "sleep" or cfg.variant == "poison"
+		genFluidSwarm(ctx, fromPos, toPos, travel, cfg.c1, cfg.c2, {
+			strands = 2, radius = 0.85, turns = 1.6, arcUp = 1.2, trailW = 0.62,
+			flowTex = if isCloud then TEX.Smoke else TEX.Fire,
+			flowRate = 52, moteRate = 58, flowSz = 1.45,
+		})
 	end,
 	Impact = function(ctx)
 		local cfg = ctx.cfg
 		genSound(ctx.fx, SFX.Impact, 0.30, cfg.pitch or 1.05)
-		local tex = if cfg.variant == "paralysis" then TEX.Bolt
-			elseif cfg.variant == "burn" then TEX.Flame
-			elseif cfg.variant == "smoke" or cfg.variant == "sleep" or cfg.variant == "poison" then TEX.Puff
-			else TEX.Diamond
+		local isCloud = cfg.variant == "smoke" or cfg.variant == "sleep" or cfg.variant == "poison"
 		for _, tModel in ipairs(ctxTargets(ctx)) do
 			local hitPos = targetCenter(tModel)
-			local gy = groundY(tModel) + 0.12
-			genShockDisc(ctx.fx, CFrame.new(hitPos.X, gy, hitPos.Z), cfg.c1, 1.4, 7.2, 0.42, TEX.Ring)
-			genBurst(ctx.fx, hitPos, tex, cfg.c1, cfg.c2, if cfg.variant == "smoke" then 26 else 18, 4, 12, if cfg.variant == "smoke" then 2.2 else 1.2, 0.2, 0.50)
-			if cfg.variant == "burn" or cfg.variant == "glare" then
-				genShockDisc(ctx.fx, CFrame.new(hitPos + Vector3.new(0, 1.1, 0)), cfg.c2 or cfg.c1, 1.2, 5.4, 0.36, TEX.Ring)
-			end
+			local gy = groundY(tModel) + 0.25
+			genFluidVortex(ctx, Vector3.new(hitPos.X, gy, hitPos.Z), cfg.c1, cfg.c2, {
+				count = 2, radius = 2.6, height = 4.4, dur = 0.56, turns = 1.8,
+				flowTex = if isCloud then TEX.Smoke else TEX.Fire, trailW = 0.60,
+			})
+			genBurst(ctx.fx, hitPos, if isCloud then TEX.Smoke else TEX.Fire, cfg.c1, cfg.c2, if cfg.variant == "smoke" then 28 else 20, 4, 14, if cfg.variant == "smoke" then 2.2 else 1.2, 3.8, 0.54)
+			genBurst(ctx.fx, hitPos, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 24, 6, 18, 0.55, 0.04, 0.42, 180, 0, nil, 0.9)
 			genLight(ctx.fx, hitPos, cfg.c1, 2.4, 12)
 		end
 	end,
-	Duration = 0.88,
+	Duration = 0.92,
 }
 
--- 8. GenBuff: posturas, gritos de guerra, danca das espadas, corpo de ferro e agilidade
+-- 8. GenBuff: posturas, gritos de guerra, danca das espadas, corpo de ferro e agilidade (vortice ascendente fluido)
 PROC_HANDLERS.GenBuff = {
 	Charge = function(ctx)
 		local cfg = ctx.cfg
 		local aPos = rootOf(ctx.attacker).Position
 		genSound(ctx.fx, SFX.Charge, 0.30, cfg.pitch or 1.1)
-		genBurst(ctx.fx, aPos, TEX.Gather, cfg.c1, cfg.c2, 12, 3, 8, 0.7, 0.1, 0.28)
+		genBurst(ctx.fx, aPos, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 18, 3, 9, 0.50, 0.04, 0.30, 180, 0, Vector3.new(0, 8, 0), 1.0)
 	end,
 	Release = function(ctx)
 		local cfg = ctx.cfg
@@ -3585,146 +3848,106 @@ PROC_HANDLERS.GenBuff = {
 		for _, m in ipairs(targets) do
 			if not alive(m) then continue end
 			local pos = targetCenter(m)
-			local gy = groundY(m) + 0.18
-			for i = 1, 2 do
-				task.delay((i - 1) * 0.11, function()
-					if not ctx.alive then return end
-					local ring = genShockDisc(ctx.fx, CFrame.new(pos.X, gy, pos.Z), if i == 1 then cfg.c1 else (cfg.c2 or cfg.c1), 2.4, 6.2, 0.45, TEX.Ring)
-					tween(ring, 0.45, { CFrame = CFrame.new(pos.X, gy + 4.4, pos.Z) }, Enum.EasingStyle.Sine)
-				end)
-			end
-			local riseTex = if cfg.variant == "speed" then TEX.Streak elseif cfg.variant == "defense" then TEX.Diamond else TEX.Glint
-			genBurst(ctx.fx, Vector3.new(pos.X, gy + 0.6, pos.Z), riseTex, cfg.c1, cfg.c2, 18, 4, 11, 0.75, 0.1, 0.44, 45, 90, Vector3.new(0, 12, 0))
+			local gy = groundY(m) + 0.25
+			local strands = if cfg.variant == "swords" then 3 else 2
+			genFluidVortex(ctx, Vector3.new(pos.X, gy, pos.Z), cfg.c1, cfg.c2, {
+				count = strands, radius = if cfg.variant == "swords" then 3.0 else 2.5,
+				height = 4.8, dur = 0.58, turns = if cfg.variant == "swords" then 2.6 else 1.8,
+				flowTex = TEX.Fire, trailW = if cfg.variant == "swords" then 0.72 else 0.55,
+			})
+			genBurst(ctx.fx, Vector3.new(pos.X, gy + 0.6, pos.Z), TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 28, 5, 14, 0.55, 0.04, 0.48, 55, 0, Vector3.new(0, 14, 0), 1.2)
+			genBurst(ctx.fx, Vector3.new(pos.X, gy + 0.8, pos.Z), TEX.Fire, cfg.c1, cfg.c2, 16, 3, 10, 0.9, 2.2, 0.42, 65, 90, Vector3.new(0, 8, 0))
 			genLight(ctx.fx, pos, cfg.c1, 2.6, 12)
-
-			-- Danca das Espadas: 3 laminas espectrais orbitando rapidamente em volta do espadachim
-			if cfg.variant == "swords" then
-				local blades = {}
-				for b = 1, 3 do
-					local bl = genPart(ctx.fx, Vector3.new(0.12, 2.3, 0.26), cfg.c1, Enum.Material.Neon, Enum.PartType.Block, 0.12)
-					table.insert(blades, bl)
-				end
-				local t0 = os.clock()
-				local conn
-				conn = RunService.RenderStepped:Connect(function()
-					if not ctx.alive or not alive(m) then conn:Disconnect(); return end
-					local e = os.clock() - t0
-					local center = rootOf(m).Position + Vector3.new(0, 0.6, 0)
-					for b, bl in ipairs(blades) do
-						local ang = e * 10 + (b / 3) * math.pi * 2
-						local p = center + Vector3.new(math.cos(ang) * 2.8, math.sin(e * 6 + b) * 0.4, math.sin(ang) * 2.8)
-						bl.CFrame = CFrame.new(p) * CFrame.Angles(0, -ang, math.rad(16))
-						if e > 0.35 then
-							bl.Transparency = math.clamp(0.12 + (e - 0.35) / 0.25, 0.12, 1)
-						end
-					end
-					if e >= 0.60 then conn:Disconnect() end
-				end)
-			end
 		end
 	end,
 	Impact = function() end,
-	Duration = 0.85,
+	Duration = 0.90,
 }
 
--- 9. GenShield: Proteger (domo cristalino), Guarda Ampla e Barreira Arcana (muralha luminosa)
+-- 9. GenShield: Proteger, Guarda Ampla e Barreira Arcana (barreira eterea 3D em particulas e fitas orbitais)
 PROC_HANDLERS.GenShield = {
 	Charge = function(ctx)
 		local cfg = ctx.cfg
 		genSound(ctx.fx, SFX.Charge, 0.28, cfg.pitch or 1.15)
-		genBurst(ctx.fx, targetCenter(ctx.attacker), TEX.Diamond, cfg.c1, cfg.c2, 10, 2, 7, 0.6, 0.1, 0.24)
+		genBurst(ctx.fx, targetCenter(ctx.attacker), TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 16, 3, 8, 0.50, 0.04, 0.28, 180, 0, nil, 0.8)
 	end,
 	Release = function(ctx)
 		local cfg = ctx.cfg
 		local aRoot = rootOf(ctx.attacker)
 		genSound(ctx.fx, SFX.Release, 0.32, cfg.pitch or 1.15)
 		if cfg.variant == "dome" then
-			local dome = genPart(ctx.fx, Vector3.new(1.5, 1.5, 1.5), cfg.c1, Enum.Material.ForceField, Enum.PartType.Ball, 0.15)
-			dome.CFrame = CFrame.new(aRoot.Position + Vector3.new(0, 0.2, 0))
-			tween(dome, 0.20, { Size = Vector3.new(7.4, 7.4, 7.4), Transparency = 0.35 }, Enum.EasingStyle.Back)
-			task.delay(0.32, function()
-				if dome.Parent then tween(dome, 0.28, { Size = Vector3.new(8.2, 8.2, 8.2), Transparency = 1 }) end
-			end)
+			local gy = groundY(ctx.attacker) + 0.3
+			genFluidVortex(ctx, Vector3.new(aRoot.Position.X, gy, aRoot.Position.Z), cfg.c1, cfg.c2, {
+				count = 3, radius = 3.2, height = 4.6, dur = 0.56, turns = 2.2, flowTex = TEX.Fire, trailW = 0.68, taper = 0.15,
+			})
+			genBurst(ctx.fx, aRoot.Position, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 28, 6, 14, 0.62, 0.05, 0.48, 180, 0, nil, 0.6)
 			genLight(ctx.fx, aRoot.Position, cfg.c1, 2.8, 13)
 		else
-			local wallCF = aRoot.CFrame * CFrame.new(0, 0.6, -3.2)
-			local wall = genPart(ctx.fx, Vector3.new(1.2, 1.2, 0.25), cfg.c1, Enum.Material.ForceField, Enum.PartType.Block, 0.18)
-			wall.CFrame = wallCF
-			tween(wall, 0.22, { Size = Vector3.new(12.5, 6.2, 0.25), Transparency = 0.32 }, Enum.EasingStyle.Back)
-			task.delay(0.34, function()
-				if wall.Parent then tween(wall, 0.30, { Size = Vector3.new(13.5, 6.6, 0.15), Transparency = 1 }) end
-			end)
-			genLight(ctx.fx, wallCF.Position, cfg.c1, 2.8, 14)
+			-- Muralha fluida de energia na frente do time (particulas + 3 arcos horizontais de luz)
+			local wallCenter = aRoot.CFrame:PointToWorldSpace(Vector3.new(0, 0.8, -3.4))
+			local right = aRoot.CFrame.RightVector
+			for row = -1, 1 do
+				local fromP = wallCenter - right * 5.8 + Vector3.new(0, row * 1.4, 0)
+				local toP = wallCenter + right * 5.8 + Vector3.new(0, row * 1.4, 0)
+				genFluidSwarm(ctx, fromP, toP, 0.34, cfg.c1, cfg.c2, {
+					strands = 1, radius = 0.35, turns = 1.0, arcUp = 0.25, trailW = 0.95, flowTex = TEX.Fire, flowRate = 44, moteRate = 54, trailLife = 0.38,
+				})
+			end
+			genBurst(ctx.fx, wallCenter, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 28, 6, 16, 0.60, 0.05, 0.48, 140, 0, Vector3.new(0, 4, 0), 1.0)
+			genLight(ctx.fx, wallCenter, cfg.c1, 2.8, 14)
 		end
 	end,
 	Impact = function() end,
-	Duration = 0.85,
+	Duration = 0.90,
 }
 
--- 10. GenHazard: espinhos/laminas, runas toxicas e rede pegajosa no lado inimigo
+-- 10. GenHazard: laminas, runas toxicas e rede pegajosa no campo inimigo (100% particulas e rastros fluidos)
 PROC_HANDLERS.GenHazard = {
 	Charge = function(ctx)
 		local cfg = ctx.cfg
 		genSound(ctx.fx, SFX.Charge, 0.26, cfg.pitch or 1.05)
-		genBurst(ctx.fx, handPos(ctx.attacker), TEX.Glint, cfg.c1, cfg.c2, 10, 2, 6, 0.6, 0.1, 0.22)
+		genBurst(ctx.fx, handPos(ctx.attacker), TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 14, 2, 7, 0.48, 0.04, 0.26, 180, 0, nil, 0.8)
 	end,
 	Release = function(ctx)
 		local cfg = ctx.cfg
 		local fromPos = handPos(ctx.attacker)
 		local center, gy = ctxCenterOfTargets(ctx)
-		local landCenter = Vector3.new(center.X, gy + 0.25, center.Z)
-		local travel = math.max(0.14, (ctx.timing.Impact or 0.48) - (ctx.timing.Release or 0.28))
+		local landCenter = Vector3.new(center.X, gy + 0.3, center.Z)
+		local travel = math.max(0.15, (ctx.timing.Impact or 0.48) - (ctx.timing.Release or 0.28))
 		genSound(ctx.fx, SFX.Release, 0.32, cfg.pitch or 1.05)
 		for i = 1, 3 do
-			local off = Vector3.new((i - 2) * 2.2, 0, ((i % 2) - 0.5) * 1.4)
-			local toPos = landCenter + off
-			local piece = genPart(ctx.fx, Vector3.new(0.45, 0.45, 0.45), cfg.c1, Enum.Material.Neon, Enum.PartType.Ball, 0.08)
-			piece.CFrame = CFrame.new(fromPos)
-			attachGenTrail(piece, cfg.c1, cfg.c2, 0.36, 0.16)
-			local t0 = os.clock()
-			local conn
-			conn = RunService.RenderStepped:Connect(function()
-				if not ctx.alive or not piece.Parent then conn:Disconnect(); return end
-				local a = math.clamp((os.clock() - t0) / travel, 0, 1)
-				piece.CFrame = CFrame.new(fromPos:Lerp(toPos, a) + Vector3.new(0, math.sin(a * math.pi) * 3.0, 0))
-				if a >= 1 then conn:Disconnect(); piece.Transparency = 1 end
-			end)
+			local off = Vector3.new((i - 2) * 2.4, 0, ((i % 2) - 0.5) * 1.4)
+			genFluidSwarm(ctx, fromPos, landCenter + off, travel, cfg.c1, cfg.c2, {
+				strands = 1, radius = 0.45, turns = 0.8, arcUp = 2.8, trailW = 0.42,
+				flowTex = if cfg.variant == "toxic" then TEX.Smoke else TEX.Fire, flowRate = 36, moteRate = 52,
+			})
 		end
 	end,
 	Impact = function(ctx)
 		local cfg = ctx.cfg
 		local center, gy = ctxCenterOfTargets(ctx)
-		local floorCenter = Vector3.new(center.X, gy + 0.10, center.Z)
+		local floorCenter = Vector3.new(center.X, gy + 0.25, center.Z)
 		genSound(ctx.fx, SFX.Impact, 0.32, cfg.pitch or 1.02)
-		genShockDisc(ctx.fx, CFrame.new(floorCenter), cfg.c1, 2.2, 10.5, 0.46, TEX.Ring)
-		if cfg.variant == "spikes" then
-			for i = 1, 5 do
-				local ang = (i / 5) * math.pi * 2
-				local spPos = floorCenter + Vector3.new(math.cos(ang) * 2.6, 0.55, math.sin(ang) * 2.6)
-				local sp = genPart(ctx.fx, Vector3.new(0.28, 0.1, 0.28), cfg.c1, Enum.Material.Neon, Enum.PartType.Block, 0.08)
-				sp.CFrame = CFrame.new(spPos) * CFrame.Angles(math.rad(16), ang, 0)
-				tween(sp, 0.14, { Size = Vector3.new(0.28, 1.5, 0.28) }, Enum.EasingStyle.Back)
-				task.delay(0.32, function()
-					if sp.Parent then tween(sp, 0.24, { Size = Vector3.new(0.08, 0.1, 0.08), Transparency = 1 }) end
-				end)
-			end
-		elseif cfg.variant == "toxic" then
-			genBurst(ctx.fx, floorCenter + Vector3.new(0, 0.4, 0), TEX.Puff, cfg.c1, cfg.c2, 22, 4, 12, 1.4, 0.2, 0.50, 75)
+		genFluidVortex(ctx, floorCenter, cfg.c1, cfg.c2, {
+			count = 2, radius = 4.2, height = 1.2, dur = 0.52, turns = 1.5,
+			flowTex = if cfg.variant == "toxic" then TEX.Smoke else TEX.Fire, trailW = 0.55, taper = -0.15,
+		})
+		if cfg.variant == "toxic" then
+			genBurst(ctx.fx, floorCenter + Vector3.new(0, 0.5, 0), TEX.Smoke, cfg.c1, cfg.c2, 26, 4, 14, 1.5, 3.8, 0.56, 80, 90, Vector3.new(0, 4, 0))
 		else
-			genShockDisc(ctx.fx, CFrame.new(floorCenter + Vector3.new(0, 0.06, 0)) * CFrame.Angles(0, 0.5, 0), cfg.c2 or cfg.c1, 1.8, 11.2, 0.50, TEX.Shock)
-			genBurst(ctx.fx, floorCenter + Vector3.new(0, 0.5, 0), TEX.Glint, cfg.c1, cfg.c2, 16, 4, 10, 0.85, 0.1, 0.42)
+			genBurst(ctx.fx, floorCenter + Vector3.new(0, 0.4, 0), TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 30, 8, 22, 0.58, 0.04, 0.46, 85, 0, Vector3.new(0, 5, 0), 1.15)
 		end
 		genLight(ctx.fx, floorCenter + Vector3.new(0, 1.0, 0), cfg.c1, 2.5, 13)
 	end,
-	Duration = 0.90,
+	Duration = 0.92,
 }
 
--- 11. GenHeal: cura individual/em grupo e purificacao radiante
+-- 11. GenHeal: cura individual/em grupo e purificacao radiante (helice ascendente serena de luz e particulas)
 PROC_HANDLERS.GenHeal = {
 	Charge = function(ctx)
 		local cfg = ctx.cfg
 		genSound(ctx.fx, SFX.Charge, 0.28, cfg.pitch or 1.18)
-		genBurst(ctx.fx, targetCenter(ctx.attacker), TEX.Diamond, cfg.c1, cfg.c2, 12, 2, 6, 0.65, 0.08, 0.28)
+		genBurst(ctx.fx, targetCenter(ctx.attacker), TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 18, 2, 7, 0.52, 0.04, 0.32, 180, 0, Vector3.new(0, 6, 0))
 	end,
 	Release = function(ctx)
 		local cfg = ctx.cfg
@@ -3733,42 +3956,39 @@ PROC_HANDLERS.GenHeal = {
 		for _, m in ipairs(targets) do
 			if not alive(m) then continue end
 			local pos = targetCenter(m)
-			local gy = groundY(m) + 0.15
-			local halo = genShockDisc(ctx.fx, CFrame.new(pos.X, gy, pos.Z), cfg.c1, 2.2, 6.2, 0.50, TEX.Ring)
-			tween(halo, 0.50, { CFrame = CFrame.new(pos.X, gy + 5.0, pos.Z) }, Enum.EasingStyle.Sine)
-			genBurst(ctx.fx, Vector3.new(pos.X, gy + 0.6, pos.Z), TEX.Diamond, cfg.c1, cfg.c2, 22, 3, 9, 0.8, 0.08, 0.52, 50, 90, Vector3.new(0, 10, 0))
-			genBurst(ctx.fx, pos, TEX.Star, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 6, 2, 6, 1.3, 0.1, 0.36)
+			local gy = groundY(m) + 0.20
+			genFluidVortex(ctx, Vector3.new(pos.X, gy, pos.Z), cfg.c1, cfg.c2, {
+				count = 2, radius = 2.5, height = 5.2, dur = 0.58, turns = 2.0, flowTex = TEX.Fire, trailW = 0.52,
+			})
+			genBurst(ctx.fx, Vector3.new(pos.X, gy + 0.6, pos.Z), TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 30, 4, 11, 0.56, 0.05, 0.54, 55, 0, Vector3.new(0, 10, 0), 0.7)
 			genLight(ctx.fx, pos, cfg.c1, 2.6, 13)
 		end
 	end,
 	Impact = function() end,
-	Duration = 0.90,
+	Duration = 0.92,
 }
 
--- 12. GenWind: Vento a Favor e Desobstruir (rajadas luminosas varrendo a arena)
+-- 12. GenWind: Vento a Favor e Desobstruir (ciclones 3D fluidos de ventania varrendo a arena)
 PROC_HANDLERS.GenWind = {
 	Charge = function(ctx)
 		local cfg = ctx.cfg
 		genSound(ctx.fx, SFX.Charge, 0.26, cfg.pitch or 1.2)
-		genBurst(ctx.fx, rootOf(ctx.attacker).Position, TEX.Streak, cfg.c1, cfg.c2, 10, 5, 12, 0.7, 0.1, 0.24)
+		genBurst(ctx.fx, rootOf(ctx.attacker).Position, TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 16, 6, 14, 0.48, 0.04, 0.28, 180, 0, nil, 1.2)
 	end,
 	Release = function(ctx)
 		local cfg = ctx.cfg
 		local aRoot = rootOf(ctx.attacker)
 		genSound(ctx.fx, SFX.Release, 0.34, cfg.pitch or 1.2)
-		local gy = groundY(ctx.attacker) + 0.5
-		for i = 1, 3 do
-			task.delay((i - 1) * 0.09, function()
-				if not ctx.alive then return end
-				local cf = CFrame.new(aRoot.Position.X, gy + (i - 1) * 1.1, aRoot.Position.Z) * CFrame.Angles(math.rad(12), i * 1.1, 0)
-				genShockDisc(ctx.fx, cf, if i % 2 == 0 then (cfg.c2 or cfg.c1) else cfg.c1, 2.4, 13.5, 0.40, TEX.Ring)
-			end)
-		end
-		genBurst(ctx.fx, aRoot.Position + Vector3.new(0, 1.0, 0), TEX.Streak, cfg.c1, cfg.c2, 24, 12, 28, 0.9, 0.1, 0.42, 120)
+		local gy = groundY(ctx.attacker) + 0.4
+		genFluidVortex(ctx, Vector3.new(aRoot.Position.X, gy, aRoot.Position.Z), cfg.c1, cfg.c2, {
+			count = 3, radius = 4.2, height = 5.5, dur = 0.56, turns = 2.2, flowTex = TEX.Smoke, trailW = 0.72, taper = -0.35,
+		})
+		genBurst(ctx.fx, aRoot.Position + Vector3.new(0, 1.0, 0), TEX.SoftGlow, cfg.c2 or Color3.new(1, 1, 1), cfg.c1, 32, 12, 28, 0.58, 0.04, 0.44, 120, 0, nil, 1.3)
+		genBurst(ctx.fx, aRoot.Position + Vector3.new(0, 0.8, 0), TEX.Smoke, cfg.c1, cfg.c2, 18, 8, 18, 1.3, 3.6, 0.46, 110, 120)
 		genLight(ctx.fx, aRoot.Position, cfg.c1, 2.6, 14)
 	end,
 	Impact = function() end,
-	Duration = 0.85,
+	Duration = 0.90,
 }
 
 local function fallbackGenericStyle(moveId: string?)

@@ -153,14 +153,14 @@ Moves.List = {
 	SocoDireto = {
 		Name = "Soco Direto", Type = "Lutador", Category = "Damage", Power = 40, Accuracy = 100, PP = 30,
 		Generic = true, LearnLevel = 1,
-		Anim = "PunchJab", Vfx = "GenMelee",
-		Timing = { Charge = 0.10, Release = 0.22, Impact = 0.34, Length = 0.72 },
+		Anim = "SocoDireto", Vfx = "GenMelee",
+		Timing = { Charge = 0.12, Release = 0.24, Impact = 0.36, Length = 0.78 },
 	},
 	ComboMarcial = {
 		Name = "Combo Marcial", Type = "Lutador", Category = "Damage", Power = 45, Accuracy = 100, PP = 25,
 		Generic = true, LearnLevel = 1,
-		Anim = "ComboMarcial", Vfx = "ComboMarcial", AnimSpeed = 2.6,
-		Timing = { Charge = 0.12, Release = 0.54, Impact = 1.15, Length = 1.52 },
+		Anim = "ComboMarcial", Vfx = "ComboMarcial",
+		Timing = { Charge = 0.12, Release = 0.30, Impact = 0.86, Length = 1.24 },
 	},
 	PosturaDeCombate = {
 		Name = "Postura de Combate", Type = "Lutador", Category = "Status", Accuracy = nil, PP = 15,
@@ -260,16 +260,16 @@ Moves.List = {
 	EsferaArcana = {
 		Name = "Esfera Arcana", Type = "Mago", Category = "Damage", Power = 42, Accuracy = 100, PP = 25,
 		Generic = true, LearnLevel = 1,
-		Anim = "MagicCastOrb", Vfx = "GenProjectile",
-		Timing = { Charge = 0.12, Release = 0.30, Impact = 0.46, Length = 0.84 },
+		Anim = "EsferaArcana", Vfx = "GenProjectile",
+		Timing = { Charge = 0.14, Release = 0.32, Impact = 0.48, Length = 0.88 },
 	},
 	ChamaMistica = {
 		Name = "Chama M\u{ed}stica", Type = "Mago", Category = "Damage", Power = 35, Accuracy = 100, PP = 15,
 		Target = "AllEnemies",
 		Effect = { Kind = "Status", Status = "Burn", Chance = 30, Target = "Target" },
 		Generic = true, LearnLevel = 1,
-		Anim = "MagicWaveCast", Vfx = "GenVolley",
-		Timing = { Charge = 0.14, Release = 0.34, Impact = 0.54, Length = 0.94 },
+		Anim = "ChamaMistica", Vfx = "GenVolley",
+		Timing = { Charge = 0.14, Release = 0.36, Impact = 0.56, Length = 0.96 },
 	},
 	SeloParalisante = {
 		Name = "Selo Paralisante", Type = "Mago", Category = "Status", Accuracy = 90, PP = 15,
@@ -379,14 +379,14 @@ Moves.List = {
 	DisparoPreciso = {
 		Name = "Disparo Preciso", Type = "Atirador", Category = "Damage", Power = 42, Accuracy = nil, PP = 25,
 		Generic = true, LearnLevel = 1,
-		Anim = "RangedSnapShot", Vfx = "GenProjectile",
-		Timing = { Charge = 0.10, Release = 0.24, Impact = 0.38, Length = 0.74 },
+		Anim = "DisparoPreciso", Vfx = "GenProjectile",
+		Timing = { Charge = 0.12, Release = 0.26, Impact = 0.40, Length = 0.78 },
 	},
 	TiroPerfurante = {
 		Name = "Tiro Perfurante", Type = "Atirador", Category = "Damage", Power = 52, Accuracy = 95, PP = 15,
 		CritChance = 0.18, Generic = true, LearnLevel = 1,
-		Anim = "RangedSnipeShot", Vfx = "GenProjectile",
-		Timing = { Charge = 0.14, Release = 0.36, Impact = 0.48, Length = 0.94 },
+		Anim = "TiroPerfurante", Vfx = "GenProjectile",
+		Timing = { Charge = 0.14, Release = 0.38, Impact = 0.52, Length = 0.96 },
 	},
 	MiraFirme = {
 		Name = "Mira Firme", Type = "Atirador", Category = "Status", Accuracy = nil, PP = 15,

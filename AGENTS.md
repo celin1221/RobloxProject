@@ -87,8 +87,13 @@ Qualquer Agente de IA trabalhando neste projeto **DEVE preservar integralmente**
    * **PROIBIDO** colocar círculos, discos ou vórtices de aura no chão/pé dos personagens (`Byakuya`, `Sarutobi`, `San`, `Setero`, `BarbaBranca` e futuros personagens).
 6. **VFX de Ataques (`VfxController.luau` / `ReplicatedStorage/Vfx`):**
    * **REGRA PERMANENTE (Fluidez + Zero Formatos Duros):** Priorizar VFX **fluidos e ricos em partículas** (enxames 3D em hélice, vórtices orbitais, rastros `Trail`, múltiplas ondas de partículas e impacto cinematográfico). **PROIBIDO** usar cones, cubos, cilindros rígidos ou círculos/decals planos engessados em golpes novos ou retrabalhados.
-7. **Ataques Básicos Compartilhados da Classe `Espadachim` (`Moves.luau` / `CombatAnimator.luau` / `VfxController.luau`):**
-   * **REGRA PERMANENTE:** Os **2 ataques básicos de Espadachim** (`CorteBasico` — *Corte Rápido*, e `CorteCruzado` — *Corte Cruzado*) possuem **animações e VFX idênticos compartilhados por TODOS os espadachins** (`Byakuya`, `Zoro`, `Ichigo`, `Renji`, `Sasuke`, `Kaen`, etc.).
-   * Cada espadachim de destaque adiciona suas **2 habilidades especiais / assinatura próprias** (ex.: `Byakuya` = `Senbonzakura` + `SenbonzakuraKageyoshi`).
+7. **Ataques Básicos Compartilhados das 4 Classes (`Moves.luau` / `CombatAnimator.luau` / `VfxController.luau`):**
+   * **REGRA PERMANENTE:** Cada uma das 4 classes possui **2 ataques básicos padrão (Nv. 1)** com animações procedurais 60 FPS e VFX fluidos compartilhados por todos os personagens da classe:
+     * **Espadachim:** `CorteBasico` (*Corte Rápido*) e `CorteCruzado` (*Corte Cruzado*).
+     * **Lutador:** `SocoDireto` (*Soco Direto*) e `ComboMarcial` (*Combo Marcial* — Jab → Cruzado → Chute Giratório 360°).
+     * **Mago:** `EsferaArcana` (*Esfera Arcana*) e `ChamaMistica` (*Chama Mística*).
+     * **Atirador:** `DisparoPreciso` (*Disparo Preciso*) e `TiroPerfurante` (*Tiro Perfurante*).
+   * Personagens de destaque adicionam suas habilidades especiais / assinatura próprias (ex.: `Byakuya` = `Senbonzakura` + `SenbonzakuraKageyoshi`; `Sarutobi` = 4 elementos).
+   * Todos os 12 arquétipos procedurais `PROC_HANDLERS.Gen*` (e `ComboMarcial`) usam VFX 100% fluidos em partículas e rastros 3D (zero cones, zero cubos/blocos rígidos e zero discos planos de decal).
 8. **Kit Elemental do `Sarutobi` (4 Elementos — Terra, Fogo, Água e Vento):**
    * `DotonMuralhaTerrestre` (*Doton: Dragão de Terra*, Nv. 34), `KatonDragaoDeFogo` (*Katon: Dragão de Fogo*, Nv. 40), `SuitonDragaoDeAgua` (*Suiton: Dragão de Água*, Nv. 45, `AllEnemies`) e `FutonTempestadeCeleste` (*Futon: Tempestade Celeste*, Nv. 50, `Signature`, `AllEnemies`), todos com animações próprias (`SarutobiDoton`, `SarutobiKaton`, `SarutobiSuiton`, `SarutobiFuton`) e VFX 100% fluidos em partículas. Código Dev: `SARUTOBI50` / `DEVSARUTOBI50`.

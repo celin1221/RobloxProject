@@ -1726,6 +1726,312 @@ local ANIMATIONS: { [string]: any } = {
 			kf(2.15, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
 		},
 	},
+
+	--------------------------------------------------------------------
+	-- Animacoes Basicas Padrao Compartilhadas por Classe (Nv. 1)
+	-- Espadachim: CorteBasico + CorteCruzado (acima)
+	-- Lutador: SocoDireto + ComboMarcial
+	-- Mago: EsferaArcana + ChamaMistica
+	-- Atirador: DisparoPreciso + TiroPerfurante
+	--------------------------------------------------------------------
+
+	-- 35. SOCO DIRETO (Lutador basico #1): guarda marcial firme -> arrancada explosiva com giro de quadril e direto seco
+	SocoDireto = {
+		Duration = 0.78,
+		Keyframes = {
+			kf(0.00, "Linear", {
+				RightUpperArm = degCF(34, 8, 12),
+				RightLowerArm = degCF(72, 0, 0),
+				LeftUpperArm = degCF(44, -8, -12),
+				LeftLowerArm = degCF(78, 0, 0),
+			}),
+			-- Carga: recolhe punho direito na cintura, ombro esquerdo avanca em guarda
+			kf(0.14, "QuadOut", {
+				LowerTorso = degCF(-8, -38, 0, Vector3.new(0, -0.30, 0.28)),
+				UpperTorso = degCF(-6, -34, -4),
+				Head = degCF(8, 56, 0),
+				RightUpperArm = degCF(-34, -18, 26),
+				RightLowerArm = degCF(98, 0, 0),
+				LeftUpperArm = degCF(72, 22, -14),
+				LeftLowerArm = degCF(46, 0, 0),
+				LeftUpperLeg = degCF(24, 0, -6),
+				RightUpperLeg = degCF(-26, 0, 6),
+			}),
+			-- Impacto: avanco explosivo para frente com rotacao completa de tronco e braco direito estendido
+			kf(0.28, "ExpoOut", {
+				LowerTorso = degCF(-10, 40, 5, Vector3.new(0, -0.26, -0.96)),
+				UpperTorso = degCF(-16, 46, 6),
+				Head = degCF(12, -66, -3),
+				RightUpperArm = degCF(100, 10, -10),
+				RightLowerArm = degCF(6, 0, 0),
+				LeftUpperArm = degCF(-34, -14, -26),
+				LeftLowerArm = degCF(72, 0, 0),
+				LeftUpperLeg = degCF(-30, 0, -6),
+				RightUpperLeg = degCF(34, 0, 6),
+			}),
+			-- Follow-through elastico mantendo o peso no soco
+			kf(0.48, "QuadOut", {
+				LowerTorso = degCF(-6, 30, 3, Vector3.new(0, -0.18, -0.72)),
+				UpperTorso = degCF(-10, 34, 4),
+				Head = degCF(8, -48, 0),
+				RightUpperArm = degCF(92, 6, -6),
+				RightLowerArm = degCF(16, 0, 0),
+				LeftUpperArm = degCF(-20, -8, -18),
+				LeftLowerArm = degCF(60, 0, 0),
+				LeftUpperLeg = degCF(-20, 0, -5),
+				RightUpperLeg = degCF(22, 0, 5),
+			}),
+			kf(0.78, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
+
+	-- 36. COMBO MARCIAL (Lutador basico #2): Jab Esquerdo -> Cruzado Direito -> Chute Giratorio 360 Finalizador!
+	ComboMarcial = {
+		Duration = 1.24,
+		Keyframes = {
+			kf(0.00, "Linear", {
+				RightUpperArm = degCF(32, 0, 10),
+				RightLowerArm = degCF(70, 0, 0),
+				LeftUpperArm = degCF(38, 0, -10),
+				LeftLowerArm = degCF(74, 0, 0),
+			}),
+			-- Preparacao compacta de guarda baixa
+			kf(0.12, "QuadOut", {
+				LowerTorso = degCF(-10, 26, 0, Vector3.new(0, -0.34, 0.22)),
+				UpperTorso = degCF(-8, 22, 0),
+				Head = degCF(8, -36, 0),
+				LeftUpperArm = degCF(-20, 14, -22),
+				LeftLowerArm = degCF(94, 0, 0),
+				RightUpperArm = degCF(58, -16, 16),
+				RightLowerArm = degCF(68, 0, 0),
+				LeftUpperLeg = degCF(-20, 0, -6),
+				RightUpperLeg = degCF(22, 0, 6),
+			}),
+			-- HIT 1: Jab Esquerdo veloz!
+			kf(0.28, "ExpoOut", {
+				LowerTorso = degCF(-8, -32, -4, Vector3.new(0, -0.24, -0.58)),
+				UpperTorso = degCF(-12, -38, -4),
+				Head = degCF(10, 52, 0),
+				LeftUpperArm = degCF(98, -10, 8),
+				LeftLowerArm = degCF(6, 0, 0),
+				RightUpperArm = degCF(-28, -14, 24),
+				RightLowerArm = degCF(86, 0, 0),
+				LeftUpperLeg = degCF(24, 0, -6),
+				RightUpperLeg = degCF(-26, 0, 6),
+			}),
+			-- HIT 2: Cruzado Direito pesado!
+			kf(0.50, "ExpoOut", {
+				LowerTorso = degCF(-12, 42, 6, Vector3.new(0, -0.28, -0.92)),
+				UpperTorso = degCF(-18, 48, 8),
+				Head = degCF(14, -66, -4),
+				RightUpperArm = degCF(104, 16, -24),
+				RightLowerArm = degCF(10, 0, 0),
+				LeftUpperArm = degCF(-32, -12, -30),
+				LeftLowerArm = degCF(56, 0, 0),
+				LeftUpperLeg = degCF(-28, 0, -6),
+				RightUpperLeg = degCF(32, 0, 6),
+			}),
+			-- Salto/impulso entrando no giro 360 do chute finalizador
+			kf(0.68, "Linear", {
+				LowerTorso = degCF(-14, 165, -8, Vector3.new(0, 0.28, -0.78)),
+				UpperTorso = degCF(-10, 22, -6),
+				RightUpperArm = degCF(28, 0, 58),
+				LeftUpperArm = degCF(28, 0, -58),
+				RightUpperLeg = degCF(76, 0, 28),
+				RightLowerLeg = degCF(-14, 0, 0),
+				LeftUpperLeg = degCF(18, 0, -10),
+				LeftLowerLeg = degCF(-46, 0, 0),
+			}),
+			-- HIT 3 (IMPACTO): Chute Giratorio Alto completando 360 graus!
+			kf(0.86, "ExpoOut", {
+				LowerTorso = degCF(-16, 336, -12, Vector3.new(0, 0.16, -1.08)),
+				UpperTorso = degCF(-14, 28, -8),
+				Head = degCF(10, -24, 0),
+				RightUpperArm = degCF(20, 0, 64),
+				LeftUpperArm = degCF(36, 0, -52),
+				RightUpperLeg = degCF(98, 0, 22),
+				RightLowerLeg = degCF(-4, 0, 0),
+				LeftUpperLeg = degCF(-22, 0, -8),
+				LeftLowerLeg = degCF(-16, 0, 0),
+			}),
+			-- Aterrissagem equilibrada
+			kf(1.04, "QuadOut", {
+				LowerTorso = degCF(-6, 360, 0, Vector3.new(0, -0.20, -0.45)),
+				UpperTorso = degCF(-8, 10, 0),
+				RightUpperArm = degCF(22, 0, 24),
+				LeftUpperArm = degCF(22, 0, -24),
+				RightUpperLeg = degCF(18, 0, 6),
+				LeftUpperLeg = degCF(-16, 0, -6),
+			}),
+			kf(1.24, "SineInOut", {
+				LowerTorso = degCF(0, 360, 0),
+				RightUpperArm = degCF(6, 0, 5),
+				LeftUpperArm = degCF(6, 0, -5),
+			}),
+		},
+	},
+
+	-- 37. ESFERA ARCANA (Mago basico #1): canalizacao circular elegante com duas maos + leve levitacao -> projecao frontal
+	EsferaArcana = {
+		Duration = 0.88,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(10, 0, 6), LeftUpperArm = degCF(10, 0, -6) }),
+			-- Canalizacao: maos em concha diante do peito, corpo flutua levemente concentrando energia
+			kf(0.22, "CubicOut", {
+				LowerTorso = degCF(4, -22, 0, Vector3.new(0, 0.24, 0.16)),
+				UpperTorso = degCF(10, -26, 0),
+				Head = degCF(-6, 36, 0),
+				RightUpperArm = degCF(62, 24, -22),
+				RightLowerArm = degCF(64, 0, 0),
+				LeftUpperArm = degCF(54, -22, 24),
+				LeftLowerArm = degCF(66, 0, 0),
+				LeftUpperLeg = degCF(10, 0, -6),
+				RightUpperLeg = degCF(-12, 0, 6),
+			}),
+			-- Disparo arcano: giro fluido de tronco projetando a palma direita a frente
+			kf(0.38, "ExpoOut", {
+				LowerTorso = degCF(-8, 24, 0, Vector3.new(0, 0.12, -0.48)),
+				UpperTorso = degCF(-12, 30, 4),
+				Head = degCF(8, -40, 0),
+				RightUpperArm = degCF(102, 8, -4),
+				RightLowerArm = degCF(6, 0, 0),
+				LeftUpperArm = degCF(34, -18, -32),
+				LeftLowerArm = degCF(32, 0, 0),
+				LeftUpperLeg = degCF(-18, 0, -6),
+				RightUpperLeg = degCF(20, 0, 6),
+			}),
+			-- Sustentacao elegante acompanhando o cometa arcano
+			kf(0.60, "QuadOut", {
+				LowerTorso = degCF(-4, 18, 0, Vector3.new(0, 0.04, -0.34)),
+				UpperTorso = degCF(-6, 22, 2),
+				Head = degCF(4, -30, 0),
+				RightUpperArm = degCF(96, 4, 2),
+				LeftUpperArm = degCF(24, -12, -24),
+			}),
+			kf(0.88, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
+
+	-- 38. CHAMA MISTICA (Mago basico #2): abre bracos evocando chamas -> varredura dupla ampla lancando torrente de fogo
+	ChamaMistica = {
+		Duration = 0.96,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(10, 0, 6), LeftUpperArm = degCF(10, 0, -6) }),
+			-- Abertura mistica ampla puxando brasas dos dois lados
+			kf(0.24, "BackOut", {
+				LowerTorso = degCF(6, 0, 0, Vector3.new(0, 0.20, 0.24)),
+				UpperTorso = degCF(14, 0, 0),
+				Head = degCF(-10, 0, 0),
+				RightUpperArm = degCF(66, -26, 68),
+				RightLowerArm = degCF(24, 0, 0),
+				LeftUpperArm = degCF(66, 26, -68),
+				LeftLowerArm = degCF(24, 0, 0),
+				LeftUpperLeg = degCF(14, 0, -8),
+				RightUpperLeg = degCF(14, 0, 8),
+			}),
+			-- Varredura dupla explosiva projetando o leque de chamas misticas!
+			kf(0.42, "ExpoOut", {
+				LowerTorso = degCF(-12, 0, 0, Vector3.new(0, -0.18, -0.58)),
+				UpperTorso = degCF(-18, 0, 0),
+				Head = degCF(12, 0, 0),
+				RightUpperArm = degCF(104, 16, 12),
+				RightLowerArm = degCF(6, 0, 0),
+				LeftUpperArm = degCF(104, -16, -12),
+				LeftLowerArm = degCF(6, 0, 0),
+				LeftUpperLeg = degCF(-18, 0, -6),
+				RightUpperLeg = degCF(20, 0, 6),
+			}),
+			-- Acompanhamento fluido abrindo levemente as maos
+			kf(0.66, "QuadOut", {
+				LowerTorso = degCF(-6, 0, 0, Vector3.new(0, -0.10, -0.38)),
+				UpperTorso = degCF(-10, 0, 0),
+				RightUpperArm = degCF(94, 8, 24),
+				LeftUpperArm = degCF(94, -8, -24),
+			}),
+			kf(0.96, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
+
+	-- 39. DISPARO PRECISO (Atirador basico #1): passo lateral agil -> puxada limpa de arco/mira -> disparo seco com snap
+	DisparoPreciso = {
+		Duration = 0.78,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(10, 0, 6), LeftUpperArm = degCF(10, 0, -6) }),
+			-- Puxada lateral precisa: braco esquerdo estendido em mira, direito puxando a corda/gatilho
+			kf(0.18, "CubicOut", {
+				LowerTorso = degCF(-4, -44, 0, Vector3.new(0, -0.18, 0.14)),
+				UpperTorso = degCF(-2, -30, 0),
+				Head = degCF(4, 68, 0),
+				LeftUpperArm = degCF(94, 54, -10),
+				LeftLowerArm = degCF(8, 0, 0),
+				RightUpperArm = degCF(86, -18, 28),
+				RightLowerArm = degCF(88, 0, 0),
+				LeftUpperLeg = degCF(20, 0, -8),
+				RightUpperLeg = degCF(-22, 0, 8),
+			}),
+			-- Disparo seco: mao direita solta para tras com snap nitido de ombro!
+			kf(0.30, "ExpoOut", {
+				LowerTorso = degCF(-4, -34, 0, Vector3.new(0, -0.14, 0.30)),
+				UpperTorso = degCF(4, -24, 0),
+				Head = degCF(0, 52, 0),
+				LeftUpperArm = degCF(102, 48, -10),
+				LeftLowerArm = degCF(8, 0, 0),
+				RightUpperArm = degCF(76, -34, 44),
+				RightLowerArm = degCF(22, 0, 0),
+				LeftUpperLeg = degCF(16, 0, -8),
+				RightUpperLeg = degCF(-18, 0, 8),
+			}),
+			kf(0.52, "QuadOut", {
+				LowerTorso = degCF(-2, -26, 0, Vector3.new(0, -0.10, 0.22)),
+				UpperTorso = degCF(2, -18, 0),
+				Head = degCF(0, 40, 0),
+				LeftUpperArm = degCF(94, 40, -8),
+				RightUpperArm = degCF(72, -22, 30),
+			}),
+			kf(0.78, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
+
+	-- 40. TIRO PERFURANTE (Atirador basico #2): base agachada travada acumulando carga -> disparo de alta potencia com coice!
+	TiroPerfurante = {
+		Duration = 0.96,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(10, 0, 6), LeftUpperArm = degCF(10, 0, -6) }),
+			-- Base agachada travando mira concentrada
+			kf(0.28, "CubicOut", {
+				LowerTorso = degCF(-10, -48, 0, Vector3.new(0, -0.44, 0.18)),
+				UpperTorso = degCF(-8, -28, 0),
+				Head = degCF(10, 70, 0),
+				LeftUpperArm = degCF(94, 58, -8),
+				LeftLowerArm = degCF(12, 0, 0),
+				RightUpperArm = degCF(90, -12, 22),
+				RightLowerArm = degCF(94, 0, 0),
+				LeftUpperLeg = degCF(34, 0, -10),
+				LeftLowerLeg = degCF(-28, 0, 0),
+				RightUpperLeg = degCF(-32, 0, 10),
+			}),
+			-- Coice explosivo do tiro perfurante!
+			kf(0.44, "ExpoOut", {
+				LowerTorso = degCF(6, -34, 0, Vector3.new(0, -0.26, 0.64)),
+				UpperTorso = degCF(18, -22, 0),
+				Head = degCF(-10, 50, 0),
+				LeftUpperArm = degCF(120, 48, -14),
+				LeftLowerArm = degCF(10, 0, 0),
+				RightUpperArm = degCF(116, -24, 34),
+				RightLowerArm = degCF(18, 0, 0),
+				LeftUpperLeg = degCF(24, 0, -8),
+				RightUpperLeg = degCF(-26, 0, 8),
+			}),
+			kf(0.66, "QuadOut", {
+				LowerTorso = degCF(0, -26, 0, Vector3.new(0, -0.18, 0.46)),
+				UpperTorso = degCF(8, -16, 0),
+				Head = degCF(-4, 38, 0),
+				LeftUpperArm = degCF(104, 38, -10),
+				RightUpperArm = degCF(98, -16, 24),
+			}),
+			kf(0.96, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
 }
 
 --------------------------------------------------------------------

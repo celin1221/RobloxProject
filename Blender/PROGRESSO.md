@@ -1344,3 +1344,25 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS: ... 97/93 Animated Moves + UI Guardrails`).
 - Validado ao vivo no Play Mode (aura pura visível e limpa + 4 golpes elementais rodando sem erros no console) e aprovado pelo usuário.
 - Place salvo no Roblox Studio na **versão 336** (`TeamCreate`).
+
+
+## Animações Padrão Completas das 4 Classes + Motor de VFX Genérico 100% Fluido em Partículas (25/11/2026)
+
+**Feito**
+- **1. Auditoria Completa de Animações Padrão (Personagens + Classes):**
+  - Verificadas todas as 7 animações padrão (`Idle`, `Walk`, `Attack`, `Hit`, `Faint`, `Victory`, `Mine`) nos `25` modelos em `ServerStorage/Characters`: **`0` faltando**.
+  - Identificadas as lacunas de animações básicas dedicadas por classe em `CombatAnimator.luau` (notadamente `ComboMarcial` que não tinha animação procedural e caía no fallback `PunchHeavy`, além dos pares básicos Nv. 1 de `Lutador`, `Mago` e `Atirador` que compartilhavam animações genéricas).
+- **2. 6 Novas Animações Básicas Dedicadas por Classe (`src/shared/CombatAnimator.luau` — total 40 animações procedurais 60 FPS):**
+  - Agora **todas as 4 classes** seguem o mesmo padrão aprovado de `Espadachim` (`CorteBasico` + `CorteCruzado`), com 2 ataques básicos padrão dedicados (compatíveis com I-Pose, R15 Motor6D e R15 Skinned Bone):
+    - **Lutador:** `SocoDireto` (guarda marcial → arrancada com giro de quadril e direto seco) e `ComboMarcial` (combo fluido de 3 golpes: Jab Esquerdo → Cruzado Direito → Chute Giratório 360° finalizador).
+    - **Mago:** `EsferaArcana` (canalização circular com duas mãos + leve levitação → projeção frontal) e `ChamaMistica` (abertura ampla evocando chamas → varredura dupla frontal).
+    - **Atirador:** `DisparoPreciso` (passo lateral ágil → puxada limpa de mira → disparo com snap de ombro) e `TiroPerfurante` (base agachada concentrada → disparo de alta potência com coice).
+  - Vinculadas diretamente em `src/shared/Data/Moves.luau` com timings sincronizados e planilhas `Blender/Planilha_Personagens.xlsx` / `Planilha_Personagens.xlsx` regeneradas (`97` ataques únicos, `269` vínculos).
+- **3. Refatoração 100% Fluida do `ComboMarcial` + Todos os 12 Arquétipos `PROC_HANDLERS.Gen*` (`src/shared/VfxController.luau`):**
+  - Removidos **100%** dos discos planos de decal (`genShockDisc`), blocos retangulares neon e esferas sólidas dos golpes padrão/genéricos (zero cones, zero cubos/blocos rígidos e zero círculos engessados).
+  - Criadas primitivas 100% fluidas em partículas (`genFluidRing`, `genFluidSwarm`, `genFluidVortex`) combinando âncoras invisíveis em hélices/vórtices 3D, `Trail`s sedosos, partículas nativas `fire_main.dds`/`smoke_main.dds` e orbes suaves `SoftGlow` (`83184852649242`), aplicadas em `ComboMarcial` (3 impactos sincronizados) e em todos os 12 arquétipos `GenSlash`, `GenMelee`, `GenGroundWave`, `GenProjectile`, `GenVolley`, `GenSkyStrike`, `GenHex`, `GenBuff`, `GenShield`, `GenHazard`, `GenHeal` e `GenWind`.
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS: ... 97/93 Animated Moves + UI Guardrails`).
+- Validado ao vivo no Play Mode em todos os 3 tipos de rig (`Luffy` I-Pose, `Setero` Skinned Bone, `Uryu` I-Pose, `Kaen` R15 Motor6D): **`22/22` golpes testados (`6` básicos novos + todos os `12` arquétipos fluidos), `0` falhas, `0` vazamentos (`BattleVfx=0`, `Katana=0`) e `0` erros no Console**.
+- Place salvo no Roblox Studio na **versão 337** (`TeamCreate`).
