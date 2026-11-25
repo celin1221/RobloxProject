@@ -21,6 +21,7 @@ local Items = require(Data.Items)
 local Benefits = require(Data.Benefits)
 local Characters = require(Data.Characters)
 local AccountLevel = require(Data:WaitForChild("AccountLevel"))
+local Awakening = require(Data:WaitForChild("Awakening"))
 
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local AccountLevelService = require(script.Parent:WaitForChild("AccountLevelService"))
@@ -97,6 +98,20 @@ local function grant(player: Player, data, reward): { string }
 	if reward.Gems and reward.Gems > 0 then
 		data.Gems += reward.Gems
 		table.insert(lines, "+" .. reward.Gems .. " gemas")
+	end
+	if typeof(reward.Materials) == "table" then
+		data.Materials = Awakening.SanitizeMaterials(data.Materials)
+		for matId, n in pairs(reward.Materials) do
+			local mat = Awakening.GetMaterial(matId)
+			if mat and typeof(n) == "number" and n > 0 then
+				local have = data.Materials[matId] or 0
+				local give = math.min(math.floor(n), math.max(0, Awakening.MaxMaterialStack - have))
+				if give > 0 then
+					data.Materials[matId] = have + give
+					table.insert(lines, "+" .. give .. "x " .. mat.Name)
+				end
+			end
+		end
 	end
 	for id, n in pairs(reward.Items or {}) do
 		local item = Items.Get(id)

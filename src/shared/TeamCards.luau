@@ -428,12 +428,17 @@ function TeamCards.new(parent: Instance, p)
 		hpFill.Size = UDim2.fromScale(math.max(0.04, frac), 1)
 		hpFill.BackgroundColor3 = if frac > 0.5 then T.Palette.hpHigh elseif frac > 0.2 then T.Palette.hpMid else T.Palette.hpLow
 		-- (a posicao da faixa de HP e fixa: borda de baixo)
-		-- brilho
+		-- brilho (Lendario, Brilhante ou Desperto)
 		local shiny = m.Variant == "Brilhante"
-		sparkle.Visible = shiny
-		local wantShine = def.Rarity == "Lendario" or shiny
+		local awakened = m.Awakened == true
+		sparkle.Visible = shiny or awakened
+		local wantShine = def.Rarity == "Lendario" or shiny or awakened
 		if wantShine and not shine then
-			shine = UI.shine(border, if shiny then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(255, 240, 170))
+			local shineCol = if shiny
+				then Color3.fromRGB(255, 255, 255)
+				elseif awakened then Color3.fromRGB(245, 165, 255)
+				else Color3.fromRGB(255, 240, 170)
+			shine = UI.shine(border, shineCol)
 			shine.ZIndex = z + 3
 		elseif not wantShine and shine then
 			shine:Destroy()

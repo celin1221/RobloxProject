@@ -369,6 +369,8 @@ function ArenaManager.SpawnActive(session, side: string, index: number?, fieldSl
 	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	model.HumanoidRootPart.Anchored = true
 	ArenaManager.StandAt(model, spot, session.FloorY)
+	model:SetAttribute("CharacterId", member.Id)
+	model:SetAttribute("Awakened", member.Awakened == true)
 	CollectionService:AddTag(model, "BattleCharacter")
 
 	session.SlotModels = session.SlotModels or { Player = {}, Enemy = {} }

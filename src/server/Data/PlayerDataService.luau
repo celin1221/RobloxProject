@@ -36,6 +36,7 @@ local Data = ReplicatedStorage:WaitForChild("Data")
 local Characters = require(Data:WaitForChild("Characters"))
 local Genetics = require(Data:WaitForChild("Genetics"))
 local Training = require(Data:WaitForChild("Training"))
+local Awakening = require(Data:WaitForChild("Awakening"))
 local PvPRank = require(Data:WaitForChild("PvPRank"))
 
 local PlayerDataService = {}
@@ -112,6 +113,8 @@ local function defaultProfile()
 		},
 		-- maquina de treinamento (secao 8): nivel (eficiencia) e trabalho ativo na cupula
 		TrainingMachine = { Level = 1, Job = nil },
+		-- inventario de materiais de Despertar (Essencias, Fragmentos e Nucleo; nao ocupa slots da mochila)
+		Materials = {},
 		-- configuracoes do jogador (volumes de 0 a 100)
 		Settings = { MusicOn = true, MusicVolume = 50, SfxOn = true, SfxVolume = 80, MapFx = true, CharacterAuras = true },
 		-- Refugio (secao 14): nivel da Forja, contadores, Bau ({ {Id, Qty} }), selvagens pendentes e ultimo surgimento
@@ -232,6 +235,7 @@ local function sanitize(data)
 	data.Gems = cleanNumber(data.Gems)
 	data.Ore = cleanNumber(data.Ore)
 	data.TrainingOres = Training.SanitizeOres(data.TrainingOres, Training.MaxOrePerType)
+	data.Materials = Awakening.SanitizeMaterials(data.Materials)
 	if typeof(data.Base) == "table" then
 		data.Base.MiningSlots = math.clamp(math.max(2, cleanNumber(data.Base.MiningSlots, 6)), 2, 6)
 		data.Base.MiningLevel = math.clamp(math.max(1, cleanNumber(data.Base.MiningLevel, 10)), 1, 10)
@@ -269,6 +273,7 @@ local function sanitize(data)
 	for _, m in pairs(data.Collection) do
 		m.Level = math.clamp(cleanNumber(m.Level), 1, 50)
 		m.Xp = cleanNumber(m.Xp)
+		m.Awakened = if m.Awakened == true then true else nil
 		syncMemberLearnset(m, false)
 		local def = Characters.Get(m.CharacterId)
 		if typeof(m.Genetics) ~= "table" then

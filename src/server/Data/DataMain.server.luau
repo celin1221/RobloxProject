@@ -16,6 +16,8 @@ local BaseService = require(ServerScriptService.Economy:WaitForChild("BaseServic
 BaseService.Init()
 local TrainingService = require(ServerScriptService.Economy:WaitForChild("TrainingService"))
 TrainingService.Init()
+local AwakeningService = require(ServerScriptService.Economy:WaitForChild("AwakeningService"))
+AwakeningService.Init()
 local MonetizationService = require(ServerScriptService.Economy:WaitForChild("MonetizationService"))
 MonetizationService.OnBenefitsChanged(BaseService.RefreshLook)
 MonetizationService.Init()
@@ -157,6 +159,23 @@ if RunService:IsStudio() then
 			local uid = ProgressionService.AddCharacter(player, id, level, false, variant)
 			PlayerDataService.MarkChanged(player)
 			return uid
+		elseif action == "addmats" then
+			local data = PlayerDataService.Get(player)
+			local arg = ...
+			local Awakening = require(game:GetService("ReplicatedStorage").Data.Awakening)
+			if typeof(arg) == "table" then
+				for id, n in pairs(arg) do
+					AwakeningService.AddMaterial(data, id, n)
+				end
+			elseif typeof(arg) == "number" then
+				for _, id in ipairs(Awakening.MaterialOrder) do
+					AwakeningService.AddMaterial(data, id, arg)
+				end
+			end
+			PlayerDataService.MarkChanged(player)
+			return data.Materials
+		elseif action == "awaken" then
+			return AwakeningService.Awaken(player, ...)
 		elseif action == "timescale" then
 			require(ServerScriptService.Battle.BattleConfig).TimeScale = (...)
 			return true

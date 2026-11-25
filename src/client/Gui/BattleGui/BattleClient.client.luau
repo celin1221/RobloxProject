@@ -229,6 +229,63 @@ local enemyFieldBar = makeFieldBar("EnemyFieldBar", Vector2.new(1, 0), UDim2.fro
 local logHolder, logFace = UI.panel(root, { Name = "Log", Size = UDim2.fromScale(0.55, 0.15), Position = UDim2.fromScale(0.015, 0.015), Color = "slot", Corner = 0.3, Transparency = 0.1, Shadow = false, MaxSize = Vector2.new(720, 90) })
 local logLabel = UI.text(logFace, "", { Name = "Text", Size = UDim2.fromScale(0.94, 0.8), Position = UDim2.fromScale(0.03, 0.1), Role = "Small", AlignX = Enum.TextXAlignment.Left, Rich = true, StrokeMult = 0.5 })
 
+-- Banner rapido estilo Pokemon quando uma Passiva dispara em batalha
+local passiveBanner, passiveBannerFace = UI.panel(root, {
+	Name = "PassiveCallout",
+	Size = UDim2.fromScale(0.28, 0.075),
+	Position = UDim2.fromScale(0.015, 0.185),
+	Color = "panelAlt",
+	Corner = 0.32,
+	Shadow = false,
+	Visible = false,
+	MaxSize = Vector2.new(340, 52),
+	ZIndex = 12,
+})
+local passiveBannerIcon = UI.icon(passiveBannerFace, "sparkle", {
+	Name = "Icon",
+	Size = UDim2.fromScale(0.14, 0.68),
+	Position = UDim2.fromScale(0.04, 0.16),
+	ZIndex = 13,
+})
+local passiveBannerTitle = UI.text(passiveBannerFace, "", {
+	Name = "Title",
+	Size = UDim2.fromScale(0.78, 0.84),
+	Position = UDim2.fromScale(0.20, 0.08),
+	Role = "Small",
+	AlignX = Enum.TextXAlignment.Left,
+	Rich = true,
+	StrokeMult = 0.45,
+	ZIndex = 13,
+})
+local passiveBannerToken = 0
+local function showPassiveBanner(side: string?, actorName: string?, passiveName: string?, tier: string?)
+	passiveBannerToken += 1
+	local tok = passiveBannerToken
+	local isEnemy = side == "Enemy"
+	local tierHex = if tier == "Secret" then "#F578FF" elseif tier == "Unique" then "#FFD154" else "#76C8FF"
+	local panelCol = if tier == "Secret" then "purple" else "panelAlt"
+	UI.paint(passiveBanner, panelCol)
+	UI.setIcon(passiveBannerIcon, if tier == "Secret" or tier == "Unique" then "star" else "sparkle")
+	passiveBannerTitle.Text = string.format("<font color='%s'><b>%s</b></font>  \u{b7}  %s", tierHex, passiveName or "Passiva", actorName or "")
+	passiveBanner.AnchorPoint = Vector2.new(if isEnemy then 1 else 0, 0)
+	local startPos = UDim2.fromScale(if isEnemy then 1.04 else -0.04, 0.185)
+	local endPos = UDim2.fromScale(if isEnemy then 0.985 else 0.015, 0.185)
+	passiveBanner.Position = startPos
+	passiveBanner.Visible = true
+	TweenService:Create(passiveBanner, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = endPos }):Play()
+	task.delay(1.35, function()
+		if passiveBannerToken == tok then
+			local outTw = TweenService:Create(passiveBanner, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = startPos })
+			outTw:Play()
+			outTw.Completed:Connect(function()
+				if passiveBannerToken == tok then
+					passiveBanner.Visible = false
+				end
+			end)
+		end
+	end)
+end
+
 -- Area dos comandos (embaixo a direita)
 local menuArea = UI.frame(root, { Name = "MenuArea", Size = UDim2.fromScale(0.32, 0.44), Position = UDim2.fromScale(0.985, 0.93), AnchorPoint = Vector2.new(1, 1), Aspect = 1.75, MaxSize = Vector2.new(480, 275) })
 local waitingHolder, waitingFace = UI.panel(menuArea, { Name = "Waiting", Size = UDim2.fromScale(0.7, 0.24), Position = UDim2.fromScale(1, 1), AnchorPoint = Vector2.new(1, 1), Color = "slot", Corner = T.Corner.Pill, Shadow = false })
@@ -1610,6 +1667,15 @@ BattleUpdate.OnClientEvent:Connect(function(battleId, data)
 			local targetSide = ev.TargetSide or (if side == "Player" then "Enemy" else "Player")
 			local targetModel = slotModelFor(targetSide, ev.TargetFieldSlot or 1)
 			popNumber(targetModel, "Errou", Color3.fromRGB(210, 210, 225))
+		elseif ev.Kind == "Passive" then
+			local tierCol = if ev.PassiveTier == "Secret"
+				then Color3.fromRGB(245, 115, 255)
+				elseif ev.PassiveTier == "Unique" then Color3.fromRGB(255, 206, 72)
+				else Color3.fromRGB(115, 210, 255)
+			local mActor = side and memberAt(current.State[side], fs)
+			showPassiveBanner(side, mActor and mActor.Name or "", ev.PassiveName, ev.PassiveTier)
+			popNumber(model, ev.PassiveName or "Passiva!", tierCol)
+			UI.play("click")
 		elseif ev.Kind == "Protected" then
 			popNumber(model, "Protegido!", T.Palette.teal)
 		elseif ev.Kind == "FieldUpdate" then

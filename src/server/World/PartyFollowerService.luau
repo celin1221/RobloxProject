@@ -154,12 +154,13 @@ function PartyFollowerService.Refresh(player: Player)
 		return
 	end
 
-	local key = def.ModelName .. "|" .. tostring(member.Variant or "")
+	local key = def.ModelName .. "|" .. tostring(member.Variant or "") .. "|" .. tostring(member.Awakened == true)
 	local current = followers[player]
 	if current and current.Model and current.Model.Parent and current.Key == key then
 		current.Uid = uid
 		current.Model:SetAttribute("Uid", uid)
 		current.Model:SetAttribute("Level", member.Level or 1)
+		current.Model:SetAttribute("Awakened", member.Awakened == true)
 		return
 	end
 
@@ -181,6 +182,7 @@ function PartyFollowerService.Refresh(player: Player)
 	model:SetAttribute("Uid", uid)
 	model:SetAttribute("CharacterId", member.CharacterId)
 	model:SetAttribute("Variant", member.Variant)
+	model:SetAttribute("Awakened", member.Awakened == true)
 	model:SetAttribute("Level", member.Level or 1)
 	model:SetAttribute("Moving", false)
 

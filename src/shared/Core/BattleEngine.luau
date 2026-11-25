@@ -24,6 +24,7 @@ local Moves = require(Data.Moves)
 local Items = require(Data.Items)
 local TypeChart = require(Data.TypeChart)
 local Genetics = require(Data.Genetics)
+local Passives = require(Data:WaitForChild("Passives"))
 
 local DamageCalc = require(script.Parent.DamageCalc)
 local AIController = require(script.Parent.AIController)
@@ -37,6 +38,22 @@ BattleEngine.SIDES = SIDES
 local MAX_TEAM = 6
 
 local STAT_NAMES = { Attack = "Ataque", Defense = "Defesa", Speed = "Velocidade", Accuracy = "Precis\u{e3}o" }
+
+local STATUS_DISPLAY = {
+	Burn = "Queimadura",
+	Poison = "Veneno",
+	Paralysis = "Paralisia",
+	Sleep = "Sono",
+	Freeze = "Congelamento",
+}
+
+local function passiveOf(battler)
+	if not battler or not battler.PassiveId then
+		return nil, nil
+	end
+	local p = Passives.Get(battler.PassiveId)
+	return p, p and p.Effect or nil
+end
 
 -- Texto quando o status e aplicado
 local STATUS_TEXT = {
@@ -88,6 +105,8 @@ local function newBattler(characterId: string, level: number, moveIds: { string 
 		local pp = extra.Pp and extra.Pp[moveId]
 		moves[i] = { Id = moveId, Pp = if typeof(pp) == "number" then math.clamp(pp, 0, move.PP) else move.PP, MaxPp = move.PP }
 	end
+	local awakened = extra.Awakened == true
+	local passiveId = if typeof(extra.PassiveId) == "string" then extra.PassiveId else Characters.PassiveIdOf(characterId, awakened)
 	return {
 		Id = characterId,
 		Name = def.Name,
@@ -102,6 +121,11 @@ local function newBattler(characterId: string, level: number, moveIds: { string 
 		Stages = freshStages(),
 		Protected = false,
 		ProtectStreak = 0,
+		Awakened = awakened,
+		PassiveId = passiveId,
+		SturdyUsed = false,
+		ThresholdUsed = false,
+		AwakenTriggered = false,
 		Moves = moves,
 		Uid = uid,
 		Genetics = if typeof(extra.Genetics) == "table" then Genetics.SanitizeTable(extra.Genetics) else nil,
@@ -671,6 +695,82 @@ function BattleEngine:_EnqueueSide(queue, side: string, sideAction)
 	end
 end
 
+-- Dispara evento visual/log de ativacao de Passiva
+function BattleEngine:_PushPassive(side: string, fieldSlot: number, battler, push, text: string?)
+	local p = passiveOf(battler)
+	if not p then
+		return
+	end
+	push({
+		Kind = "Passive",
+		Side = side,
+		FieldSlot = fieldSlot,
+		PassiveId = p.Id,
+		PassiveName = p.Name,
+		PassiveTier = p.Tier,
+		Text = text or (battler.Name .. " ativou " .. p.Name .. "!"),
+	})
+end
+
+-- Passivas de entrada em campo (ex.: Intimidacao reduz Ataque dos adversarios)
+function BattleEngine:_TriggerOnEnter(side: string, fieldSlot: number, battler, push)
+	if not battler or battler.Hp <= 0 then
+		return
+	end
+	local p, eff = passiveOf(battler)
+	if not p or not eff or not eff.OnEnterDebuff then
+		return
+	end
+	local foeSide = otherSide(side)
+	local aliveFoes = self:AliveFieldSlots(foeSide)
+	if #aliveFoes == 0 then
+		return
+	end
+	self:_PushPassive(side, fieldSlot, battler, push, battler.Name .. " intimidou o advers\u{e1}rio com " .. p.Name .. "!")
+	for _, fs in ipairs(aliveFoes) do
+		local foe = self:ActiveAt(foeSide, fs)
+		if foe and foe.Hp > 0 then
+			self:_ApplyStatStage(foeSide, fs, foe, eff.OnEnterDebuff.Stat, eff.OnEnterDebuff.Stages, false, push, side)
+		end
+	end
+end
+
+-- Passivas de limiar de HP (ex.: Instinto Zenkai <50%, Vontade de D <40%)
+function BattleEngine:_CheckThresholdPassive(side: string, fieldSlot: number, battler, push)
+	if not battler or battler.Hp <= 0 or battler.ThresholdUsed then
+		return
+	end
+	local p, eff = passiveOf(battler)
+	local trig = eff and eff.ThresholdTrigger
+	if not p or not trig then
+		return
+	end
+	if (battler.Hp / math.max(1, battler.MaxHp)) < trig.Below then
+		battler.ThresholdUsed = true
+		battler.AwakenTriggered = true
+		self:_PushPassive(side, fieldSlot, battler, push, battler.Name .. " despertou " .. p.Name .. "!")
+		if trig.HealFraction and battler.Hp < battler.MaxHp then
+			local healed = math.min(battler.MaxHp - battler.Hp, math.max(1, math.floor(battler.MaxHp * trig.HealFraction)))
+			if healed > 0 then
+				battler.Hp += healed
+				push({
+					Kind = "Heal",
+					Side = side,
+					FieldSlot = fieldSlot,
+					Active = true,
+					Amount = healed,
+					Hp = battler.Hp,
+					MaxHp = battler.MaxHp,
+					Text = battler.Name .. " recuperou " .. healed .. " de HP!",
+				})
+			end
+		end
+		for _, buff in ipairs(trig.Buffs or {}) do
+			self:_ApplyStatStage(side, fieldSlot, battler, buff.Stat, buff.Stages, false, push, side)
+		end
+	end
+end
+
 -- Resolve um turno inteiro. Devolve a lista de eventos, na ordem em que aconteceram.
 -- enemyAction: so no PvP (o outro jogador); sem ela, a IA escolhe.
 -- prefix: eventos que entram antes (ex.: aviso de tempo esgotado)
@@ -701,6 +801,31 @@ function BattleEngine:ResolveTurn(playerAction, enemyAction, prefix)
 		push(ev)
 	end
 
+	-- Passivas de entrada dos lutadores iniciais no Turno 1 (ordenadas por Velocidade)
+	if not self._EntryPassivesDone then
+		self._EntryPassivesDone = true
+		local starters = {}
+		for _, sideName in ipairs(SIDES) do
+			for _, fs in ipairs(self:AliveFieldSlots(sideName)) do
+				local b = self:ActiveAt(sideName, fs)
+				if b and b.Hp > 0 then
+					table.insert(starters, {
+						Side = sideName,
+						FieldSlot = fs,
+						Battler = b,
+						Speed = self:_EffectiveSpeed(sideName, b),
+					})
+				end
+			end
+		end
+		table.sort(starters, function(a, b)
+			return a.Speed > b.Speed
+		end)
+		for _, st in ipairs(starters) do
+			self:_TriggerOnEnter(st.Side, st.FieldSlot, st.Battler, push)
+		end
+	end
+
 	local enemy = self.Sides.Enemy
 	if not enemyAction then
 		if self:IsDouble() then
@@ -727,6 +852,7 @@ function BattleEngine:ResolveTurn(playerAction, enemyAction, prefix)
 		return a.Tiebreak > b.Tiebreak
 	end)
 
+	self._ActedThisTurn = {}
 	for _, q in ipairs(queue) do
 		if self.Winner then
 			break
@@ -745,9 +871,11 @@ function BattleEngine:ResolveTurn(playerAction, enemyAction, prefix)
 				elseif kind == "Item" then
 					self:_DoItem(q.Side, q.FieldSlot, q.Action.ItemId, q.Action.TargetIndex, push)
 				end
+				self._ActedThisTurn[current] = true
 			end
 		end
 	end
+	self._ActedThisTurn = nil
 
 	if not self.Winner then
 		self:_EndOfTurn(push)
@@ -1078,6 +1206,8 @@ function BattleEngine:_DoMove(side: string, fieldSlot: number, action, push)
 	local spreadMult = if isSpread and #targets >= 2 then DamageCalc.SPREAD_MULTIPLIER else 1
 	local multiTarget = #targets > 1
 	local selfFieldEffectDone = false
+	local aPassive, aEff = passiveOf(actor)
+	local shownPassiveForMove = {}
 
 	for _, t in ipairs(targets) do
 		if self.Winner or actor.Hp <= 0 then
@@ -1115,9 +1245,10 @@ function BattleEngine:_DoMove(side: string, fieldSlot: number, action, push)
 			end
 		end
 
-		-- Precisao por alvo (golpes em si ou no lado do campo nunca erram)
+		-- Precisao por alvo (golpes em si ou no lado do campo nunca erram; Olho de Aguia soma +10%)
 		if move.Accuracy and targetMode ~= "Self" and not t.IsSideTarget then
-			local chance = move.Accuracy * DamageCalc.StageMultiplier(actor.Stages.Accuracy)
+			local baseAcc = move.Accuracy + (if aEff and aEff.AccuracyBonus then aEff.AccuracyBonus else 0)
+			local chance = baseAcc * DamageCalc.StageMultiplier(actor.Stages.Accuracy)
 			if self.Rng:NextNumber() * 100 >= chance then
 				push({
 					Kind = "Miss",
@@ -1135,21 +1266,52 @@ function BattleEngine:_DoMove(side: string, fieldSlot: number, action, push)
 			local barrierMult = if self.Sides[t.Side].SideEffects.Barrier > 0
 				then (if self:IsDouble() then 0.75 else 0.67)
 				else 1
-			local result = DamageCalc.Compute(actor, t.Battler, move, self.Rng, spreadMult, barrierMult)
-			t.Battler.Hp = math.max(0, t.Battler.Hp - result.Damage)
+			local targetActed = self._ActedThisTurn ~= nil and self._ActedThisTurn[t.Battler] == true
+			local result = DamageCalc.Compute(actor, t.Battler, move, self.Rng, spreadMult, barrierMult, {
+				TargetActedThisTurn = targetActed,
+				IsSpread = isSpread,
+			})
+			local dPassive, dEff = passiveOf(t.Battler)
+
+			-- Anuncia ativacoes marcantes de Passiva (sem repetir no mesmo golpe multi-alvo)
+			for _, trig in ipairs(result.Triggers or {}) do
+				local whoKey = trig.Who .. "_" .. trig.Passive.Id .. "_" .. tostring(t.FieldSlot)
+				if not shownPassiveForMove[whoKey] then
+					shownPassiveForMove[whoKey] = true
+					if trig.Who == "Attacker" then
+						self:_PushPassive(side, fieldSlot, actor, push, actor.Name .. " ativou " .. trig.Passive.Name .. "!")
+					else
+						self:_PushPassive(t.Side, t.FieldSlot, t.Battler, push, t.Battler.Name .. " ativou " .. trig.Passive.Name .. "!")
+					end
+				end
+			end
+
+			-- Firmeza (Sturdy): se estava com 100% HP, resiste ao golpe fatal ficando com 1 HP
+			local finalDmg = result.Damage
+			local sturdyTriggered = false
+			if dEff and dEff.Sturdy and not t.Battler.SturdyUsed and t.Battler.Hp >= t.Battler.MaxHp and finalDmg >= t.Battler.Hp then
+				finalDmg = math.max(0, t.Battler.Hp - 1)
+				t.Battler.SturdyUsed = true
+				sturdyTriggered = true
+			end
+
+			t.Battler.Hp = math.max(0, t.Battler.Hp - finalDmg)
 			push({
 				Kind = "Damage",
 				Side = t.Side,
 				FieldSlot = t.FieldSlot,
-				Amount = result.Damage,
+				Amount = finalDmg,
 				Hp = t.Battler.Hp,
 				MaxHp = t.Battler.MaxHp,
 				Crit = result.Crit,
 				TypeMultiplier = result.TypeMultiplier,
 				MoveType = move.Type,
-				Spread = spreadMult,
-				Text = t.Battler.Name .. " perdeu " .. result.Damage .. " de HP.",
+				Spread = result.Spread,
+				Text = t.Battler.Name .. " perdeu " .. finalDmg .. " de HP.",
 			})
+			if sturdyTriggered then
+				self:_PushPassive(t.Side, t.FieldSlot, t.Battler, push, t.Battler.Name .. " resistiu com 1 HP gra\u{e7}as \u{e0} " .. (dPassive and dPassive.Name or "Firmeza") .. "!")
+			end
 			if result.Crit then
 				push({ Kind = "Message", Text = if multiTarget then "Golpe cr\u{ed}tico em " .. t.Battler.Name .. "!" else "Golpe cr\u{ed}tico!" })
 			end
@@ -1160,8 +1322,8 @@ function BattleEngine:_DoMove(side: string, fieldSlot: number, action, push)
 			end
 
 			-- Dreno de vida (absorve parte do dano causado)
-			if move.Drain and result.Damage > 0 and actor.Hp > 0 and actor.Hp < actor.MaxHp then
-				local healed = math.min(actor.MaxHp - actor.Hp, math.max(1, math.floor(result.Damage * move.Drain)))
+			if move.Drain and finalDmg > 0 and actor.Hp > 0 and actor.Hp < actor.MaxHp then
+				local healed = math.min(actor.MaxHp - actor.Hp, math.max(1, math.floor(finalDmg * move.Drain)))
 				if healed > 0 then
 					actor.Hp += healed
 					push({
@@ -1180,6 +1342,55 @@ function BattleEngine:_DoMove(side: string, fieldSlot: number, action, push)
 			local targetFainted = t.Battler.Hp <= 0
 			if targetFainted then
 				self:_Faint(t.Side, t.FieldSlot, push)
+				-- Passivas ao nocautear um adversario (Sede de Vitoria / Despertar Hollow)
+				if not self.Winner and t.Side ~= side and actor.Hp > 0 and aEff and (aEff.OnKoSelfBuff or aEff.OnKoHealFraction) then
+					self:_PushPassive(side, fieldSlot, actor, push, actor.Name .. " ativou " .. (aPassive and aPassive.Name or "Passiva") .. "!")
+					if aEff.OnKoSelfBuff then
+						self:_ApplyStatStage(side, fieldSlot, actor, aEff.OnKoSelfBuff.Stat, aEff.OnKoSelfBuff.Stages, false, push, side)
+					end
+					if aEff.OnKoHealFraction and actor.Hp < actor.MaxHp then
+						local koHeal = math.min(actor.MaxHp - actor.Hp, math.max(1, math.floor(actor.MaxHp * aEff.OnKoHealFraction)))
+						if koHeal > 0 then
+							actor.Hp += koHeal
+							push({
+								Kind = "Heal",
+								Side = side,
+								FieldSlot = fieldSlot,
+								Active = true,
+								Amount = koHeal,
+								Hp = actor.Hp,
+								MaxHp = actor.MaxHp,
+								Text = actor.Name .. " recuperou " .. koHeal .. " de HP!",
+							})
+						end
+					end
+				end
+			else
+				-- Passivas de limiar de HP no defensor (Instinto Zenkai / Vontade de D)
+				self:_CheckThresholdPassive(t.Side, t.FieldSlot, t.Battler, push)
+			end
+
+			-- Contra-Espinhos (reflete dano em golpes de Espadachim ou Lutador)
+			if not self.Winner and t.Side ~= side and finalDmg > 0 and actor.Hp > 0
+				and dEff and dEff.ContactReflectFraction and dEff.ContactTypes and dEff.ContactTypes[move.Type] then
+				local refl = math.max(1, math.floor(actor.MaxHp * dEff.ContactReflectFraction))
+				actor.Hp = math.max(0, actor.Hp - refl)
+				self:_PushPassive(t.Side, t.FieldSlot, t.Battler, push, (dPassive and dPassive.Name or "Contra-Espinhos") .. " feriu " .. actor.Name .. "!")
+				push({
+					Kind = "Damage",
+					Side = side,
+					FieldSlot = fieldSlot,
+					Amount = refl,
+					Hp = actor.Hp,
+					MaxHp = actor.MaxHp,
+					Recoil = true,
+					Text = actor.Name .. " sofreu " .. refl .. " de dano refletido!",
+				})
+				if actor.Hp <= 0 then
+					self:_Faint(side, fieldSlot, push)
+				else
+					self:_CheckThresholdPassive(side, fieldSlot, actor, push)
+				end
 			end
 
 			-- Efeito secundario (se for no usuario/campo, aplica mesmo se o alvo desmaiou, e no maximo 1 vez por uso)
@@ -1195,8 +1406,8 @@ function BattleEngine:_DoMove(side: string, fieldSlot: number, action, push)
 			end
 
 			-- Recuo (usuario sofre parte do dano causado)
-			if move.Recoil and result.Damage > 0 and actor.Hp > 0 and not self.Winner then
-				local recoil = math.max(1, math.floor(result.Damage * move.Recoil))
+			if move.Recoil and finalDmg > 0 and actor.Hp > 0 and not self.Winner then
+				local recoil = math.max(1, math.floor(finalDmg * move.Recoil))
 				actor.Hp = math.max(0, actor.Hp - recoil)
 				push({
 					Kind = "Damage",
@@ -1211,6 +1422,8 @@ function BattleEngine:_DoMove(side: string, fieldSlot: number, action, push)
 				})
 				if actor.Hp <= 0 then
 					self:_Faint(side, fieldSlot, push)
+				else
+					self:_CheckThresholdPassive(side, fieldSlot, actor, push)
 				end
 			end
 		else
@@ -1224,6 +1437,11 @@ function BattleEngine:_SetStatus(side: string, fieldSlot: number, status: string
 	assert(DamageCalc.STATUS[status], "Status desconhecido: " .. tostring(status))
 	local target = self:ActiveAt(side, fieldSlot)
 	if not target or target.Hp <= 0 then
+		return false
+	end
+	local tPassive, tEff = passiveOf(target)
+	if tEff and tEff.StatusImmune and tEff.StatusImmune[status] then
+		self:_PushPassive(side, fieldSlot, target, push, (tPassive and tPassive.Name or "Passiva") .. " protegeu " .. target.Name .. " contra " .. (STATUS_DISPLAY[status] or status) .. "!")
 		return false
 	end
 	if target.Status then
@@ -1262,10 +1480,18 @@ function BattleEngine:_PushFieldUpdate(side: string, push, text: string?, textEn
 	})
 end
 
-function BattleEngine:_ApplyStatStage(targetSide: string, targetSlot: number, target, stat: string, delta: number, announceCap: boolean, push): boolean
+function BattleEngine:_ApplyStatStage(targetSide: string, targetSlot: number, target, stat: string, delta: number, announceCap: boolean, push, sourceSide: string?): boolean
+	local statName = STAT_NAMES[stat] or stat
+	-- Protecao de passiva contra quedas de atributo causadas pelo adversario
+	if delta < 0 and sourceSide ~= nil and sourceSide ~= targetSide then
+		local tPassive, tEff = passiveOf(target)
+		if tEff and (tEff.BlockAllEnemyStatDrops or (tEff.BlockStatDrop and tEff.BlockStatDrop[stat])) then
+			self:_PushPassive(targetSide, targetSlot, target, push, (tPassive and tPassive.Name or "Passiva") .. " impediu a queda de " .. statName .. " de " .. target.Name .. "!")
+			return false
+		end
+	end
 	local before = target.Stages[stat] or 0
 	local after = math.clamp(before + delta, DamageCalc.MIN_STAGE, DamageCalc.MAX_STAGE)
-	local statName = STAT_NAMES[stat] or stat
 	if after == before then
 		if announceCap then
 			push({ Kind = "Message", Text = statName .. " de " .. target.Name .. " n\u{e3}o pode mudar mais." })
@@ -1290,12 +1516,17 @@ function BattleEngine:_ApplyEffect(actorSide: string, actorSlot: number, hitSide
 	if not effect then
 		return
 	end
-	if self.Rng:NextNumber() * 100 >= (effect.Chance or 100) then
+	local actor = self:ActiveAt(actorSide, actorSlot)
+	local _, aEff = passiveOf(actor)
+	local chance = effect.Chance or 100
+	if not isPrimary and aEff and aEff.SecondaryChanceMult and chance < 100 then
+		chance = math.min(100, chance * aEff.SecondaryChanceMult)
+	end
+	if self.Rng:NextNumber() * 100 >= chance then
 		return
 	end
 
 	local kind = effect.Kind
-	local actor = self:ActiveAt(actorSide, actorSlot)
 
 	-- Efeitos de protecao e de campo (independem de alvo inimigo estar vivo)
 	if kind == "Protect" then
@@ -1419,11 +1650,11 @@ function BattleEngine:_ApplyEffect(actorSide: string, actorSlot: number, hitSide
 	if kind == "Status" then
 		self:_SetStatus(targetSide, targetSlot, effect.Status, push, isPrimary and not multiTarget)
 	elseif kind == "StatStage" then
-		self:_ApplyStatStage(targetSide, targetSlot, target, effect.Stat, effect.Stages, true, push)
+		self:_ApplyStatStage(targetSide, targetSlot, target, effect.Stat, effect.Stages, true, push, actorSide)
 	elseif kind == "MultiStat" then
 		local anyChanged = false
 		for _, ch in ipairs(effect.Changes or {}) do
-			if self:_ApplyStatStage(targetSide, targetSlot, target, ch.Stat, ch.Stages, false, push) then
+			if self:_ApplyStatStage(targetSide, targetSlot, target, ch.Stat, ch.Stages, false, push, actorSide) then
 				anyChanged = true
 			end
 		end
@@ -1479,9 +1710,11 @@ function BattleEngine:_ApplyEntryHazards(side: string, fieldSlot: number, incomi
 	if not h then
 		return
 	end
+	local _, inEff = passiveOf(incoming)
+	local hazardMult = if inEff and inEff.HazardAndDotMult then inEff.HazardAndDotMult else 1
 	if h.Spikes > 0 then
 		local frac = SPIKES_FRACTION[math.clamp(h.Spikes, 1, 3)]
-		local dmg = math.max(1, math.floor(incoming.MaxHp * frac))
+		local dmg = math.max(1, math.floor(incoming.MaxHp * frac * hazardMult))
 		incoming.Hp = math.max(0, incoming.Hp - dmg)
 		push({
 			Kind = "Damage",
@@ -1496,12 +1729,14 @@ function BattleEngine:_ApplyEntryHazards(side: string, fieldSlot: number, incomi
 		if incoming.Hp <= 0 then
 			self:_Faint(side, fieldSlot, push)
 			return
+		else
+			self:_CheckThresholdPassive(side, fieldSlot, incoming, push)
 		end
 	end
 	if h.ToxicSpikes > 0 and incoming.Hp > 0 then
 		self:_SetStatus(side, fieldSlot, "Poison", push, false)
 		if h.ToxicSpikes >= 2 then
-			local chip = math.max(1, math.floor(incoming.MaxHp / 16))
+			local chip = math.max(1, math.floor((incoming.MaxHp / 16) * hazardMult))
 			incoming.Hp = math.max(0, incoming.Hp - chip)
 			push({
 				Kind = "StatusDamage",
@@ -1516,23 +1751,13 @@ function BattleEngine:_ApplyEntryHazards(side: string, fieldSlot: number, incomi
 			if incoming.Hp <= 0 then
 				self:_Faint(side, fieldSlot, push)
 				return
+			else
+				self:_CheckThresholdPassive(side, fieldSlot, incoming, push)
 			end
 		end
 	end
 	if h.StickyWeb and incoming.Hp > 0 then
-		local before = incoming.Stages.Speed or 0
-		local after = math.clamp(before - 1, DamageCalc.MIN_STAGE, DamageCalc.MAX_STAGE)
-		if after ~= before then
-			incoming.Stages.Speed = after
-			push({
-				Kind = "StatStage",
-				Side = side,
-				FieldSlot = fieldSlot,
-				Stat = "Speed",
-				Stage = after,
-				Text = "A rede aderente reduziu a Velocidade de " .. incoming.Name .. "!",
-			})
-		end
+		self:_ApplyStatStage(side, fieldSlot, incoming, "Speed", -1, false, push, otherSide(side))
 	end
 end
 
@@ -1550,6 +1775,7 @@ function BattleEngine:_DoSwitch(side: string, fieldSlot: number, index: number, 
 	end
 	incoming.Protected = false
 	incoming.ProtectStreak = 0
+	incoming.SturdyUsed = false
 	sideState.ActiveSlots[fieldSlot] = index
 	self:SyncLegacyActive(side)
 	incoming.Participated = true
@@ -1571,6 +1797,9 @@ function BattleEngine:_DoSwitch(side: string, fieldSlot: number, index: number, 
 	})
 
 	self:_ApplyEntryHazards(side, fieldSlot, incoming, push)
+	if incoming.Hp > 0 and not self.Winner then
+		self:_TriggerOnEnter(side, fieldSlot, incoming, push)
+	end
 end
 
 -- Item da mochila: gasta o turno do slot. Pode mirar qualquer membro do time.
@@ -1674,15 +1903,17 @@ function BattleEngine:_Faint(side: string, fieldSlot: number, push)
 	end
 end
 
--- Fim do turno (GDD secao 5): queimadura, veneno, sono e duracao de efeitos de campo (Barrier/Tailwind)
+-- Fim do turno (GDD secao 5): queimadura, veneno, sono, passivas de regeneracao e efeitos de campo (Barrier/Tailwind)
 function BattleEngine:_EndOfTurn(push)
 	for _, side in ipairs(SIDES) do
 		for fs = 1, self.SlotsPerSide do
 			local b = self:ActiveAt(side, fs)
 			if b and b.Hp > 0 then
+				local bPassive, bEff = passiveOf(b)
 				local rule = b.Status and DamageCalc.STATUS[b.Status]
 				if rule and rule.TickFraction then
-					local dmg = math.max(1, math.floor(b.MaxHp * rule.TickFraction))
+					local dotMult = if bEff and bEff.HazardAndDotMult then bEff.HazardAndDotMult else 1
+					local dmg = math.max(1, math.floor(b.MaxHp * rule.TickFraction * dotMult))
 					b.Hp = math.max(0, b.Hp - dmg)
 					local cause = if b.Status == "Burn" then "da queimadura" else "do veneno"
 					push({
@@ -1700,6 +1931,8 @@ function BattleEngine:_EndOfTurn(push)
 						if self.Winner then
 							return
 						end
+					else
+						self:_CheckThresholdPassive(side, fs, b, push)
 					end
 				elseif b.Status == "Sleep" then
 					b.StatusTurns -= 1
@@ -1707,6 +1940,24 @@ function BattleEngine:_EndOfTurn(push)
 						b.Status = nil
 						b.StatusTurns = 0
 						push({ Kind = "StatusCured", Side = side, FieldSlot = fs, Status = "Sleep", Text = b.Name .. " acordou!" })
+					end
+				end
+
+				-- Cura por turno de passiva (Regeneracao 6%, Manto da Raposa 8%)
+				if b.Hp > 0 and b.Hp < b.MaxHp and bEff and bEff.EndTurnHealFraction then
+					local healed = math.min(b.MaxHp - b.Hp, math.max(1, math.floor(b.MaxHp * bEff.EndTurnHealFraction)))
+					if healed > 0 then
+						b.Hp += healed
+						self:_PushPassive(side, fs, b, push, (bPassive and bPassive.Name or "Regenera\u{e7}\u{e3}o") .. " restaurou " .. healed .. " HP de " .. b.Name .. "!")
+						push({
+							Kind = "Heal",
+							Side = side,
+							FieldSlot = fs,
+							Active = true,
+							Amount = healed,
+							Hp = b.Hp,
+							MaxHp = b.MaxHp,
+						})
 					end
 				end
 			end
@@ -1737,6 +1988,7 @@ end
 
 -- Informacao de um membro para o cliente (golpes so do proprio time)
 function BattleEngine:_MemberInfo(b, withMoves: boolean)
+	local p = passiveOf(b)
 	local info = {
 		Id = b.Id,
 		Name = b.Name,
@@ -1748,6 +2000,10 @@ function BattleEngine:_MemberInfo(b, withMoves: boolean)
 		Status = b.Status,
 		Stages = table.clone(b.Stages),
 		Fainted = b.Hp <= 0,
+		Awakened = b.Awakened == true,
+		PassiveId = b.PassiveId,
+		PassiveName = p and p.Name or nil,
+		PassiveTier = p and p.Tier or nil,
 	}
 	if withMoves then
 		local moves = {}

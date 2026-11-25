@@ -120,6 +120,36 @@ return {
 	YOMOGI = { Character = "Yomogi", Level = 10, Repeatable = true },
 	DEVYOMOGI = { Character = "Yomogi", Level = 10, Repeatable = true },
 
+	-- Codigo de Dev para testar o Altar Secreto do Despertar (materiais + 10.000 Gold + iniciais Nv. 35)
+	DESPERTAR = {
+		Gold = 10000,
+		Materials = {
+			EssenciaLamina = 10,
+			EssenciaPunho = 10,
+			EssenciaArcana = 10,
+			EssenciaPrecisao = 10,
+			FragmentoFolha = 6,
+			FragmentoMares = 6,
+			FragmentoAlmas = 6,
+			NucleoDespertar = 4,
+		},
+		Repeatable = true,
+	},
+	DEVDESPERTAR = {
+		Gold = 10000,
+		Materials = {
+			EssenciaLamina = 10,
+			EssenciaPunho = 10,
+			EssenciaArcana = 10,
+			EssenciaPrecisao = 10,
+			FragmentoFolha = 6,
+			FragmentoMares = 6,
+			FragmentoAlmas = 6,
+			NucleoDespertar = 4,
+		},
+		Repeatable = true,
+	},
+
 	-- Codigo de Dev para receber todos os personagens principais de uma vez
 	DEVALL = {
 		Characters = {

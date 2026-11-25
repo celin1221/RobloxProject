@@ -28,6 +28,7 @@ local Tower = require(Data.Tower)
 local Encounters = require(Data.Encounters)
 local Genetics = require(Data:WaitForChild("Genetics"))
 local AccountLevel = require(Data:WaitForChild("AccountLevel"))
+local Awakening = require(Data:WaitForChild("Awakening"))
 
 local PlayerDataService = require(ServerScriptService:WaitForChild("Data"):WaitForChild("PlayerDataService"))
 local AccountLevelService = require(ServerScriptService.Data:WaitForChild("AccountLevelService"))
@@ -35,6 +36,7 @@ local ProgressionService = require(ServerScriptService.Data:WaitForChild("Progre
 local BattleService = require(ServerScriptService:WaitForChild("Battle"):WaitForChild("BattleService"))
 local TowerService = require(ServerScriptService:WaitForChild("Tower"):WaitForChild("TowerService"))
 local BaseService = require(ServerScriptService:WaitForChild("Economy"):WaitForChild("BaseService"))
+local AwakeningService = require(ServerScriptService.Economy:WaitForChild("AwakeningService"))
 local CharacterLibrary = require(ServerScriptService:WaitForChild("CharacterLibrary"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -561,6 +563,11 @@ local function rollDrop(r)
 	if bauCount(r) >= Refuge.BauCapacity(r.Forja) then
 		return "full"
 	end
+	local forgeDrop = Awakening.Drops.Refuge
+	if r.Forja >= (forgeDrop.ForgeHighCoreLevel or 6) and rng:NextNumber() < (forgeDrop.ForgeHighCoreChance or 0.12) then
+		table.insert(r.Bau, { Id = "NucleoDespertar", Qty = 1 })
+		return "NucleoDespertar", 1
+	end
 	local pool = Refuge.DropPool(r.Forja)
 	local id = pool[rng:NextInteger(1, #pool)]
 	local qty = if id == "Ore" then rng:NextInteger(Refuge.OreMin, Refuge.OreMax) else 1
@@ -599,6 +606,10 @@ RefugeService.RollCandy = rollCandy
 local function itemName(id: string): string
 	if id == "Ore" then
 		return "Min\u{e9}rio"
+	end
+	local mat = Awakening.GetMaterial(id)
+	if mat then
+		return mat.Name
 	end
 	local it = Items.Get(id)
 	return it and it.Name or id
@@ -704,6 +715,15 @@ startWild = function(player: Player, entryId)
 				end
 				if candy and candy ~= "full" then
 					table.insert(lines, "Um " .. itemName(candy) .. " caiu no Ba\u{fa}!")
+				end
+				-- Essencia de Classe do selvagem derrotado/capturado (28%)
+				local essId = def and Awakening.ClassEssence[def.Type]
+				if essId and rng:NextNumber() < (Awakening.Drops.Refuge.WildEssenceChance or 0.28) then
+					local given = AwakeningService.AddMaterial(profile, essId, 1)
+					if given > 0 then
+						local matDef = Awakening.GetMaterial(essId)
+						table.insert(lines, "Material obtido: +1x " .. (matDef and matDef.Name or essId) .. "!")
+					end
 				end
 			end
 			changed(player, true)
@@ -900,6 +920,8 @@ function RefugeService.Collect(player: Player)
 		if e.Id == "Ore" then
 			take = math.min(e.Qty, math.max(0, Base.OreMax - data.Ore))
 			data.Ore += take
+		elseif Awakening.GetMaterial(e.Id) then
+			take = AwakeningService.AddMaterial(data, e.Id, e.Qty)
 		elseif Items.Get(e.Id) then
 			take = math.min(e.Qty, Items.SpaceFor(data.Bag, e.Id, slots))
 			if take > 0 then

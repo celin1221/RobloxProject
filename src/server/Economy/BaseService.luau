@@ -358,12 +358,16 @@ local function syncNPCs(player: Player)
 				root.Anchored = true
 				makeNpcIntangible(model)
 				model:SetAttribute("Uid", uid)
+				model:SetAttribute("CharacterId", member.CharacterId)
+				model:SetAttribute("Awakened", member.Awakened == true)
 				model:SetAttribute("OwnerUserId", player.UserId)
 				model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
 				CollectionService:AddTag(model, "BaseCharacter")
 				model.Parent = folder
 			else
 				makeNpcIntangible(model)
+				model:SetAttribute("CharacterId", member.CharacterId)
+				model:SetAttribute("Awakened", member.Awakened == true)
 			end
 			local changed = model:GetAttribute("BaseState") ~= state
 			model:SetAttribute("BaseState", state)

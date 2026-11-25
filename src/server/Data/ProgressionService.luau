@@ -136,6 +136,9 @@ function ProgressionService.AddXp(player: Player, uid: string, amount: number)
 		m.Xp -= Progression.XpToNext(m.Level)
 		m.Level += 1
 		table.insert(lines, def.Name .. " subiu para o n\u{ed}vel " .. m.Level .. "!")
+		if m.Level == 35 and Characters.HasAwakening(m.CharacterId) and not m.Awakened then
+			table.insert(lines, def.Name .. " atingiu o Nv. 35! Um poder secreto ressoa em um altar oculto na floresta...")
+		end
 		for _, moveId in ipairs(Characters.NewMovesAt(m.CharacterId, m.Level)) do
 			if not table.find(m.Learned, moveId) then
 				table.insert(m.Learned, moveId)
@@ -249,6 +252,7 @@ function ProgressionService.TeamFor(player: Player)
 				StatMultipliers = Genetics.MultipliersFor(m.Genetics, m.Training),
 				Genetics = m.Genetics,
 				Training = m.Training,
+				Awakened = m.Awakened == true,
 				Hp = m.Hp,
 				Status = m.Status,
 				StatusTurns = m.StatusTurns,

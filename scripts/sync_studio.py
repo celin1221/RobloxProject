@@ -207,6 +207,8 @@ local ok, res = pcall(function()
     local Tower = require(dataClone:WaitForChild("Tower"))
     local Benefits = require(dataClone:WaitForChild("Benefits"))
     local Retention = require(dataClone:WaitForChild("Retention"))
+    local Passives = require(dataClone:WaitForChild("Passives"))
+    local Awakening = require(dataClone:WaitForChild("Awakening"))
 
 -- Test 1: GDD Section 5 Damage Conference (Kaen Corte Flamejante on Raiko at Lv 10 = 12 to 14 non-crit)
 local b = BattleEngine.New({
@@ -551,7 +553,96 @@ if ssChars then
     end
 end
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), Economy/XP Rebalance + Summon Rates + BaseCollect Shield + Clean Idle/Walk IDs + %d/93 Animated Moves + UI Guardrails", b.Turn, simTurns, totalMoves)
+-- Test 13: Passives System (20 passives, battle triggers) + Awakening Crafting & Secret Cave Altar
+assert(#Passives.Order == 20, "Expected 20 passives in Passives.Order, got " .. tostring(#Passives.Order))
+for cid, def in pairs(Characters.List) do
+    local p = Characters.PassiveOf(cid, false)
+    assert(p ~= nil, "Missing base passive on character " .. cid)
+    if def.Rarity == "Lendario" then
+        assert(p.Tier == "Unique", "Legendary " .. cid .. " must have Unique passive, got " .. tostring(p.Tier))
+    end
+end
+for _, sid in ipairs({ "Luffy", "Naruto", "Ichigo" }) do
+    local sp = Characters.PassiveOf(sid, true)
+    assert(sp and sp.Tier == "Secret", "Awakened " .. sid .. " must unlock Secret passive")
+    local rec = Awakening.RecipeFor(sid)
+    assert(rec and rec.MinLevel == 35 and rec.Gold == 10000 and #rec.Materials >= 3, "Invalid Awakening recipe on " .. sid)
+end
+-- +10% Awakening stat bonus verification
+local luffyBase = Progression.MemberMultiplier({ CharacterId = "Luffy", Stars = 0, Awakened = false })
+local luffyAw = Progression.MemberMultiplier({ CharacterId = "Luffy", Stars = 0, Awakened = true })
+assert(math.abs(luffyAw / luffyBase - 1.10) < 0.001, "Expected +10% Awakened stat multiplier")
+-- CanAwaken validation
+local fakeProf = {
+    Gold = 10000,
+    Materials = { EssenciaPunho = 8, FragmentoMares = 5, NucleoDespertar = 2 },
+    Collection = {
+        c1 = { CharacterId = "Luffy", Level = 34 },
+        c2 = { CharacterId = "Luffy", Level = 35 },
+    },
+}
+local ok34 = Awakening.CanAwaken(fakeProf, "c1")
+local ok35 = Awakening.CanAwaken(fakeProf, "c2")
+assert((not ok34) and ok35, "Expected Awakening Lv 35 gate to reject Lv 34 and accept Lv 35")
+
+-- Battle passive test A: Sturdy (Chad survives lethal Lv 50 hit at 100% HP with 1 HP)
+local bSturdy = BattleEngine.New({
+    Player = { Team = { { CharacterId = "Byakuya", Level = 50, Moves = { "SenbonzakuraKageyoshi" } } } },
+    Enemy = { Team = { { CharacterId = "Chad", Level = 5, Moves = { "SocoDireto" } } }, AI = "Facil" },
+    Mode = "PvP", EnemyHuman = true, Seed = 10,
+})
+local evSturdy = bSturdy:ResolveTurn({ Kind = "Move", Index = 1 }, { Kind = "Move", Index = 1 })
+assert(bSturdy:Active("Enemy").Hp == 1, "Expected Chad (Firmeza/Sturdy) to survive lethal hit with 1 HP, got " .. tostring(bSturdy:Active("Enemy").Hp))
+
+-- Battle passive test B: Intimidacao (Zoro lowers enemy Attack on turn 1 entry) + InfinitoAbsoluto (Setero blocks it!)
+local bIntim = BattleEngine.New({
+    Player = { Team = { { CharacterId = "Zoro", Level = 30, Moves = { "CorteBasico" } } } },
+    Enemy = { Team = { { CharacterId = "Setero", Level = 30, Moves = { "EsferaArcana" } } }, AI = "Facil" },
+    Mode = "PvP", EnemyHuman = true, Seed = 11,
+})
+bIntim:ResolveTurn({ Kind = "Move", Index = 1 }, { Kind = "Move", Index = 1 })
+assert(bIntim:Active("Enemy").Stages.Attack == 0, "Expected Setero (InfinitoAbsoluto) to block Zoro's Intimidacao drop")
+
+-- Battle passive test C: Awakened Luffy (VontadeDeD) is immune to Paralysis
+local bLuffy = BattleEngine.New({
+    Player = { Team = { { CharacterId = "Luffy", Level = 40, Awakened = true, Moves = { "SocoDireto" } } } },
+    Enemy = { Team = { { CharacterId = "Nami", Level = 40, Moves = { "SeloParalisante" } } }, AI = "Facil" },
+    Mode = "PvP", EnemyHuman = true, Seed = 12,
+})
+bLuffy:ResolveTurn({ Kind = "Move", Index = 1 }, { Kind = "Move", Index = 1 })
+assert(bLuffy:Active("Player").Status ~= "Paralysis", "Expected Awakened Luffy (VontadeDeD) to be immune to Paralysis")
+
+-- Battle passive test D: BarbaBranca (TremorDosMares) ignores 2x2 spread penalty (Spread == 1.0!)
+local bWB = BattleEngine.New({
+    Player = { Team = {
+        { CharacterId = "BarbaBranca", Level = 50, Moves = { "CeuETerra" } },
+        { CharacterId = "Kaen", Level = 50, Moves = { "PosturaDaLamina" } },
+    } },
+    Enemy = { Team = {
+        { CharacterId = "Yomogi", Level = 50, Moves = { "CascaDeCarvalho" } },
+        { CharacterId = "Chad", Level = 50, Moves = { "PosturaDeCombate" } },
+    } },
+    Format = "2x2", Mode = "PvP", EnemyHuman = true, Seed = 13,
+})
+local evWB = bWB:ResolveTurn(
+    { Kind = "Double", Actions = { { FieldSlot = 1, Kind = "Move", Index = 1 }, { FieldSlot = 2, Kind = "Move", Index = 1 } } },
+    { Kind = "Double", Actions = { { FieldSlot = 1, Kind = "Move", Index = 1 }, { FieldSlot = 2, Kind = "Move", Index = 1 } } }
+)
+local wbSpreadHits = 0
+for _, ev in ipairs(evWB) do
+    if ev.Kind == "Damage" and ev.Side == "Enemy" then
+        assert(ev.Spread == 1, "Expected BarbaBranca (TremorDosMares) to deal 1.0x spread damage, got " .. tostring(ev.Spread))
+        wbSpreadHits += 1
+    end
+end
+assert(wbSpreadHits == 2, "Expected BarbaBranca CeuETerra to hit 2 targets at 1.0x spread")
+
+-- Secret Awakening Altar in Workspace + AwakeningGui ScreenGui exist
+local mapAltar = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("SecretAwakeningAltar")
+assert(mapAltar and mapAltar:FindFirstChild("AwakeningPrompt", true), "Missing Workspace.Map.SecretAwakeningAltar with AwakeningPrompt")
+assert(sg:FindFirstChild("AwakeningGui") and sg.AwakeningGui:IsA("ScreenGui"), "Missing StarterGui.AwakeningGui ScreenGui")
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), 20 Passives + Awakening Crafting + Secret Altar + Economy/XP Rebalance + %d/93 Animated Moves + UI Guardrails", b.Turn, simTurns, totalMoves)
 end)
 sandbox:Destroy()
 assert(ok, res)

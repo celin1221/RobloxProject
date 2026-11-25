@@ -19,6 +19,7 @@ export type RemoteEventName =
 	| "Notify"        -- Server -> Client: toast / notificacao na tela
 	| "PvPInvite"     -- Server -> Client: convite de desafio PvP (inclui Format: "1x1" | "2x2")
 	| "TrainingOpen"  -- Server -> Client: abre tela da Maquina de Treinamento pela capsula 3D
+	| "AwakeningOpen" -- Server -> Client: abre tela do Altar Secreto do Despertar
 	| "AccountXpGain" -- Server -> Client: ganho de XP / subida de nivel da conta
 
 export type RemoteFunctionName =
@@ -49,6 +50,7 @@ export type RemoteFunctionName =
 	| "PvPCancel"     -- Client -> Server: cancela convite de PvP
 	| "Rewards"       -- Client -> Server: coleta login diario, bau de tempo, missoes ou codigos
 	| "ClaimLevelReward" -- Client -> Server: resgata recompensa de nivel da conta (level ou "All")
+	| "AwakenCharacter" -- Client -> Server: desperta um personagem Epico Nv. 35+ no Altar Secreto
 	| "SaveSettings"  -- Client -> Server: salva configuracoes do cliente (som, qualidade baixa, etc.)
 
 local Net = {}

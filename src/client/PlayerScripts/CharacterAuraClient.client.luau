@@ -17,6 +17,7 @@ local CollectionService = game:GetService("CollectionService")
 
 local ClientSettings = require(ReplicatedStorage:WaitForChild("ClientSettings"))
 ClientSettings.start()
+local Awakening = require(ReplicatedStorage:WaitForChild("Data"):WaitForChild("Awakening"))
 
 local player = Players.LocalPlayer
 local TAG = "CharacterAura"
@@ -356,10 +357,169 @@ end
 CollectionService:GetInstanceAddedSignal(TAG):Connect(trackTagged)
 CollectionService:GetInstanceRemovedSignal(TAG):Connect(unregister)
 
+--------------------------------------------------------------------
+-- Aura Minimalista 100% Particulas Puras para Personagens DESPERTOS
+-- (Regra permanente: zero discos no chao, zero billboards/stickers, zero orbes solidos)
+--------------------------------------------------------------------
+local AWAKENED_MODEL_TAGS = { "PartyFollower", "BaseCharacter", "BattleCharacter" }
+local awakenedTracked: { [Model]: { Att: Attachment, Conns: { RBXScriptConnection } } } = {}
+
+local function clearAwakenedAura(model: Model)
+	local info = awakenedTracked[model]
+	if info then
+		if info.Att and info.Att.Parent then
+			info.Att:Destroy()
+		end
+		for _, c in ipairs(info.Conns) do
+			c:Disconnect()
+		end
+		awakenedTracked[model] = nil
+	end
+end
+
+local function buildAwakenedAura(model: Model)
+	if not model.Parent or not model:IsDescendantOf(workspace) then
+		return
+	end
+	if model:GetAttribute("Awakened") ~= true then
+		local existing = awakenedTracked[model]
+		if existing and existing.Att and existing.Att.Parent then
+			existing.Att:Destroy()
+			existing.Att = nil :: any
+		end
+		return
+	end
+	local existing = awakenedTracked[model]
+	if existing and existing.Att and existing.Att.Parent then
+		return
+	end
+	local anchor = (model:FindFirstChild("UpperTorso")
+		or model:FindFirstChild("Torso_Mesh")
+		or model:FindFirstChild("Torso")
+		or model:FindFirstChild("HumanoidRootPart")) :: BasePart?
+	if not anchor then
+		return
+	end
+
+	local charId = model:GetAttribute("CharacterId")
+	local recipe = if typeof(charId) == "string" then Awakening.RecipeFor(charId) else nil
+	local c1 = (recipe and recipe.AuraColor) or Color3.fromRGB(245, 130, 255)
+	local c2 = (recipe and recipe.AuraSecondary) or Color3.fromRGB(255, 212, 85)
+
+	local att = Instance.new("Attachment")
+	att.Name = "AwakenedAuraAttachment"
+	att.Position = Vector3.new(0, 0.15, 0)
+	att.Parent = anchor
+
+	-- Camada 1: particulas suaves ascendentes em volta do tronco (minimalista, limpa e visivel)
+	local wisps = Instance.new("ParticleEmitter")
+	wisps.Name = "AwakenedWisps"
+	wisps.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, c2),
+		ColorSequenceKeypoint.new(0.45, c1),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)),
+	})
+	wisps.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.12),
+		NumberSequenceKeypoint.new(0.4, 0.42),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	wisps.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.85),
+		NumberSequenceKeypoint.new(0.25, 0.35),
+		NumberSequenceKeypoint.new(0.8, 0.65),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	wisps.Lifetime = NumberRange.new(0.85, 1.45)
+	wisps.Rate = 11
+	wisps.Speed = NumberRange.new(1.4, 2.8)
+	wisps.SpreadAngle = Vector2.new(26, 26)
+	wisps.Acceleration = Vector3.new(0, 2.2, 0)
+	wisps.LightEmission = 0.85
+	wisps.Drag = 1.6
+	wisps.Enabled = aurasEnabled()
+	wisps.Parent = att
+
+	-- Camada 2: faiscas finas minimalistas subindo devagar
+	local sparks = Instance.new("ParticleEmitter")
+	sparks.Name = "AwakenedSparks"
+	sparks.Color = ColorSequence.new(c2, c1)
+	sparks.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.08),
+		NumberSequenceKeypoint.new(0.5, 0.16),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	sparks.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.4),
+		NumberSequenceKeypoint.new(0.75, 0.25),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	sparks.Lifetime = NumberRange.new(0.7, 1.3)
+	sparks.Rate = 7
+	sparks.Speed = NumberRange.new(1.8, 3.6)
+	sparks.SpreadAngle = Vector2.new(45, 45)
+	sparks.Acceleration = Vector3.new(0, 3.0, 0)
+	sparks.LightEmission = 0.95
+	sparks.Enabled = aurasEnabled()
+	sparks.Parent = att
+
+	if existing then
+		existing.Att = att
+	else
+		awakenedTracked[model] = { Att = att, Conns = {} }
+	end
+end
+
+local function watchAwakenedModel(inst: Instance)
+	if not inst:IsA("Model") or awakenedTracked[inst] then
+		return
+	end
+	local conns: { RBXScriptConnection } = {}
+	awakenedTracked[inst] = { Att = nil :: any, Conns = conns }
+	table.insert(conns, inst:GetAttributeChangedSignal("Awakened"):Connect(function()
+		pcall(buildAwakenedAura, inst)
+	end))
+	table.insert(conns, inst.ChildAdded:Connect(function()
+		local info = awakenedTracked[inst]
+		if info and (not info.Att or not info.Att.Parent) and inst:GetAttribute("Awakened") == true then
+			pcall(buildAwakenedAura, inst)
+		end
+	end))
+	table.insert(conns, inst.AncestryChanged:Connect(function()
+		if inst:IsDescendantOf(workspace) then
+			pcall(buildAwakenedAura, inst)
+		else
+			clearAwakenedAura(inst)
+		end
+	end))
+	pcall(buildAwakenedAura, inst)
+	task.defer(function()
+		if awakenedTracked[inst] then
+			pcall(buildAwakenedAura, inst)
+		end
+	end)
+end
+
+for _, tagName in ipairs(AWAKENED_MODEL_TAGS) do
+	for _, m in ipairs(CollectionService:GetTagged(tagName)) do
+		watchAwakenedModel(m)
+	end
+	CollectionService:GetInstanceAddedSignal(tagName):Connect(watchAwakenedModel)
+end
+
 ClientSettings.Changed:Connect(function()
 	local on = aurasEnabled()
 	for _, entry in pairs(entries) do
 		pcall(setFxEnabled, entry, on)
+	end
+	for _, info in pairs(awakenedTracked) do
+		if info.Att and info.Att.Parent then
+			for _, ch in ipairs(info.Att:GetChildren()) do
+				if ch:IsA("ParticleEmitter") then
+					ch.Enabled = on
+				end
+			end
+		end
 	end
 end)
 

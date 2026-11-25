@@ -11,6 +11,7 @@
 local Characters = require(script.Parent:WaitForChild("Characters"))
 local Summon = require(script.Parent:WaitForChild("Summon"))
 local Genetics = require(script.Parent:WaitForChild("Genetics"))
+local Awakening = require(script.Parent:WaitForChild("Awakening"))
 
 local Progression = {}
 Progression.Genetics = Genetics
@@ -48,10 +49,11 @@ function Progression.VictoryXp(enemyLevels: { number }, doubleXp: boolean?): num
 	return Progression.XpPerEnemyLevel * sum * (if doubleXp then 2 else 1)
 end
 
--- Multiplicador base de um membro salvo: estrelas (+5% cada) e variante
+-- Multiplicador base de um membro salvo: estrelas (+5% cada), variante e Despertar (+10%)
 function Progression.MemberMultiplier(m): number
 	local variantBonus = (m.Variant and Characters.VariantBonus and Characters.VariantBonus[m.Variant]) or 0
-	return Summon.StarMultiplier(m.Stars) * (1 + variantBonus)
+	local awakenedBonus = if m and m.Awakened == true then Awakening.StatBonus else 0
+	return Summon.StarMultiplier(m.Stars) * (1 + variantBonus) * (1 + awakenedBonus)
 end
 
 -- Multiplicadores finais por atributo (estrelas, variante, Genetica e Treino)
@@ -112,6 +114,8 @@ function Progression.StatBreakdown(m)
 		TrainingAvg = Genetics.Average(trn),
 		IsPerfectGenetics = Genetics.IsPerfect(gen),
 		BaseMultiplier = baseMult,
+		Awakened = m ~= nil and m.Awakened == true,
+		AwakenedBonusPct = if m ~= nil and m.Awakened == true then math.floor(Awakening.StatBonus * 100 + 0.5) else 0,
 		TotalBase = totalBase,
 		TotalFinal = totalFinal,
 	}

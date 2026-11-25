@@ -245,10 +245,11 @@ local function inTraining(data, uid: string): boolean
 end
 
 local function protectedFromConsume(data, uid: string): boolean
-	return inTeam(data, uid) or inTraining(data, uid)
+	local m = data.Collection and data.Collection[uid]
+	return inTeam(data, uid) or inTraining(data, uid) or (m ~= nil and m.Awakened == true)
 end
 
--- 3 iguais viram +1 estrela: fica a melhor copia, 2 copias fora do time sao consumidas
+-- 3 iguais viram +1 estrela: fica a melhor copia (sempre preservando Desperto!), 2 copias fora do time sao consumidas
 function SummonService.Fuse(player: Player, characterId)
 	local data = PlayerDataService.Get(player)
 	if not data or typeof(characterId) ~= "string" or not Characters.Get(characterId) then
@@ -259,6 +260,9 @@ function SummonService.Fuse(player: Player, characterId)
 		return false, "Precisa de " .. Summon.Stars.CopiesPerStar .. " c\u{f3}pias."
 	end
 	table.sort(copies, function(a, b)
+		if (a.Awakened == true) ~= (b.Awakened == true) then
+			return a.Awakened == true
+		end
 		if (a.Stars or 0) ~= (b.Stars or 0) then
 			return (a.Stars or 0) > (b.Stars or 0)
 		end

@@ -30,6 +30,7 @@ return {
 		Default = 1.0,
 		UseMove = 0.7,
 		Damage = 1.0,
+		Passive = 0.75,
 		Faint = 1.4,
 	},
 

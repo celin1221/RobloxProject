@@ -1366,3 +1366,39 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - `python scripts/sync_studio.py status` (`100% in sync` nos 93 scripts) e `python scripts/sync_studio.py test` (`PASS: ... 97/93 Animated Moves + UI Guardrails`).
 - Validado ao vivo no Play Mode em todos os 3 tipos de rig (`Luffy` I-Pose, `Setero` Skinned Bone, `Uryu` I-Pose, `Kaen` R15 Motor6D): **`22/22` golpes testados (`6` básicos novos + todos os `12` arquétipos fluidos), `0` falhas, `0` vazamentos (`BattleVfx=0`, `Katana=0`) e `0` erros no Console**.
 - Place salvo no Roblox Studio na **versão 337** (`TeamCreate`).
+
+
+## Sistema de Passivas (20 Passivas), Crafting de Despertar (Nv. 35+) e Gruta Secreta na Floresta (25/11/2026)
+
+**Feito**
+- **1. Camada Data (`src/shared/Data/Passives.luau`, `Awakening.luau`, `Characters.luau`, `Progression.luau`, `Net.luau`):**
+  - **`Passives.luau` (20 passivas declarativas estilo Pokémon, escaláveis):**
+    - **12 Passivas Genéricas** atribuídas por espécie a Comuns, Raros e Épicos base (`OlhoDeAguia`, `Intimidacao`, `Firmeza`, `EspiritoGuerreiro`, `ChamaInterior`, `SedeDeVitoria`, `MenteTatica`, `Regeneracao`, `PassosVelozes`, `GolpeCerteiro`, `EscudoNatural`, `ContraEspinhos`).
+    - **5 Passivas Únicas (Lendários):** `PetalasInfinitas` (Byakuya), `TremorDosMares` (Barba Branca), `MestreDosElementos` (Sarutobi), `InstintoZenkai` (San) e `InfinitoAbsoluto` (Setero).
+    - **3 Passivas Secretas Únicas (Épicos Iniciais Despertos):** `VontadeDeD` (Luffy), `MantoDaRaposa` (Naruto) e `DespertarHollow` (Ichigo).
+  - **`Awakening.luau` (Sistema Híbrido Combinado de Materiais + Receitas Nv. 35+):**
+    - 8 Materiais em `data.Materials` (não ocupam os 30 slots da mochila de batalha): `EssenciaLamina`, `EssenciaPunho`, `EssenciaArcana`, `EssenciaPrecisao`, `FragmentoFolha`, `FragmentoMares`, `FragmentoAlmas` e `NucleoDespertar`.
+    - Receitas de `Luffy`, `Naruto` e `Ichigo`: **Nv. 35+** + **8 Essências de Classe** (Naruto combina `6 Punho + 2 Arcana`) + **5 Fragmentos do Anime** + **2 Núcleos do Despertar** + **10.000 Gold** → desbloqueia Passiva Secreta Única + selo `DESPERTO` + aura 3D minimalista em partículas + **`+10%` nos atributos finais** (`Progression.MemberMultiplier`).
+- **2. Motor de Combate 1x1 e 2x2 (`DamageCalc.luau`, `BattleEngine.luau`, `BattleConfig.luau`, `ArenaManager.luau`):**
+  - Todos os gatilhos integrados de forma pura: entrada no turno 1 e em trocas (`Intimidacao`), imunidade a debuffs (`OlhoDeAguia`, `InfinitoAbsoluto`), imunidade a status (`VontadeDeD`, `MantoDaRaposa`), bônus de precisão/crítico/velocidade/classe/HP baixo/HP alto/agir por último (`MenteTatica`), `Firmeza` (sobrevive com 1 HP), `TremorDosMares` (ignora penalidade de spread 2x2), `PetalasInfinitas` (ignora buffs positivos de Defesa), `MestreDosElementos` (dobra chance secundária), limiares de HP (`InstintoZenkai`, `VontadeDeD`), reflexo de contato (`ContraEspinhos`), bônus de nocaute (`SedeDeVitoria`, `DespertarHollow`), redução de hazards/DoT (`EscudoNatural`) e cura de fim de turno (`Regeneracao`, `MantoDaRaposa`).
+  - Evento `Kind = "Passive"` enviado ao cliente (espelhado corretamente no PvP) e atributo `Awakened` propagado para modelos 3D em batalha, base e acompanhante.
+- **3. Servidor & Drops Integrados (`AwakeningService.luau`, `PlayerDataService.luau`, `ProgressionService.luau`, `PvPService.luau`, `SummonService.luau`, `TowerService.luau`, `RefugeService.luau`, `PartyFollowerService.luau`, `BaseService.luau`, `RetentionService.luau`, `DataMain.server.luau`, `Codes.luau`):**
+  - Drops distribuídos por pilar: **Ginásios** garantem Fragmento do Anime (`2×` 1ª vez / `1×` repetições) + Essência; **Torre** e **selvagens do Refúgio (`28%`)** dropam Essências de Classe; **Torre Difícil**, **Chefes do Infinito** e **Forja Nv. 6+ (`12%`)** dropam `NucleoDespertar`.
+  - Blindagem em `SummonService.Fuse` e `SellDuplicate`: personagens Despertos têm prioridade absoluta na fusão e nunca podem ser consumidos nem vendidos.
+  - Códigos Dev `DESPERTAR` / `DEVDESPERTAR` adicionados em `Codes.luau` para teste rápido.
+- **4. Gruta e Máquina Secreta no Mapa (`Workspace.Map.SecretAwakeningAltar` + `StarterGui/AwakeningGui`):**
+  - Construída gruta rochosa camuflada por pedras e pinheiros na floresta Norte-Oeste atrás do Lago (`(-125, 8, -132)`, 52 partes, `AwakeningPrompt` tecla `E`, placa discreta visível só de perto com `MaxDistance = 24`, núcleo flutuante animado).
+- **5. Interface e Aura Minimalista (`AwakeningClient`, `CharacterDetailClient`, `BattleClient`, `BagClient`, `TeamCards`, `CharacterAuraClient`):**
+  - **Info (`CharacterDetailClient`):** novo Card de Passiva exibindo nome/tier/descrição + selo trancado `"Passiva Secreta: ??? — Desbloqueie no Nv. 35 em um altar oculto na floresta..."` em Épicos ainda não despertos.
+  - **Batalha (`BattleClient`):** banner rápido estilo Pokémon (`PassiveCallout`) + pop-up colorido sobre o lutador sempre que uma passiva ativa.
+  - **Mochila (`BagClient`):** nova aba **`MATERIAIS`** exibindo todos os 8 materiais, quantidades e origem de cada drop.
+  - **Altar Secreto (`AwakeningClient`):** UI completa `Midnight-Blue Anime` (zero emojis) com lista de personagens despertáveis, prévia da Passiva Secreta, checklist de Nível/Gold/Materiais e confirmação sonora.
+  - **Aura Desperto (`CharacterAuraClient` + `TeamCards`):** aura 100% partículas puras minimalistas (`AwakenedWisps` + `AwakenedSparks`, zero discos no chão/billboards/stickers) no `PartyFollower`, `BaseCharacter` e `BattleCharacter`, com brilho violeta-dourado nos cards.
+- **6. Planilha Excel e Testes (`scripts/update_characters_sheet.py`, `scripts/sync_studio.py`):**
+  - `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` regeneradas com 4 novas colunas em `Personagens` (`Passiva Base`, `Tipo Passiva`, `Passiva Secreta (Despertar)`, `Receita de Despertar`), nova aba **`Passivas`** (todas as 20 passivas e receitas) e bloco de resumo dinâmico na aba **`Resumo`**.
+  - Adicionado **Test 13** em `scripts/sync_studio.py` testando todas as 20 passivas, gatilhos de combate (`Firmeza`, `Intimidacao` vs `InfinitoAbsoluto`, imunidade `VontadeDeD`, spread `1.0x` do `TremorDosMares`), validação de receitas Nv. 35+, `+10%` de atributos e existência do `SecretAwakeningAltar` + `AwakeningGui`.
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos 97 scripts) e `python scripts/sync_studio.py test` (`PASS`).
+- Validado ao vivo no Play Mode (com backup e restauração limpa do perfil): abertura remota do `AwakeningGui` pelo servidor, 5 linhas de requisitos, despertar real de `Luffy` (`Vontade de D`, `-10.000 Gold`, `-8/-5/-2` materiais, rejeição de despertar duplicado) e `Ichigo` (`Despertar Hollow`), `PartyFollower` exibindo `AwakenedAuraAttachment` no `UpperTorso` com 2 `ParticleEmitter`s puros (`0` decals/discos) e **`0` erros/avisos no Console**.
+- Place salvo no Roblox Studio na **versão 340** (`TeamCreate`).

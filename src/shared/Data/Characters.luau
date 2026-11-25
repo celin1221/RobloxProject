@@ -10,6 +10,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Moves = require(script.Parent:WaitForChild("Moves"))
+local Passives = require(script.Parent:WaitForChild("Passives"))
 
 local Characters = {}
 
@@ -67,6 +68,7 @@ Characters.List = {
 		Anime = "Generico",
 		Type = "Espadachim",
 		Rarity = "Comum",
+		Passive = "ChamaInterior",
 		Concept = "Espadachim jovem e impulsivo",
 		BaseLevel = 10,
 		BaseStats = { HP = 62, Attack = 24, Defense = 18, Speed = 22 },
@@ -90,6 +92,7 @@ Characters.List = {
 		Anime = "Generico",
 		Type = "Lutador",
 		Rarity = "Comum",
+		Passive = "EspiritoGuerreiro",
 		Concept = "Lutador de rua calmo e r\u{e1}pido",
 		BaseLevel = 10,
 		BaseStats = { HP = 66, Attack = 22, Defense = 20, Speed = 20 },
@@ -113,6 +116,7 @@ Characters.List = {
 		Anime = "Generico",
 		Type = "Mago",
 		Rarity = "Comum",
+		Passive = "Regeneracao",
 		Concept = "Meio-fera da floresta, instintivo e protetor",
 		BaseLevel = 10,
 		BaseStats = { HP = 64, Attack = 21, Defense = 23, Speed = 19 },
@@ -147,6 +151,7 @@ Characters.List = {
 		Anime = "JujutsuKaisen",
 		Type = "Mago",
 		Rarity = "Lendario",
+		Passive = "InfinitoAbsoluto",
 		Concept = "Feiticeiro lend\u{e1}rio de luz, gravidade e vazio",
 		BaseLevel = 10,
 		BaseStats = { HP = 66, Attack = 24, Defense = 21, Speed = 23 },
@@ -182,6 +187,7 @@ Characters.List = {
 		Anime = "DragonBall",
 		Type = "Lutador",
 		Rarity = "Lendario",
+		Passive = "InstintoZenkai",
 		Concept = "Artista marcial lend\u{e1}rio que canaliza o Ki e a energia vital celeste",
 		BaseLevel = 10,
 		BaseStats = { HP = 68, Attack = 25, Defense = 20, Speed = 22 },
@@ -219,6 +225,7 @@ Characters.List = {
 		Anime = "OnePiece",
 		Type = "Espadachim",
 		Rarity = "Lendario",
+		Passive = "TremorDosMares",
 		Concept = "Colosso lend\u{e1}rio dos mares capaz de rachar o pr\u{f3}prio ar com sua bisento",
 		BaseLevel = 10,
 		BaseStats = { HP = 76, Attack = 27, Defense = 22, Speed = 15 },
@@ -256,6 +263,8 @@ Characters.List = {
 		Type = "Lutador",
 		Rarity = "Epico",
 		Starter = true,
+		Passive = "EspiritoGuerreiro",
+		SecretPassive = "VontadeDeD",
 		Concept = "Capit\u{e3}o pirata de borracha com combos velozes e golpes de impacto",
 		BaseLevel = 10,
 		BaseStats = { HP = 68, Attack = 25, Defense = 20, Speed = 23 },
@@ -290,6 +299,7 @@ Characters.List = {
 		Anime = "OnePiece",
 		Type = "Mago",
 		Rarity = "Comum",
+		Passive = "EscudoNatural",
 		Concept = "Navegadora astuta especialista em tempestades e golpes em \u{e1}rea",
 		BaseLevel = 10,
 		BaseStats = { HP = 60, Attack = 23, Defense = 18, Speed = 25 },
@@ -321,6 +331,7 @@ Characters.List = {
 		Anime = "OnePiece",
 		Type = "Atirador",
 		Rarity = "Comum",
+		Passive = "OlhoDeAguia",
 		Concept = "Atirador engenhoso de disparos certeiros e sementes explosivas",
 		BaseLevel = 10,
 		BaseStats = { HP = 62, Attack = 22, Defense = 19, Speed = 24 },
@@ -353,6 +364,7 @@ Characters.List = {
 		Anime = "OnePiece",
 		Type = "Espadachim",
 		Rarity = "Raro",
+		Passive = "Intimidacao",
 		Concept = "Espadachim implac\u{e1}vel do estilo tr\u{ea}s espadas",
 		BaseLevel = 10,
 		BaseStats = { HP = 66, Attack = 26, Defense = 21, Speed = 20 },
@@ -386,6 +398,7 @@ Characters.List = {
 		Anime = "OnePiece",
 		Type = "Lutador",
 		Rarity = "Raro",
+		Passive = "PassosVelozes",
 		Concept = "Cozinheiro combatente especialista em chutes r\u{e1}pidos e precisos",
 		BaseLevel = 10,
 		BaseStats = { HP = 65, Attack = 25, Defense = 19, Speed = 24 },
@@ -420,6 +433,7 @@ Characters.List = {
 		Anime = "Naruto",
 		Type = "Lutador",
 		Rarity = "Comum",
+		Passive = "Regeneracao",
 		Concept = "Kunoichi \u{e1}gil de golpes f\u{ed}sicos diretos e quebra-guarda",
 		BaseLevel = 10,
 		BaseStats = { HP = 64, Attack = 23, Defense = 20, Speed = 21 },
@@ -452,6 +466,7 @@ Characters.List = {
 		Anime = "Naruto",
 		Type = "Mago",
 		Rarity = "Comum",
+		Passive = "MenteTatica",
 		Concept = "Estrategista t\u{e1}tico especialista em controle e paralisia de sombras",
 		BaseLevel = 10,
 		BaseStats = { HP = 61, Attack = 21, Defense = 21, Speed = 24 },
@@ -483,6 +498,7 @@ Characters.List = {
 		Anime = "Naruto",
 		Type = "Mago",
 		Rarity = "Raro",
+		Passive = "GolpeCerteiro",
 		Concept = "Jounin veterano de reflexos r\u{e1}pidos e jutsus em \u{e1}rea",
 		BaseLevel = 10,
 		BaseStats = { HP = 65, Attack = 25, Defense = 20, Speed = 25 },
@@ -514,6 +530,7 @@ Characters.List = {
 		Anime = "Naruto",
 		Type = "Espadachim",
 		Rarity = "Raro",
+		Passive = "SedeDeVitoria",
 		Concept = "Espadachim disciplinado especialista em cortes r\u{e1}pidos e precisos",
 		BaseLevel = 10,
 		BaseStats = { HP = 64, Attack = 26, Defense = 19, Speed = 24 },
@@ -546,6 +563,8 @@ Characters.List = {
 		Type = "Lutador",
 		Rarity = "Epico",
 		Starter = true,
+		Passive = "ChamaInterior",
+		SecretPassive = "MantoDaRaposa",
 		Concept = "Shinobi determinado com vigor elevado e combos diretos intensos",
 		BaseLevel = 10,
 		BaseStats = { HP = 70, Attack = 25, Defense = 21, Speed = 24 },
@@ -580,6 +599,7 @@ Characters.List = {
 		Anime = "Naruto",
 		Type = "Mago",
 		Rarity = "Lendario",
+		Passive = "MestreDosElementos",
 		Concept = "Mestre lend\u{e1}rio de todos os jutsus elementais de Konoha",
 		BaseLevel = 10,
 		BaseStats = { HP = 72, Attack = 26, Defense = 24, Speed = 21 },
@@ -615,6 +635,7 @@ Characters.List = {
 		Anime = "Bleach",
 		Type = "Lutador",
 		Rarity = "Comum",
+		Passive = "Firmeza",
 		Concept = "Lutador resistente com golpes pesados de bra\u{e7}o blindado",
 		BaseLevel = 10,
 		BaseStats = { HP = 69, Attack = 24, Defense = 23, Speed = 17 },
@@ -646,6 +667,7 @@ Characters.List = {
 		Anime = "Bleach",
 		Type = "Atirador",
 		Rarity = "Comum",
+		Passive = "OlhoDeAguia",
 		Concept = "Arqueiro Quincy de flechas espirituais certeiras e r\u{e1}pidas",
 		BaseLevel = 10,
 		BaseStats = { HP = 61, Attack = 24, Defense = 18, Speed = 25 },
@@ -677,6 +699,7 @@ Characters.List = {
 		Anime = "Bleach",
 		Type = "Mago",
 		Rarity = "Raro",
+		Passive = "EscudoNatural",
 		Concept = "Shinigami especialista em Kido glacial e controle de campo",
 		BaseLevel = 10,
 		BaseStats = { HP = 64, Attack = 24, Defense = 21, Speed = 23 },
@@ -708,6 +731,7 @@ Characters.List = {
 		Anime = "Bleach",
 		Type = "Espadachim",
 		Rarity = "Raro",
+		Passive = "Intimidacao",
 		Concept = "Tenente impetuoso que domina cortes amplos de longo alcance",
 		BaseLevel = 10,
 		BaseStats = { HP = 67, Attack = 26, Defense = 20, Speed = 21 },
@@ -740,6 +764,8 @@ Characters.List = {
 		Type = "Espadachim",
 		Rarity = "Epico",
 		Starter = true,
+		Passive = "SedeDeVitoria",
+		SecretPassive = "DespertarHollow",
 		Concept = "Shinigami substituto veloz com cortes espirituais devastadores",
 		BaseLevel = 10,
 		BaseStats = { HP = 67, Attack = 26, Defense = 19, Speed = 25 },
@@ -771,6 +797,7 @@ Characters.List = {
 		Anime = "Bleach",
 		Type = "Espadachim",
 		Rarity = "Lendario",
+		Passive = "PetalasInfinitas",
 		Concept = "Capit\u{e3}o nobre da Soul Society mestre em tempestades de l\u{e2}minas",
 		BaseLevel = 10,
 		BaseStats = { HP = 70, Attack = 27, Defense = 23, Speed = 24 },
@@ -806,11 +833,13 @@ Characters.List = {
 ]]
 Characters.List.ProtoRaro = {
 	Name = "ProtoAtirador", ModelName = "ProtoRaro", Anime = "Generico", Type = "Atirador", Rarity = "Raro", Prototype = true,
+	Passive = "OlhoDeAguia",
 	Concept = "Modelo provis\u{f3}rio de teste", BaseLevel = 10,
 	BaseStats = { HP = 64, Attack = 22, Defense = 21, Speed = 21 },
 }
 Characters.List.ProtoEpico = {
 	Name = "Yoru", ModelName = "ProtoEpico", Anime = "Generico", Type = "Mago", Rarity = "Epico", Prototype = true,
+	Passive = "EscudoNatural",
 	Concept = "Modelo provis\u{f3}rio de teste", BaseLevel = 10,
 	BaseStats = { HP = 64, Attack = 23, Defense = 20, Speed = 21 },
 }
@@ -991,6 +1020,33 @@ function Characters.ByAnime(animeId: string, includePrototype: boolean?): { stri
 	end
 	table.sort(out)
 	return out
+end
+
+-- Passiva ativa do personagem (troca para SecretPassive se estiver Desperto)
+function Characters.PassiveIdOf(id: string, awakened: boolean?): string?
+	local def = Characters.List[id]
+	if not def then
+		return nil
+	end
+	if awakened and def.SecretPassive then
+		return def.SecretPassive
+	end
+	return def.Passive
+end
+
+function Characters.PassiveOf(id: string, awakened: boolean?)
+	local pid = Characters.PassiveIdOf(id, awakened)
+	return if pid then Passives.Get(pid) else nil
+end
+
+function Characters.SecretPassiveOf(id: string)
+	local def = Characters.List[id]
+	return if def and def.SecretPassive then Passives.Get(def.SecretPassive) else nil
+end
+
+function Characters.HasAwakening(id: string): boolean
+	local def = Characters.List[id]
+	return def ~= nil and def.SecretPassive ~= nil
 end
 
 return Characters

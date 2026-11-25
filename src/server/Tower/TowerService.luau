@@ -23,6 +23,7 @@ local Progression = require(Data.Progression)
 local AccountLevel = require(Data:WaitForChild("AccountLevel"))
 local Benefits = require(Data.Benefits)
 local Genetics = require(Data:WaitForChild("Genetics"))
+local Awakening = require(Data:WaitForChild("Awakening"))
 
 local BattleService = require(ServerScriptService:WaitForChild("Battle"):WaitForChild("BattleService"))
 local Config = require(ServerScriptService.Battle:WaitForChild("BattleConfig"))
@@ -30,6 +31,7 @@ local PlayerDataService = require(ServerScriptService:WaitForChild("Data"):WaitF
 local AccountLevelService = require(ServerScriptService.Data:WaitForChild("AccountLevelService"))
 local ProgressionService = require(ServerScriptService.Data:WaitForChild("ProgressionService"))
 local RetentionService = require(ServerScriptService.Data:WaitForChild("RetentionService"))
+local AwakeningService = require(ServerScriptService:WaitForChild("Economy"):WaitForChild("AwakeningService"))
 local Clock = require(ServerScriptService.Data:WaitForChild("Clock"))
 local Retention = require(Data:WaitForChild("Retention"))
 
@@ -272,6 +274,32 @@ local function enemyTeamFor(run)
 	end, nil, run.Mode)
 end
 
+local CLASS_LIST = { "Espadachim", "Lutador", "Mago", "Atirador" }
+
+local function grantMaterial(data, matId: string?, qty: number, lines): boolean
+	if not matId or qty <= 0 then
+		return false
+	end
+	local mat = Awakening.GetMaterial(matId)
+	if not mat then
+		return false
+	end
+	local given = AwakeningService.AddMaterial(data, matId, qty)
+	if given > 0 then
+		table.insert(lines, "Material obtido: +" .. given .. "x " .. mat.Name .. "!")
+		return true
+	end
+	return false
+end
+
+local function randomEssenceId(preferredType: string?): string
+	if preferredType and Awakening.ClassEssence[preferredType] then
+		return Awakening.ClassEssence[preferredType]
+	end
+	local cls = CLASS_LIST[rng:NextInteger(1, #CLASS_LIST)]
+	return Awakening.ClassEssence[cls]
+end
+
 -- Copia limpa do time para o Modo Treino (HP/PP cheios, sem status, sem alterar perfil salvo)
 local function practiceTeamFor(player: Player, levelMode: string): ({ any }?, string?, number?)
 	local data = PlayerDataService.Get(player)
@@ -293,6 +321,7 @@ local function practiceTeamFor(player: Player, levelMode: string): ({ any }?, st
 				StatMultipliers = Genetics.MultipliersFor(m.Genetics, m.Training),
 				Genetics = m.Genetics,
 				Training = m.Training,
+				Awakened = m.Awakened == true,
 			})
 		end
 	end
@@ -337,13 +366,30 @@ local function completeMode(player: Player, run, lines)
 			table.insert(lines, "Mochila cheia: " .. Items.Get(itemId).Name .. " ficou de fora.")
 		end
 	end
+	local firstHardToday = false
 	if mode.Reward.DailyGems then
 		if tSlot.LastHardRewardDay ~= today() then
 			tSlot.LastHardRewardDay = today()
+			firstHardToday = true
 			data.Gems += mode.Reward.DailyGems
 			table.insert(lines, "+" .. mode.Reward.DailyGems .. " gemas (limite di\u{e1}rio " .. run.Format .. ").")
 		else
 			table.insert(lines, "As gemas do Dif\u{ed}cil (" .. run.Format .. ") j\u{e1} foram recebidas hoje.")
+		end
+	end
+	-- Drops de Materiais de Despertar (Essencias de Classe + Nucleo do Despertar no Dificil)
+	local dropCfg = Awakening.Drops.Tower[run.Mode]
+	if dropCfg then
+		if dropCfg.EssenceChance and rng:NextNumber() < dropCfg.EssenceChance then
+			grantMaterial(data, randomEssenceId(nil), dropCfg.EssenceQty or 1, lines)
+		end
+		if dropCfg.ExtraEssenceChance and rng:NextNumber() < dropCfg.ExtraEssenceChance then
+			grantMaterial(data, randomEssenceId(nil), 1, lines)
+		end
+		if dropCfg.DailyGuaranteedCore and firstHardToday then
+			grantMaterial(data, "NucleoDespertar", 1, lines)
+		elseif dropCfg.CoreChance and dropCfg.CoreChance > 0 and rng:NextNumber() < dropCfg.CoreChance then
+			grantMaterial(data, "NucleoDespertar", 1, lines)
 		end
 	end
 	local nextMode = Tower.NextMode(run.Mode)
@@ -408,6 +454,21 @@ local function completeGym(player: Player, run, lines)
 		end
 		table.insert(lines, gym.Name .. " vencido novamente! +" .. gold .. " gold.")
 	end
+	-- Materiais de Despertar do Ginasio: Fragmento do Anime garantido + Essencia da classe do Lider
+	local gymDrop = Awakening.Drops.Gym
+	local fragId = Awakening.AnimeFragment[gym.Anime]
+	local leaderId = gym.Stages[#gym.Stages] and gym.Stages[#gym.Stages].Team and gym.Stages[#gym.Stages].Team[1]
+	local leaderDef = leaderId and Characters.Get(leaderId)
+	local essId = randomEssenceId(leaderDef and leaderDef.Type or nil)
+	if firstBadge then
+		grantMaterial(data, fragId, gymDrop.FirstFragmentQty or 2, lines)
+		grantMaterial(data, essId, gymDrop.FirstEssenceQty or 2, lines)
+	else
+		grantMaterial(data, fragId, gymDrop.RepeatFragmentQty or 1, lines)
+		if rng:NextNumber() < (gymDrop.RepeatEssenceChance or 0.60) then
+			grantMaterial(data, essId, 1, lines)
+		end
+	end
 	AccountLevelService.AddXp(player, AccountLevel.XpSources.GymWin, gym.Name, true)
 end
 
@@ -467,6 +528,21 @@ local function onBattleEnd(player: Player, run, battle, result: string)
 		end
 		if submitSeason(player, floor, run.Format) then
 			table.insert(lines, "Recorde da temporada (" .. run.Format .. "): andar " .. floor .. ".")
+		end
+		-- Materiais de Despertar no Infinito (Essencia por andar/chefe + Nucleo do Despertar em Chefes)
+		local infDrop = Awakening.Drops.Infinito
+		local leadEnemy = battle.Sides.Enemy.Team[1]
+		local leadDef = leadEnemy and Characters.Get(leadEnemy.Id)
+		local leadEss = randomEssenceId(leadDef and leadDef.Type or nil)
+		if Tower.IsBossFloor(floor) then
+			grantMaterial(data, leadEss, infDrop.BossEssenceQty or 1, lines)
+			local bossNum = math.max(1, floor // Tower.Modes.Infinito.BossEvery)
+			local coreChance = if floor % 15 == 0 then 1.0 else math.min(infDrop.BossCoreMax or 0.90, (infDrop.BossCoreBase or 0.35) + (bossNum - 1) * (infDrop.BossCoreStep or 0.25))
+			if rng:NextNumber() < coreChance then
+				grantMaterial(data, "NucleoDespertar", 1, lines)
+			end
+		elseif rng:NextNumber() < (infDrop.FloorEssenceChance or 0.25) then
+			grantMaterial(data, leadEss, 1, lines)
 		end
 		if Tower.IsBossFloor(floor) then
 			local chance = Tower.BossDropChance(floor)

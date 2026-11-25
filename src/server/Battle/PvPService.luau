@@ -285,6 +285,7 @@ function PvPService.TeamFor(player: Player)
 				StatMultipliers = Genetics.MultipliersFor(m.Genetics, m.Training),
 				Genetics = m.Genetics,
 				Training = m.Training,
+				Awakened = m.Awakened == true,
 			})
 		end
 	end

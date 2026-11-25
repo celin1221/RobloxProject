@@ -15,6 +15,7 @@ local Benefits = require(Data:WaitForChild("Benefits"))
 local Characters = require(Data:WaitForChild("Characters"))
 local Progression = require(Data:WaitForChild("Progression"))
 local Genetics = require(Data:WaitForChild("Genetics"))
+local Awakening = require(Data:WaitForChild("Awakening"))
 local CharacterFilter = require(ReplicatedStorage:WaitForChild("CharacterFilter"))
 local UI = require(ReplicatedStorage:WaitForChild("UI"))
 local T = UI.Theme
@@ -45,6 +46,13 @@ local filterState = CharacterFilter.CreateState()
 local charCount = UI.text(charFilterRow, "", { Name = "Count", Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Right, StrokeMult = 0.4 })
 local charsList = UI.scroll(charsView, { Name = "Characters", Gap = 0.024, Flat = true })
 
+local matsView = UI.frame(body, { Name = "MaterialsView", Visible = false })
+local matsHint = UI.text(matsView, "Materiais de Despertar n\u{e3}o ocupam espa\u{e7}o na mochila. Descubra onde us\u{e1}-los explorando a floresta!", {
+	Name = "Hint", Size = UDim2.fromScale(1, 0.085), Position = UDim2.fromScale(0, 0),
+	Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.4,
+})
+local matsList = UI.scroll(matsView, { Name = "Materials", Size = UDim2.fromScale(1, 0.90), Position = UDim2.fromScale(0, 0.10), Columns = 2, CellAspect = 2.6, Gap = 0.03, Flat = true })
+
 local msg = UI.text(body, "", { Name = "Message", Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 1, -20), Role = "Small", Color = "gold" })
 
 local searchBox, animeBtn, rarityBtn, typeBtn, sortBtn
@@ -71,6 +79,8 @@ local function layoutViews()
 	itemsView.Size = UDim2.fromOffset(W, contentH)
 	charsView.Position = UDim2.fromOffset(0, topOffset)
 	charsView.Size = UDim2.fromOffset(W, contentH)
+	matsView.Position = UDim2.fromOffset(0, topOffset)
+	matsView.Size = UDim2.fromOffset(W, contentH)
 
 	local twoRows = W < 820
 	local g = math.max(8, math.floor(W * 0.014))
@@ -267,10 +277,12 @@ end
 
 local selectTab = UI.tabs(body, {
 	{ Id = "Itens", Text = "ITENS", Icon = "bag" },
+	{ Id = "Materiais", Text = "MATERIAIS", Icon = "sparkle" },
 	{ Id = "Personagens", Text = "PERSONAGENS", Icon = "team" },
-}, { ActiveColor = "green", MaxHeight = T.TouchMin, MaxWidth = 0.44 }, function(id)
+}, { ActiveColor = "green", MaxHeight = T.TouchMin, MaxWidth = 0.31 }, function(id)
 	activeTab = id
 	itemsView.Visible = id == "Itens"
+	matsView.Visible = id == "Materiais"
 	charsView.Visible = id == "Personagens"
 	msg.Text = ""
 	if refresh then
@@ -430,12 +442,67 @@ local function refreshTargets()
 	end)
 end
 
+local function refreshMaterials()
+	UI.clear(matsList)
+	local mats = (profile and profile.Materials) or {}
+	for i, matId in ipairs(Awakening.MaterialOrder) do
+		local def = Awakening.GetMaterial(matId)
+		if def then
+			local qty = math.max(0, math.floor(tonumber(mats[matId]) or 0))
+			local _, face = UI.panel(matsList, {
+				Name = "Mat_" .. matId,
+				Color = if qty > 0 then "panelAlt" else "slot",
+				Corner = 0.16,
+				Shadow = false,
+				StrokeColor = if qty > 0 then def.Color else nil,
+				StrokeMult = 0.8,
+				LayoutOrder = i,
+			})
+			local ico = UI.icon(face, def.Icon or "sparkle", {
+				Name = "Icon",
+				Size = UDim2.fromScale(0.18, 0.62),
+				Position = UDim2.fromScale(0.04, 0.19),
+			})
+			ico.ImageTransparency = if qty > 0 then 0 else 0.45
+			UI.text(face, def.Name, {
+				Name = "MatName",
+				Size = UDim2.fromScale(0.56, 0.38),
+				Position = UDim2.fromScale(0.24, 0.10),
+				Role = "Small",
+				AlignX = Enum.TextXAlignment.Left,
+			})
+			UI.text(face, "x" .. qty, {
+				Name = "Qty",
+				Size = UDim2.fromScale(0.18, 0.42),
+				Position = UDim2.fromScale(0.96, 0.08),
+				AnchorPoint = Vector2.new(1, 0),
+				Role = "Body",
+				Color = if qty > 0 then "gold" else "inkSoft",
+				AlignX = Enum.TextXAlignment.Right,
+			})
+			UI.text(face, "Origem: " .. (def.Source or ""), {
+				Name = "Source",
+				Size = UDim2.fromScale(0.72, 0.42),
+				Position = UDim2.fromScale(0.24, 0.50),
+				Role = "Small",
+				Color = "inkSoft",
+				AlignX = Enum.TextXAlignment.Left,
+				Wrap = true,
+				StrokeMult = 0.35,
+			})
+		end
+	end
+end
+
 refresh = function()
 	if not profile then
 		return
 	end
 	if activeTab == "Personagens" then
 		refreshCharacters()
+		return
+	elseif activeTab == "Materiais" then
+		refreshMaterials()
 		return
 	end
 	slotsLabel.Text = string.format("%d/%d espa\u{e7}os \u{b7} pilhas de %d", Items.SlotsUsed(profile.Bag), Benefits.BagSlots(profile, Items.BagSlots), Items.StackLimit)

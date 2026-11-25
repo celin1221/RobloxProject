@@ -16,6 +16,7 @@ local Characters = require(Data:WaitForChild("Characters"))
 local Progression = require(Data:WaitForChild("Progression"))
 local Genetics = require(Data:WaitForChild("Genetics"))
 local TypeChart = require(Data:WaitForChild("TypeChart"))
+local Awakening = require(Data:WaitForChild("Awakening"))
 local UI = require(ReplicatedStorage:WaitForChild("UI"))
 local TeamCards = require(ReplicatedStorage:WaitForChild("TeamCards"))
 local RadarChart = require(ReplicatedStorage:WaitForChild("RadarChart"))
@@ -185,14 +186,14 @@ for _, statKey in ipairs(Genetics.Stats) do
 	}
 end
 
-local footerNote = UI.text(statsFace, "Treine atributos na C\u{e1}psula da Base para subir at\u{e9} 100%.", {
-	Name = "Note",
-	Role = "Small",
-	Color = "inkSoft",
-	AlignX = Enum.TextXAlignment.Left,
-	StrokeMult = 0.4,
-	ZIndex = 3,
-})
+-- Card de Passiva (mostra Passiva ativa + mistério da Passiva Secreta para Epicos ainda nao despertos)
+local passiveCard, passiveFace = UI.panel(statsFace, { Name = "PassiveCard", Color = "panelAlt", Corner = 0.18, Shadow = false, ZIndex = 3 })
+local passiveIcon = UI.icon(passiveFace, "sparkle", { Name = "Icon", ZIndex = 4 })
+local passiveTitle = UI.text(passiveFace, "", { Name = "Title", Role = "Small", AlignX = Enum.TextXAlignment.Left, Rich = true, StrokeMult = 0.45, ZIndex = 4 })
+local passiveDesc = UI.text(passiveFace, "", { Name = "Desc", Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, AlignY = Enum.TextYAlignment.Top, Wrap = true, StrokeMult = 0.35, ZIndex = 4 })
+local secretRow = UI.frame(passiveFace, { Name = "SecretRow", Visible = false, ZIndex = 4 })
+local secretIcon = UI.icon(secretRow, "lock", { Name = "LockIcon", ZIndex = 5 })
+local secretText = UI.text(secretRow, "", { Name = "SecretText", Role = "Small", AlignX = Enum.TextXAlignment.Left, Rich = true, Wrap = true, StrokeMult = 0.35, ZIndex = 5 })
 
 local function layout()
 	local W, H = body.AbsoluteSize.X, body.AbsoluteSize.Y
@@ -271,20 +272,45 @@ local function layout()
 	radar.Root.Position = UDim2.fromOffset(rPad, plotY)
 	radar.Root.Size = UDim2.fromOffset(rW, plotH)
 
-	-- 3) Layout direito (Tabela 4 atributos)
+	-- 3) Layout direito (Tabela 4 atributos + Card de Passiva)
 	local sPad = 8
 	local sW = col3W - sPad * 2
-	local hdrH = math.max(16, math.floor(H * 0.085))
-	local ftrH = math.max(16, math.floor(H * 0.08))
+	local hdrH = math.max(15, math.floor(H * 0.065))
+	local passH = math.clamp(math.floor(H * 0.27), 88, 140)
 	statsHeader.Size = UDim2.fromOffset(sW, hdrH)
-	statsHeader.Position = UDim2.fromOffset(sPad, 6)
+	statsHeader.Position = UDim2.fromOffset(sPad, 5)
 
-	footerNote.Size = UDim2.fromOffset(sW, ftrH)
-	footerNote.Position = UDim2.fromOffset(sPad, H - ftrH - 4)
+	passiveCard.Size = UDim2.fromOffset(sW, passH)
+	passiveCard.Position = UDim2.fromOffset(sPad, H - passH - 6)
 
-	local listY = 6 + hdrH + 4
-	local listH = math.max(80, H - listY - ftrH - 8)
-	local rowGap = math.max(4, math.floor(listH * 0.025))
+	local pw, ph = sW - 12, passH - 8
+	local hasSecretRow = secretRow.Visible
+	local pTitleH = math.max(16, math.floor(ph * 0.24))
+	local secH = if hasSecretRow then math.max(24, math.floor(ph * 0.34)) else 0
+	local pDescH = math.max(20, ph - pTitleH - secH - (if hasSecretRow then 6 else 4))
+
+	local icoS = math.max(14, math.min(20, pTitleH))
+	passiveIcon.Position = UDim2.fromOffset(6, 4)
+	passiveIcon.Size = UDim2.fromOffset(icoS, icoS)
+	passiveTitle.Position = UDim2.fromOffset(6 + icoS + 5, 3)
+	passiveTitle.Size = UDim2.fromOffset(math.max(40, pw - icoS - 5), pTitleH)
+
+	passiveDesc.Position = UDim2.fromOffset(6, 4 + pTitleH + 2)
+	passiveDesc.Size = UDim2.fromOffset(pw, pDescH)
+
+	if hasSecretRow then
+		secretRow.Position = UDim2.fromOffset(6, ph - secH + 2)
+		secretRow.Size = UDim2.fromOffset(pw, secH)
+		local lS = math.max(13, math.min(18, secH - 4))
+		secretIcon.Position = UDim2.fromOffset(0, math.floor((secH - lS) / 2))
+		secretIcon.Size = UDim2.fromOffset(lS, lS)
+		secretText.Position = UDim2.fromOffset(lS + 5, 0)
+		secretText.Size = UDim2.fromOffset(math.max(40, pw - lS - 5), secH)
+	end
+
+	local listY = 5 + hdrH + 4
+	local listH = math.max(80, H - listY - passH - 12)
+	local rowGap = math.max(3, math.floor(listH * 0.022))
 	local cardH = math.floor((listH - rowGap * 3) / 4)
 
 	for i, statKey in ipairs(Genetics.Stats) do
@@ -329,7 +355,9 @@ local function refresh()
 	local rarityText = RARITY_NAME[def.Rarity] or def.Rarity
 	local animeText = Characters.AnimeDisplay(Characters.AnimeOf(def.Id))
 	local typeText = TypeChart.DisplayName[def.Type] or def.Type
-	win.Title.Text = string.upper(def.Name) .. "  \u{b7}  NV " .. tostring(m.Level or 1)
+	local awakened = m.Awakened == true
+	local awTag = if awakened then "  \u{b7}  DESPERTO" else ""
+	win.Title.Text = string.upper(def.Name) .. awTag .. "  \u{b7}  NV " .. tostring(m.Level or 1)
 
 	portrait.Set(currentUid, m)
 	metaTag.Text = string.format("%s  \u{b7}  %s  \u{b7}  %s", rarityText, animeText, typeText)
@@ -340,7 +368,28 @@ local function refresh()
 
 	genAvgLabel.Text = string.format("Gen\u{e9}tica m\u{e9}dia: <font color='#73F5FF'>%.0f%%</font>", bd.GeneticsAvg)
 	trnAvgLabel.Text = string.format("Treino m\u{e9}dio: <font color='#FFCE54'>%.0f%%</font>", bd.TrainingAvg)
-	powerLabel.Text = string.format("Geral: %d  (Base %d)", bd.TotalFinal, bd.TotalBase)
+	local awPow = if awakened then " (+10% Desperto)" else ""
+	powerLabel.Text = string.format("Geral: %d  (Base %d)%s", bd.TotalFinal, bd.TotalBase, awPow)
+
+	-- Atualiza Card de Passiva + pista secreta para Epicos nao despertos
+	local passive = Characters.PassiveOf(def.Id, awakened)
+	local hasSecretLocked = (not awakened) and Characters.HasAwakening(def.Id)
+	if passive then
+		local tierColHex = if passive.Tier == "Secret" then "#F578FF" elseif passive.Tier == "Unique" then "#FFD154" else "#76C8FF"
+		local tierTag = if passive.Tier == "Secret" then "PASSIVA SECRETA" elseif passive.Tier == "Unique" then "PASSIVA \u{da}NICA" else "PASSIVA"
+		UI.paint(passiveCard, if passive.Tier == "Secret" then "purple" elseif passive.Tier == "Unique" then "panelAlt" else "panelAlt")
+		UI.setIcon(passiveIcon, if passive.Tier == "Secret" or passive.Tier == "Unique" then "star" else "sparkle")
+		passiveTitle.Text = string.format("<font color='%s'>%s</font>  \u{b7}  <b>%s</b>", tierColHex, tierTag, passive.Name)
+		passiveDesc.Text = passive.Description or ""
+	else
+		passiveTitle.Text = "PASSIVA  \u{b7}  Nenhuma"
+		passiveDesc.Text = ""
+	end
+	secretRow.Visible = hasSecretLocked
+	if hasSecretLocked then
+		secretText.Text = "<font color='#F578FF'><b>Passiva Secreta: ???</b></font>  <font color='#C9C4E8'>" .. Awakening.SecretHint .. "</font>"
+	end
+	layout()
 
 	radar.SetData(bd.Genetics, bd.Training)
 

@@ -29,6 +29,8 @@ from openpyxl.utils import get_column_letter
 ROOT = Path(__file__).resolve().parent.parent
 CHARACTERS_LUAU = ROOT / "src" / "shared" / "Data" / "Characters.luau"
 MOVES_LUAU = ROOT / "src" / "shared" / "Data" / "Moves.luau"
+PASSIVES_LUAU = ROOT / "src" / "shared" / "Data" / "Passives.luau"
+AWAKENING_LUAU = ROOT / "src" / "shared" / "Data" / "Awakening.luau"
 CODES_LUAU = ROOT / "src" / "server_storage" / "Codes.luau"
 OUT_BLENDER = ROOT / "Blender" / "Planilha_Personagens.xlsx"
 OUT_ROOT = ROOT / "Planilha_Personagens.xlsx"
@@ -620,6 +622,74 @@ def parse_moves() -> tuple[dict[str, dict[str, Any]], dict[str, list[str]]]:
     return moves, class_defaults
 
 
+PASSIVE_TIER_DISPLAY = {
+    "Generic": "Comum (Genérica)",
+    "Unique": "Única (Lendário)",
+    "Secret": "Secreta (Despertar)",
+}
+PASSIVE_TIER_ORDER = {"Generic": 1, "Unique": 2, "Secret": 3}
+
+
+def parse_passives() -> dict[str, dict[str, Any]]:
+    src = PASSIVES_LUAU.read_text(encoding="utf-8")
+    m_list = re.search(r"Passives\.List\s*=\s*\{", src)
+    assert m_list, "Passives.List nao encontrado"
+    list_block, _ = extract_braced_block(src, m_list.end() - 1)
+    out: dict[str, dict[str, Any]] = {}
+    for pid, body in parse_top_level_entries(list_block):
+        top = strip_named_block(body, "Effect")
+        name_m = re.search(r'Name\s*=\s*"([^"]+)"', top)
+        tier_m = re.search(r'Tier\s*=\s*"([^"]+)"', top)
+        owner_m = re.search(r'Owner\s*=\s*"([^"]+)"', top)
+        short_m = re.search(r'Short\s*=\s*"([^"]+)"', top)
+        desc_m = re.search(r'Description\s*=\s*"([^"]+)"', top)
+        out[pid] = {
+            "Id": pid,
+            "Name": decode_luau_str(name_m.group(1)) if name_m else pid,
+            "Tier": tier_m.group(1) if tier_m else "Generic",
+            "Owner": owner_m.group(1) if owner_m else "",
+            "Short": decode_luau_str(short_m.group(1)) if short_m else "",
+            "Description": decode_luau_str(desc_m.group(1)) if desc_m else "",
+        }
+    return out
+
+
+def parse_awakening() -> tuple[dict[str, str], dict[str, dict[str, Any]]]:
+    src = AWAKENING_LUAU.read_text(encoding="utf-8")
+    # Material names
+    mat_names: dict[str, str] = {}
+    m_mat = re.search(r"Awakening\.Materials\s*=\s*\{", src)
+    if m_mat:
+        mat_block, _ = extract_braced_block(src, m_mat.end() - 1)
+        for mid, body in parse_top_level_entries(mat_block):
+            nm = re.search(r'Name\s*=\s*"([^"]+)"', body)
+            mat_names[mid] = decode_luau_str(nm.group(1)) if nm else mid
+
+    recipes: dict[str, dict[str, Any]] = {}
+    m_rec = re.search(r"Awakening\.Recipes\s*=\s*\{", src)
+    if m_rec:
+        rec_block, _ = extract_braced_block(src, m_rec.end() - 1)
+        for cid, body in parse_top_level_entries(rec_block):
+            top = strip_named_block(body, "Materials")
+            lv_m = re.search(r"MinLevel\s*=\s*(\d+)", top)
+            gold_m = re.search(r"Gold\s*=\s*(\d+)", top)
+            sp_m = re.search(r'SecretPassive\s*=\s*"([^"]+)"', top)
+            mats = re.findall(r'Id\s*=\s*"([^"]+)"\s*,\s*Qty\s*=\s*(\d+)', body)
+            min_lv = int(lv_m.group(1)) if lv_m else 35
+            gold = int(gold_m.group(1)) if gold_m else 10000
+            parts = [f"Nv. {min_lv}+"]
+            for mid, qty in mats:
+                parts.append(f"{qty}x {mat_names.get(mid, mid)}")
+            parts.append(f"{gold:,} Gold".replace(",", "."))
+            recipes[cid] = {
+                "MinLevel": min_lv,
+                "Gold": gold,
+                "SecretPassive": sp_m.group(1) if sp_m else "",
+                "Summary": " + ".join(parts),
+            }
+    return mat_names, recipes
+
+
 def parse_codes() -> dict[str, list[str]]:
     src = CODES_LUAU.read_text(encoding="utf-8")
     m_ret = re.search(r"return\s*\{", src)
@@ -655,6 +725,8 @@ def parse_characters(class_defaults: dict[str, list[tuple[int, str]]]) -> list[d
         rar_m = re.search(r'Rarity\s*=\s*"([^"]+)"', body)
         starter = bool(re.search(r"Starter\s*=\s*true", body))
         proto = bool(re.search(r"Prototype\s*=\s*true", body))
+        passive_m = re.search(r'\bPassive\s*=\s*"([^"]+)"', body)
+        secret_passive_m = re.search(r'\bSecretPassive\s*=\s*"([^"]+)"', body)
         has_placeholder = bool(re.search(r"PlaceholderColors\s*=\s*\{", body))
         has_shiny_palette = bool(re.search(r"ShinyPalette\s*=\s*\{", body))
         stats_m = re.search(
@@ -693,6 +765,8 @@ def parse_characters(class_defaults: dict[str, list[tuple[int, str]]]) -> list[d
                 "Learnset": learnset,
                 "MoveIds": move_ids,
                 "UsesClassKit": uses_class_kit,
+                "Passive": passive_m.group(1) if passive_m else "",
+                "SecretPassive": secret_passive_m.group(1) if secret_passive_m else "",
             }
         )
 
@@ -711,6 +785,8 @@ def build_workbook(
     chars: list[dict[str, Any]],
     moves: dict[str, dict[str, Any]],
     codes_by_char: dict[str, list[str]],
+    passives: dict[str, dict[str, Any]],
+    awakening_recipes: dict[str, dict[str, Any]],
 ) -> openpyxl.Workbook:
     wb = openpyxl.Workbook()
 
@@ -792,6 +868,10 @@ def build_workbook(
         "VFX / Cut-In",
         "Variante Brilhante",
         "Código Dev",
+        "Passiva Base",
+        "Tipo Passiva",
+        "Passiva Secreta (Despertar)",
+        "Receita de Despertar",
         "Pendências / Observações",
     ]
     ws.append(headers)
@@ -844,6 +924,14 @@ def build_workbook(
         anime_name = ANIME_DISPLAY.get(ch["Anime"], ch["Anime"])
         rarity_name = RARITY_DISPLAY.get(ch["Rarity"], ch["Rarity"])
 
+        p_def = passives.get(ch["Passive"])
+        p_name = p_def["Name"] if p_def else "-"
+        p_tier_str = PASSIVE_TIER_DISPLAY.get(p_def["Tier"], p_def["Tier"]) if p_def else "-"
+        sp_def = passives.get(ch["SecretPassive"])
+        sp_name = sp_def["Name"] if sp_def else "-"
+        rec = awakening_recipes.get(cid)
+        rec_summary = rec["Summary"] if rec else "-"
+
         row_vals = [
             cid,
             ch["Name"],
@@ -865,6 +953,10 @@ def build_workbook(
             vfx_cutin,
             shiny,
             code_str,
+            p_name,
+            p_tier_str,
+            sp_name,
+            rec_summary,
             notes,
         ]
         ws.append(row_vals)
@@ -873,9 +965,9 @@ def build_workbook(
         for c_idx in range(1, len(headers) + 1):
             cell = ws.cell(r_idx, c_idx)
             cell.border = CELL_BORDER
-            cell.font = BOLD_FONT if c_idx in (1, 2, 14) else BASE_FONT
-            if c_idx in (1, 2, 9, 15, 20, 21):
-                cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=(c_idx == 21))
+            cell.font = BOLD_FONT if c_idx in (1, 2, 14, 21) else BASE_FONT
+            if c_idx in (1, 2, 9, 15, 20, 21, 23, 24, 25):
+                cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=(c_idx in (24, 25)))
             else:
                 cell.alignment = Alignment(horizontal="center", vertical="center")
 
@@ -905,15 +997,22 @@ def build_workbook(
             ws.cell(r_idx, 19).fill = YELLOW
         else:
             ws.cell(r_idx, 19).fill = RED
+        if p_def:
+            ws.cell(r_idx, 22).fill = GOLD if p_def["Tier"] == "Unique" else BLUE
+        if sp_def:
+            ws.cell(r_idx, 23).fill = PURPLE
+            ws.cell(r_idx, 23).font = BOLD_FONT
+            ws.cell(r_idx, 24).fill = PURPLE
 
     col_widths_p = {
         "A": 14, "B": 16, "C": 16, "D": 19, "E": 12, "F": 13, "G": 9,
         "H": 12, "I": 34, "J": 7, "K": 7, "L": 7, "M": 7, "N": 12,
-        "O": 25, "P": 16, "Q": 22, "R": 22, "S": 20, "T": 24, "U": 52,
+        "O": 25, "P": 16, "Q": 22, "R": 22, "S": 20, "T": 24,
+        "U": 22, "V": 19, "W": 22, "X": 46, "Y": 52,
     }
     for col, w in col_widths_p.items():
         ws.column_dimensions[col].width = w
-    ws.auto_filter.ref = f"A1:U{len(chars) + 1}"
+    ws.auto_filter.ref = f"A1:Y{len(chars) + 1}"
 
     # -----------------------------------------------------------------
     # ABA 2: Ataques (Catálogo completo e único de todos os ataques do jogo)
@@ -1195,7 +1294,97 @@ def build_workbook(
     ws_m.auto_filter.ref = f"A1:S{m_row}"
 
     # -----------------------------------------------------------------
-    # ABA 4: Resumo (formulas dinamicas sobre Personagens e Ataques)
+    # ABA 4: Passivas (Catalogo completo de Passivas + Receitas de Despertar)
+    # -----------------------------------------------------------------
+    ws_ps = wb.create_sheet("Passivas")
+    ws_ps.freeze_panes = "C2"
+
+    users_by_passive: dict[str, list[str]] = {}
+    for ch in chars:
+        if ch["Prototype"]:
+            continue
+        if ch["Passive"]:
+            users_by_passive.setdefault(ch["Passive"], []).append(ch["Name"])
+        if ch["SecretPassive"]:
+            users_by_passive.setdefault(ch["SecretPassive"], []).append(f"{ch['Name']} (Desperto)")
+
+    sorted_passives = sorted(
+        passives.values(),
+        key=lambda p: (PASSIVE_TIER_ORDER.get(p["Tier"], 99), p["Name"].lower()),
+    )
+
+    ps_headers = [
+        "ID",
+        "Nome da Passiva",
+        "Categoria",
+        "Resumo do Efeito",
+        "Descrição Completa em Batalha",
+        "Qtd. Usuários",
+        "Personagens que Usam",
+        "Como Obter / Receita de Despertar",
+    ]
+    ws_ps.append(ps_headers)
+    ws_ps.row_dimensions[1].height = 26
+    for c_idx in range(1, len(ps_headers) + 1):
+        cell = ws_ps.cell(1, c_idx)
+        cell.fill = HEADER_FILL
+        cell.font = HEADER_FONT
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = CELL_BORDER
+
+    TIER_PASSIVE_FILL = {
+        "Generic": BLUE,
+        "Unique": GOLD,
+        "Secret": PURPLE,
+    }
+
+    for r_idx, p in enumerate(sorted_passives, start=2):
+        users = users_by_passive.get(p["Id"], [])
+        if p["Tier"] == "Secret":
+            rec = awakening_recipes.get(p["Owner"])
+            how = f"Altar Secreto (Gruta NO): {rec['Summary']}" if rec else "Altar Secreto do Despertar (Nv. 35+)"
+        elif p["Tier"] == "Unique":
+            how = "Inata do Lendário"
+        else:
+            how = "Inata (Pool Genérico)"
+        users_str = ", ".join(users) if users else "Disponível no Pool p/ futuros personagens"
+        tier_label = PASSIVE_TIER_DISPLAY.get(p["Tier"], p["Tier"])
+        ws_ps.append(
+            [
+                p["Id"],
+                p["Name"],
+                tier_label,
+                p["Short"],
+                p["Description"],
+                len(users),
+                users_str,
+                how,
+            ]
+        )
+        ws_ps.row_dimensions[r_idx].height = 28
+        for c_idx in range(1, len(ps_headers) + 1):
+            cell = ws_ps.cell(r_idx, c_idx)
+            cell.border = CELL_BORDER
+            cell.font = BOLD_FONT if c_idx in (1, 2) else BASE_FONT
+            cell.alignment = Alignment(
+                horizontal="center" if c_idx in (3, 6) else "left",
+                vertical="center",
+                wrap_text=(c_idx in (4, 5, 7, 8)),
+            )
+        if p["Tier"] in TIER_PASSIVE_FILL:
+            ws_ps.cell(r_idx, 3).fill = TIER_PASSIVE_FILL[p["Tier"]]
+            if p["Tier"] in ("Unique", "Secret"):
+                ws_ps.cell(r_idx, 3).font = BOLD_FONT
+
+    col_widths_ps = {
+        "A": 22, "B": 24, "C": 21, "D": 40, "E": 56, "F": 13, "G": 34, "H": 50,
+    }
+    for col, w in col_widths_ps.items():
+        ws_ps.column_dimensions[col].width = w
+    ws_ps.auto_filter.ref = f"A1:H{len(sorted_passives) + 1}"
+
+    # -----------------------------------------------------------------
+    # ABA 5: Resumo (formulas dinamicas sobre Personagens, Ataques e Passivas)
     # -----------------------------------------------------------------
     ws_r = wb.create_sheet("Resumo")
     last_p = len(chars) + 1
@@ -1416,13 +1605,54 @@ def build_workbook(
         ["Espadachim", "Lutador", "Mago", "Atirador", "Universal"],
         a_cls,
     )
-    add_attack_summary_table(
+    a_row = add_attack_summary_table(
         a_row,
         "ATAQUES POR STATUS DE DEV",
         "Status",
         ["Implementado (100%)", "Parcial", "Pendente (Anim/VFX)", "Fallback (Sem PP)"],
         a_dev,
     )
+
+    last_ps = len(sorted_passives) + 1
+    ps_cat = f"Passivas!$C$2:$C${last_ps}"
+    ws_r.merge_cells(start_row=a_row, start_column=5, end_row=a_row, end_column=7)
+    t_ps = ws_r.cell(a_row, 5, "RESUMO DE PASSIVAS E DESPERTAR")
+    t_ps.fill = TITLE_FILL
+    t_ps.font = TITLE_FONT
+    t_ps.alignment = Alignment(horizontal="left", vertical="center")
+    r_ps = a_row + 1
+    for offset, h in enumerate(["Categoria de Passiva", "Quantidade", "Regra"]):
+        c = ws_r.cell(r_ps, 5 + offset, h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="center" if offset == 1 else "left", vertical="center")
+        c.border = CELL_BORDER
+    ps_rows = [
+        ("Comum (Genérica)", f'=COUNTIF({ps_cat},"Comum (Genérica)")', "Pool reutilizável (Comuns, Raros e Épicos base)"),
+        ("Única (Lendário)", f'=COUNTIF({ps_cat},"Única (Lendário)")', "Exclusiva de cada Lendário"),
+        ("Secreta (Despertar)", f'=COUNTIF({ps_cat},"Secreta (Despertar)")', "Altar Secreto Nv. 35+ (+10% Stats + Aura)"),
+    ]
+    first_ps_r = r_ps + 1
+    for label, form, rule_txt in ps_rows:
+        r_ps += 1
+        ws_r.cell(r_ps, 5, label)
+        ws_r.cell(r_ps, 6, form)
+        ws_r.cell(r_ps, 7, rule_txt)
+        for ci in (5, 6, 7):
+            c = ws_r.cell(r_ps, ci)
+            c.border = CELL_BORDER
+            c.font = BASE_FONT
+            c.alignment = Alignment(horizontal="center" if ci == 6 else "left", vertical="center")
+    r_ps += 1
+    ws_r.cell(r_ps, 5, "TOTAL PASSIVAS")
+    ws_r.cell(r_ps, 6, f"=SUM(F{first_ps_r}:F{r_ps-1})")
+    ws_r.cell(r_ps, 7, "100% integradas ao motor 1x1 e 2x2")
+    for ci in (5, 6, 7):
+        c = ws_r.cell(r_ps, ci)
+        c.border = CELL_BORDER
+        c.font = BOLD_FONT
+        c.fill = SLATE
+        c.alignment = Alignment(horizontal="center" if ci == 6 else "left", vertical="center")
 
     ws_r.column_dimensions["A"].width = 34
     ws_r.column_dimensions["B"].width = 14
@@ -1437,9 +1667,11 @@ def build_workbook(
 
 def main() -> None:
     moves, class_defaults = parse_moves()
+    passives = parse_passives()
+    _, awakening_recipes = parse_awakening()
     codes_by_char = parse_codes()
     chars = parse_characters(class_defaults)
-    wb = build_workbook(chars, moves, codes_by_char)
+    wb = build_workbook(chars, moves, codes_by_char, passives, awakening_recipes)
 
     OUT_BLENDER.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT_BLENDER)
@@ -1454,6 +1686,7 @@ def main() -> None:
     print(
         f"Planilha atualizada com sucesso: {len(active)} personagens ativos + {len(protos)} prototipos "
         f"(total {len(chars)} linhas) | {wb['Ataques'].max_row - 1} ataques unicos | "
+        f"{wb['Passivas'].max_row - 1} passivas | "
         f"{wb['Kit por Personagem'].max_row - 1} vinculos kit por personagem."
     )
     print(f"  - {OUT_BLENDER}")
