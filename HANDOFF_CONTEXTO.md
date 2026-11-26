@@ -101,8 +101,8 @@ Consulte o detalhamento completo em [`Blender/PROGRESSO.md`](./Blender/PROGRESSO
 * **Rework Completo Nível AAA — Ataque `Fuga` (Chama Divina / Flecha de Fogo do Sukuna, 26/11/2026):**
   * Novo módulo dedicado `src/shared/Sukuna/FugaVFX.luau` integrado a `SukunaVFX`, `CinematicCamera`, `AnimatorModule`, `SoundManager`, `Config` (`Config.Assets.Fuga` + `Config.FugaTimeline` `0.00s..8.80s`), `Moves`, `BattleService` (`Impact = 4.05`, `PostImpactHold = 3.10`) e `VfxController`.
   * Empilhamento térmico real de 4 camadas (`ZOffset = 2 / 1 / -1` + `VelocityParallel`), `PointLight` com flicker `math.noise(t * 14, seed, 0)`, postura de arqueiro `~75°` com micro-tremor muscular procedural, arco/corda/flecha de `Beam`s vivos + vórtice de sucção de `20 studs`, voo com 4 `Trail`s + anéis sônicos + rastro queimado via raycast, duplo Impact Frame e pilar termobárico colossal de `~165 studs` seguido de chuva de cinzas (`0` instâncias vazadas). **114 scripts** sincronizados (`PASS`).
-* **Banner Dragon Ball (5 Novos Personagens + San Lendário + 5º Ginásio Guerreiros Z, 26/11/2026 · Place v362):**
-  * 5 novos personagens Tripo R6-on-R15 (`Piccolo` & `Kuririn` Comum; `Vegeta` & `Gohan` Raro; `Freeza` Épico v2 com cauda unificada ao Torso) completando o elenco Dragon Ball com `San` (Lendário).
+* **Banner Dragon Ball (5 Novos Personagens + San Lendário + 5º Ginásio Guerreiros Z, 26/11/2026 · Place v363):**
+  * 5 novos personagens Tripo R6-on-R15 (`Piccolo` & `Kuririn` Comum; `Vegeta` & `Gohan` Raro; `Freeza` Épico **v3**, Asset `111673771796864`, com **ombreiras horizontais da armadura + cauda completa unificadas ao `Torso`** e braços/pernas 100% livres) completando o elenco Dragon Ball com `San` (Lendário).
   * Novo Banner `DragonBall` (`banner_dragonball` `86187786633555`) + 5º Ginásio (`Ginásio dos Guerreiros Z`, Tier 5, Nv. 28–32, `insignia_dragonball` `118201028417794`) + códigos Dev (`PICCOLO`, `KURIRIN`, `VEGETA`, `GOHAN`, `FREEZA`, `SAN`/`SAN50`, `DRAGONBALL`/`DEVDRAGONBALL`/`DBZ`). **34 personagens ativos** nas planilhas (`Test 18` PASS).
 
 ---

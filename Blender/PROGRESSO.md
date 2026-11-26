@@ -1582,3 +1582,8 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
   - `SummonGui.BannerTab_DragonBall=true`, `DragonBallStageFeatured=Freeza, San, Vegeta`, `TowerGui.Gym_DragonBall=true`, `BadgesRowCount=5`.
   - Golpes de classe executados ao vivo nos 5 novos modelos (`Piccolo:EsferaArcana`, `Kuririn:DisparoPreciso`, `Vegeta:ComboMarcial`, `Gohan:SocoDireto`, `Freeza:ChamaMistica`, `BattleVfxLeft=0`) com **`0` erros de jogo/VFX no Console**.
 - Place salvo no Roblox Studio na **versão 362** (`TeamCreate`).
+
+### Revisão do Modelo 3D do `Freeza` (`v3` — Ombreiras Horizontais + Cauda Completa no `Torso`, 26/11/2026)
+- Recortado diretamente da malha T-Pose original (`freeza.fbx`) com planos diagonais na costura branca das ombreiras (`Z = 0,650 + 0,54·(|X| − 0,150)`), preservando **ambas as ombreiras horizontais da armadura Saiyajin** e a **cauda inteira contínua** unificadas no `Torso`, além do corte refinado do pescoço (`Z = 0,718` no colarinho) mantendo queixo e boca 100% em `Head`.
+- Braços (`LeftArm`, `RightArm`) 100% livres das ombreiras, rotacionados verticalmente encaixados sob as ombreiras com tampas sólidas e faces duplas (`Freeza_R6_Auto_v3.{blend,fbx}`).
+- Enviado via Open Cloud (**Asset ID `111673771796864`**, `Approved`), montado em `ServerStorage/Characters/Freeza` (`Tex=6/6`, `TorsoSz=(4.47, 4.06, 2.12)`, `ArmWidth=(0.69, 0.69)`, `FootY=-3.188`), planilhas regeneradas, `sync_studio.py status/test` `PASS` e Place salvo na **versão 363**.

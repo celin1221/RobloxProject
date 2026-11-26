@@ -338,11 +338,11 @@ DEV_META: dict[str, dict[str, str]] = {
     "Freeza": {
         "Stage": "Em Andamento",
         "HasModel": "Sim",
-        "Rig": "R6-on-R15 (Auto-Tripo v2 — Cauda no Torso)",
+        "Rig": "R6-on-R15 (Auto-Tripo v3 — Ombreiras + Cauda no Torso)",
         "Anim": "Não (Kit Classe Mago)",
         "VfxCutIn": "Pendente",
         "Shiny": "Sim (Paleta Golden)",
-        "Notes": "Banner Dragon Ball (Épico); modelo 3D v2 com cauda unificada ao Torso (pernas livres); faltam golpes exclusivos (Death Beam/Supernova), animações e VFX",
+        "Notes": "Banner Dragon Ball (Épico); modelo 3D v3 com ombreiras horizontais da armadura e cauda completa unificadas ao Torso (braços e pernas 100% livres); faltam golpes exclusivos (Death Beam/Supernova)",
     },
     "ProtoRaro": {
         "Stage": "Teste (Remover)",
