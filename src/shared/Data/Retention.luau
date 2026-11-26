@@ -51,15 +51,15 @@ function Retention.SeasonEnd(t: number): number
 	return daysFromCivil(y, m, 1) * 86400
 end
 
--- Login diario: 7 dias, reinicia se pular um
+-- Login diario: 7 dias, reinicia se pular um (inclui Selos para Captura e Raids)
 Retention.Login = {
 	{ Gold = 300 },
-	{ Gold = 600 },
+	{ Gold = 600, Items = { SeloContrato = 1 } },
 	{ Gold = 900 },
-	{ Gold = 1200 },
-	{ Gold = 1800 },
-	{ Gold = 2500 },
-	{ Tickets = { Premium = 1 } },
+	{ Gold = 1200, Items = { SeloContrato = 1 } },
+	{ Gold = 1800, Items = { SeloSuperior = 1 } },
+	{ Gold = 2500, Items = { SeloContrato = 2 } },
+	{ Tickets = { Premium = 1 }, Items = { SeloSuperior = 1 } },
 }
 
 -- Baus por tempo online no dia (cada um 1 vez por dia)

@@ -39,16 +39,17 @@ flowchart TD
 
 ## 2. Mapa Completo da Árvore de Código (`src/` ↔ Roblox Studio)
 
-Todos os **114 scripts ativos** do projeto estão extraídos, modularizados e sincronizados na pasta `src/`:
+Todos os **118 scripts ativos** do projeto estão extraídos, modularizados e sincronizados na pasta `src/`:
 
 ### 2.1. `src/shared/` → `ReplicatedStorage`
 | Caminho em `src/shared/` | Instância no Studio | Papel Arquitetural |
 | :--- | :--- | :--- |
 | **`Core/BattleEngine.luau`** | `ReplicatedStorage.Core.BattleEngine` | **Máquina de estados pura do combate 1x1 / 2x2 / 6x6**. Resolve turnos, prioridade (Fuga > Troca/Item > Velocidade), PP (`OncePerBattle`), Expansão de Domínio (`MalevolentShrine` 2 rodadas, 15% sangramento e moveset exclusivo `Fuga`), precisão, status e captura sem depender de `Players` ou `Workspace`. |
+| **`Core/RaidEngine.luau`** | `ReplicatedStorage.Core.RaidEngine` | **Máquina de estados pura da Raid Global Cooperativa 4×1**. Resolve turnos de 1–4 jogadores + Aliados NPCs, 2 vidas individuais com revive automático em 2 turnos, Escudo de Fase (`65%`/`30%` HP), Pulso de Anulação, 2 ações/turno do Boss e ranking de dano/MVP sem depender de `Players` ou `Workspace`. |
 | **`Core/DamageCalc.luau`** | `ReplicatedStorage.Core.DamageCalc` | **Fórmula matemática oficial do GDD (Seção 5)**, multiplicadores de estágios (`-6` a `+6`), spread `0,75x` em 2x2, regras de status e cálculo de dano esperado (`ExpectedDamage`). |
 | **`Core/AIController.luau`** | `ReplicatedStorage.Core.AIController` | **IA de Batalha** (`Facil`, `Medio` 70%/30%, `Dificil` com análise de matchup, Expansão de Domínio e uso de status, em `1x1` e `2x2`). |
 | **`Net.luau`** | `ReplicatedStorage.Net` | **Contrato único de rede** com tipos exportados (`RemoteEventName` e `RemoteFunctionName`) documentando os Remotes do jogo. |
-| **`Data/*.luau` (23 arquivos)** | `ReplicatedStorage.Data.*` | Tabelas de configuração puras: `Characters`, `Moves`, `Passives`, `Awakening`, `TypeChart`, `Items`, `Progression`, `AccountLevel`, `StarterTrack`, `PvPRank`, `Gyms`, `Genetics`, `Training`, `Tower`, `Summon`, `SummonStageThemes`, `Encounters`, `Base`, `Refuge`, `ProductIds`, `Benefits`, `Retention`, `Audio`. |
+| **`Data/*.luau` (24 arquivos)** | `ReplicatedStorage.Data.*` | Tabelas de configuração puras: `Characters`, `Moves`, `Passives`, `Awakening`, `Raids`, `TypeChart`, `Items`, `Progression`, `AccountLevel`, `StarterTrack`, `PvPRank`, `Gyms`, `Genetics`, `Training`, `Tower`, `Summon`, `SummonStageThemes`, `Encounters`, `Base`, `Refuge`, `ProductIds`, `Benefits`, `Retention`, `Audio`. |
 | **`UI.luau`, `UIKit.luau`, `UITheme.luau`, `TeamCards.luau`, `RadarChart.luau`, `SummonBannerStage.luau`** | `ReplicatedStorage.*` | **Design System Midnight-Blue Anime & Palco 3D**: construção programática de telas em escala (`Scale`), paleta azul-noturno, brilho diagonal `UI.sheen` (38°), botões com afundamento 3D, 100% ícones personalizados (`UI.Icons`), cards 3D, gráfico de radar e palco 3D ao vivo de invocação. |
 | **`CombatAnimator.luau`, `VfxController.luau`, `VariantController.luau`** | `ReplicatedStorage.*` | Animações procedurais 60 FPS em `Motor6D`, execução de efeitos visuais em 3 fases (`Charge`, `Release`, `Impact`) e aplicação visual de variantes (`Brilhante`, `Ouro`, `Rubi`, etc.). |
 | **`HollowPurple/*.luau` (7 arquivos)** | `ReplicatedStorage.HollowPurple.*` | Sistema modular AAA do *Vazio Roxo* (`Config`, `Janitor`, `LightningModule`, `DebrisModule`, `CameraEffects`, `LightingEffects`, `HollowPurpleVFX`). |
@@ -66,12 +67,12 @@ Todos os **114 scripts ativos** do projeto estão extraídos, modularizados e si
 | **`Economy/BaseService.luau` & `TrainingService.luau`** | `ServerScriptService.Economy.*` | Terrenos (`Plots`), passeio (`Gold/s` ao vivo), mineração (gold + minério bruto + 4 minérios de atributo com nível 1..10) e Cúpula de Vidro (Treino de +20 em +20, cronômetro, upgrade e bloqueios). |
 | **`Economy/InventoryService.luau`** | `ServerScriptService.Economy.InventoryService` | Compra e uso de itens (Poções, Cura-Status, Éter, Reviver, Selos) dentro e fora de batalha. |
 | **`Economy/MonetizationService.luau`** | `ServerScriptService.Economy.MonetizationService` | `MarketplaceService.ProcessReceipt`, compra de Game Passes / Benefícios por Robux ou Gemas. |
-| **`World/RefugeService.luau` & `EncounterService.luau`** | `ServerScriptService.World.*` | Refúgio privado da base (caverna, spawn de selvagens por nível da Forja 1..10, baú de drops) e encontros selvagens. |
+| **`World/RefugeService.luau`, `RaidService.luau` & `EncounterService.luau`** | `ServerScriptService.World.*` | Refúgio privado da base (caverna, spawn de selvagens por nível da Forja 1..10, baú de drops), Evento Global de Raid Cooperativa 4×1 (relógio UTC, lobbies, 3 arenas dedicadas, MVP e captura pós-Raid) e encontros selvagens. |
 | **`Data/*.luau` (9 arquivos)** | `ServerScriptService.Data.*` | `PlayerDataService` (DataStore com trava de sessão), `AccountLevelService` (XP e recompensas de nível da conta), `ProgressionService` (XP, nível, aprendizado de golpes), `TeamService`, `AlbumService`, `RetentionService` (login diário, baús de tempo, missões, trilha inicial), `SettingsService`, `Clock`, `DataMain`. |
 
 ### 2.3. `src/client/` → `StarterGui` & `StarterPlayerScripts`
-* **`src/client/Gui/<NomeGui>/<NomeClient>.client.luau` (16 telas):**
-  * `BattleClient`, `HudClient`, `SummonClient`, `EquipeClient`, `TeamBarClient`, `RefugeClient`, `RewardsClient`, `ShopClient`, `PvPClient`, `BaseUiClient`, `BagClient`, `TowerClient`, `SettingsClient`, `CharacterDetailClient`, `TrainingClient`, `LevelRewardsClient`.
+* **`src/client/Gui/<NomeGui>/<NomeClient>.client.luau` (17 telas):**
+  * `BattleClient`, `RaidClient`, `HudClient`, `SummonClient`, `EquipeClient`, `TeamBarClient`, `RefugeClient`, `RewardsClient`, `ShopClient`, `PvPClient`, `BaseUiClient`, `BagClient`, `TowerClient`, `SettingsClient`, `CharacterDetailClient`, `TrainingClient`, `LevelRewardsClient`.
 * **`src/client/PlayerScripts/*.client.luau` (7 controladores):**
   * `MapFxClient`, `AudioClient`, `VipTagClient`, `BaseClient`, `NpcWalkClient`, `WildClient`, `CharacterAuraClient`.
 

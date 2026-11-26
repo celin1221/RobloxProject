@@ -119,6 +119,8 @@ local function defaultProfile()
 		Settings = { MusicOn = true, MusicVolume = 50, SfxOn = true, SfxVolume = 80, MapFx = true, CharacterAuras = true },
 		-- Refugio (secao 14): nivel da Forja, contadores, Bau ({ {Id, Qty} }), selvagens pendentes e ultimo surgimento
 		Refuge = { Forja = 1, WildDefeated = 0, Captures = 0, Bau = {}, Pending = {}, LastSpawn = 0, NextId = 1 },
+		-- Raid Global 4x1: janelas horarias UTC ja resgatadas e total de vitorias
+		Raid = { ClaimedSlots = {}, Wins = 0 },
 		CreatedAt = os.time(),
 	}
 end
@@ -236,6 +238,14 @@ local function sanitize(data)
 	data.Ore = cleanNumber(data.Ore)
 	data.TrainingOres = Training.SanitizeOres(data.TrainingOres, Training.MaxOrePerType)
 	data.Materials = Awakening.SanitizeMaterials(data.Materials)
+	if typeof(data.Raid) ~= "table" then
+		data.Raid = { ClaimedSlots = {}, Wins = 0 }
+	else
+		if typeof(data.Raid.ClaimedSlots) ~= "table" then
+			data.Raid.ClaimedSlots = {}
+		end
+		data.Raid.Wins = cleanNumber(data.Raid.Wins)
+	end
 	if typeof(data.Base) == "table" then
 		data.Base.MiningSlots = math.clamp(math.max(2, cleanNumber(data.Base.MiningSlots, 6)), 2, 6)
 		data.Base.MiningLevel = math.clamp(math.max(1, cleanNumber(data.Base.MiningLevel, 10)), 1, 10)

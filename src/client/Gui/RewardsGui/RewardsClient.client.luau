@@ -168,11 +168,12 @@ local function renderLogin()
 		end
 		UI.text(face, "DIA " .. i, { Name = "Day", Size = UDim2.fromScale(0.9, 0.16), Position = UDim2.fromScale(0.05, 0.04), Role = "Small" })
 		UI.icon(face, rewardIcon(r), { Name = "Icon", Size = UDim2.fromScale(0.75, 0.32), Position = UDim2.fromScale(0.5, 0.24), AnchorPoint = Vector2.new(0.5, 0) })
-		UI.text(face, rewardText(r), { Name = "Reward", Size = UDim2.fromScale(0.9, if r.Tickets then 0.28 else 0.2), Position = UDim2.fromScale(0.05, if r.Tickets then 0.55 else 0.58), Role = "Small", Color = if r.Tickets then "gems" else "gold" })
+		local tallReward = r.Tickets ~= nil or r.Items ~= nil
+		UI.text(face, rewardText(r), { Name = "Reward", Size = UDim2.fromScale(0.92, if tallReward then 0.30 else 0.20), Position = UDim2.fromScale(0.04, if tallReward then 0.54 else 0.58), Role = "Small", Color = if r.Tickets then "gems" else "gold" })
 		if done then
-			UI.icon(face, "tick", { Name = "Done", Size = UDim2.fromScale(0.5, if r.Tickets then 0.14 else 0.18), Position = UDim2.fromScale(0.5, if r.Tickets then 0.84 else 0.8), AnchorPoint = Vector2.new(0.5, 0) })
+			UI.icon(face, "tick", { Name = "Done", Size = UDim2.fromScale(0.5, if tallReward then 0.13 else 0.18), Position = UDim2.fromScale(0.5, if tallReward then 0.85 else 0.80), AnchorPoint = Vector2.new(0.5, 0) })
 		elseif ready then
-			UI.text(face, "HOJE", { Name = "Today", Size = UDim2.fromScale(0.9, 0.14), Position = UDim2.fromScale(0.05, if r.Tickets then 0.84 else 0.82), Role = "Small", Color = "gold" })
+			UI.text(face, "HOJE", { Name = "Today", Size = UDim2.fromScale(0.9, 0.13), Position = UDim2.fromScale(0.05, if tallReward then 0.85 else 0.82), Role = "Small", Color = "gold" })
 		end
 	end
 	if claimed then

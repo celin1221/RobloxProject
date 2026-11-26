@@ -26,6 +26,9 @@ RetentionService.Init()
 require(script.Parent:WaitForChild("SettingsService")).Init()
 local RefugeService = require(ServerScriptService:WaitForChild("World"):WaitForChild("RefugeService"))
 RefugeService.Init()
+local RaidService = require(ServerScriptService.World:WaitForChild("RaidService"))
+RaidService.Init()
+BattleService.SetExtraBusyCheck(RaidService.IsInRaid)
 local TeamService = require(script.Parent:WaitForChild("TeamService"))
 TeamService.Init()
 local PartyFollowerService = require(ServerScriptService.World:WaitForChild("PartyFollowerService"))
@@ -176,6 +179,8 @@ if RunService:IsStudio() then
 			return data.Materials
 		elseif action == "awaken" then
 			return AwakeningService.Awaken(player, ...)
+		elseif action == "raid" then
+			return RaidService.Dev(player, ...)
 		elseif action == "timescale" then
 			require(ServerScriptService.Battle.BattleConfig).TimeScale = (...)
 			return true

@@ -21,6 +21,7 @@ export type RemoteEventName =
 	| "TrainingOpen"  -- Server -> Client: abre tela da Maquina de Treinamento pela capsula 3D
 	| "AwakeningOpen" -- Server -> Client: abre tela do Altar Secreto do Despertar
 	| "AccountXpGain" -- Server -> Client: ganho de XP / subida de nivel da conta
+	| "RaidState"     -- Server -> Client: status global da Raid, lobby, combate 4x1 e captura pos-raid
 
 export type RemoteFunctionName =
 	"GetProfile"      -- Client -> Server: retorna snapshot do perfil salvo
@@ -51,6 +52,7 @@ export type RemoteFunctionName =
 	| "Rewards"       -- Client -> Server: coleta login diario, bau de tempo, missoes ou codigos
 	| "ClaimLevelReward" -- Client -> Server: resgata recompensa de nivel da conta (level ou "All")
 	| "AwakenCharacter" -- Client -> Server: desperta um personagem Epico Nv. 35+ no Altar Secreto
+	| "RaidAction"    -- Client -> Server: entrar/sair/escolher lutador/iniciar/atacar/capturar na Raid Global
 	| "SaveSettings"  -- Client -> Server: salva configuracoes do cliente (som, qualidade baixa, etc.)
 
 local Net = {}

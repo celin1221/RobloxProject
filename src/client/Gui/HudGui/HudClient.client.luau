@@ -561,6 +561,7 @@ local function drainAnnounceQueue()
 		while #announceQueue > 0 do
 			local item = table.remove(announceQueue, 1)
 			local text, meta = item.Text, item.Meta
+			local isRaidOpen = meta and meta.Kind == "RaidOpen"
 			local isSecret = meta and meta.Rarity == "Secreto"
 			local isLeg = meta and meta.Rarity == "Lendario"
 			local isShiny = meta and meta.Variant == "Brilhante"
@@ -569,11 +570,17 @@ local function drainAnnounceQueue()
 			if stroke then
 				stroke.Color = if isSecret
 					then Color3.fromRGB(235, 42, 74)
+					elseif isRaidOpen and (meta.Stars or 3) == 4 then Color3.fromRGB(168, 85, 247)
+					elseif isRaidOpen and (meta.Stars or 3) == 3 then Color3.fromRGB(63, 168, 255)
 					elseif isShiny then Color3.fromRGB(115, 245, 255)
 					else T.Palette.lendario
 			end
 
-			if isSecret and isShiny then
+			if isRaidOpen then
+				UI.setIcon(bannerTagIcon, if isSecret then "sparkle" else "sword")
+				bannerTagLabel.Text = string.format("RAID GLOBAL %d ESTRELAS ABERTA!", tonumber(meta.Stars) or 3)
+				bannerTagLabel.TextColor3 = if isSecret then Color3.fromRGB(255, 92, 122) else T.Palette.gold
+			elseif isSecret and isShiny then
 				UI.setIcon(bannerTagIcon, "sparkle")
 				bannerTagLabel.Text = "SECRETO BRILHANTE NO SERVIDOR"
 				bannerTagLabel.TextColor3 = Color3.fromRGB(255, 92, 122)

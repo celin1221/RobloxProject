@@ -46,13 +46,28 @@ local BattleEndRE = Remotes:WaitForChild("BattleEnd")
 local sessions = {} -- [Player] = sessao ativa
 local cooldownUntil = {} -- [Player] = os.clock() liberado
 local mustLeaveTrigger = {} -- [Player] = true ate sair do raio da torre
+local extraBusyCheck: ((Player) -> boolean)? = nil
 
-function BattleService.IsInBattle(player: Player): boolean
+function BattleService.SetExtraBusyCheck(fn: ((Player) -> boolean)?)
+	extraBusyCheck = fn
+end
+
+function BattleService.IsInStandardBattle(player: Player): boolean
 	return sessions[player] ~= nil
 end
 
+function BattleService.IsInBattle(player: Player): boolean
+	if sessions[player] ~= nil then
+		return true
+	end
+	if extraBusyCheck and extraBusyCheck(player) then
+		return true
+	end
+	return false
+end
+
 function BattleService.CanTrigger(player: Player): boolean
-	return sessions[player] == nil and not mustLeaveTrigger[player] and os.clock() >= (cooldownUntil[player] or 0)
+	return not BattleService.IsInBattle(player) and not mustLeaveTrigger[player] and os.clock() >= (cooldownUntil[player] or 0)
 end
 
 function BattleService.MarkOutsideTrigger(player: Player)

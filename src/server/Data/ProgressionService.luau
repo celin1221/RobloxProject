@@ -45,6 +45,7 @@ local SOURCE_INFO = {
 	Summon = { Verb = "invocou", Place = "na Invoca\u{e7}\u{e3}o" },
 	Refuge = { Verb = "capturou", Place = "no Ref\u{fa}gio" },
 	Capture = { Verb = "capturou", Place = "em batalha" },
+	Raid = { Verb = "capturou", Place = "na Raid Global" },
 	Tower = { Verb = "recrutou", Place = "na Torre Infinita" },
 	Reward = { Verb = "conseguiu", Place = "" },
 }

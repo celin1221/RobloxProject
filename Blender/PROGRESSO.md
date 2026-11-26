@@ -1587,3 +1587,31 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - Recortado diretamente da malha T-Pose original (`freeza.fbx`) com planos diagonais na costura branca das ombreiras (`Z = 0,650 + 0,54·(|X| − 0,150)`), preservando **ambas as ombreiras horizontais da armadura Saiyajin** e a **cauda inteira contínua** unificadas no `Torso`, além do corte refinado do pescoço (`Z = 0,718` no colarinho) mantendo queixo e boca 100% em `Head`.
 - Braços (`LeftArm`, `RightArm`) 100% livres das ombreiras, rotacionados verticalmente encaixados sob as ombreiras com tampas sólidas e faces duplas (`Freeza_R6_Auto_v3.{blend,fbx}`).
 - Enviado via Open Cloud (**Asset ID `111673771796864`**, `Approved`), montado em `ServerStorage/Characters/Freeza` (`Tex=6/6`, `TorsoSz=(4.47, 4.06, 2.12)`, `ArmWidth=(0.69, 0.69)`, `FootY=-3.188`), planilhas regeneradas, `sync_studio.py status/test` `PASS` e Place salvo na **versão 363**.
+
+
+## Evento Global de Raid Cooperativa 4×1 (Estilo Pokémon Raid) & Selos no Login Diário (26/11/2026)
+
+**Feito**
+- **1. Camada Data (`src/shared/Data/Raids.luau`, `Retention.luau`, `Net.luau`):**
+  - Relógio global determinístico via UTC (`:00` UTC a cada **1 hora**, janela de **15 minutos** aberta sincronizada em todos os servidores).
+  - Rotação global com dificuldade/estrela sorteada por hora (`3★` 40% Nv. 25, `4★` 33% Nv. 35, `5★` Lendário 22% Nv. 45, `6★` Secreto `Sukuna` 5% Nv. 50 — entrada livre para qualquer nível com aviso de nível recomendado).
+  - Economia protegida: recompensas garantidas de **Gold**, **XP de Conta**, **XP de Personagem**, **Minérios de Treino** e **Bônus MVP (+25% Gold/XP)** — **sem Gemas e sem Materiais de Despertar/Núcleos** (mantidos exclusivos da Torre/Ginásios/Refúgio).
+  - Captura Pós-Raid usando exclusivamente Selos reais da mochila (sem Selo grátis): `3★`/`4★` aceitam `SeloContrato` (`35%`/`25%`) ou `SeloSuperior` (`52,5%`/`37,5%`); **`5★` Lendário (`8%`) e `6★` Sukuna (`1%` exato) exigem exclusivamente `SeloSuperior`**.
+  - Selos adicionados no Login Diário (`Retention.Login`): `SeloContrato` nos dias **2, 4 e 6** e `SeloSuperior` nos dias **5 e 7** (UI ajustada em `RewardsClient.client.luau`).
+  - Remotes documentados e criados em `ReplicatedStorage/Remotes`: `RaidState` (`RemoteEvent`) e `RaidAction` (`RemoteFunction`).
+- **2. Camada Core (`src/shared/Core/RaidEngine.luau`):**
+  - Máquina de estados pura 4×1 (100% determinística, zero dependências de `Workspace`/`Players`/`task.wait`): 1–4 jogadores humanos + Aliados NPCs completando 4 lutadores (NPCs não consomem vidas humanas), 1 personagem por jogador, **2 vidas individuais** com **2 turnos** para reviver automaticamente, somente os 4 golpes (sem Mochila/Torcida), limite de **10 turnos** e conversão automática para IA em caso de desconexão.
+  - Mecânicas completas do Boss: escala gigante, **Escudo de Fase** aos `65%` e `30%` HP (dano reduzido a `35%`, Super Efetivo/Crítico quebra `2` barras, quebra de escudo atordoa + `-2 DEF` + burst de `4%` HP), **Pulso de Anulação** e **2 ações por turno** (`1` alvo único + `1` golpe em área).
+- **3. Mundo 3D & Camada Server (`Workspace`, `RaidService.luau`, `PlayerDataService.luau`, `ProgressionService.luau`, `BattleService.luau`, `DataMain.server.luau`):**
+  - Construído **Monólito / Fenda de Raid 3D** em `Workspace.Map.RaidMonolith` (`(-40, 8.0, 30)`, espelho simétrico do `LevelRewardsShrine`) com pilar de energia em partículas puras na cor da estrela ativa e `RaidPrompt` (`E`).
+  - Construídas **3 Arenas de Raid dedicadas** (`Workspace.Arenas.RaidArena01..03` em `X = 3100`, piso opaco `Transparency = 0` respeitando regra de Z-sorting, `4` altares em arco `AllyPoint1..4`, `1` altar colossal `BossPoint`, `TrainerPoint1..4` e `RaidCameraPoint` sem conflito com `Arena01..10`).
+  - `RaidService.luau`: sincronia horária, anúncio global na abertura (`HudClient` `RaidOpen`), lobbies de 1–4 jogadores (contagem de `30s` ou `"Iniciar Agora"`), trava `AwaitingInput` + timer de `20s`, persistência anti-exploit `data.Raid.ClaimedSlots[slotKey]` (1 recompensa/captura por hora UTC), verificação de capacidade `Benefits.CollectionMax` antes de consumir Selo, e ponte Dev `_DevData("raid", p, "open", stars, bossId)`.
+- **4. Camada Client (`StarterGui/RaidGui/RaidClient.client.luau`, `HudClient.client.luau`, `RewardsClient.client.luau`):**
+  - Tema `Midnight-Blue Anime` (zero emojis, 100% `UI.Icons`): banner compacto no topo do HUD com timer/teleporte, janela de Lobby com preview 3D do Boss + seletor de lutador + aviso de Selo, HUD de combate 4×1 com segmentos do Escudo de Fase + cards dos 4 aliados (`Vidas 2/2`, `Volta 2t`) + VFX/animações reais via `VfxController.PlayMove`, e tela final com Ranking de Dano/MVP + Captura Pós-Raid.
+- **5. Suíte de Validação (`scripts/sync_studio.py` — `Test 19`):**
+  - Adicionado **Test 19 (`GlobalRaid4x1`)** validando relógio determinístico UTC, regras de captura (`5★`/`6★` `SuperiorOnly`, `Sukuna = 1%`), ausência de Gemas/Despertar, bônus MVP `+25%`, Selos no Login Diário, simulação completa de `RaidEngine` (Escudo, Pulso, 2 ações/turno, 2 vidas + revive em 2 turnos) e integridade do Monólito/3 Arenas dedicadas.
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos **118 scripts**) e `python scripts/sync_studio.py test` (`PASS`).
+- Validado ao vivo no Play Mode (com backup e restauração limpa do perfil): abertura `6★ Sukuna` no Monólito (`RAID 6 ESTRELAS: SUKUNA`), batalha completa `3★ Freeza` 4×1 vencida em `5` turnos (`29,9s`, `MovesAccepted = 5`, MVP `+1.875 Gold | +75 XP Conta | +225 XP Lutador | +4 Minérios de cada`, `0` Gemas adicionadas), proteção de capacidade de coleção no fluxo de captura, liberação limpa da `RaidArena01` (`InUse = false`, `InBattle = false`) e **`0` erros/avisos no Console**.
+- Place salvo no Roblox Studio na **versão 368** (`TeamCreate`).

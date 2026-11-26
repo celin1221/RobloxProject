@@ -842,7 +842,93 @@ end
 assert(codesMod.DRAGONBALL and codesMod.DBZ and codesMod.PICCOLO and codesMod.KURIRIN and codesMod.VEGETA and codesMod.GOHAN and codesMod.FREEZA and codesMod.SAN,
     "Missing DragonBall dev codes")
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + Domain/Fuga + Jujutsu/DragonBall Banners + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, totalMoves)
+-- Test 19: Global Raid 4x1 (UTC schedule, RaidEngine Shield/Lives/2-Action Boss, Capture 1% Sukuna, Daily Seals, 3D Monolith & 3 Raid Arenas)
+local Raids = require(dataClone:WaitForChild("Raids"))
+local RaidEngine = require(coreClone:WaitForChild("RaidEngine"))
+assert(Raids.IntervalSeconds == 3600 and Raids.OpenDurationSeconds == 900, "Expected 1h UTC Raid interval & 15m open window")
+assert(Raids.PlayerLives == 2 and Raids.RespawnTurns == 2 and Raids.MaxTurns == 10 and Raids.TurnTimer == 20, "Expected Raid 2 lives, 2t respawn, 10 turns, 20s timer")
+local stOpenA = Raids.StateAt(1700002800) -- exact :00 UTC
+local stOpenB = Raids.StateAt(1700002800)
+local stClosed = Raids.StateAt(1700002800 + 905) -- :15:05 UTC
+assert(stOpenA.Open and stOpenA.SlotId == stOpenB.SlotId and stOpenA.Stars == stOpenB.Stars and stOpenA.BossId == stOpenB.BossId,
+    "Expected deterministic global UTC Raid schedule")
+assert(not stClosed.Open and stClosed.NextOpenIn > 0, "Expected Raid closed after 15m window")
+local okC5 = Raids.CaptureChance(5, "SeloContrato")
+local okS5, rateS5 = Raids.CaptureChance(5, "SeloSuperior")
+local okC6 = Raids.CaptureChance(6, "SeloContrato")
+local okS6, rateS6 = Raids.CaptureChance(6, "SeloSuperior")
+assert((not okC5) and okS5 and rateS5 > 0 and rateS5 <= 0.10, "Expected 5* Raid to require SeloSuperior only")
+assert((not okC6) and okS6 and math.abs(rateS6 - 0.01) < 1e-6, "Expected 6* Sukuna Raid to require SeloSuperior with exact 1% catch rate")
+assert(Retention.Login[2].Items and Retention.Login[2].Items.SeloContrato and Retention.Login[5].Items and Retention.Login[5].Items.SeloSuperior,
+    "Expected daily Seals in Retention.Login")
+for _, st in ipairs(Raids.StarOrder) do
+    local rwBase = Raids.ComputeRewards(st, false)
+    local rwMvp = Raids.ComputeRewards(st, true)
+    assert(rwBase.Gems == nil and rwBase.Materials == nil, "Raid rewards must NOT grant Gems or Awakening Materials")
+    assert(rwMvp.Gold > rwBase.Gold and rwMvp.AccountXp > rwBase.AccountXp, "Expected +25% MVP Gold/XP bonus")
+end
+-- Simulate 4x1 RaidEngine: Shield activation, Shield break stun/-2 DEF, 2 Boss actions, 2 lives + 2-turn revive
+local rSim = RaidEngine.New({
+    Stars = 3, BossId = "Freeza", SlotKey = "test_raid", Seed = 42,
+    Slots = {
+        { CharacterId = "Setero", Level = 50, OwnerName = "Tester", UserId = 1, IsNpc = false },
+    },
+})
+assert(#rSim.Slots == 4 and (not rSim.Slots[1].IsNpc) and rSim.Slots[2].IsNpc and rSim.Slots[1].Lives == 2,
+    "Expected 1 human (2 lives) + 3 auto-filled NPC allies")
+local sawShieldUp, sawShieldBreak, sawPhasePulse, sawBossTwoActions = false, false, false, false
+for _ = 1, 10 do
+    if rSim.State == "Ended" then break end
+    local evs = rSim:ResolveTurn({ [1] = rSim:PickAutoAction(1) })
+    local bossAct1, bossAct2 = false, false
+    for _, ev in ipairs(evs) do
+        if ev.Kind == "ShieldUp" then sawShieldUp = true end
+        if ev.Kind == "ShieldBreak" then sawShieldBreak = true end
+        if ev.Kind == "PhasePulse" then sawPhasePulse = true end
+        if ev.Kind == "Move" and ev.ActorKind == "Boss" and ev.ActionIndex == 1 then bossAct1 = true end
+        if ev.Kind == "Move" and ev.ActorKind == "Boss" and ev.ActionIndex == 2 then bossAct2 = true end
+    end
+    if bossAct1 and bossAct2 then sawBossTwoActions = true end
+end
+assert(sawShieldUp and sawPhasePulse and sawShieldBreak, "Expected Boss PhasePulse, ShieldUp, and ShieldBreak during Raid simulation")
+assert(sawBossTwoActions, "Expected Boss to execute 2 actions per turn (1 single + 1 AoE)")
+assert(rSim.State == "Ended" and rSim.Winner == "Players" and rSim.MvpSlot == 1, "Expected Lv50 human team to defeat 3* Raid and earn MVP")
+-- Verify 2-lives + 2-turn respawn mechanic explicitly on a low-level fighter vs 6* Sukuna
+local rLife = RaidEngine.New({
+    Stars = 6, BossId = "Sukuna", SlotKey = "test_lives", Seed = 99,
+    Slots = {
+        { CharacterId = "Kaen", Level = 5, OwnerName = "LowLv", UserId = 2, IsNpc = false },
+    },
+})
+local sawFaint1, sawRevive, sawOut = false, false, false
+for _ = 1, 10 do
+    if rLife.State == "Ended" then break end
+    local evs = rLife:ResolveTurn({ [1] = { MoveIndex = 1 } })
+    for _, ev in ipairs(evs) do
+        if ev.Kind == "AllyFaint" and ev.Slot == 1 then
+            if ev.Lives == 1 and ev.RespawnIn == 2 then sawFaint1 = true end
+            if ev.Lives == 0 and ev.Out then sawOut = true end
+        elseif ev.Kind == "AllyRevive" and ev.Slot == 1 then
+            sawRevive = true
+        end
+    end
+end
+assert(sawFaint1 and sawRevive and sawOut, "Expected human fighter to faint (Lives 2->1, RespawnIn=2), revive after 2 turns, and go Out at 0/2")
+-- Verify 3D Monolith, 3 dedicated opaque Raid Arenas, RaidGui ScreenGui & Remotes
+local mono = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("RaidMonolith")
+assert(mono and mono:FindFirstChild("RaidPrompt", true), "Missing Workspace.Map.RaidMonolith with RaidPrompt")
+local arenasDir = workspace:FindFirstChild("Arenas")
+for idx = 1, 3 do
+    local ra = arenasDir and arenasDir:FindFirstChild(string.format("RaidArena%02d", idx))
+    assert(ra and ra:GetAttribute("IsRaidArena") == true and ra:FindFirstChild("BossPoint") and ra:FindFirstChild("AllyPoint4") and ra:FindFirstChild("RaidCameraPoint"),
+        "Missing dedicated RaidArena0" .. idx)
+    assert(ra:FindFirstChild("FloorMid") and ra.FloorMid.Transparency == 0, "RaidArena floor must be opaque (Transparency = 0)")
+    assert(ra:FindFirstChild("PlayerPoint") == nil, "RaidArena must not contain PlayerPoint (reserved for 1x1/2x2 arenas)")
+end
+assert(sg:FindFirstChild("RaidGui") and sg.RaidGui:IsA("ScreenGui"), "Missing StarterGui.RaidGui ScreenGui")
+assert(rs.Remotes:FindFirstChild("RaidState") and rs.Remotes:FindFirstChild("RaidAction"), "Missing RaidState/RaidAction remotes")
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + Domain/Fuga + Jujutsu/DragonBall + GlobalRaid4x1 + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, totalMoves)
 end)
 sandbox:Destroy()
 assert(ok, res)
