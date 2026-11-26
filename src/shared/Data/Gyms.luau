@@ -16,7 +16,7 @@
 
 local Gyms = {}
 
-Gyms.Order = { "Naruto", "OnePiece", "Bleach", "JujutsuKaisen" }
+Gyms.Order = { "Naruto", "OnePiece", "Bleach", "JujutsuKaisen", "DragonBall" }
 
 Gyms.List = {
 	Naruto = {
@@ -160,6 +160,42 @@ Gyms.List = {
 				AI = "Dificil",
 				Level = 28,
 				Team = { "Setero", "Nanami", "Fushiguro", "Todo", "Itadori", "Nobara" },
+			},
+		},
+	},
+	DragonBall = {
+		Id = "DragonBall",
+		Tier = 5,
+		Anime = "DragonBall",
+		BannerId = "DragonBall",
+		Name = "Gin\u{e1}sio dos Guerreiros Z",
+		AnimeName = "Dragon Ball",
+		LeaderName = "Mestre San",
+		BadgeName = "Ins\u{ed}gnia Guerreiros Z",
+		BadgeIcon = "insignia_dragonball",
+		Color = "lendario",
+		Accent = Color3.fromRGB(255, 204, 44),
+		RecommendedLevel = 32,
+		FirstReward = { Gold = 15000, Gems = 25, Items = { "DoceEpico" } },
+		RepeatReward = { Gold = 6500 },
+		Stages = {
+			{
+				Title = "Disc\u{ed}pulo da Tartaruga",
+				AI = "Facil",
+				Level = 28,
+				Team = { "Piccolo", "Kuririn" },
+			},
+			{
+				Title = "Guerreiro Saiyajin",
+				AI = "Medio",
+				Level = 30,
+				Team = { "Piccolo", "Kuririn", "Vegeta", "Gohan" },
+			},
+			{
+				Title = "L\u{ed}der Guerreiro Z",
+				AI = "Dificil",
+				Level = 32,
+				Team = { "San", "Freeza", "Vegeta", "Gohan", "Kuririn", "Piccolo" },
 			},
 		},
 	},

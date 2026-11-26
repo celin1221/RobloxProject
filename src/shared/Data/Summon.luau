@@ -61,7 +61,7 @@ Summon.Portals = {
 Summon.CurrencyName = { Gold = "gold", Gems = "gemas" }
 
 -- Paineis selecionaveis na estrela de invocacao (Anime filter + arte de painel)
-Summon.BannerOrder = { "Todos", "OnePiece", "Naruto", "Bleach", "JujutsuKaisen" }
+Summon.BannerOrder = { "Todos", "OnePiece", "Naruto", "Bleach", "JujutsuKaisen", "DragonBall" }
 Summon.Banners = {
 	Todos = {
 		Id = "Todos",
@@ -112,6 +112,16 @@ Summon.Banners = {
 		ImageId = 140680943806077,
 		Accent = Color3.fromRGB(178, 72, 255),
 		Icon = "insignia_jujutsu",
+	},
+	DragonBall = {
+		Id = "DragonBall",
+		Anime = "DragonBall",
+		Name = "Dragon Ball",
+		Short = "DRAGON BALL",
+		Subtitle = "Piccolo · Kuririn · Vegeta · Gohan · Freeza · San",
+		ImageId = 86187786633555,
+		Accent = Color3.fromRGB(255, 204, 44),
+		Icon = "insignia_dragonball",
 	},
 }
 

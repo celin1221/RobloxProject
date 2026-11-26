@@ -1555,3 +1555,30 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - `python scripts/sync_studio.py status` (`100% in sync` nos **114 scripts**) e `python scripts/sync_studio.py test` (`PASS`).
 - Validado ao vivo no Play Mode: `HollowPurpleDummyExists = false`, `WorkspaceSeteroExists = false`, `PreviewSeteroOk = true`, `ShowcaseSeteroOk = true`, `HollowPurpleRemoteOk = true` e **`0` erros/avisos no Console**.
 - Place salvo no Roblox Studio na **versão 359** (`TeamCreate`).
+
+
+## Novo Banner Dragon Ball (5 Novos Personagens + San Lendário + 5º Ginásio Guerreiros Z) (26/11/2026)
+
+**Feito**
+- **1. Elenco Completo Dragon Ball — 5 Novos Modelos Tripo Auto-Rigged + `San` Lendário (`Blender/{Piccolo,Kuririn,Vegeta,Gohan,Freeza}/`):**
+  - Processados os 5 `.zip` do Tripo (`piccolo`, `kuririn`, `vegeta`, `gohan`, `freeza`) via `scripts/auto_rig_tripo.py --max-tris 7500` e inspecionados visualmente nas 5 prévias (cortes limpos, sem fragmentos e sem ocos).
+  - **Correção cirúrgica da cauda do `Freeza` (`Freeza_R6_Auto_v2.{blend,fbx}`):** na inspeção da prévia explodida, a cauda enrolada atrás das pernas estava dividida entre `LeftLeg` e `RightLeg`; os componentes desconexos da cauda (`560 + 380` faces) foram movidos integralmente para `Torso`, deixando as pernas 100% livres para andar/chutar enquanto a cauda permanece unificada no torso (e centralização horizontal feita via `Head + LeftLeg + RightLeg`).
+  - Enviados via Open Cloud e montados em `ServerStorage.Characters` (`Tex=6/6`, animações autorizadas R6-on-R15):
+    - **Comum:** `Piccolo` (`Mago`, Asset `88105734468434`, `Regeneracao`) e `Kuririn` (`Atirador`, Asset `107828832775927`, `OlhoDeAguia`).
+    - **Raro:** `Vegeta` (`Lutador`, Asset `129049896512415`, `SedeDeVitoria`) e `Gohan` (`Lutador`, Asset `121108312568844`, `ChamaInterior`).
+    - **Épico:** `Freeza` (`Mago`, Asset `102335809689960` v2, `Intimidacao`).
+    - **Lendário (já implementado):** `San` (`Lutador`, `InstintoZenkai`, aura Ki dourado/ciano e 4 golpes exclusivos completos).
+- **2. Novo Banner `DragonBall`, 5º Ginásio de Anime (`Ginásio dos Guerreiros Z`), Artes Customizadas e Códigos Dev:**
+  - Geradas e aprovadas no Open Cloud as artes customizadas [`Blender/UI/banners/banner_dragonball.png`](./UI/banners/banner_dragonball.png) (**Image ID `86187786633555`**) e [`Blender/UI/icones/insignia_dragonball.png`](./UI/icones/insignia_dragonball.png) (**Image ID `118201028417794`**), registradas em `src/shared/UI.luau`.
+  - Registrado `DragonBall` em `Summon.BannerOrder`/`Summon.Banners`, `SummonStageThemes.luau` (`PREFERRED_ORDER` destacando **San** no centro + **Freeza** e **Vegeta** nas laterais sobre o preset `Planalto do Ki Dourado`), **5º Ginásio** (`Gyms.luau`, Tier 5, Nv. 28–32, `Insígnia Guerreiros Z`, `Genetics.GymPresets[5] = 72/95`), `TowerClient.client.luau` (porta-insígnias ajustado para 5 insígnias) e códigos Dev em `Codes.luau` (`PICCOLO`, `KURIRIN`, `VEGETA`, `GOHAN`, `FREEZA`, `SAN`/`GOKU`/`SAN50`/`GOKU50`, lote **`DRAGONBALL`** / **`DEVDRAGONBALL`** / **`DBZ`** e `DEVALL`).
+- **3. Planilhas Excel & Suíte de Testes (`scripts/update_characters_sheet.py`, `scripts/sync_studio.py`):**
+  - `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` regeneradas (**34 personagens ativos + 2 protótipos | 102 ataques únicos | 21 passivas | 392 vínculos**).
+  - Atualizado `Test 6` (`#Gyms.Order == 5`) e adicionado **Test 18 (`DragonBallBanner`)** em `scripts/sync_studio.py` validando Banner, Ginásio Tier 5, os 6 modelos R6-on-R15 e os códigos Dev.
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos **114 scripts**) e `python scripts/sync_studio.py test` (`PASS`).
+- Validado ao vivo no Play Mode:
+  - `CharacterPreviews` (`36`) e `SummonShowcaseModels` (`34`) gerados para todos os 6 de Dragon Ball (`Head_Mesh=true`, `San` com `AuraVfx=true`).
+  - `SummonGui.BannerTab_DragonBall=true`, `DragonBallStageFeatured=Freeza, San, Vegeta`, `TowerGui.Gym_DragonBall=true`, `BadgesRowCount=5`.
+  - Golpes de classe executados ao vivo nos 5 novos modelos (`Piccolo:EsferaArcana`, `Kuririn:DisparoPreciso`, `Vegeta:ComboMarcial`, `Gohan:SocoDireto`, `Freeza:ChamaMistica`, `BattleVfxLeft=0`) com **`0` erros de jogo/VFX no Console**.
+- Place salvo no Roblox Studio na **versão 362** (`TeamCreate`).

@@ -404,7 +404,7 @@ for _, bid in ipairs({ "Chad", "Uryu", "Rukia", "Renji", "Ichigo", "Byakuya" }) 
     assert(def and def.Anime == "Bleach", "Missing Bleach character " .. bid)
     assert(def.Learnset and #def.Learnset >= 4, "Expected class kit learnset on " .. bid)
 end
-assert(#Gyms.Order == 4, "Expected 4 Gyms (Naruto, OnePiece, Bleach, JujutsuKaisen)")
+assert(#Gyms.Order == 5, "Expected 5 Gyms (Naruto, OnePiece, Bleach, JujutsuKaisen, DragonBall)")
 for _, gid in ipairs(Gyms.Order) do
     local g = Gyms.Get(gid)
     assert(g and #g.Stages == 3, "Expected 3 stages in Gym " .. gid)
@@ -828,7 +828,21 @@ assert(not okCastAgain, "SantuarioMalevolente must remain locked at 0/1 PP after
 local okRestoreOnce = bDom:ValidateAction("Player", { Kind = "Item", ItemId = "Eter", TargetIndex = 1 })
 assert(not okRestoreOnce, "RestorePP item must NOT refill OncePerBattle SantuarioMalevolente")
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + Domain/Fuga + JujutsuBanner + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, totalMoves)
+-- Test 18: Dragon Ball Banner, Gym Tier 5 & 6 Tripo R6-on-R15 Models (Piccolo, Kuririn, Vegeta, Gohan, Freeza + San)
+assert(table.find(Summon.BannerOrder, "DragonBall") and Summon.Banners.DragonBall, "Missing DragonBall banner")
+local dbGym = Gyms.Get("DragonBall")
+assert(dbGym and dbGym.Tier == 5 and Gyms.ForBanner("DragonBall") == dbGym, "Missing DragonBall Tier 5 Gym")
+local expectedDb = { Piccolo = "Comum", Kuririn = "Comum", Vegeta = "Raro", Gohan = "Raro", Freeza = "Epico", San = "Lendario" }
+for cid, expRar in pairs(expectedDb) do
+    local d = Characters.Get(cid)
+    assert(d and d.Anime == "DragonBall" and d.Rarity == expRar, "Invalid DragonBall character " .. cid)
+    local cm = ssChars and ssChars:FindFirstChild(cid)
+    assert(cm and cm:FindFirstChild("Head_Mesh") and cm:FindFirstChild("Torso_Mesh"), "Missing Tripo R6-on-R15 model for " .. cid)
+end
+assert(codesMod.DRAGONBALL and codesMod.DBZ and codesMod.PICCOLO and codesMod.KURIRIN and codesMod.VEGETA and codesMod.GOHAN and codesMod.FREEZA and codesMod.SAN,
+    "Missing DragonBall dev codes")
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + Domain/Fuga + Jujutsu/DragonBall Banners + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, totalMoves)
 end)
 sandbox:Destroy()
 assert(ok, res)

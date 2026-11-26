@@ -106,13 +106,44 @@ return {
 		Repeatable = true,
 	},
 
-	-- Outros personagens (Repeatable = true)
+	-- Codigos de Dev — Tag: Dragon Ball (Repeatable = true)
+	PICCOLO = { Character = "Piccolo", Level = 10, Repeatable = true },
+	DEVPICCOLO = { Character = "Piccolo", Level = 10, Repeatable = true },
+
+	KURIRIN = { Character = "Kuririn", Level = 10, Repeatable = true },
+	DEVKURIRIN = { Character = "Kuririn", Level = 10, Repeatable = true },
+
+	VEGETA = { Character = "Vegeta", Level = 10, Repeatable = true },
+	DEVVEGETA = { Character = "Vegeta", Level = 10, Repeatable = true },
+
+	GOHAN = { Character = "Gohan", Level = 10, Repeatable = true },
+	DEVGOHAN = { Character = "Gohan", Level = 10, Repeatable = true },
+
+	FREEZA = { Character = "Freeza", Level = 10, Repeatable = true },
+	DEVFREEZA = { Character = "Freeza", Level = 10, Repeatable = true },
+
 	SAN = { Character = "San", Level = 10, Repeatable = true },
 	GOKU = { Character = "San", Level = 10, Repeatable = true },
 	DEVSAN = { Character = "San", Level = 10, Repeatable = true },
 	SAN50 = { Character = "San", Level = 50, Repeatable = true },
 	GOKU50 = { Character = "San", Level = 50, Repeatable = true },
 	DEVSAN50 = { Character = "San", Level = 50, Repeatable = true },
+
+	DRAGONBALL = {
+		Characters = { "Piccolo", "Kuririn", "Vegeta", "Gohan", "Freeza", "San" },
+		Level = 10,
+		Repeatable = true,
+	},
+	DEVDRAGONBALL = {
+		Characters = { "Piccolo", "Kuririn", "Vegeta", "Gohan", "Freeza", "San" },
+		Level = 10,
+		Repeatable = true,
+	},
+	DBZ = {
+		Characters = { "Piccolo", "Kuririn", "Vegeta", "Gohan", "Freeza", "San" },
+		Level = 10,
+		Repeatable = true,
+	},
 
 	-- Codigos de Dev — Tag: Jujutsu Kaisen (Repeatable = true)
 	NOBARA = { Character = "Nobara", Level = 10, Repeatable = true },
@@ -203,7 +234,8 @@ return {
 			"Sakura", "Shikamaru", "Kakashi", "Sasuke", "Naruto", "Sarutobi",
 			"Chad", "Uryu", "Rukia", "Renji", "Ichigo", "Byakuya",
 			"Nobara", "Itadori", "Fushiguro", "Todo", "Nanami", "Setero",
-			"San", "Sukuna", "Kaen", "Raiko", "Yomogi",
+			"Piccolo", "Kuririn", "Vegeta", "Gohan", "Freeza", "San",
+			"Sukuna", "Kaen", "Raiko", "Yomogi",
 		},
 		Level = 10,
 		Repeatable = true,

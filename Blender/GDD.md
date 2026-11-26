@@ -106,7 +106,8 @@ Todos os personagens são originais. Personagens e técnicas de animes existente
 - **Naruto:** Comum (`Sakura`, `Shikamaru`), Raro (`Kakashi`, `Sasuke`), Épico (`Naruto`), Lendário (`Sarutobi`).
 - **Bleach:** Comum (`Chad`, `Uryu`), Raro (`Rukia`, `Renji`), Épico (`Ichigo`), Lendário (`Byakuya`).
 - **Jujutsu Kaisen:** Comum (`Nobara`, `Itadori`), Raro (`Fushiguro`, `Todo`), Épico (`Nanami`), Lendário (`Gojo` / ID `Setero`), **Secreto** (`Sukuna`, cor preta, BST 162).
-- **Dragon Ball / Genéricos:** `San` (Lendário), `Kaen`, `Raiko`, `Yomogi`.
+- **Dragon Ball:** Comum (`Piccolo`, `Kuririn`), Raro (`Vegeta`, `Gohan`), Épico (`Freeza`), Lendário (`San`).
+- **Genéricos:** `Kaen`, `Raiko`, `Yomogi`.
 
 ## 5. Combate por turnos
 
@@ -306,7 +307,7 @@ Toda lógica de batalha e economia roda no servidor; o cliente envia escolhas e 
 | Batalha | Nome, nível, HP e status dos dois lados (`1x1` ou `2x2`); menu Lutar / Mochila / Time / Fugir; log |
 | Lutar | 4 golpes com classe (cor e ícone), poder e PP |
 | Time / Equipe | 6 personagens com HP, nível e status; grade 3D com busca por nome, filtros de Anime/Raridade/Classe e ordenação por Status |
-| Torre | Abas Torre (`1x1` e `2x2`), Ginásios de Anime (Porta-Insígnias + 4 Ginásios: Konoha, Grand Line, Soul Society e Jujutsu de Tóquio) e Treino (simulador `1x1`/`2x2`), recompensas e placar |
+| Torre | Abas Torre (`1x1` e `2x2`), Ginásios de Anime (Porta-Insígnias + 5 Ginásios: Konoha, Grand Line, Soul Society, Jujutsu de Tóquio e Guerreiros Z) e Treino (simulador `1x1`/`2x2`), recompensas e placar |
 | Invocação | Palco 3D ao vivo estilo Anime Vanguards, trilho de banners por anime, chances visíveis, garantia centralizada, botões `INVOCAR 1` / `INVOCAR 10` com ícone e preço centralizados, animação 3D de revelação |
 | Base | Personagens Passeando / Minerando, taxas `g/s` ao vivo, nível da mineração, faixa dos 4 minérios e acesso à Cápsula de Treino |
 | Loja | Itens (gold), Vender Minério, Benefícios (Robux ou gemas) e Pacotes de Gemas |
