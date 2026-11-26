@@ -1545,10 +1545,13 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - Ciclo completo de `8.80s` executado nas 6 fases sobre o modelo real de `Sukuna` (`Done_AutoCleanup=0`, zero erros e restauração integral de `Lighting`).
 
 
-## Remoção do Dummy de Teste do `Vazio Roxo` na Praça (26/11/2026)
+## Remoção do Dummy de Teste do `Vazio Roxo` na Praça e `Workspace.Setero` Legado (26/11/2026)
 
 **Feito**
 - Desativado `Config.SpawnStudioTestDummy = false` em `src/shared/HollowPurple/Config.luau` e removido o bloco automático de criação do `HollowPurpleDummy` (`"Alvo Vazio Roxo [R]"`, `CFrame.new(0, 11.5, 42)` em frente à Torre) em `src/server/HollowPurpleServer.server.luau`.
+- Removida a sobra legada `Workspace.Setero` (modelo antigo skinned 1 peça em `(120.5, 14.2, -279.2)` sem referências em scripts), preservando integralmente o modelo ativo em `ServerStorage/Characters/Setero`.
 
-**Testado**
+**Testado (Play Mode ao vivo + Suíte GDD)**
 - `python scripts/sync_studio.py status` (`100% in sync` nos **114 scripts**) e `python scripts/sync_studio.py test` (`PASS`).
+- Validado ao vivo no Play Mode: `HollowPurpleDummyExists = false`, `WorkspaceSeteroExists = false`, `PreviewSeteroOk = true`, `ShowcaseSeteroOk = true`, `HollowPurpleRemoteOk = true` e **`0` erros/avisos no Console**.
+- Place salvo no Roblox Studio na **versão 359** (`TeamCreate`).
