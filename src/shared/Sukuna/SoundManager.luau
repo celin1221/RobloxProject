@@ -11,6 +11,7 @@
 
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
@@ -387,56 +388,337 @@ function SoundManager.PlayDomainSlashVolley(emitterPart: Instance, jan: Janitor.
 	end
 end
 
--- 5. SFX Fuga: Fase 1 ("Fuga" + ignicao), Fase 2 (tensao do arco), Fase 3 (disparo supersônico), Fase 4 (silencio -> explosao termobarica)
-function SoundManager.PlayFugaOpen(emitterPart: Instance, jan: Janitor.JanitorInstance?)
-	SoundManager.MuffleAmbient(0.78, 0.95)
-	SoundManager.PlayVoiceCue(
-		emitterPart,
-		Config.Assets.FugaVoiceId,
-		"Fuga",
-		"Abrir  \u{b7}  Flecha de Fogo",
-		1.05,
-		Config.Colors.FireGold,
-		jan
-	)
-	local ignId = Config.ResolveAsset(Config.Assets.FireIgniteSfxId, Config.Fallbacks.SfxCharge)
-	createSound(emitterPart, ignId, 0.52, 0.88, jan):Play()
-end
+--============================================================================
+-- 5. AUDIO & LEGENDA TERMICA DE 6 FASES DO FUGA (JJK Temporada 2)
+--   0.00s: Filtro Equalizer Low-Pass instantaneo (vacuo tenso)
+--   0.35s: Voz "Fuga" + Legenda minimalista 「 竈  ·  FUGA 」 com glitch/tremor termico
+--   0.50s: Estalo seco de ignicao + rugido grave de fornalha abrindo
+--   1.45s: Pressao crescente de turbina/fornalha comprimida + corda incandescente esticando
+--   3.30s: Sonic boom + rugido de jato de fogo cortando o ar (efeito Doppler)
+--   3.85s: Silencio subito de 0.12s (apenas sub-grave abafado na implosao de vacuo)
+--   4.05s: Estrondo termobarico ensurdecedor em 4 camadas (sub-bass, crack seco, tempestade de fogo, estalos)
+--============================================================================
+function SoundManager.ShowFugaSubtitle(holdDuration: number)
+	local player = Players.LocalPlayer
+	local pg = player and player:FindFirstChildOfClass("PlayerGui")
+	if not pg then
+		return
+	end
 
-function SoundManager.PlayFugaBowDraw(emitterPart: Instance, jan: Janitor.JanitorInstance?)
-	local drawSnd = createSound(emitterPart, Config.Fallbacks.SfxCharge, 0.54, 1.18, jan)
-	drawSnd:Play()
-	TweenService:Create(drawSnd, TweenInfo.new(0.72, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { PlaybackSpeed = 1.62, Volume = 0.66 }):Play()
-end
+	if subtitleJanitor then
+		subtitleJanitor:Cleanup()
+		subtitleJanitor = nil
+	end
+	local jan = Janitor.new()
+	subtitleJanitor = jan
 
-function SoundManager.PlayFugaLaunch(emitterPart: Instance, jan: Janitor.JanitorInstance?)
-	local launchId = Config.ResolveAsset(Config.Assets.FireArrowLaunchSfxId, Config.Fallbacks.SfxReleaseHeavy)
-	createSound(emitterPart, launchId, 0.66, 1.12, jan):Play()
-	createSound(emitterPart, Config.Fallbacks.SfxRelease, 0.48, 1.48, jan):Play()
-end
+	local sg = Instance.new("ScreenGui")
+	sg.Name = "SukunaFugaThermalSubtitle"
+	sg.DisplayOrder = 25
+	sg.IgnoreGuiInset = true
+	sg.ResetOnSpawn = false
+	sg.Parent = pg
+	jan:Add(sg)
 
-function SoundManager.PlayFugaThermobaricImpact(emitterPart: Instance, jan: Janitor.JanitorInstance?)
-	-- Fracao de silencio absoluto (0.08s hitstop) seguida pelo estrondo termobarico!
-	SoundManager.MuffleAmbient(0.14, 1.2)
-	local function detonate()
-		if not emitterPart.Parent then
+	local holder = Instance.new("Frame")
+	holder.Name = "ThermalLegendFrame"
+	holder.AnchorPoint = Vector2.new(0.5, 0.5)
+	holder.Position = UDim2.fromScale(0.5, 0.81)
+	holder.Size = UDim2.fromScale(0.42, 0.082)
+	holder.BackgroundColor3 = Color3.fromRGB(10, 6, 6)
+	holder.BackgroundTransparency = 0.28
+	holder.BorderSizePixel = 0
+	holder.Parent = sg
+
+	local sizeCon = Instance.new("UISizeConstraint")
+	sizeCon.MaxSize = Vector2.new(560, 76)
+	sizeCon.MinSize = Vector2.new(260, 48)
+	sizeCon.Parent = holder
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.18, 0)
+	corner.Parent = holder
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Config.Colors.ThermalCoreEnd
+	stroke.Thickness = 1.6
+	stroke.Transparency = 0.22
+	stroke.Parent = holder
+
+	local grad = Instance.new("UIGradient")
+	grad.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(36, 12, 6)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(12, 6, 6)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(36, 12, 6)),
+	})
+	grad.Parent = holder
+
+	-- Linha incandescente fina superior
+	local emberLine = Instance.new("Frame")
+	emberLine.AnchorPoint = Vector2.new(0.5, 0)
+	emberLine.Position = UDim2.fromScale(0.5, 0.06)
+	emberLine.Size = UDim2.fromScale(0.04, 0.035)
+	emberLine.BackgroundColor3 = Config.Colors.ThermalFlameStart
+	emberLine.BorderSizePixel = 0
+	emberLine.Parent = holder
+
+	-- Sombra fantasma cromatica laranja para efeito de distorcao/glitch termico sutil
+	local ghostLbl = Instance.new("TextLabel")
+	ghostLbl.Name = "ThermalGhost"
+	ghostLbl.AnchorPoint = Vector2.new(0.5, 0.5)
+	ghostLbl.Position = UDim2.fromScale(0.5, 0.44)
+	ghostLbl.Size = UDim2.fromScale(0.92, 0.52)
+	ghostLbl.BackgroundTransparency = 1
+	ghostLbl.Font = Enum.Font.GothamBlack
+	ghostLbl.Text = "\u{300c} \u{7ac8}  \u{b7}  FUGA \u{300d}"
+	ghostLbl.TextColor3 = Config.Colors.ThermalFlameStart
+	ghostLbl.TextScaled = true
+	ghostLbl.TextTransparency = 0.62
+	ghostLbl.Parent = holder
+
+	local mainLbl = Instance.new("TextLabel")
+	mainLbl.Name = "MainTitle"
+	mainLbl.AnchorPoint = Vector2.new(0.5, 0.5)
+	mainLbl.Position = UDim2.fromScale(0.5, 0.44)
+	mainLbl.Size = UDim2.fromScale(0.92, 0.52)
+	mainLbl.BackgroundTransparency = 1
+	mainLbl.Font = Enum.Font.GothamBlack
+	mainLbl.Text = "\u{300c} \u{7ac8}  \u{b7}  FUGA \u{300d}"
+	mainLbl.TextColor3 = Config.Colors.ThermalCoreStart
+	mainLbl.TextScaled = true
+	mainLbl.TextTransparency = 1
+	mainLbl.Parent = holder
+
+	local mainStroke = Instance.new("UIStroke")
+	mainStroke.Color = Color3.fromRGB(14, 4, 2)
+	mainStroke.Thickness = 2.4
+	mainStroke.Transparency = 1
+	mainStroke.Parent = mainLbl
+
+	local subLbl = Instance.new("TextLabel")
+	subLbl.Name = "SubCaption"
+	subLbl.AnchorPoint = Vector2.new(0.5, 0.5)
+	subLbl.Position = UDim2.fromScale(0.5, 0.80)
+	subLbl.Size = UDim2.fromScale(0.86, 0.25)
+	subLbl.BackgroundTransparency = 1
+	subLbl.Font = Enum.Font.GothamBold
+	subLbl.Text = "CHAMA DIVINA  \u{b7}  ABRIR"
+	subLbl.TextColor3 = Config.Colors.ThermalCoreEnd
+	subLbl.TextScaled = true
+	subLbl.TextTransparency = 1
+	subLbl.Parent = holder
+
+	local uiScale = Instance.new("UIScale")
+	uiScale.Scale = 0.90
+	uiScale.Parent = holder
+
+	jan:Add(TweenService:Create(uiScale, TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1.0 })):Play()
+	jan:Add(TweenService:Create(emberLine, TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Size = UDim2.fromScale(0.80, 0.035) })):Play()
+	jan:Add(TweenService:Create(mainLbl, TweenInfo.new(0.12), { TextTransparency = 0 })):Play()
+	jan:Add(TweenService:Create(mainStroke, TweenInfo.new(0.12), { Transparency = 0 })):Play()
+	jan:Add(TweenService:Create(subLbl, TweenInfo.new(0.18), { TextTransparency = 0.08 })):Play()
+
+	-- Glitch / tremor termico sutil em tempo real (primeiros 0.22s mais intensos, depois reverberacao de calor suave)
+	local t0 = os.clock()
+	if RunService:IsClient() then
+		jan:Connect(RunService.RenderStepped, function()
+			if not holder.Parent then
+				return
+			end
+			local el = os.clock() - t0
+			local burst = if el < 0.22 then (1 - el / 0.22) * 3.2 else 0.75
+			local jx = math.noise(el * 36, 4.2, 0) * 0.006 * burst
+			local jy = math.noise(el * 42, 11.7, 0) * 0.018 * burst
+			ghostLbl.Position = UDim2.fromScale(0.5 + jx * 1.9, 0.44 + jy * 1.6)
+			mainLbl.Position = UDim2.fromScale(0.5 + jx * 0.45, 0.44 + jy * 0.45)
+			stroke.Color = Config.Colors.ThermalCoreEnd:Lerp(Config.Colors.ThermalFlameStart, 0.5 + 0.5 * math.noise(el * 16, 1.3, 0))
+		end)
+	end
+
+	local fadeAt = math.max(0.25, holdDuration - 0.28)
+	jan:Delay(fadeAt, function()
+		if not sg.Parent then
 			return
 		end
-		local expId = Config.ResolveAsset(Config.Assets.ThermobaricExplosionSfxId, Config.Fallbacks.SfxImpactHeavy)
-		local boomLow = createSound(emitterPart, expId, 0.82, 0.58, jan)
-		local rev = Instance.new("ReverbSoundEffect")
-		rev.DecayTime = 2.8
-		rev.WetLevel = -4
-		rev.Parent = boomLow
-		boomLow:Play()
+		jan:Add(TweenService:Create(holder, TweenInfo.new(0.26), { BackgroundTransparency = 1 })):Play()
+		jan:Add(TweenService:Create(stroke, TweenInfo.new(0.26), { Transparency = 1 })):Play()
+		jan:Add(TweenService:Create(emberLine, TweenInfo.new(0.26), { BackgroundTransparency = 1 })):Play()
+		jan:Add(TweenService:Create(ghostLbl, TweenInfo.new(0.26), { TextTransparency = 1 })):Play()
+		jan:Add(TweenService:Create(subLbl, TweenInfo.new(0.26), { TextTransparency = 1 })):Play()
+		jan:Add(TweenService:Create(mainLbl, TweenInfo.new(0.26), { TextTransparency = 1 })):Play()
+		local endTw = jan:Add(TweenService:Create(mainStroke, TweenInfo.new(0.26), { Transparency = 1 }))
+		endTw:Play()
+		endTw.Completed:Once(function()
+			if subtitleJanitor == jan then
+				subtitleJanitor = nil
+			end
+			jan:Cleanup()
+		end)
+	end)
+end
 
-		createSound(emitterPart, expId, 0.72, 0.92, jan):Play()
-		createSound(emitterPart, Config.Fallbacks.SfxReleaseHeavy, 0.58, 0.68, jan):Play()
-	end
-	if jan then
-		jan:Delay(0.08, detonate)
+function SoundManager.PlayFugaVoice(emitterPart: Instance, jan: Janitor.JanitorInstance?)
+	SoundManager.ShowFugaSubtitle(1.35)
+	local customVoice = if Config.Assets.Fuga and Config.HasCustomAsset(Config.Assets.Fuga.VoiceId)
+		then Config.Assets.Fuga.VoiceId
+		else Config.Assets.FugaVoiceId
+
+	if Config.HasCustomAsset(customVoice) then
+		local voice = createSound(emitterPart, Config.ResolveAsset(customVoice, ""), 1.25, 1.0, jan)
+		local rev = Instance.new("ReverbSoundEffect")
+		rev.DecayTime = 1.35
+		rev.WetLevel = -8
+		rev.DryLevel = 0
+		rev.Parent = voice
+		voice:Play()
 	else
-		task.delay(0.08, detonate)
+		local cue = createSound(emitterPart, Config.Fallbacks.SfxCharge, 0.38, 0.54, jan)
+		cue:Play()
+	end
+end
+
+function SoundManager.PlayFugaIgniteFurnace(emitterPart: Instance, jan: Janitor.JanitorInstance?): Sound
+	local ignId = Config.ResolveFugaAsset(
+		Config.Assets.Fuga and Config.Assets.Fuga.IgniteSfxId,
+		Config.Assets.FireIgniteSfxId,
+		Config.Fallbacks.SfxImpact
+	)
+	local furId = Config.ResolveFugaAsset(
+		Config.Assets.Fuga and Config.Assets.Fuga.FurnaceLoopSfxId,
+		Config.Assets.FireIgniteSfxId,
+		Config.Fallbacks.SfxCharge
+	)
+	-- Estalo seco de ignicao
+	createSound(emitterPart, ignId, 0.58, 1.52, jan):Play()
+	-- Rugido grave de fornalha abrindo
+	local furnace = createSound(emitterPart, furId, 0.62, 0.62, jan)
+	furnace:Play()
+	return furnace
+end
+
+function SoundManager.PlayFugaBowTension(emitterPart: Instance, duration: number, jan: Janitor.JanitorInstance?): (Sound, Sound)
+	local bowId = Config.ResolveFugaAsset(
+		Config.Assets.Fuga and Config.Assets.Fuga.BowTensionSfxId,
+		nil,
+		Config.Fallbacks.SfxCharge
+	)
+	-- Turbina/fornalha comprimida
+	local turbine = createSound(emitterPart, bowId, 0.42, 0.74, jan)
+	turbine.Looped = true
+	turbine:Play()
+	TweenService:Create(turbine, TweenInfo.new(duration, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+		PlaybackSpeed = 1.68,
+		Volume = 0.78,
+	}):Play()
+
+	-- Corda incandescente esticando no limite
+	local stringStretch = createSound(emitterPart, Config.Fallbacks.SfxRelease, 0.30, 1.15, jan)
+	stringStretch:Play()
+	TweenService:Create(stringStretch, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		PlaybackSpeed = 1.92,
+		Volume = 0.56,
+	}):Play()
+	return turbine, stringStretch
+end
+
+function SoundManager.PlayFugaSonicLaunch(emitterPart: Instance, flightDuration: number, jan: Janitor.JanitorInstance?): Sound
+	local launchId = Config.ResolveFugaAsset(
+		Config.Assets.Fuga and Config.Assets.Fuga.SonicLaunchSfxId,
+		Config.Assets.FireArrowLaunchSfxId,
+		Config.Fallbacks.SfxReleaseHeavy
+	)
+	-- Sonic boom agudo + grave
+	createSound(emitterPart, Config.Fallbacks.SfxImpactHeavy, 0.76, 1.38, jan):Play()
+	createSound(emitterPart, launchId, 0.80, 1.18, jan):Play()
+
+	-- Rugido de jato de fogo cortando o ar com efeito Doppler rapido!
+	local jet = createSound(emitterPart, Config.Fallbacks.SfxRelease, 0.68, 1.82, jan)
+	jet.Looped = true
+	jet:Play()
+	TweenService:Create(jet, TweenInfo.new(flightDuration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		PlaybackSpeed = 0.88,
+		Volume = 0.52,
+	}):Play()
+	return jet
+end
+
+function SoundManager.PlayFugaVacuumImplosion(emitterPart: Instance, jan: Janitor.JanitorInstance?)
+	-- Silencio subito de 0.12s com filtro Low-Pass profundo + zumbido sub-grave abafado
+	SoundManager.MuffleAmbient(0.20, 1.25)
+	local subId = Config.ResolveFugaAsset(
+		Config.Assets.Fuga and Config.Assets.Fuga.VacuumSubSfxId,
+		nil,
+		Config.Fallbacks.SfxImpactHeavy
+	)
+	local subHum = createSound(emitterPart, subId, 0.44, 0.34, jan)
+	local eq = Instance.new("EqualizerSoundEffect")
+	eq.LowGain = 6
+	eq.MidGain = -24
+	eq.HighGain = -48
+	eq.Parent = subHum
+	subHum:Play()
+end
+
+function SoundManager.PlayFugaThermobaricDetonation(
+	emitterPart: Instance,
+	roarDuration: number,
+	jan: Janitor.JanitorInstance?
+)
+	local boomId = Config.ResolveFugaAsset(
+		Config.Assets.Fuga and Config.Assets.Fuga.ThermobaricBoomSfxId,
+		Config.Assets.ThermobaricExplosionSfxId,
+		Config.Fallbacks.SfxImpactHeavy
+	)
+	local stormId = Config.ResolveFugaAsset(
+		Config.Assets.Fuga and Config.Assets.Fuga.FirestormRoarSfxId,
+		nil,
+		Config.Fallbacks.SfxReleaseHeavy
+	)
+
+	-- Camada 1: Sub-bass termobarico profundo com reverberacao colossal
+	local subBoom = createSound(emitterPart, boomId, 0.96, 0.44, jan)
+	subBoom.RollOffMaxDistance = 420
+	local rev = Instance.new("ReverbSoundEffect")
+	rev.DecayTime = 3.8
+	rev.Density = 1.0
+	rev.WetLevel = -2
+	rev.Parent = subBoom
+	subBoom:Play()
+
+	-- Camada 2: Explosao seca aguda rasgando o silencio
+	local crackBoom = createSound(emitterPart, Config.Fallbacks.SfxImpact, 0.84, 1.22, jan)
+	crackBoom.RollOffMaxDistance = 380
+	crackBoom:Play()
+
+	-- Camada 3: Impacto medio-grave encorpado
+	local midBoom = createSound(emitterPart, boomId, 0.88, 0.82, jan)
+	midBoom.RollOffMaxDistance = 380
+	midBoom:Play()
+
+	-- Camada 4: Rugido continuo de tempestade de fogo + estalos de destruicao
+	local storm = createSound(emitterPart, stormId, 0.72, 0.56, jan)
+	storm.Looped = true
+	storm.RollOffMaxDistance = 360
+	storm:Play()
+
+	if jan then
+		for i = 1, 5 do
+			jan:Delay(0.28 * i, function()
+				if emitterPart.Parent then
+					createSound(emitterPart, Config.Fallbacks.SfxImpact, 0.34, 0.72 + (i % 3) * 0.22, jan):Play()
+				end
+			end)
+		end
+		jan:Delay(math.max(0.5, roarDuration - 1.3), function()
+			if storm.Parent then
+				local fadeTw = TweenService:Create(storm, TweenInfo.new(1.3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+					Volume = 0,
+					PlaybackSpeed = 0.38,
+				})
+				jan:Add(fadeTw)
+				fadeTw:Play()
+			end
+		end)
 	end
 end
 

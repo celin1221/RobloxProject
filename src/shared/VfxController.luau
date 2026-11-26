@@ -3968,7 +3968,7 @@ PROC_HANDLERS.SukunaFuga = {
 	end,
 	Release = function() end,
 	Impact = function() end,
-	Duration = 1.65,
+	Duration = 4.85,
 }
 
 local function fallbackGenericStyle(moveId: string?)

@@ -6,15 +6,43 @@
 	  2. Clivar
 	  3. Fortificacao
 	  4. Santuario Malevolente (Ryōiki Tenkai: Fukuma Mizushi)
-	  5. Fuga (Flecha de Fogo Termobarica)
+	  5. Fuga (Chama Divina / Flecha de Fogo Termobarica — Rework 6 Fases JJK S2)
 
-	Todos os slots de Config.Assets aceitam "rbxassetid://..." customizados.
+	Todos os slots de Config.Assets e Config.Assets.Fuga aceitam "rbxassetid://..." customizados.
 	Quando deixados como "", o sistema usa automaticamente texturas/sons nativos
 	verificados do projeto e animacoes procedurais 60 FPS sem qualquer erro de carregamento.
 ]]
 
+export type FugaAssetSlots = {
+	-- Voz e Animacao opcional ("" usa animacao procedural 6 fases Motor6D)
+	VoiceId: string,
+	AnimationId: string,
+
+	-- Flipbooks / Texturas opcionais das 4 camadas termicas, Beams e Trails
+	FireCoreFlipbookId: string,
+	FireBodyFlipbookId: string,
+	PyroSmokeTextureId: string,
+	EmberSparkTextureId: string,
+	ArrowBeamTextureId: string,
+	PillarBeamTextureId: string,
+	ShockRingTextureId: string,
+	TrailFlameTextureId: string,
+
+	-- SFX opcionais por fase do Fuga
+	IgniteSfxId: string,
+	FurnaceLoopSfxId: string,
+	BowTensionSfxId: string,
+	SonicLaunchSfxId: string,
+	VacuumSubSfxId: string,
+	ThermobaricBoomSfxId: string,
+	FirestormRoarSfxId: string,
+}
+
 export type SukunaAssets = {
-	-- Vozes sincronizadas (substitua "" pelo seu "rbxassetid://...")
+	-- Subtabela dedicada e limpa para o Rework AAA do Fuga
+	Fuga: FugaAssetSlots,
+
+	-- Vozes sincronizadas dos outros golpes (retrocompativeis)
 	RyoikiTenkaiVoiceId: string,
 	FukumaMizushiVoiceId: string,
 	FugaVoiceId: string,
@@ -26,7 +54,7 @@ export type SukunaAssets = {
 	SantuarioAnimId: string,
 	FugaAnimId: string,
 
-	-- Texturas / Flipbooks opcionais para particulas, Beams e Trails
+	-- Texturas / Flipbooks gerais
 	FireCoreTextureId: string,
 	FireWispTextureId: string,
 	PyroSmokeTextureId: string,
@@ -50,9 +78,25 @@ local Config = {
 	ShrineModelName = "SukunaMalevolentShrine",
 
 	-- Culling de distancia para otimizacao de FPS e protecao de camera de jogadores distantes
-	MaxCameraDistance = 175.0,
-	ReducedDetailDistance = 185.0,
-	MaxRenderDistance = 420.0,
+	MaxCameraDistance = 195.0,
+	ReducedDetailDistance = 195.0,
+	MaxRenderDistance = 450.0,
+
+	-- Timeline exata das 6 Fases do Fuga (em segundos)
+	FugaTimeline = {
+		Phase1Start = 0.00, -- Abertura da Fornalha & Low-Pass
+		VoiceTime = 0.35, -- Voz "Fuga" + Legenda Cinematografica
+		HandsPartTime = 0.45, -- Afastamento lento das palmas
+		IgniteTime = 0.50, -- Estalo seco de ignicao + rugido da fornalha
+		Phase2BowStart = 1.45, -- Postura 75° de arqueiro + Arco/Corda/Flecha + Succao 20 studs
+		TremorStart = 2.70, -- Micro-tremor muscular nos ultimos 0.5s da puxada
+		Phase3ApexStart = 3.20, -- Pausa de tensao absoluta de 0.10s no apice
+		LaunchTime = 3.30, -- Soltura explosiva, recuo e voo supersonico
+		Phase4ImplodeStart = 3.85, -- Hitstop (0.12s) + Silencio Subito + Implosao + Duplo Impact Frame
+		Phase5PillarStart = 4.05, -- Detonacao do Pilar Colossal de Fogo Termobarico (~165 studs)
+		Phase6AftermathStart = 7.20, -- Nucleo branco apaga, fumaca escura + chuva de cinzas
+		TotalDuration = 8.80, -- Restauracao limpa total via Janitor
+	},
 
 	-- Texturas nativas/verificadas do projeto usadas como fallback imediato quando Config.Assets estiver ""
 	Fallbacks = {
@@ -65,6 +109,8 @@ local Config = {
 		Streak = "rbxassetid://122479098668481",
 		Gather = "rbxassetid://115073640656853",
 		Puff = "rbxassetid://82305102124278",
+		Ring = "rbxassetid://136971071117749",
+		Shock = "rbxassetid://83043634785289",
 		Trail = "rbxassetid://115075243133786",
 		SoftGlow = "rbxassetid://83184852649242",
 
@@ -75,7 +121,7 @@ local Config = {
 		SfxImpactHeavy = "rbxassetid://99881515803650",
 	},
 
-	-- Paleta cromatica amaldicoada e termica real (branco-dourado -> laranja -> carmesim -> fuligem preta)
+	-- Paleta cromatica amaldicoada + Empilhamento Termico Real de 4 Camadas do Fuga
 	Colors = {
 		SlashWhite = Color3.fromRGB(255, 246, 248),
 		CrimsonBright = Color3.fromRGB(242, 24, 54),
@@ -86,18 +132,53 @@ local Config = {
 		ShrineWood = Color3.fromRGB(24, 12, 14),
 		ShrineRoof = Color3.fromRGB(16, 10, 14),
 
-		-- Transicao termica do Fuga (Flecha de Fogo)
-		FireWhiteGold = Color3.fromRGB(255, 252, 228),
-		FireGold = Color3.fromRGB(255, 208, 84),
-		FireOrange = Color3.fromRGB(255, 108, 22),
-		FireCrimson = Color3.fromRGB(206, 24, 28),
-		PyroSootLit = Color3.fromRGB(68, 24, 16),
-		PyroBlack = Color3.fromRGB(12, 9, 10),
+		-- Camada 1: Nucleo Incandescente (ZOffset = 2, LightEmission = 1)
+		ThermalCoreStart = Color3.fromRGB(255, 255, 235),
+		ThermalCoreEnd = Color3.fromRGB(255, 220, 90),
+
+		-- Camada 2: Corpo da Chama (ZOffset = 1, LightEmission = 0.75)
+		ThermalFlameStart = Color3.fromRGB(255, 115, 10),
+		ThermalFlameEnd = Color3.fromRGB(210, 25, 5),
+
+		-- Camada 3: Fumaca Piroclastica Densa (ZOffset = -1, LightEmission = 0)
+		ThermalSmokeStart = Color3.fromRGB(28, 22, 22),
+		ThermalSmokeEnd = Color3.fromRGB(10, 8, 10),
+
+		-- Camada 4 & Paleta auxiliar de brasas/luzes
+		FireWhiteGold = Color3.fromRGB(255, 255, 235),
+		FireGold = Color3.fromRGB(255, 220, 90),
+		FireOrange = Color3.fromRGB(255, 115, 10),
+		FireCrimson = Color3.fromRGB(210, 25, 5),
+		ImpactFlashScarlet = Color3.fromRGB(255, 110, 40),
+		PyroSootLit = Color3.fromRGB(68, 26, 14),
+		PyroBlack = Color3.fromRGB(10, 8, 10),
 		AshGrey = Color3.fromRGB(148, 136, 132),
 	},
 
 	-- Slots centralizados prontos para receber IDs customizados futuramente
 	Assets = {
+		Fuga = {
+			VoiceId = "",
+			AnimationId = "",
+
+			FireCoreFlipbookId = "",
+			FireBodyFlipbookId = "",
+			PyroSmokeTextureId = "",
+			EmberSparkTextureId = "",
+			ArrowBeamTextureId = "",
+			PillarBeamTextureId = "",
+			ShockRingTextureId = "",
+			TrailFlameTextureId = "",
+
+			IgniteSfxId = "",
+			FurnaceLoopSfxId = "",
+			BowTensionSfxId = "",
+			SonicLaunchSfxId = "",
+			VacuumSubSfxId = "",
+			ThermobaricBoomSfxId = "",
+			FirestormRoarSfxId = "",
+		},
+
 		RyoikiTenkaiVoiceId = "",
 		FukumaMizushiVoiceId = "",
 		FugaVoiceId = "",
@@ -132,6 +213,16 @@ function Config.ResolveAsset(customId: string?, fallbackId: string): string
 			return customId
 		end
 		return "rbxassetid://" .. customId
+	end
+	return fallbackId
+end
+
+function Config.ResolveFugaAsset(fugaSlot: string?, legacySlot: string?, fallbackId: string): string
+	if typeof(fugaSlot) == "string" and #fugaSlot > 0 then
+		return Config.ResolveAsset(fugaSlot, fallbackId)
+	end
+	if typeof(legacySlot) == "string" and #legacySlot > 0 then
+		return Config.ResolveAsset(legacySlot, fallbackId)
 	end
 	return fallbackId
 end

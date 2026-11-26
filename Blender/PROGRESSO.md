@@ -1524,3 +1524,22 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 **Testado (Play Mode ao vivo + Captura Visual Antes/Depois + Suíte GDD)**
 - `python scripts/sync_studio.py status` (`100% in sync` nos **113 scripts**) e `python scripts/sync_studio.py test` (`PASS: ... Domain/Fuga + JujutsuBanner + 102 Animated Moves + UI Guardrails`).
 - Verificado visualmente por captura de câmera nas arenas que o corte horizontal nas partículas desapareceu 100%, e validado em Play Mode pelo usuário (`0` erros de script no Console).
+
+
+## Rework Completo Nível AAA — Ataque `Fuga` (Chama Divina / Flecha de Fogo do Sukuna) (26/11/2026)
+
+**Feito**
+- **1. Módulo Dedicado `src/shared/Sukuna/FugaVFX.luau` (`--!strict`, Zero Cones/Esferas/Cilindros de Neon):**
+  - Empilhamento térmico real em **4 camadas** (`createThermalStack`) em todas as fontes de fogo: Camada 1 Núcleo Incandescente (`ZOffset = 2`, `LightEmission = 1`, `RGB 255,255,235 -> 255,220,90`), Camada 2 Corpo da Chama (`ZOffset = 1`, `LightEmission = 0.75`, `RGB 255,115,10 -> 210,25,5`), Camada 3 Fumaça Piroclástica Densa (`ZOffset = -1`, `LightEmission = 0`, `RGB 28,22,22 -> 10,8,10`) e Camada 4 Brasas Esticadas (`VelocityParallel`, `Squash` alto, `Drag`).
+  - `PointLight` com flicker procedural em tempo real via `math.noise(t * 14, seed, 0)` variando brilho e alcance.
+  - Coreografia completa em **6 fases (`0.00s` a `8.80s`)** em `RunService.RenderStepped` (`dt`): abertura da fornalha entre as palmas -> postura de arqueiro `~75°` com Arco Flamejante curvo, Corda de Plasma em `"V"`, Flecha Divina de 3 `Beam`s entrelaçados e Vórtice de Sucção Térmica de `20 studs` -> disparo supersônico com 4 `Trail`s, anéis sônicos a cada `0.035s` e rastro queimado via `Raycast` -> Hitstop `0.12s` + implosão de vácuo + Duplo Impact Frame (`Contrast = 3.2` P&B -> `RGB 255,110,40`) -> Pilar Colossal de Fogo Termobárico (`~165 studs`, 7 nós verticais, 4 `Beam`s turbulentos, cogumelo piroclástico, 4 orbiters espirais, ondas 360° e destroços copiando material do piso) -> extinção gradual e chuva de cinzas/brasas por `2.5s` com limpeza total via `Janitor`.
+- **2. Animação, Câmera, Áudio/Legenda, Servidor e `Config.Assets.Fuga`:**
+  - `Config.luau`: adicionados `Config.Assets.Fuga` (slots limpos `""` para `VoiceId`, `AnimationId`, flipbooks e SFX) e `Config.FugaTimeline`.
+  - `AnimatorModule.luau` & `CombatAnimator.luau`: animação de 6 fases em `Motor6D` com micro-tremor muscular procedural (`2.70s..3.30s`), pausa no ápice (`0.10s`), recuo explosivo e vibração residual do arco no braço esquerdo.
+  - `CinematicCamera.luau`: driver atualizado para `RenderStepped` (`dt`) com os 6 planos do `Fuga` (*Dutch Angle*, *Over-The-Shoulder* `FOV 62 -> 40`, coice `FOV 40 -> 90` e *Wide Low-Angle Crane Shot* olhando o pilar de `165 studs`).
+  - `SoundManager.luau`: legenda `「 竈  ·  FUGA 」` com tremor térmico, Doppler no voo, silêncio súbito na implosão e detonação termobárica em 4 camadas.
+  - `Moves.luau`, `BattleService.luau`, `VfxController.luau` e planilhas `Planilha_Personagens.xlsx` sincronizados (`Impact = 4.05`, `Length = 8.80`, `PostImpactHold = 3.10`), preservando 100% das regras de combate do Sukuna.
+
+**Testado**
+- `python scripts/sync_studio.py status` (`100% in sync` nos **114 scripts**) e `python scripts/sync_studio.py test` (`PASS`, incluindo smoke test de `FugaVFX` no `Test 17`).
+- Ciclo completo de `8.80s` executado nas 6 fases sobre o modelo real de `Sukuna` (`Done_AutoCleanup=0`, zero erros e restauração integral de `Lighting`).

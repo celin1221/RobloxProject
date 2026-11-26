@@ -22,6 +22,7 @@ local CinematicCamera = {}
 local activeJanitor: Janitor.JanitorInstance? = nil
 local trauma = 0.0
 local traumaDecay = 1.9
+local shakeFrequency = 26.0
 local fovPunchOffset = 0.0
 local fovPunchVel = 0.0
 local noiseSeed = math.random() * 100.0
@@ -95,32 +96,48 @@ local function restoreBattleBase()
 	end
 end
 
-local function samplePerlinShake(now: number, currentTrauma: number): CFrame
+local function samplePerlinShake(now: number, currentTrauma: number, freqOverride: number?): CFrame
 	if currentTrauma <= 0.001 or lowQuality() then
 		return CFrame.identity
 	end
 	local shakeAmt = currentTrauma * currentTrauma
-	local freq = 26.0
+	local freq = freqOverride or shakeFrequency
 	local nx = math.noise(now * freq, noiseSeed, 0.17) * 2.0
 	local ny = math.noise(now * freq, noiseSeed + 19.3, 0.53) * 2.0
 	local nz = math.noise(now * freq * 0.85, noiseSeed + 41.7, 0.91) * 2.0
-	local maxOffset = 1.35
-	local maxRollDeg = 3.8
+	local maxOffset = 1.55
+	local maxRollDeg = 4.2
 	return CFrame.new(nx * maxOffset * shakeAmt, ny * maxOffset * 0.85 * shakeAmt, 0)
 		* CFrame.Angles(
-			math.rad(ny * 1.1 * shakeAmt),
-			math.rad(nx * 1.1 * shakeAmt),
+			math.rad(ny * 1.2 * shakeAmt),
+			math.rad(nx * 1.2 * shakeAmt),
 			math.rad(nz * maxRollDeg * shakeAmt)
 		)
 end
 
-function CinematicCamera.AddTrauma(amount: number, decayRate: number?)
+function CinematicCamera.AddTrauma(amount: number, decayRate: number?, freq: number?)
 	if lowQuality() then
 		return
 	end
-	trauma = math.clamp(trauma + amount, 0, 1.25)
+	trauma = math.clamp(trauma + amount, 0, 1.35)
 	if decayRate then
 		traumaDecay = decayRate
+	end
+	if freq then
+		shakeFrequency = freq
+	end
+end
+
+function CinematicCamera.SetTrauma(value: number, decayRate: number?, freq: number?)
+	if lowQuality() then
+		return
+	end
+	trauma = math.clamp(value, 0, 1.35)
+	if decayRate then
+		traumaDecay = decayRate
+	end
+	if freq then
+		shakeFrequency = freq
 	end
 end
 
@@ -152,13 +169,16 @@ local function startSequence(
 
 	jan:Add(function()
 		trauma = 0
+		shakeFrequency = 26.0
 		fovPunchOffset = 0
 		fovPunchVel = 0
 		restoreBattleBase()
 	end)
 
-	local t0 = os.clock()
-	jan:Connect(RunService.Heartbeat, function(dt: number)
+	local elapsed = 0.0
+	local lastRenderTick = os.clock()
+
+	local function stepCamera(dt: number)
 		local curCam = workspace.CurrentCamera
 		if not curCam or curCam.CameraType ~= Enum.CameraType.Scriptable then
 			jan:Cleanup()
@@ -168,7 +188,8 @@ local function startSequence(
 			return
 		end
 
-		local elapsed = os.clock() - t0
+		local stepDt = math.clamp(dt, 0.0001, 0.25)
+		elapsed += stepDt
 		if elapsed >= duration then
 			jan:Cleanup()
 			if activeJanitor == jan then
@@ -177,9 +198,7 @@ local function startSequence(
 			return
 		end
 
-		local stepDt = math.min(dt, 0.05)
 		trauma = math.max(0, trauma - traumaDecay * stepDt)
-		-- Mola amortecida para FOV punch
 		local springForce = -fovPunchOffset * 58.0 - fovPunchVel * 12.5
 		fovPunchVel += springForce * stepDt
 		fovPunchOffset += fovPunchVel * stepDt
@@ -193,11 +212,26 @@ local function startSequence(
 		local dutchCF = if dutchDeg and math.abs(dutchDeg) > 0.01
 			then CFrame.Angles(0, 0, math.rad(dutchDeg))
 			else CFrame.identity
-		local shakeCF = samplePerlinShake(os.clock(), trauma)
+		local shakeCF = samplePerlinShake(elapsed, trauma, shakeFrequency)
 
 		curCam.CFrame = poseCF * dutchCF * shakeCF
-		curCam.FieldOfView = math.clamp(targetFov + fovPunchOffset, 30, 86)
-	end)
+		curCam.FieldOfView = math.clamp(targetFov + fovPunchOffset, 28, 96)
+	end
+
+	if RunService:IsClient() then
+		jan:Connect(RunService.RenderStepped, function(dt: number)
+			lastRenderTick = os.clock()
+			stepCamera(dt)
+		end)
+		-- Fallback seguro caso a janela do Studio esteja minimizada/sem foco
+		jan:Connect(RunService.Heartbeat, function(dt: number)
+			if os.clock() - lastRenderTick > 0.12 then
+				stepCamera(dt)
+			end
+		end)
+	else
+		jan:Connect(RunService.Heartbeat, stepCamera)
+	end
 end
 
 -- 1. DESMANTELAR: Close rapido no gesto -> chicote acompanhando o corte -> Dutch Angle + shake seco
@@ -398,80 +432,149 @@ function CinematicCamera.PlayDomainSlashTick(target: Model?)
 	end)
 end
 
--- 5. FUGA (Flecha de Fogo):
--- Fase 1 close nas palmas -> Fase 2 orbita ate over-the-shoulder alinhado com a flecha (FOV 70 -> 46)
--- -> Fase 3 tracking shot supersônico -> Fase 4 plano aberto epico no pilar termobarico + trauma shake pesado
+-- 5. FUGA (Chama Divina / Flecha de Fogo — Coreografia Cinematografica de 6 Fases, 0.00s a 8.80s):
+-- Fase 1 (0.00..1.45s): Corte seco para Close-Up extremo peito/maos (FOV 44), Dutch Angle 6° e Dolly Out lento acompanhando abertura
+-- Fase 2 (1.45..3.20s): Movimento orbital continuo da frente/rosto ate Over-The-Shoulder direito alinhado na flecha, FOV 62 -> 40
+-- Fase 3 (3.20..3.85s): Apice 0.10s -> em 3.30s coice instantaneo FOV 40 -> 90 + corte para Tracking Shot lateral-dianteiro supersônico
+-- Fase 4 (3.85..4.05s): Close tenso travado na implosao de vacuo (0.12s) + Duplo Impact Frame
+-- Fase 5 (4.05..7.20s): Corte brusco para Wide Low-Angle Crane Shot olhando para o pilar de ~165 studs + Trauma Shake violento decaindo
+-- Fase 6 (7.20..8.80s): Retorno suave ao enquadramento base da batalha sob a chuva de cinzas
 function CinematicCamera.PlayFuga(attacker: Model, target: Model, timing: { [string]: number }?)
 	local aRoot = rootOf(attacker)
 	local tRoot = rootOf(target) or aRoot
 	if not aRoot or not tRoot then
 		return
 	end
-	local p1End = 0.68
-	local relT = (timing and timing.Release) or 1.48
-	local impT = (timing and timing.Impact) or 2.08
-	local lenT = (timing and timing.Length) or 3.15
+
+	local TL = Config.FugaTimeline
+	local lenT = (timing and timing.Length) or TL.TotalDuration
 	local startPos = aRoot.Position
 	local endPos = tRoot.Position
+	local didLaunchKick = false
+	local didPillarBoom = false
 
 	startSequence(startPos, lenT, function(t: number, baseCF: CFrame, baseFov: number)
-		local aCF = aRoot.CFrame
-		local tgtPos = (if tRoot.Parent then tRoot.Position else endPos) + Vector3.new(0, 1.0, 0)
-		local aimVec = tgtPos - (aCF.Position + Vector3.new(0, 1.1, 0))
-		local aimDir = if aimVec.Magnitude > 0.05 then aimVec.Unit else aCF.LookVector
+		local curOrigin = if aRoot.Parent then aRoot.Position else startPos
+		local curTarget = if tRoot.Parent then tRoot.Position else endPos
+		local chestPos = curOrigin + Vector3.new(0, 0.85, 0)
+		local tgtChest = curTarget + Vector3.new(0, 0.95, 0)
+		local flatVec = Vector3.new(curTarget.X - curOrigin.X, 0, curTarget.Z - curOrigin.Z)
+		local aimDir = if flatVec.Magnitude > 0.05 then flatVec.Unit else aRoot.CFrame.LookVector
 		local right = aimDir:Cross(Vector3.yAxis)
-		right = if right.Magnitude > 0.05 then right.Unit else aCF.RightVector
+		right = if right.Magnitude > 0.05 then right.Unit else Vector3.xAxis
 
-		-- Fase 1: Close nas maos abrindo as chamas branco-douradas diante do rosto
-		local palmsFocus = aCF.Position + aimDir * 1.15 + Vector3.new(0, 1.05, 0)
-		local closeHandsCF = CFrame.lookAt(aCF.Position + aimDir * 3.2 + right * 1.45 + Vector3.new(0, 1.28, 0), palmsFocus)
+		if t < TL.Phase2BowStart then
+			-- FASE 1 (0.00s..1.45s): Corte seco Close-Up extremo peito/maos (FOV = 44), Dutch Angle 6°, Dolly Out lento
+			local a = math.clamp(t / TL.Phase2BowStart, 0, 1)
+			local smooth = a * a * (3 - 2 * a)
+			local dollyDist = 2.35 + smooth * 1.45
+			local camPos = chestPos + aimDir * dollyDist + right * (0.42 + smooth * 0.35) + Vector3.new(0, 0.18 + smooth * 0.16, 0)
+			local lookFocus = chestPos + Vector3.new(0, 0.12 + smooth * 0.22, 0)
+			return CFrame.lookAt(camPos, lookFocus), 44.0, 6.0 - smooth * 1.2
 
-		-- Fase 2: Orbita ate over-the-shoulder alinhado com a ponta incandescente da flecha (FOV 70 -> 46)
-		local otsPos = aCF.Position - aimDir * 3.35 + right * 1.38 + Vector3.new(0, 1.62, 0)
-		local arrowTipPos = aCF.Position + aimDir * 2.8 + Vector3.new(0, 1.18, 0)
-		local otsCF = CFrame.lookAt(otsPos, arrowTipPos:Lerp(tgtPos, 0.72))
-
-		if t < p1End then
-			local a = math.clamp(t / p1End, 0, 1)
-			local ease = 1 - (1 - a) ^ 3
-			return baseCF:Lerp(closeHandsCF, ease), baseFov + (46 - baseFov) * ease, 0
-		elseif t < relT then
-			local a = math.clamp((t - p1End) / math.max(0.12, relT - p1End), 0, 1)
+		elseif t < TL.Phase3ApexStart then
+			-- FASE 2 (1.45s..3.20s): Orbita continua da frente/lateral do rosto ate Over-The-Shoulder direito + FOV 62 -> 40!
+			local a = math.clamp((t - TL.Phase2BowStart) / (TL.Phase3ApexStart - TL.Phase2BowStart), 0, 1)
 			local ease = a * a * (3 - 2 * a)
-			-- Orbita ao redor do Sukuna enquanto fecha FOV de 70 -> 46!
-			local orbitAng = (1 - ease) * math.pi * 0.78
-			local midPos = aCF.Position
-				+ (aimDir * math.cos(orbitAng) * -3.5)
-				+ (right * (1.38 + math.sin(orbitAng) * 2.8))
-				+ Vector3.new(0, 1.55, 0)
-			local orbCF = CFrame.lookAt(midPos, arrowTipPos:Lerp(tgtPos, ease * 0.72))
-			local blendedCF = orbCF:Lerp(otsCF, ease)
-			local fov = 70 + (46 - 70) * ease
-			return blendedCF, fov, -2.5 * ease
-		elseif t < impT then
-			-- Fase 3: Tracking shot acompanhando o projetil supersônico de fogo!
-			local a = math.clamp((t - relT) / math.max(0.08, impT - relT), 0, 1)
-			local arrowPos = (aCF.Position + Vector3.new(0, 1.2, 0)):Lerp(tgtPos, a)
-			local trackPos = arrowPos - aimDir * 5.2 + right * 3.6 + Vector3.new(0, 1.45, 0)
-			local trackCF = CFrame.lookAt(trackPos, arrowPos + aimDir * 3.2)
-			return trackCF, 64 + 8 * a, -4.5
-		else
-			-- Fase 4: Hitstop (0.08s) -> Plano aberto epico no pilar colossal de fogo + retorno suave
-			local post = t - impT
-			local widePos = tgtPos - aimDir * 18.5 + right * 11.5 + Vector3.new(0, 5.4, 0)
-			local wideLook = tgtPos + Vector3.new(0, 5.2, 0)
-			local wideCF = CFrame.lookAt(widePos, wideLook)
-			if post < 0.08 then
-				-- Hitstop travado no impacto
-				local freezePos = tgtPos - aimDir * 6.5 + right * 4.2 + Vector3.new(0, 1.8, 0)
-				return CFrame.lookAt(freezePos, tgtPos), 44, -6.0
-			elseif post < 0.72 then
-				return wideCF, 66, -2.5
-			else
-				local a = math.clamp((post - 0.72) / math.max(0.15, (lenT - impT) - 0.72), 0, 1)
-				local ease = a * a * (3 - 2 * a)
-				return wideCF:Lerp(baseCF, ease), 66 + (baseFov - 66) * ease, -2.5 * (1 - ease)
+			local compressEase = 1 - (1 - a) ^ 2.6
+
+			-- Angulo orbital: sai da frente-direita (theta = 0.22*pi) e desliza suavemente para tras do ombro direito (theta = 0.88*pi)
+			local theta = (0.20 + ease * 0.68) * math.pi
+			local rad = 3.65 - ease * 0.35
+			local orbPos = curOrigin
+				+ aimDir * (math.cos(theta) * rad)
+				+ right * (math.sin(theta) * 2.35 + ease * 0.85)
+				+ Vector3.new(0, 1.42 + ease * 0.20, 0)
+
+			-- Plano exato Over-The-Shoulder direito alinhado ao longo da flecha ardente mirando no alvo
+			local otsPos = curOrigin - aimDir * 3.15 + right * 1.28 + Vector3.new(0, 1.54, 0)
+			local arrowShaftLook = (curOrigin + aimDir * 3.8 + Vector3.new(0, 1.18, 0)):Lerp(tgtChest, 0.78)
+			local faceFocus = headPosOf(attacker) + aimDir * 0.55
+
+			local orbCF = CFrame.lookAt(orbPos, faceFocus:Lerp(arrowShaftLook, ease))
+			local otsCF = CFrame.lookAt(otsPos, arrowShaftLook)
+			local finalCF = orbCF:Lerp(otsCF, ease * ease)
+
+			-- Tremor de tensao pura crescendo progressivamente na puxada maxima
+			local tensionTrauma = 0.06 + (a ^ 2.2) * 0.30
+			CinematicCamera.SetTrauma(tensionTrauma, 3.0, 38.0 + a * 16.0)
+
+			local fov = 62.0 + (40.0 - 62.0) * compressEase
+			return finalCF, fov, -2.5 * ease
+
+		elseif t < TL.LaunchTime then
+			-- FASE 3A (3.20s..3.30s): Pausa de tensao absoluta de 0.10s no apice (FOV travado em 40)
+			local otsPos = curOrigin - aimDir * 3.22 + right * 1.28 + Vector3.new(0, 1.54, 0)
+			local arrowShaftLook = (curOrigin + aimDir * 4.0 + Vector3.new(0, 1.18, 0)):Lerp(tgtChest, 0.82)
+			CinematicCamera.SetTrauma(0.36, 3.2, 54.0)
+			return CFrame.lookAt(otsPos, arrowShaftLook), 40.0, -2.8
+
+		elseif t < TL.Phase4ImplodeStart then
+			-- FASE 3B (3.30s..3.85s): Coice FOV 40 -> 90 + Corte para Tracking Shot lateral-dianteiro acompanhando a flecha!
+			if not didLaunchKick then
+				didLaunchKick = true
+				CinematicCamera.SetTrauma(0.92, 3.4, 42.0)
 			end
+			local flightSpan = TL.Phase4ImplodeStart - TL.LaunchTime
+			local u = math.clamp((t - TL.LaunchTime) / flightSpan, 0, 1)
+			local accelU = u ^ 1.35
+			local arrowStart = curOrigin + aimDir * 2.4 + Vector3.new(0, 1.18, 0)
+			local arrowNow = arrowStart:Lerp(tgtChest, accelU)
+
+			-- Primeiros 0.08s: explosao do coice no OTS (FOV 40 -> 90!), depois corte imediato pro Tracking Shot lateral-dianteiro!
+			if t - TL.LaunchTime < 0.075 then
+				local k = (t - TL.LaunchTime) / 0.075
+				local kickPos = curOrigin - aimDir * (3.22 + k * 1.4) + right * 1.35 + Vector3.new(0, 1.54, 0)
+				return CFrame.lookAt(kickPos, arrowNow + aimDir * 4.0), 40.0 + 50.0 * (1 - (1 - k) ^ 3), -5.5
+			end
+
+			-- Tracking Shot dinamico lateral-dianteiro escoltando o cometa de fogo ate o impacto!
+			local trackPos = arrowNow + aimDir * 2.8 + right * 4.65 + Vector3.new(0, 0.95, 0)
+			local trackLook = arrowNow:Lerp(tgtChest, 0.45)
+			local dynFov = 88.0 - u * 12.0
+			return CFrame.lookAt(trackPos, trackLook), dynFov, -6.5
+
+		elseif t < TL.Phase5PillarStart then
+			-- FASE 4 (3.85s..4.05s): Implosao de Vacuo & Hitstop (camera travada no ponto de colisao comprimindo!)
+			local a = math.clamp((t - TL.Phase4ImplodeStart) / (TL.Phase5PillarStart - TL.Phase4ImplodeStart), 0, 1)
+			CinematicCamera.SetTrauma(0.08 * (1 - a), 6.0, 20.0)
+			local impCamPos = tgtChest - aimDir * (5.6 - a * 1.1) + right * 3.4 + Vector3.new(0, 0.55, 0)
+			return CFrame.lookAt(impCamPos, tgtChest), 46.0 - a * 8.0, -7.5
+
+		elseif t < TL.Phase6AftermathStart then
+			-- FASE 5 (4.05s..7.20s): Corte brusco para Wide Low-Angle Crane Shot olhando para cima no pilar de ~165 studs!
+			local pTime = t - TL.Phase5PillarStart
+			if not didPillarBoom then
+				didPillarBoom = true
+				CinematicCamera.SetTrauma(1.32, 0.85, 34.0)
+			end
+			-- Primeiros 0.8s violentissimos (alta freq), depois decai organicamente em tremores lentos e pesados!
+			if pTime < 0.80 then
+				CinematicCamera.SetTrauma(math.max(trauma, 1.25 - pTime * 0.55), 0.95, 32.0 - pTime * 14.0)
+			else
+				local slowDecay = math.max(0.08, 0.72 * math.exp(-(pTime - 0.80) * 0.75))
+				CinematicCamera.SetTrauma(slowDecay, 0.8, 11.5)
+			end
+
+			local craneProgress = math.clamp(pTime / (TL.Phase6AftermathStart - TL.Phase5PillarStart), 0, 1)
+			local floorY = curTarget.Y - 2.6
+			local wideLowPos = Vector3.new(curTarget.X, floorY + 1.85 + craneProgress * 2.8, curTarget.Z)
+				- aimDir * (34.0 + craneProgress * 6.5)
+				+ right * (18.5 - craneProgress * 4.5)
+			-- Olha de baixo para cima acompanhando a escala colossal do pilar de 165 studs engolindo o ceu!
+			local lookUpHeight = 28.0 + math.min(1, pTime / 0.65) * 24.0 - craneProgress * 8.0
+			local wideLook = Vector3.new(curTarget.X, floorY + lookUpHeight, curTarget.Z)
+			return CFrame.lookAt(wideLowPos, wideLook), 74.0 - craneProgress * 4.0, -2.4 * (1 - craneProgress * 0.5)
+
+		else
+			-- FASE 6 (7.20s..8.80s): Retorno suave e cinematografico para a camera padrao da batalha enquanto as cinzas caem
+			local a = math.clamp((t - TL.Phase6AftermathStart) / math.max(0.15, lenT - TL.Phase6AftermathStart), 0, 1)
+			local ease = a * a * (3 - 2 * a)
+			local floorY = curTarget.Y - 2.6
+			local lastWidePos = Vector3.new(curTarget.X, floorY + 4.65, curTarget.Z) - aimDir * 40.5 + right * 14.0
+			local lastWideLook = Vector3.new(curTarget.X, floorY + 44.0, curTarget.Z)
+			local fromCF = CFrame.lookAt(lastWidePos, lastWideLook)
+			return fromCF:Lerp(baseCF, ease), 70.0 + (baseFov - 70.0) * ease, -1.2 * (1 - ease)
 		end
 	end)
 end

@@ -886,17 +886,9 @@ Moves.List = {
 		Target = "AllEnemies", BreaksProtect = true, CritChance = 0.22,
 		Hidden = true, DomainExclusive = true, Signature = true,
 		CustomCinematicCamera = true,
-		CutIn = true, Anim = "SukunaFuga", Vfx = "SukunaFuga",
-		CutInFocusY = 1.80, CutInFov = 44, CutInBannerY = 0.16,
-		CutInColors = {
-			Bg = Color3.fromRGB(16, 8, 6),
-			Grad1 = Color3.fromRGB(255, 116, 26),
-			Grad2 = Color3.fromRGB(48, 10, 8),
-			Stroke = Color3.fromRGB(255, 232, 168),
-			Text = Color3.fromRGB(255, 250, 236),
-			TextStroke = Color3.fromRGB(20, 6, 4),
-		},
-		Timing = { Charge = 0.24, Release = 1.48, Impact = 2.08, Length = 3.15 },
+		CutIn = false, Anim = "SukunaFuga", Vfx = "SukunaFuga",
+		PostImpactHold = 3.10,
+		Timing = { Charge = 0.02, Release = 3.20, Impact = 4.05, Length = 8.80 },
 	},
 
 	-- Golpe reserva usado so quando todos os golpes estao sem PP

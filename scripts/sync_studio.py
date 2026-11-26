@@ -741,7 +741,7 @@ local sukFolder = rs:FindFirstChild("Sukuna")
 assert(sukFolder, "Missing ReplicatedStorage.Sukuna folder")
 local sukClone = sukFolder:Clone()
 sukClone.Parent = sandbox
-for _, modName in ipairs({ "Config", "Janitor", "CinematicCamera", "SoundManager", "AnimatorModule", "MalevolentShrineEnv", "SukunaVFX" }) do
+for _, modName in ipairs({ "Config", "Janitor", "CinematicCamera", "SoundManager", "AnimatorModule", "MalevolentShrineEnv", "FugaVFX", "SukunaVFX" }) do
     local modInst = sukClone:FindFirstChild(modName)
     assert(modInst and modInst:IsA("ModuleScript"), "Missing Sukuna module: " .. modName)
     local reqMod = require(modInst)
@@ -750,6 +750,33 @@ for _, modName in ipairs({ "Config", "Janitor", "CinematicCamera", "SoundManager
     assert(not srcTxt:find("Enum.PartType.Ball", 1, true) and not srcTxt:find("Enum.PartType.Cylinder", 1, true) and not srcTxt:find("Enum.PartType.Wedge", 1, true),
         "Forbidden primitive shape found in Sukuna." .. modName)
 end
+local sukCfg = require(sukClone.Config)
+assert(sukCfg.Assets and sukCfg.Assets.Fuga and sukCfg.Assets.Fuga.VoiceId == "" and sukCfg.Assets.Fuga.AnimationId == "",
+    "Expected clean Config.Assets.Fuga slots defaulting to empty string")
+assert(sukCfg.FugaTimeline and sukCfg.FugaTimeline.TotalDuration == 8.80 and sukCfg.FugaTimeline.Phase5PillarStart == 4.05,
+    "Expected Config.FugaTimeline 0.00s..8.80s with Phase 5 pillar at 4.05s")
+-- Smoke-test FugaVFX.Play + FugaVFX.Cleanup (verifies 4-layer thermal stack, zero primitives & zero leaks)
+local sukVfxMod = require(sukClone.SukunaVFX)
+local dummyA = Instance.new("Model", sandbox)
+local hrpA = Instance.new("Part", dummyA)
+hrpA.Name = "HumanoidRootPart"; hrpA.Anchored = true; hrpA.CFrame = CFrame.new(0, 10, 0)
+dummyA.PrimaryPart = hrpA
+local dummyB = Instance.new("Model", sandbox)
+local hrpB = Instance.new("Part", dummyB)
+hrpB.Name = "HumanoidRootPart"; hrpB.Anchored = true; hrpB.CFrame = CFrame.new(0, 10, -24)
+dummyB.PrimaryPart = hrpB
+local vfxFolderBefore = workspace:FindFirstChild(sukCfg.WorkspaceFolderName)
+local countBefore = vfxFolderBefore and #vfxFolderBefore:GetChildren() or 0
+sukVfxMod.PlayFuga(dummyA, dummyB, { dummyB }, { Charge = 0.02, Release = 3.20, Impact = 4.05, Length = 8.80 })
+local vfxFolderMid = workspace:FindFirstChild(sukCfg.WorkspaceFolderName)
+assert(vfxFolderMid and #vfxFolderMid:GetChildren() > countBefore, "Expected FugaVFX.Play to spawn carriers in BattleVfx")
+for _, desc in ipairs(vfxFolderMid:GetDescendants()) do
+    if desc:IsA("Part") then
+        assert(desc.Shape == Enum.PartType.Block, "Forbidden non-Block Part shape in FugaVFX: " .. tostring(desc.Shape))
+    end
+end
+sukVfxMod.Cleanup()
+assert(#vfxFolderMid:GetChildren() == countBefore, "Expected 0 leaked instances in BattleVfx after SukunaVFX.Cleanup()")
 local sukOrder50 = Characters.DefaultActive("Sukuna", 50)
 assert(sukOrder50[1] == "Desmantelar" and sukOrder50[2] == "Clivar" and sukOrder50[3] == "Fortificacao" and sukOrder50[4] == "SantuarioMalevolente",
     "Expected Sukuna DefaultActive(50) exact order: Desmantelar, Clivar, Fortificacao, SantuarioMalevolente")

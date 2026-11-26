@@ -26,7 +26,9 @@ type KeyframeDef = {
 type AnimDef = {
 	Duration: number,
 	AssetSlot: string,
+	FugaCustomSlot: boolean?,
 	DashToTarget: boolean?,
+	FugaMuscleTremor: boolean?,
 	Keyframes: { KeyframeDef },
 }
 
@@ -312,66 +314,148 @@ local ANIM_DEFS: { [string]: AnimDef } = {
 		},
 	},
 
-	-- 5. FUGA (Flecha de Fogo):
-	-- Fase 1 aproxima e abre as palmas -> Fase 2 postura de arqueiro puxando o arco -> Fase 3 soltura com recuo
+	-- 5. FUGA (Chama Divina / Flecha de Fogo — Coreografia Cinematografica de 6 Fases, 0.00s a 8.80s):
+	-- Fase 1 (0.00..1.45s): Palmas juntas diante do peito, cabeca baixa -> em 0.45s afasta lentamente abrindo a fornalha + ergue olhar frio
+	-- Fase 2 (1.45..3.20s): Gira torso ~75° em postura firme de arqueiro, braco esq reto mirando o peito do alvo, dir puxando pesado + micro-tremor muscular
+	-- Fase 3 (3.20..3.85s): 0.10s pausa de tensao absoluta -> soltura explosiva em 3.30s com chicoteada de recuo e vibracao do braco esquerdo
+	-- Fases 4-6 (3.85..8.80s): Sustenta postura imponente diante do pilar termobarico e retorna limpo ao idle
 	SukunaFuga = {
-		Duration = 3.15,
+		Duration = 8.80,
 		AssetSlot = "FugaAnimId",
+		FugaCustomSlot = true,
+		FugaMuscleTremor = true,
 		Keyframes = {
 			kf(0.00, "Linear", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
-			-- Palmas unidas na frente do peito ("Fuga")
-			kf(0.24, "CubicOut", {
-				LowerTorso = degCF(-2, 0, 0, Vector3.new(0, -0.06, 0)),
-				UpperTorso = degCF(-4, 0, 0),
-				Head = degCF(-8, 0, 0),
-				RightUpperArm = degCF(68, 28, -34),
-				RightLowerArm = degCF(64, 0, 0),
-				LeftUpperArm = degCF(68, -28, 34),
-				LeftLowerArm = degCF(64, 0, 0),
+			-- 0.00s -> 0.42s: Posiciona as duas maos juntas diante do peito, palmas quase se tocando, cabeca inclinada para baixo
+			kf(0.38, "CubicOut", {
+				LowerTorso = degCF(-3, 0, 0, Vector3.new(0, -0.08, 0.04)),
+				UpperTorso = degCF(-6, 0, 0),
+				Head = degCF(-18, 0, 0),
+				RightUpperArm = degCF(70, 34, -38),
+				RightLowerArm = degCF(68, -8, 0),
+				RightHand = degCF(6, 0, 12),
+				LeftUpperArm = degCF(70, -34, 38),
+				LeftLowerArm = degCF(68, 8, 0),
+				LeftHand = degCF(6, 0, -12),
+				LeftUpperLeg = degCF(6, 0, -7),
+				RightUpperLeg = degCF(6, 0, 7),
 			}),
-			-- Abre as palmas devagar revelando a fornalha viva de fogo
-			kf(0.68, "SineInOut", {
-				LowerTorso = degCF(0, 0, 0, Vector3.new(0, -0.04, 0)),
-				UpperTorso = degCF(4, 0, 0),
-				Head = degCF(-4, 0, 0),
-				RightUpperArm = degCF(72, -12, 26),
-				RightLowerArm = degCF(34, 0, 0),
-				LeftUpperArm = degCF(72, 12, -26),
-				LeftLowerArm = degCF(34, 0, 0),
+			kf(0.45, "Linear", {
+				LowerTorso = degCF(-3, 0, 0, Vector3.new(0, -0.08, 0.04)),
+				UpperTorso = degCF(-6, 0, 0),
+				Head = degCF(-16, 0, 0),
+				RightUpperArm = degCF(70, 34, -38),
+				RightLowerArm = degCF(68, -8, 0),
+				RightHand = degCF(6, 0, 12),
+				LeftUpperArm = degCF(70, -34, 38),
+				LeftLowerArm = degCF(68, 8, 0),
+				LeftHand = degCF(6, 0, -12),
+				LeftUpperLeg = degCF(6, 0, -7),
+				RightUpperLeg = degCF(6, 0, 7),
 			}),
-			-- Gira em postura de arqueiro: braco esquerdo estendido mirando, direito puxando a corda incandescente!
-			kf(1.42, "CubicOut", {
-				LowerTorso = degCF(-6, -52, 0, Vector3.new(0, -0.24, 0.14)),
-				UpperTorso = degCF(-4, -36, 0),
-				Head = degCF(4, 78, 0),
-				LeftUpperArm = degCF(94, 58, -8),
+			-- 0.45s -> 1.42s: Afasta as maos lentamente abrindo a porta invisivel da fornalha e ergue o olhar frio para o inimigo!
+			kf(1.42, "SineInOut", {
+				LowerTorso = degCF(0, 0, 0, Vector3.new(0, -0.05, 0)),
+				UpperTorso = degCF(5, 0, 0),
+				Head = degCF(3, 0, 0),
+				RightUpperArm = degCF(76, -18, 34),
+				RightLowerArm = degCF(28, 0, 0),
+				RightHand = degCF(-8, 0, -10),
+				LeftUpperArm = degCF(76, 18, -34),
+				LeftLowerArm = degCF(28, 0, 0),
+				LeftHand = degCF(-8, 0, 10),
+				LeftUpperLeg = degCF(8, 0, -9),
+				RightUpperLeg = degCF(8, 0, 9),
+			}),
+			-- 1.45s -> 2.02s: Gira o torso ~75° de lado em postura firme de arqueiro, braco esquerdo reto apontando no alvo!
+			kf(2.02, "CubicOut", {
+				LowerTorso = degCF(-6, -64, 0, Vector3.new(0, -0.28, 0.08)),
+				UpperTorso = degCF(-4, -14, 0),
+				Head = degCF(4, 76, 0),
+				LeftUpperArm = degCF(92, 72, -4),
+				LeftLowerArm = degCF(2, 0, 0),
+				LeftHand = degCF(0, 0, -6),
+				RightUpperArm = degCF(88, 32, -12),
+				RightLowerArm = degCF(42, 0, 0),
+				RightHand = degCF(0, -8, 6),
+				LeftUpperLeg = degCF(28, 0, -12),
+				LeftLowerLeg = degCF(-26, 0, 0),
+				RightUpperLeg = degCF(-24, 0, 12),
+				RightLowerLeg = degCF(-8, 0, 0),
+			}),
+			-- 2.02s -> 3.20s: Puxada pesada progressiva ate proximo ao rosto/ombro direito (curva CubicOut desacelerando sob tensao extrema!)
+			kf(3.20, "CubicOut", {
+				LowerTorso = degCF(-8, -66, 0, Vector3.new(0, -0.34, 0.16)),
+				UpperTorso = degCF(-4, -16, 2),
+				Head = degCF(5, 80, -2),
+				LeftUpperArm = degCF(93, 74, -4),
+				LeftLowerArm = degCF(2, 0, 0),
+				LeftHand = degCF(0, 0, -8),
+				RightUpperArm = degCF(95, -28, 34),
+				RightLowerArm = degCF(108, 0, 0),
+				RightHand = degCF(-4, -14, 12),
+				LeftUpperLeg = degCF(32, 0, -13),
+				LeftLowerLeg = degCF(-30, 0, 0),
+				RightUpperLeg = degCF(-28, 0, 13),
+				RightLowerLeg = degCF(-10, 0, 0),
+			}),
+			-- 3.20s -> 3.30s: Pausa de tensao absoluta de 0.10s no apice da puxada!
+			kf(3.30, "Linear", {
+				LowerTorso = degCF(-8, -66, 0, Vector3.new(0, -0.34, 0.16)),
+				UpperTorso = degCF(-4, -16, 2),
+				Head = degCF(5, 80, -2),
+				LeftUpperArm = degCF(93, 74, -4),
+				LeftLowerArm = degCF(2, 0, 0),
+				LeftHand = degCF(0, 0, -8),
+				RightUpperArm = degCF(95, -28, 34),
+				RightLowerArm = degCF(108, 0, 0),
+				RightHand = degCF(-4, -14, 12),
+				LeftUpperLeg = degCF(32, 0, -13),
+				LeftLowerLeg = degCF(-30, 0, 0),
+				RightUpperLeg = degCF(-28, 0, 13),
+				RightLowerLeg = degCF(-10, 0, 0),
+			}),
+			-- 3.30s -> 3.45s: Soltura explosiva! Braco direito chicoteia para tras e tronco absorve o coice violento!
+			kf(3.45, "ExpoOut", {
+				LowerTorso = degCF(8, -54, 0, Vector3.new(0, -0.22, 0.58)),
+				UpperTorso = degCF(18, -14, -5),
+				Head = degCF(-8, 66, 3),
+				LeftUpperArm = degCF(104, 62, -10),
 				LeftLowerArm = degCF(6, 0, 0),
-				RightUpperArm = degCF(92, -22, 28),
-				RightLowerArm = degCF(96, 0, 0),
-				LeftUpperLeg = degCF(24, 0, -10),
-				RightUpperLeg = degCF(-24, 0, 10),
-			}),
-			-- Disparo brusco com recuo violento do braco direito!
-			kf(1.58, "ExpoOut", {
-				LowerTorso = degCF(6, -38, 0, Vector3.new(0, -0.18, 0.48)),
-				UpperTorso = degCF(14, -24, 0),
-				Head = degCF(-6, 58, 0),
-				LeftUpperArm = degCF(108, 48, -12),
-				LeftLowerArm = degCF(8, 0, 0),
-				RightUpperArm = degCF(104, -38, 48),
+				LeftHand = degCF(10, 0, -12),
+				RightUpperArm = degCF(112, -58, 64),
 				RightLowerArm = degCF(16, 0, 0),
-				LeftUpperLeg = degCF(18, 0, -8),
-				RightUpperLeg = degCF(-20, 0, 8),
+				RightHand = degCF(-18, 0, 22),
+				LeftUpperLeg = degCF(22, 0, -10),
+				LeftLowerLeg = degCF(-16, 0, 0),
+				RightUpperLeg = degCF(-26, 0, 12),
 			}),
-			-- Sustenta a postura observando o pilar colossal de fogo
-			kf(2.45, "QuadOut", {
-				LowerTorso = degCF(2, -24, 0, Vector3.new(0, -0.08, 0.24)),
-				UpperTorso = degCF(6, -16, 0),
-				Head = degCF(-2, 36, 0),
-				LeftUpperArm = degCF(92, 34, -8),
-				RightUpperArm = degCF(68, -18, 28),
+			-- 3.45s -> 4.25s: Estabiliza o recuo observando friamente a implosao e a detonacao do pilar colossal
+			kf(4.25, "QuadOut", {
+				LowerTorso = degCF(3, -38, 0, Vector3.new(0, -0.14, 0.34)),
+				UpperTorso = degCF(8, -12, -2),
+				Head = degCF(-2, 48, 0),
+				LeftUpperArm = degCF(86, 46, -12),
+				LeftLowerArm = degCF(14, 0, 0),
+				RightUpperArm = degCF(58, -28, 38),
+				RightLowerArm = degCF(28, 0, 0),
+				LeftUpperLeg = degCF(14, 0, -8),
+				RightUpperLeg = degCF(-16, 0, 8),
 			}),
-			kf(3.15, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+			-- 4.25s -> 7.20s: Postura soberana banhada pelo clarao do pilar termobarico
+			kf(7.20, "SineInOut", {
+				LowerTorso = degCF(2, -24, 0, Vector3.new(0, -0.06, 0.16)),
+				UpperTorso = degCF(5, -8, 0),
+				Head = degCF(2, 32, 0),
+				LeftUpperArm = degCF(36, 18, -16),
+				LeftLowerArm = degCF(22, 0, 0),
+				RightUpperArm = degCF(24, -12, 18),
+				RightLowerArm = degCF(20, 0, 0),
+				LeftUpperLeg = degCF(8, 0, -6),
+				RightUpperLeg = degCF(-8, 0, 6),
+			}),
+			-- 7.20s -> 8.80s: Retorno suave a postura neutra enquanto as cinzas caem
+			kf(8.80, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
 		},
 	},
 }
@@ -497,8 +581,11 @@ function AnimatorModule.Play(
 	local jan = Janitor.new()
 	activeAnimJanitors[model] = jan
 
-	-- 1. Verifica se ha AnimationId customizado em Config.Assets
+	-- 1. Verifica se ha AnimationId customizado em Config.Assets.Fuga.AnimationId ou Config.Assets
 	local customAssetId = (Config.Assets :: any)[def.AssetSlot] :: string?
+	if def.FugaCustomSlot and Config.Assets.Fuga and Config.HasCustomAsset(Config.Assets.Fuga.AnimationId) then
+		customAssetId = Config.Assets.Fuga.AnimationId
+	end
 	if Config.HasCustomAsset(customAssetId) then
 		local hum = model:FindFirstChildOfClass("Humanoid")
 		local animator = hum and hum:FindFirstChildOfClass("Animator")
@@ -598,7 +685,7 @@ function AnimatorModule.Play(
 		local now = os.clock()
 		local hsUntil = hitstopUntilByModel[model] or 0
 		if now >= hsUntil then
-			elapsed += math.min(dt, 0.05) * timeScale
+			elapsed += math.clamp(dt, 0.0001, 0.25) * timeScale
 		end
 
 		if elapsed >= animDur then
@@ -627,6 +714,27 @@ function AnimatorModule.Play(
 			local c1 = k1.joints[jName] or CFrame.identity
 			pose[jName] = c0:Lerp(c1, alpha)
 		end
+
+		-- Micro-tremor muscular procedural nos ultimos 0.5s da puxada (2.70s..3.30s) + vibracao do arco no braco esq pos-soltura (3.30s..3.68s)
+		if def.FugaMuscleTremor then
+			if elapsed >= 2.70 and elapsed <= 3.30 then
+				local strain = math.clamp((elapsed - 2.70) / 0.50, 0.25, 1.0)
+				local jx = math.noise(elapsed * 46, 7.1, 0) * 2.4 * strain
+				local jy = math.sin(elapsed * 88) * 1.65 * strain
+				local jz = math.noise(elapsed * 52, 19.4, 0) * 2.1 * strain
+				pose.RightUpperArm = (pose.RightUpperArm or CFrame.identity) * degCF(jx, jy, jz)
+				pose.RightLowerArm = (pose.RightLowerArm or CFrame.identity) * degCF(jy * 1.2, 0, jx * 0.8)
+				pose.RightHand = (pose.RightHand or CFrame.identity) * degCF(jz, jx, jy)
+				pose.LeftUpperArm = (pose.LeftUpperArm or CFrame.identity) * degCF(jx * 0.45, jy * 0.35, -jz * 0.45)
+				pose.LeftHand = (pose.LeftHand or CFrame.identity) * degCF(-jy * 0.6, 0, jx * 0.6)
+			elseif elapsed > 3.30 and elapsed <= 3.68 then
+				local decay = 1 - ((elapsed - 3.30) / 0.38)
+				local vib = math.sin((elapsed - 3.30) * 96) * 3.2 * decay * decay
+				pose.LeftUpperArm = (pose.LeftUpperArm or CFrame.identity) * degCF(vib, vib * 0.5, -vib * 0.7)
+				pose.LeftLowerArm = (pose.LeftLowerArm or CFrame.identity) * degCF(vib * 0.8, 0, 0)
+			end
+		end
+
 		local lockNeck = model:GetAttribute("LockNeckHair") == true
 		applyPose(joints, isIPose, lockNeck, pose)
 

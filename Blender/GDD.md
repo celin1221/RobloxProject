@@ -442,5 +442,6 @@ Decisões em aberto: nome do jogo; troca de personagens entre jogadores; validar
 * **Limite de PP:** `Santuário Malevolente` possui **`1 PP` por partida** (`OncePerBattle = true`), permanecendo em `0/1 PP` até o fim do confronto e não podendo ser restaurado por itens `RestorePP`.
 * **Duração e Sangramento:** Permanece ativo por **2 rodadas completas**; aplica **15% do HP Máximo** em dano garantido de cortes/sangramento nos oponentes ativos na invocação e ao final de cada uma das 2 rodadas.
 * **Moveset Exclusivo no Domínio:** Durante as 2 rodadas ativas do Santuário, as 4 habilidades padrão ficam bloqueadas/ocultas e o Sukuna dispõe exclusivamente de **`Fuga`** (*Flecha de Fogo*, área `AllEnemies`, `BreaksProtect = true`). Ao encerrar a 2ª rodada (ou caso o Sukuna desmaie), o cenário retorna ao normal e os 4 golpes padrão são restaurados na HUD.
+* **Coreografia Cinematográfica de `Fuga` (`0.00s`–`8.80s`):** 6 fases sincronizadas em `RenderStepped` (`FugaVFX.luau`) — abertura da fornalha e legenda `「 竈  ·  FUGA 」`, postura lateral de arqueiro tensionando arco/corda/flecha de `Beam`s vivos com sucção térmica de `20 studs`, disparo supersônico com 4 `Trail`s e rastro queimado no piso, implosão de vácuo com duplo Impact Frame e detonação do pilar termobárico colossal de `~165 studs` encerrando em chuva de cinzas.
 
 

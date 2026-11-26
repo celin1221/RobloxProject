@@ -39,7 +39,7 @@ flowchart TD
 
 ## 2. Mapa Completo da Árvore de Código (`src/` ↔ Roblox Studio)
 
-Todos os **113 scripts ativos** do projeto estão extraídos, modularizados e sincronizados na pasta `src/`:
+Todos os **114 scripts ativos** do projeto estão extraídos, modularizados e sincronizados na pasta `src/`:
 
 ### 2.1. `src/shared/` → `ReplicatedStorage`
 | Caminho em `src/shared/` | Instância no Studio | Papel Arquitetural |
@@ -52,7 +52,7 @@ Todos os **113 scripts ativos** do projeto estão extraídos, modularizados e si
 | **`UI.luau`, `UIKit.luau`, `UITheme.luau`, `TeamCards.luau`, `RadarChart.luau`, `SummonBannerStage.luau`** | `ReplicatedStorage.*` | **Design System Midnight-Blue Anime & Palco 3D**: construção programática de telas em escala (`Scale`), paleta azul-noturno, brilho diagonal `UI.sheen` (38°), botões com afundamento 3D, 100% ícones personalizados (`UI.Icons`), cards 3D, gráfico de radar e palco 3D ao vivo de invocação. |
 | **`CombatAnimator.luau`, `VfxController.luau`, `VariantController.luau`** | `ReplicatedStorage.*` | Animações procedurais 60 FPS em `Motor6D`, execução de efeitos visuais em 3 fases (`Charge`, `Release`, `Impact`) e aplicação visual de variantes (`Brilhante`, `Ouro`, `Rubi`, etc.). |
 | **`HollowPurple/*.luau` (7 arquivos)** | `ReplicatedStorage.HollowPurple.*` | Sistema modular AAA do *Vazio Roxo* (`Config`, `Janitor`, `LightningModule`, `DebrisModule`, `CameraEffects`, `LightingEffects`, `HollowPurpleVFX`). |
-| **`Sukuna/*.luau` (7 arquivos)** | `ReplicatedStorage.Sukuna.*` | Sistema modular AAA de *Ryomen Sukuna* (`Config`, `Janitor`, `CinematicCamera`, `SoundManager`, `AnimatorModule`, `MalevolentShrineEnv`, `SukunaVFX`) — câmera cinematográfica, legendas sincronizadas, Santuário Malevolente 3D e Flecha de Fogo Termobárica (*Fuga*). |
+| **`Sukuna/*.luau` (8 arquivos)** | `ReplicatedStorage.Sukuna.*` | Sistema modular AAA de *Ryomen Sukuna* (`Config`, `Janitor`, `CinematicCamera`, `SoundManager`, `AnimatorModule`, `MalevolentShrineEnv`, `FugaVFX`, `SukunaVFX`) — câmera cinematográfica em `RenderStepped`, legendas sincronizadas, Santuário Malevolente 3D e Rework AAA de 6 fases (`0.00s..8.80s`) da Chama Divina (*Fuga*). |
 
 ### 2.2. `src/server/` → `ServerScriptService`
 | Subpasta / Módulo | Instância no Studio | Responsabilidade no Servidor |

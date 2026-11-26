@@ -2304,12 +2304,12 @@ local ANIMATIONS: { [string]: any } = {
 		},
 	},
 
-	-- 46. SUKUNA FUGA (Flecha de Fogo exclusiva do Dominio — delegada ao Sukuna/AnimatorModule)
+	-- 46. SUKUNA FUGA (Chama Divina / Flecha de Fogo 6 Fases — delegada ao Sukuna/AnimatorModule)
 	SukunaFuga = {
-		Duration = 3.15,
+		Duration = 8.80,
 		Keyframes = {
 			kf(0.00, "Linear", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
-			kf(3.15, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+			kf(8.80, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
 		},
 	},
 }

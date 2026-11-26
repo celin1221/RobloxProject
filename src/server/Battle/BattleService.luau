@@ -281,6 +281,9 @@ local function present(session, events)
 			if not clientMove or isSecondarySpreadHit then
 				ArenaManager.ImpactBurst(model, TypeChart.Color[ev.MoveType] or Color3.new(1, 1, 1))
 			end
+			if clientMove and typeof(clientMove.PostImpactHold) == "number" and not isSecondarySpreadHit then
+				delay = math.max(delay, clientMove.PostImpactHold)
+			end
 		elseif ev.Kind == "StatusDamage" and model then
 			CharacterLibrary.Play(model, "Hit")
 			ArenaManager.ImpactBurst(model, if ev.Status == "Burn" then Color3.fromRGB(255, 110, 40) else Color3.fromRGB(160, 70, 200))
