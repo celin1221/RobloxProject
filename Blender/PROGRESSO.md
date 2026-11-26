@@ -1543,3 +1543,12 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 **Testado**
 - `python scripts/sync_studio.py status` (`100% in sync` nos **114 scripts**) e `python scripts/sync_studio.py test` (`PASS`, incluindo smoke test de `FugaVFX` no `Test 17`).
 - Ciclo completo de `8.80s` executado nas 6 fases sobre o modelo real de `Sukuna` (`Done_AutoCleanup=0`, zero erros e restauração integral de `Lighting`).
+
+
+## Remoção do Dummy de Teste do `Vazio Roxo` na Praça (26/11/2026)
+
+**Feito**
+- Desativado `Config.SpawnStudioTestDummy = false` em `src/shared/HollowPurple/Config.luau` e removido o bloco automático de criação do `HollowPurpleDummy` (`"Alvo Vazio Roxo [R]"`, `CFrame.new(0, 11.5, 42)` em frente à Torre) em `src/server/HollowPurpleServer.server.luau`.
+
+**Testado**
+- `python scripts/sync_studio.py status` (`100% in sync` nos **114 scripts**) e `python scripts/sync_studio.py test` (`PASS`).

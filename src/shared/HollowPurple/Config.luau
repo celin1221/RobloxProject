@@ -34,7 +34,7 @@ local Config = {
 	OrientCasterToAim = true,
 	RequireSeteroInParty = false, -- false permite testar imediatamente com R no Play Mode
 	AlsoAnimateSeteroFollower = true, -- se o seguidor ativo for Setero, ele conjura junto!
-	SpawnStudioTestDummy = true, -- cria um Dummy de teste na praca no Studio para testar dano/knockback na hora
+	SpawnStudioTestDummy = false, -- desativado: sem Dummy de teste na praca/frente da torre
 	AllowPvPFreeRoam = false, -- protege outros jogadores fora de arenas PvP
 
 	-- Culling de distancia no cliente (otimizacao FPS)
