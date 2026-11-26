@@ -1495,3 +1495,32 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
   - `SummonGui.BannerTab_JujutsuKaisen=true`, `JujutsuStageFeatured=Nanami, Gojo, Fushiguro`, `TowerGui.Gym_JujutsuKaisen=true`.
   - Avatar do jogador caminhou ao vivo de fora (`Z=-141`) atravessando toda a passagem secreta até o altar na caverna (`FinalDistToAltarPedestal=8.3 <= 12`, zero bloqueios/travamentos).
 - Place salvo no Roblox Studio na **versão 349** (`TeamCreate`).
+
+
+## Sistema Completo de Regras, Domínio, `Fuga`, VFX/Câmera/SFX AAA do `Sukuna` & Correção de Corte de VFX nas Arenas (25/11/2026)
+
+**Feito**
+- **1. Auditoria e Regras Autoritativas de Gameplay do `Sukuna` (`Characters.luau`, `Moves.luau`, `BattleEngine.luau`, `AIController.luau`, `ProgressionService.luau`, `BattleService.luau`, `BattleClient.client.luau`):**
+  - Moveset padrão Nv. 50 ordenado exatamente em **`1. Desmantelar`, `2. Clivar`, `3. Fortificação`, `4. Santuário Malevolente`** (`DefaultOrder`).
+  - `SantuarioMalevolente` configurado com **`PP = 1`** e **`OncePerBattle = true`**, bloqueando recarga por itens `RestorePP` (`Éter`) durante toda a partida e iniciando sempre em `1/1 PP` a cada nova batalha.
+  - Estado autoritativo de Domínio (`SideEffects.MalevolentShrine = 2` + chip `SANTUÁRIO Xt` na HUD): permanece ativo por **exatamente 2 rodadas completas** após a invocação (ou encerra antes se o Sukuna desmaiar/sair de campo sem outro Sukuna ativo).
+  - Sangramento/cortes automáticos (`_ApplyDomainSlash`): causa **15% do HP Máximo** nos oponentes ativos imediatamente na invocação e ao final de cada uma das **2 rodadas ativas** (`DomainStart`, `DomainSlash`, `DomainEnd`).
+  - Troca exclusiva de moveset no Domínio (`_SetSukunaDomainMoves`): enquanto o Santuário estiver ativo, os 4 golpes padrão ficam bloqueados/ocultos e o Sukuna passa a ter **apenas `Fuga`** (`Power = 98`, `Target = "AllEnemies"`, `BreaksProtect = true`, centralizado na HUD). Ao fim das 2 rodadas, os 4 golpes padrão retornam com `Santuário Malevolente` travado em `0/1 PP`.
+- **2. Camada Audiovisual Modular AAA (`src/shared/Sukuna/*.luau` → `ReplicatedStorage/Sukuna/*`, `--!strict`, Zero Cones/Esferas/Cilindros):**
+  - `Config.luau`: tabela `Config.Assets` organizada para vozes (*Ryōiki Tenkai*, *Fukuma Mizushi*, *Fuga*), `AnimationId`s e flipbooks/texturas, com fallbacks nativos imediatos e paletas térmicas reais.
+  - `Janitor.luau`: limpeza determinística de instâncias, conexões, tweens, threads e restauração integral de `Camera`, `Lighting`, `Sky` e `Atmosphere`.
+  - `CinematicCamera.luau`: close-ups (`FOV 48`), 3 cortes secos de anime no *Clivar*, contra-plongée orbital na *Fortificação*, *crane shot* épico no *Santuário*, plano *over-the-shoulder* de arqueiro (`FOV 70 -> 46`) + *tracking shot* supersônico + plano aberto termobárico no *Fuga* e *Perlin Trauma Shake*.
+  - `SoundManager.luau`: abafamento low-pass (`EqualizerSoundEffect`), SFX multicamadas e vozes sincronizadas com legendas cinematográficas estilizadas (**"Ryōiki Tenkai..."**, **"Fukuma Mizushi"**, **"Fuga"**).
+  - `AnimatorModule.luau` (+ ponte em `CombatAnimator.luau`): suporte a `AnimationId` customizado com fallback procedural 60 FPS em `Motor6D` nos 5 golpes (incluindo avanço físico com *afterimage* escura no *Clivar*, selo *Enmaten* no *Santuário* e postura de arqueiro com recuo no *Fuga*).
+  - `MalevolentShrineEnv.luau` & `SukunaVFX.luau` (+ ponte em `VfxController.luau`): céu vermelho-sangue, piso escuro reflexivo opaco com névoa, arquitetura 3D monumental do **Santuário Malevolente** (telhados curvos de pagode, pilares carmesim, mandíbulas/presas, crânios e chifres), cortes 3D no espaço e arco/flecha + pilar termobárico volumétrico do **Fuga** 100% em `ParticleEmitter`s, `Beam`s e `Trail`s.
+- **3. Investigação e Correção Definitiva do Corte Horizontal de VFX nas Arenas (`Workspace.Arenas.Arena01..Arena10`, `_ConstrutorArenasSukuna.luau`, `ArenaManager.luau`):**
+  - Diagnosticada e corrigida a falha de Z-sorting do motor do Roblox onde `AbyssVignetteDecal` em `InfiniteAbyssVignette` (`Transparency = 1`, `358.8 x 358.8`) e `LiquidReflectionDecal` em `WaterSurfaceReflection` (`Transparency = 1`) ordenavam na frente das partículas do lado inimigo, cortando auras e efeitos na linha do horizonte.
+  - Aplicada a vinheta (`ZIndex = 2`) diretamente sobre o piso opaco `InfiniteMirrorWater` (`Transparency = 0`, G-buffer) nas 10 arenas existentes, no construtor `_ConstrutorArenasSukuna.luau` e na proteção automática `sanitizeArenaFloorDecals` em `ArenaManager.luau`.
+- **4. Códigos Dev Nv. 50 Adicionais, Planilhas Excel e `Test 17`:**
+  - Adicionados códigos `BYAKUYA50` / `DEVBYAKUYA50`, `SAN50` / `GOKU50` / `DEVSAN50` e `BARBABRANCA50` / `DEVBARBABRANCA50` em `src/server_storage/Codes.luau`.
+  - `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` atualizadas (**29 personagens ativos + 2 protótipos | 102 ataques únicos | 21 passivas | 337 vínculos**).
+  - Adicionado **Test 17** em `scripts/sync_studio.py` validando todas as 6 regras do Sukuna, `Fuga` e os 7 módulos AAA sem primitivos proibidos.
+
+**Testado (Play Mode ao vivo + Captura Visual Antes/Depois + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos **113 scripts**) e `python scripts/sync_studio.py test` (`PASS: ... Domain/Fuga + JujutsuBanner + 102 Animated Moves + UI Guardrails`).
+- Verificado visualmente por captura de câmera nas arenas que o corte horizontal nas partículas desapareceu 100%, e validado em Play Mode pelo usuário (`0` erros de script no Console).

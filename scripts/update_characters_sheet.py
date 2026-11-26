@@ -78,10 +78,10 @@ DEV_META: dict[str, dict[str, str]] = {
         "Stage": "Concluído (100%)",
         "HasModel": "Sim",
         "Rig": "R6-on-R15 (Auto-Tripo + Aura Partículas Puras)",
-        "Anim": "Sim (CombatAnimator 60 FPS + 4 golpes)",
-        "VfxCutIn": "Sim / Sim (3 Cut-Ins)",
+        "Anim": "Sim (AnimatorModule 60 FPS + 5 golpes incl. Fuga)",
+        "VfxCutIn": "Sim / Sim (Sukuna AAA + Santuário 3D + Fuga)",
         "Shiny": "Sim (Paleta + Aura)",
-        "Notes": "Raridade SECRETO (0,001% em qualquer banner Nv. 15+); BST 162 (> Lendários); Fortificação, Desmantelar, Clivar e Santuário Malevolente (Nv. 50)",
+        "Notes": "Raridade SECRETO (0,001% Nv. 15+); BST 162; Desmantelar, Clivar, Fortificação, Santuário Malevolente (1 PP / 2 rodadas / 15% sangramento) e Fuga exclusivo no Domínio",
     },
     "San": {
         "Stage": "Concluído (100%)",

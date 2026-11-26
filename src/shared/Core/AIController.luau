@@ -50,7 +50,20 @@ local function pickSmartRandom(battler, usable, rng: Random): number
 	return usable[rng:NextInteger(1, #usable)]
 end
 
--- Procura um golpe de cura ou purificacao util para a IA Dificil
+-- Procura um golpe de cura, purificacao ou Expansao de Dominio util para a IA
+local function pickDomainMove(battler, usable): number?
+	if battler._StandardMoves ~= nil then
+		return nil
+	end
+	for _, i in ipairs(usable) do
+		local move = Moves.Get(battler.Moves[i].Id)
+		if move and move.Effect and move.Effect.Kind == "DomainExpansion" then
+			return i
+		end
+	end
+	return nil
+end
+
 local function pickSupportMove(battler, usable): number?
 	if battler.Hp / math.max(1, battler.MaxHp) < 0.45 then
 		for _, i in ipairs(usable) do
@@ -158,6 +171,10 @@ function AIController.ChooseAction(level: string, self, foe, rng: Random, team, 
 	if level == "Facil" then
 		index = randomPick()
 	elseif level == "Dificil" then
+		local domIdx = pickDomainMove(self, usable)
+		if domIdx then
+			return { Kind = "Move", Index = domIdx }
+		end
 		local supportIdx = pickSupportMove(self, usable)
 		if supportIdx then
 			return { Kind = "Move", Index = supportIdx }
@@ -172,6 +189,10 @@ function AIController.ChooseAction(level: string, self, foe, rng: Random, team, 
 		end
 		index = bestDamage(self, foe, usable)
 	else -- "Medio"
+		local domIdx = pickDomainMove(self, usable)
+		if domIdx and rng:NextNumber() < 0.75 then
+			return { Kind = "Move", Index = domIdx }
+		end
 		if rng:NextNumber() < AIController.MEDIUM_BEST_CHANCE then
 			index = bestDamage(self, foe, usable)
 		else
@@ -277,7 +298,10 @@ function AIController.ChooseActionsDouble(level: string, ownSide, foeSide, rng: 
 				end
 
 				local moveIdx, targetSlot = pickSmartRandom(battler, usable, rng), defaultTargetSlot
-				if level == "Dificil" then
+				local domIdx = pickDomainMove(battler, usable)
+				if domIdx and (level == "Dificil" or (level == "Medio" and rng:NextNumber() < 0.75)) then
+					moveIdx, targetSlot = domIdx, defaultTargetSlot
+				elseif level == "Dificil" then
 					local supportIdx = pickSupportMove(battler, usable)
 					if supportIdx then
 						moveIdx, targetSlot = supportIdx, defaultTargetSlot

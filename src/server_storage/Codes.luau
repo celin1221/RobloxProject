@@ -28,6 +28,8 @@ return {
 
 	BARBABRANCA = { Character = "BarbaBranca", Level = 10, Repeatable = true },
 	DEVBARBABRANCA = { Character = "BarbaBranca", Level = 10, Repeatable = true },
+	BARBABRANCA50 = { Character = "BarbaBranca", Level = 50, Repeatable = true },
+	DEVBARBABRANCA50 = { Character = "BarbaBranca", Level = 50, Repeatable = true },
 
 	ONEPIECE = {
 		Characters = { "Nami", "Usopp", "Zoro", "Sanji", "Luffy", "BarbaBranca" },
@@ -90,6 +92,8 @@ return {
 
 	BYAKUYA = { Character = "Byakuya", Level = 10, Repeatable = true },
 	DEVBYAKUYA = { Character = "Byakuya", Level = 10, Repeatable = true },
+	BYAKUYA50 = { Character = "Byakuya", Level = 50, Repeatable = true },
+	DEVBYAKUYA50 = { Character = "Byakuya", Level = 50, Repeatable = true },
 
 	BLEACH = {
 		Characters = { "Chad", "Uryu", "Rukia", "Renji", "Ichigo", "Byakuya" },
@@ -106,6 +110,9 @@ return {
 	SAN = { Character = "San", Level = 10, Repeatable = true },
 	GOKU = { Character = "San", Level = 10, Repeatable = true },
 	DEVSAN = { Character = "San", Level = 10, Repeatable = true },
+	SAN50 = { Character = "San", Level = 50, Repeatable = true },
+	GOKU50 = { Character = "San", Level = 50, Repeatable = true },
+	DEVSAN50 = { Character = "San", Level = 50, Repeatable = true },
 
 	-- Codigos de Dev — Tag: Jujutsu Kaisen (Repeatable = true)
 	NOBARA = { Character = "Nobara", Level = 10, Repeatable = true },

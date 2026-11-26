@@ -434,3 +434,13 @@ Decisões em aberto: nome do jogo; troca de personagens entre jogadores; validar
 
 **Regras:** tudo no servidor; o cliente nunca informa progresso. Salvos: nível da Forja, contadores (selvagens derrotados e capturas), conteúdo do Baú, selvagens pendentes e hora do último surgimento.
 
+---
+
+## 15. Expansão de Domínio — Ryomen Sukuna (`Secreto`)
+
+* **Moveset Padrão Nv. 50:** `1. Desmantelar`, `2. Clivar`, `3. Fortificação`, `4. Santuário Malevolente`.
+* **Limite de PP:** `Santuário Malevolente` possui **`1 PP` por partida** (`OncePerBattle = true`), permanecendo em `0/1 PP` até o fim do confronto e não podendo ser restaurado por itens `RestorePP`.
+* **Duração e Sangramento:** Permanece ativo por **2 rodadas completas**; aplica **15% do HP Máximo** em dano garantido de cortes/sangramento nos oponentes ativos na invocação e ao final de cada uma das 2 rodadas.
+* **Moveset Exclusivo no Domínio:** Durante as 2 rodadas ativas do Santuário, as 4 habilidades padrão ficam bloqueadas/ocultas e o Sukuna dispõe exclusivamente de **`Fuga`** (*Flecha de Fogo*, área `AllEnemies`, `BreaksProtect = true`). Ao encerrar a 2ª rodada (ou caso o Sukuna desmaie), o cenário retorna ao normal e os 4 golpes padrão são restaurados na HUD.
+
+

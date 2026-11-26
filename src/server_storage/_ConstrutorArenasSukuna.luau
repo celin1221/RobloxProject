@@ -926,7 +926,7 @@ function M.buildArena(id: number, centerPos: Vector3): Model
 	local camYaw = math.atan2(-(camLookA.Z - camPosA.Z), camLookA.X - camPosA.X)
 	local waterTop = makePart(decor, {
 		Name = "InfiniteMirrorWater",
-		Size = Vector3.new(VAULT_R * 2.02, 0.14, VAULT_R * 2.02),
+		Size = Vector3.new(VAULT_R * 2.05, 0.14, VAULT_R * 2.05),
 		CFrame = CFrame.new(cx, waterY - 0.06, cz) * CFrame.Angles(0, camYaw, 0),
 		Color = Color3.fromRGB(68, 10, 16),
 		Material = Enum.Material.SmoothPlastic,
@@ -942,23 +942,17 @@ function M.buildArena(id: number, centerPos: Vector3): Model
 	rippleTex.StudsPerTileU = 20
 	rippleTex.StudsPerTileV = 34
 	rippleTex.Transparency = 0.12
+	rippleTex.ZIndex = 1
 	rippleTex.Parent = waterTop
 
-	-- Vinheta radial de abismo negro sobre as bordas distantes da agua (dissolve o rosa no preto infinito sem nenhuma linha de fim!)
-	local vigPlane = makePart(decor, {
-		Name = "InfiniteAbyssVignette",
-		Size = Vector3.new(VAULT_R * 2.05, 0.03, VAULT_R * 2.05),
-		Position = Vector3.new(cx, waterY + 0.025, cz),
-		Transparency = 1,
-		CanCollide = false,
-		CanQuery = false,
-	})
+	-- Vinheta radial de abismo negro aplicada diretamente na superficie OPACA da agua (G-buffer: nunca corta particulas/VFX no horizonte!)
 	local vigDecal = Instance.new("Decal")
 	vigDecal.Name = "AbyssVignetteDecal"
 	vigDecal.Face = Enum.NormalId.Top
 	vigDecal.Texture = M.TEX.WATER_VIGNETTE
 	vigDecal.Transparency = 0
-	vigDecal.Parent = vigPlane
+	vigDecal.ZIndex = 2
+	vigDecal.Parent = waterTop
 
 	-- B2. ALTARES AMALDICOADOS ONDE OS PERSONAGENS SEMPRE FICAM EM CIMA (Lutadores + Avatares dos Jogadores!)
 	local altarsFolder = Instance.new("Folder")
@@ -1181,12 +1175,14 @@ function M.buildArena(id: number, centerPos: Vector3): Model
 
 		buildMonumentalGate(sideFolder, gateCF)
 
-		-- Reflexo liquido estendido ate a base da tela sem invadir a camera oposta (-62 + 46.5 = -15.5 < -15.1!)
+		-- Reflexo liquido em parte OPACA rente a agua (evita Z-sorting sobre particulas!)
 		local reflPlane = makePart(sideFolder, {
 			Name = "WaterSurfaceReflection",
-			Size = Vector3.new(54, 0.04, 39),
-			CFrame = gateCF * CFrame.new(0, 0.05, -27.0) * CFrame.Angles(0, math.pi, 0),
-			Transparency = 1,
+			Size = Vector3.new(54, 0.05, 39),
+			CFrame = gateCF * CFrame.new(0, -0.01, -27.0) * CFrame.Angles(0, math.pi, 0),
+			Color = Color3.fromRGB(68, 10, 16),
+			Material = Enum.Material.SmoothPlastic,
+			Transparency = 0,
 			CanCollide = false,
 			CanQuery = false,
 		})

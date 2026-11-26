@@ -608,7 +608,7 @@ local function itemTargetOk(m)
 		return m.Status ~= nil, m.Name .. " n\u{e3}o tem status."
 	elseif pendingItemKind == "RestorePP" then
 		for _, mv in ipairs(m.Moves or {}) do
-			if mv.Pp < mv.MaxPp then
+			if not mv.OncePerBattle and not mv.DomainExclusive and mv.Pp < mv.MaxPp then
 				return true
 			end
 		end
@@ -736,6 +736,9 @@ local function setFieldBadges(side: string, sideState)
 	local items = {}
 	local se = sideState.SideEffects
 	if se then
+		if (se.MalevolentShrine or 0) > 0 then
+			table.insert(items, { Text = "SANTU\u{c1}RIO " .. se.MalevolentShrine .. "t", Color = "red" })
+		end
 		if (se.Barrier or 0) > 0 then
 			table.insert(items, { Text = "BARREIRA " .. se.Barrier .. "t", Color = "blue" })
 		end
@@ -909,12 +912,22 @@ function refreshMoves()
 		return
 	end
 	local double = isDouble()
+	local singleDomainOnly = active.Moves ~= nil and #active.Moves == 1 and active.Moves[1].DomainExclusive == true
 	for i, button in ipairs(moveButtons) do
 		local move = active.Moves and active.Moves[i]
 		button.Visible = move ~= nil
 		if move then
+			if singleDomainOnly and i == 1 then
+				button.Size = UDim2.fromScale(1.0, 0.58)
+				button.Position = UDim2.fromScale(0, 0.21)
+			else
+				local col, row = (i - 1) % 2, (i - 1) // 2
+				button.Size = UDim2.fromScale(0.485, 0.46)
+				button.Position = UDim2.fromScale(col * 0.515, row * 0.54)
+			end
 			local usable = move.Pp > 0
-			UI.paint(button, if usable then typeColor(move.Type) else "grey")
+			local btnCol = if not usable then "grey" elseif move.DomainExclusive then "orange" else typeColor(move.Type)
+			UI.paint(button, btnCol)
 			button:SetAttribute("Disabled", (not usable) or nil)
 			local face = button.Face
 			face.MoveName.Text = move.Name
@@ -925,7 +938,11 @@ function refreshMoves()
 				local chipText, chipColor = nil, nil
 				local effKind = move.EffectKind
 				local prio = move.Priority or 0
-				if effKind == "Protect" or effKind == "WideProtect" then
+				if move.DomainExclusive then
+					chipText, chipColor = "DOM\u{cd}NIO", "red"
+				elseif effKind == "DomainExpansion" then
+					chipText, chipColor = "DOM\u{cd}NIO", "purple"
+				elseif effKind == "Protect" or effKind == "WideProtect" then
 					chipText, chipColor = "PROT.", "teal"
 				elseif move.Target == "EnemySide" or effKind == "Hazard" or effKind == "SideEffect" or effKind == "ClearHazards" then
 					chipText, chipColor = "CAMPO", "purple"
@@ -1653,6 +1670,28 @@ BattleUpdate.OnClientEvent:Connect(function(battleId, data)
 			patchActive(side, fs, { Hp = ev.Hp })
 			setHp(cardFor(side, fs), ev.Hp, ev.MaxHp)
 			popNumber(model, "-" .. ev.Amount, if ev.Kind == "StatusDamage" then Color3.fromRGB(255, 120, 60) elseif ev.Crit then Color3.fromRGB(255, 176, 32) else Color3.new(1, 1, 1))
+		elseif ev.Kind == "DomainStart" then
+			local sideState = side and current.State[side]
+			if sideState then
+				sideState.SideEffects = sideState.SideEffects or {}
+				sideState.SideEffects.MalevolentShrine = ev.Turns or 2
+				setFieldBadges(side, sideState)
+			end
+		elseif ev.Kind == "DomainSlash" then
+			patchActive(side, fs, { Hp = ev.Hp })
+			setHp(cardFor(side, fs), ev.Hp, ev.MaxHp)
+			popNumber(model, "-" .. ev.Amount, Color3.fromRGB(255, 42, 74))
+			local hitModel = ev.Model or model
+			if hitModel and not ev.Invocation then
+				VfxController.PlayDomainSlash({ hitModel })
+			end
+		elseif ev.Kind == "DomainEnd" then
+			local sideState = side and current.State[side]
+			if sideState and sideState.SideEffects then
+				sideState.SideEffects.MalevolentShrine = 0
+				setFieldBadges(side, sideState)
+			end
+			VfxController.CloseDomain()
 		elseif ev.Kind == "Heal" then
 			local m = current.State[side].Team[ev.Slot]
 			if m then

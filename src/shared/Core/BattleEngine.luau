@@ -78,7 +78,7 @@ local function freshHazards()
 end
 
 local function freshSideEffects()
-	return { Barrier = 0, Tailwind = 0 }
+	return { Barrier = 0, Tailwind = 0, MalevolentShrine = 0, MalevolentShrineJustCast = false }
 end
 
 local SPIKES_FRACTION = { 1 / 8, 1 / 6, 1 / 4 }
@@ -102,7 +102,7 @@ local function newBattler(characterId: string, level: number, moveIds: { string 
 	local moves = {}
 	for i, moveId in ipairs(moveIds or Characters.DefaultActive(characterId, level)) do
 		local move = assert(Moves.Get(moveId), "Golpe desconhecido: " .. tostring(moveId))
-		local pp = extra.Pp and extra.Pp[moveId]
+		local pp = if move.OncePerBattle then move.PP else (extra.Pp and extra.Pp[moveId])
 		moves[i] = { Id = moveId, Pp = if typeof(pp) == "number" then math.clamp(pp, 0, move.PP) else move.PP, MaxPp = move.PP }
 	end
 	local awakened = extra.Awakened == true
@@ -519,8 +519,10 @@ function BattleEngine:_ValidateSlotAction(side: string, fieldSlot: number, actio
 			end
 			return true
 		elseif item.Kind == "RestorePP" then
-			for _, slot in ipairs(target.Moves) do
-				if slot.Pp < slot.MaxPp then
+			local baseSlots = target._StandardMoves or target.Moves
+			for _, slot in ipairs(baseSlots) do
+				local mvDef = Moves.Get(slot.Id)
+				if mvDef and not mvDef.OncePerBattle and not mvDef.DomainExclusive and slot.Pp < slot.MaxPp then
 					return true
 				end
 			end
@@ -887,6 +889,7 @@ end
 -- Depois do turno: fim de batalha, substituicao da maquina e pedido de escolha ao jogador
 function BattleEngine:_AfterTurn(push)
 	if self.Winner then
+		self:_RestoreAllDomainMoves()
 		self.State = "Ended"
 		return
 	end
@@ -923,6 +926,7 @@ function BattleEngine:_AfterTurn(push)
 						end
 					end
 					if self.Winner then
+						self:_RestoreAllDomainMoves()
 						self.State = "Ended"
 						return
 					end
@@ -969,6 +973,7 @@ function BattleEngine:Forfeit(side: string, reason: string?)
 	end
 	self.Winner = otherSide(side)
 	self.EndReason = reason or "Forfeit"
+	self:_RestoreAllDomainMoves()
 	self.State = "Ended"
 	return events
 end
@@ -1023,6 +1028,7 @@ function BattleEngine:ResolveReplacement(side: string, choice)
 	if self.Winner then
 		self.PendingReplace = {}
 		self:SyncLegacyActive(side)
+		self:_RestoreAllDomainMoves()
 		self.State = "Ended"
 		return events
 	end
@@ -1155,6 +1161,7 @@ local function isSelfOrFieldEffect(effect): boolean
 		or effect.Kind == "ClearHazards"
 		or effect.Kind == "Hazard"
 		or effect.Kind == "SideEffect"
+		or effect.Kind == "DomainExpansion"
 		or effect.Kind == "Protect"
 		or effect.Kind == "WideProtect"
 end
@@ -1427,7 +1434,14 @@ function BattleEngine:_DoMove(side: string, fieldSlot: number, action, push)
 				end
 			end
 		else
-			self:_ApplyEffect(side, fieldSlot, t.Side, t.FieldSlot, move.Effect, true, multiTarget, push)
+			if isSelfOrFieldEffect(move.Effect) then
+				if not selfFieldEffectDone then
+					selfFieldEffectDone = true
+					self:_ApplyEffect(side, fieldSlot, t.Side, t.FieldSlot, move.Effect, true, multiTarget, push)
+				end
+			else
+				self:_ApplyEffect(side, fieldSlot, t.Side, t.FieldSlot, move.Effect, true, multiTarget, push)
+			end
 		end
 	end
 end
@@ -1466,6 +1480,123 @@ function BattleEngine:ApplyStatus(side: string, status: string, fieldSlot: numbe
 		table.insert(events, ev)
 	end, true)
 	return events
+end
+
+function BattleEngine:_SetSukunaDomainMoves(side: string, activeDomain: boolean)
+	local s = self.Sides[side]
+	if not s then
+		return
+	end
+	for _, b in ipairs(s.Team) do
+		if b.Id == "Sukuna" then
+			if activeDomain then
+				if not b._StandardMoves then
+					b._StandardMoves = b.Moves
+					local fugaDef = Moves.Get("Fuga")
+					local maxPp = (fugaDef and fugaDef.PP) or 2
+					b.Moves = { { Id = "Fuga", Pp = maxPp, MaxPp = maxPp } }
+				end
+			elseif b._StandardMoves then
+				b.Moves = b._StandardMoves
+				b._StandardMoves = nil
+			end
+		end
+	end
+end
+
+function BattleEngine:_HasAliveSukunaOnField(side: string): boolean
+	for _, fs in ipairs(self:AliveFieldSlots(side)) do
+		local b = self:ActiveAt(side, fs)
+		if b and b.Hp > 0 and b.Id == "Sukuna" then
+			return true
+		end
+	end
+	return false
+end
+
+function BattleEngine:_RestoreAllDomainMoves()
+	for _, sName in ipairs(SIDES) do
+		self:_SetSukunaDomainMoves(sName, false)
+	end
+end
+
+function BattleEngine:_CollapseDomain(side: string, push, silent: boolean?)
+	local s = self.Sides[side]
+	local se = s and s.SideEffects
+	if not se then
+		return
+	end
+	local hadDomainMoves = false
+	for _, b in ipairs(s.Team) do
+		if b._StandardMoves ~= nil then
+			hadDomainMoves = true
+			break
+		end
+	end
+	local wasActive = (se.MalevolentShrine or 0) > 0 or hadDomainMoves
+	se.MalevolentShrine = 0
+	se.MalevolentShrineJustCast = false
+	self:_SetSukunaDomainMoves(side, false)
+	if wasActive and push and not silent then
+		local ownTxt = "O Santu\u{e1}rio Malevolente se dissipou."
+		local foeTxt = "O Santu\u{e1}rio Malevolente do advers\u{e1}rio se dissipou."
+		push({
+			Kind = "DomainEnd",
+			Side = side,
+			Domain = "MalevolentShrine",
+			Text = if side == "Player" then ownTxt else foeTxt,
+			TextEnemy = if self.EnemyHuman then (if side == "Enemy" then ownTxt else foeTxt) else nil,
+		})
+		self:_PushFieldUpdate(side, push)
+	end
+end
+
+function BattleEngine:_ApplyDomainSlash(ownerSide: string, fraction: number, isInvocation: boolean, push)
+	local foeSide = otherSide(ownerSide)
+	local aliveSlots = self:AliveFieldSlots(foeSide)
+	if #aliveSlots == 0 then
+		return
+	end
+	for _, fs in ipairs(aliveSlots) do
+		if self.Winner then
+			break
+		end
+		local foe = self:ActiveAt(foeSide, fs)
+		if foe and foe.Hp > 0 then
+			local dPassive, dEff = passiveOf(foe)
+			local rawDmg = math.max(1, math.floor(foe.MaxHp * fraction))
+			local finalDmg = rawDmg
+			local sturdyTriggered = false
+			if dEff and dEff.Sturdy and not foe.SturdyUsed and foe.Hp >= foe.MaxHp and finalDmg >= foe.Hp then
+				finalDmg = math.max(0, foe.Hp - 1)
+				foe.SturdyUsed = true
+				sturdyTriggered = true
+			end
+			foe.Hp = math.max(0, foe.Hp - finalDmg)
+			local slashTxt = if isInvocation
+				then ("Os cortes incessantes do Santu\u{e1}rio rasgaram " .. foe.Name .. " (-" .. finalDmg .. " HP)!")
+				else (foe.Name .. " sangrou com os cortes do Santu\u{e1}rio Malevolente (-" .. finalDmg .. " HP)!")
+			push({
+				Kind = "DomainSlash",
+				Side = foeSide,
+				FieldSlot = fs,
+				SourceSide = ownerSide,
+				Invocation = isInvocation == true,
+				Amount = finalDmg,
+				Hp = foe.Hp,
+				MaxHp = foe.MaxHp,
+				Text = slashTxt,
+			})
+			if sturdyTriggered then
+				self:_PushPassive(foeSide, fs, foe, push, foe.Name .. " resistiu com 1 HP gra\u{e7}as \u{e0} " .. (dPassive and dPassive.Name or "Firmeza") .. "!")
+			end
+			if foe.Hp <= 0 then
+				self:_Faint(foeSide, fs, push)
+			else
+				self:_CheckThresholdPassive(foeSide, fs, foe, push)
+			end
+		end
+	end
 end
 
 function BattleEngine:_PushFieldUpdate(side: string, push, text: string?, textEnemy: string?)
@@ -1638,6 +1769,30 @@ function BattleEngine:_ApplyEffect(actorSide: string, actorSlot: number, hitSide
 			self:_PushFieldUpdate(actorSide, push, if actorSide == "Player" then ownTxt else foeTxt, if actorSide == "Enemy" then ownTxt else foeTxt)
 		end
 		return
+	elseif kind == "DomainExpansion" then
+		if not actor or actor.Hp <= 0 then
+			return
+		end
+		local se = self.Sides[actorSide].SideEffects
+		local turns = effect.Turns or 2
+		local frac = effect.SlashFraction or 0.15
+		se.MalevolentShrine = turns
+		se.MalevolentShrineJustCast = true
+		self:_SetSukunaDomainMoves(actorSide, true)
+		local ownTxt = "Expans\u{e3}o de Dom\u{ed}nio: Santu\u{e1}rio Malevolente! O campo foi tomado por " .. turns .. " rodadas!"
+		local foeTxt = actor.Name .. " abriu o Santu\u{e1}rio Malevolente por " .. turns .. " rodadas!"
+		push({
+			Kind = "DomainStart",
+			Side = actorSide,
+			FieldSlot = actorSlot,
+			Domain = effect.Domain or "MalevolentShrine",
+			Turns = turns,
+			Text = if actorSide == "Player" then ownTxt else foeTxt,
+			TextEnemy = if self.EnemyHuman then (if actorSide == "Enemy" then ownTxt else foeTxt) else nil,
+		})
+		self:_PushFieldUpdate(actorSide, push)
+		self:_ApplyDomainSlash(actorSide, frac, true, push)
+		return
 	end
 
 	local targetSide = if effect.Target == "Self" then actorSide else hitSide
@@ -1779,6 +1934,13 @@ function BattleEngine:_DoSwitch(side: string, fieldSlot: number, index: number, 
 	sideState.ActiveSlots[fieldSlot] = index
 	self:SyncLegacyActive(side)
 	incoming.Participated = true
+	if (sideState.SideEffects.MalevolentShrine or 0) > 0 then
+		if not self:_HasAliveSukunaOnField(side) then
+			self:_CollapseDomain(side, push, false)
+		else
+			self:_SetSukunaDomainMoves(side, true)
+		end
+	end
 
 	local outName = if outgoing then outgoing.Name else ""
 	local ownText = if isReplacement or not outgoing then "Vai, " .. incoming.Name .. "!" else "Volte, " .. outName .. "! Vai, " .. incoming.Name .. "!"
@@ -1837,8 +1999,10 @@ function BattleEngine:_DoItem(side: string, fieldSlot: number, itemId: string, t
 		return
 	elseif item.Kind == "RestorePP" then
 		local best, missing = nil, 0
-		for _, slot in ipairs(target.Moves) do
-			if slot.MaxPp - slot.Pp > missing then
+		local baseSlots = target._StandardMoves or target.Moves
+		for _, slot in ipairs(baseSlots) do
+			local mvDef = Moves.Get(slot.Id)
+			if mvDef and not mvDef.OncePerBattle and not mvDef.DomainExclusive and slot.MaxPp - slot.Pp > missing then
 				best, missing = slot, slot.MaxPp - slot.Pp
 			end
 		end
@@ -1900,6 +2064,9 @@ function BattleEngine:_Faint(side: string, fieldSlot: number, push)
 	if aliveCount(self.Sides[side]) == 0 then
 		self.Winner = otherSide(side)
 		self.EndReason = "Faint"
+		self:_RestoreAllDomainMoves()
+	elseif (self.Sides[side].SideEffects.MalevolentShrine or 0) > 0 and not self:_HasAliveSukunaOnField(side) then
+		self:_CollapseDomain(side, push, false)
 	end
 end
 
@@ -1964,9 +2131,28 @@ function BattleEngine:_EndOfTurn(push)
 		end
 	end
 
-	-- Decrementa efeitos de campo por lado (Barrier e Tailwind)
+	-- Decrementa efeitos de campo por lado (Barrier, Tailwind e Santuario Malevolente)
 	for _, side in ipairs(SIDES) do
 		local se = self.Sides[side].SideEffects
+		if (se.MalevolentShrine or 0) > 0 then
+			if not self:_HasAliveSukunaOnField(side) then
+				self:_CollapseDomain(side, push, false)
+			elseif se.MalevolentShrineJustCast then
+				se.MalevolentShrineJustCast = false
+			else
+				self:_ApplyDomainSlash(side, 0.15, false, push)
+				if self.Winner then
+					self:_RestoreAllDomainMoves()
+					return
+				end
+				if se.MalevolentShrine <= 1 then
+					self:_CollapseDomain(side, push, false)
+				else
+					se.MalevolentShrine -= 1
+					self:_PushFieldUpdate(side, push)
+				end
+			end
+		end
 		if se.Barrier > 0 then
 			se.Barrier -= 1
 			if se.Barrier == 0 then
@@ -2001,6 +2187,7 @@ function BattleEngine:_MemberInfo(b, withMoves: boolean)
 		Stages = table.clone(b.Stages),
 		Fainted = b.Hp <= 0,
 		Awakened = b.Awakened == true,
+		InDomain = b._StandardMoves ~= nil,
 		PassiveId = b.PassiveId,
 		PassiveName = p and p.Name or nil,
 		PassiveTier = p and p.Tier or nil,
@@ -2020,6 +2207,8 @@ function BattleEngine:_MemberInfo(b, withMoves: boolean)
 				Accuracy = m.Accuracy,
 				Priority = m.Priority or 0,
 				EffectKind = m.Effect and m.Effect.Kind or nil,
+				OncePerBattle = m.OncePerBattle == true,
+				DomainExclusive = m.DomainExclusive == true,
 				Pp = slot.Pp,
 				MaxPp = slot.MaxPp,
 			}

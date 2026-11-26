@@ -25,6 +25,7 @@ local Debris = game:GetService("Debris")
 
 local Moves = require(ReplicatedStorage:WaitForChild("Data"):WaitForChild("Moves"))
 local CombatAnimator = require(ReplicatedStorage:WaitForChild("CombatAnimator"))
+local SukunaVFX = require(ReplicatedStorage:WaitForChild("Sukuna"):WaitForChild("SukunaVFX"))
 local VFX = ReplicatedStorage:WaitForChild("Vfx")
 
 local VfxController = {}
@@ -439,7 +440,7 @@ local function clearCutIn()
 		if cutInState.banner and cutInState.banner.Parent then
 			cutInState.banner:Destroy()
 		end
-		if cam and cam.CameraType == Enum.CameraType.Scriptable then
+		if not cutInState.customCamera and cam and cam.CameraType == Enum.CameraType.Scriptable then
 			local baseCF, baseFov = getBattleBase(cam)
 			cam.CFrame = baseCF
 			cam.FieldOfView = baseFov
@@ -524,6 +525,12 @@ local function playCutIn(move, attacker: Model, timing)
 				end
 			end)
 		end)
+	end
+
+	-- Se o golpe possui direcao de camera cinematografica dedicada (ex.: Sukuna), cede 100% do controle de camera
+	if move.CustomCinematicCamera then
+		state.customCamera = true
+		return
 	end
 
 	-- Aproximacao temporaria de camera na batalha (sempre referenciada na camera base da arena)
@@ -3915,235 +3922,53 @@ PROC_HANDLERS.GenWind = {
 }
 
 --------------------------------------------------------------------
--- Tecnicas Exclusivas do SUKUNA (Jujutsu Kaisen — Secreto)
--- 100% fluidas em particulas, rastros Trail e cortes luminosos 3D
--- (ZERO cones, ZERO cubos, ZERO cilindros rigidos, ZERO discos planos!)
+-- Tecnicas Exclusivas AAA do SUKUNA (Jujutsu Kaisen — Secreto)
+-- Delegadas integralmente ao pacote modular ReplicatedStorage/Sukuna/*
+-- (ZERO cones, ZERO esferas, ZERO cilindros de Neon!)
 --------------------------------------------------------------------
-local SUKUNA_CRIMSON = Color3.fromRGB(228, 22, 52)
-local SUKUNA_BLOOD = Color3.fromRGB(255, 84, 112)
-local SUKUNA_OBSIDIAN = Color3.fromRGB(24, 10, 18)
-
--- 1. FORTIFICACAO: condensacao sombria -> explosao de vortice duplo carmesim-negro (+1 ATQ / +1 DEF)
 PROC_HANDLERS.SukunaFortificacao = {
 	Charge = function(ctx)
-		local aRoot = rootOf(ctx.attacker)
-		genSound(ctx.fx, SFX.Charge, 0.36, 0.82)
-		genBurst(ctx.fx, aRoot.Position, TEX.Smoke, SUKUNA_OBSIDIAN, SUKUNA_CRIMSON, 22, 3, 9, 1.1, 2.8, 0.46, 180, 110)
-		genBurst(ctx.fx, aRoot.Position, TEX.SoftGlow, SUKUNA_BLOOD, SUKUNA_CRIMSON, 18, 4, 12, 0.45, 0.04, 0.34, 180, 0, nil, 1.0)
-		genLight(ctx.fx, aRoot.Position, SUKUNA_CRIMSON, 2.4, 13)
+		SukunaVFX.PlayFortificacao(ctx.attacker, ctx.timing)
 	end,
-	Release = function(ctx)
-		local aRoot = rootOf(ctx.attacker)
-		local gy = groundY(ctx.attacker) + 0.25
-		local floorPos = Vector3.new(aRoot.Position.X, gy, aRoot.Position.Z)
-		genSound(ctx.fx, SFX.ReleaseHeavy, 0.42, 0.88)
-		springShake(0.32, 0.30, 38, 10, 0.9)
-		genFluidVortex(ctx, floorPos, SUKUNA_CRIMSON, SUKUNA_BLOOD, {
-			count = 3, radius = 3.2, height = 5.4, dur = 0.60, turns = 2.4, flowTex = TEX.Fire, trailW = 0.65, taper = 0.18,
-		})
-		genFluidVortex(ctx, floorPos, SUKUNA_OBSIDIAN, SUKUNA_CRIMSON, {
-			count = 2, radius = 4.0, height = 4.6, dur = 0.56, turns = -1.8, flowTex = TEX.Smoke, trailW = 0.55, taper = -0.12,
-		})
-		genFluidRing(ctx.fx, CFrame.new(aRoot.Position), SUKUNA_CRIMSON, SUKUNA_BLOOD, 7.5, 0.44, false)
-		genLight(ctx.fx, aRoot.Position + Vector3.new(0, 1.0, 0), SUKUNA_CRIMSON, 3.4, 18)
-	end,
+	Release = function() end,
 	Impact = function() end,
-	Duration = 1.05,
+	Duration = 1.10,
 }
 
--- 2. DESMANTELAR: faisca carmesim na mao -> 3 laminas de vento amaldicoado voando -> 3 cortes fluidos em cruz!
 PROC_HANDLERS.SukunaDesmantelar = {
 	Charge = function(ctx)
-		local hp = handPos(ctx.attacker)
-		genSound(ctx.fx, SFX.Charge, 0.34, 1.12)
-		genBurst(ctx.fx, hp, TEX.SoftGlow, Color3.new(1, 1, 1), SUKUNA_CRIMSON, 20, 4, 12, 0.42, 0.04, 0.30, 180, 0, nil, 1.25)
-		genBurst(ctx.fx, hp, TEX.Smoke, SUKUNA_OBSIDIAN, SUKUNA_CRIMSON, 14, 2, 7, 0.7, 1.8, 0.34, 180, 120)
-		genLight(ctx.fx, hp, SUKUNA_CRIMSON, 2.6, 12)
+		SukunaVFX.PlayDesmantelar(ctx.attacker, ctx.target, ctx.timing)
 	end,
-	Release = function(ctx)
-		local fromPos = handPos(ctx.attacker)
-		local toPos = targetCenter(ctx.target)
-		local travel = math.max(0.18, (ctx.timing.Impact or 0.92) - (ctx.timing.Release or 0.56))
-		genSound(ctx.fx, SFX.Release, 0.44, 1.18)
-		springShake(0.24, 0.24, 42, 11, 0.7)
-		genFluidSwarm(ctx, fromPos, toPos, travel, SUKUNA_CRIMSON, Color3.new(1, 1, 1), {
-			strands = 3, radius = 1.15, turns = 1.6, arcUp = 0.25, trailW = 0.58, flowTex = TEX.Fire, flowRate = 48, moteRate = 64, trailLife = 0.24,
-		})
-	end,
-	Impact = function(ctx)
-		local hitPos = targetCenter(ctx.target)
-		local aPos = rootOf(ctx.attacker).Position
-		local hitLook = CFrame.lookAt(hitPos, Vector3.new(aPos.X, hitPos.Y, aPos.Z))
-		genSound(ctx.fx, SFX.Impact, 0.48, 1.08)
-		CombatAnimator.Hitstop(ctx.attacker, 0.055)
-		fovPunch(-4.5, 0.05, 0.24)
-		springShake(0.52, 0.34, 44, 10, 1.5)
-		genLight(ctx.fx, hitPos, SUKUNA_CRIMSON, 3.6, 20)
+	Release = function() end,
+	Impact = function() end,
+	Duration = 1.15,
+}
 
-		local angles = { 38, -42, 6 }
-		for i, ang in ipairs(angles) do
-			task.delay((i - 1) * 0.045, function()
-				if not ctx.alive then return end
-				local ox = (i - 2) * 0.55
-				local oy = ((i % 2) - 0.5) * 0.75
-				genSlashMark(ctx.fx, hitLook, Vector3.new(ox, oy, -0.5), ang, 7.6, 0.30, SUKUNA_CRIMSON, Color3.new(1, 1, 1))
-			end)
-		end
-		genFluidRing(ctx.fx, CFrame.new(hitPos), SUKUNA_CRIMSON, SUKUNA_BLOOD, 7.2, 0.40, false)
-		genBurst(ctx.fx, hitPos, TEX.Smoke, SUKUNA_OBSIDIAN, SUKUNA_CRIMSON, 20, 4, 14, 1.2, 3.2, 0.46, 180, 110)
+PROC_HANDLERS.SukunaClivar = {
+	Charge = function(ctx)
+		SukunaVFX.PlayClivar(ctx.attacker, ctx.target, ctx.timing)
 	end,
+	Release = function() end,
+	Impact = function() end,
 	Duration = 1.25,
 }
 
--- 3. CLIVAR: retalhamento brutal em grade de 6 cortes carmesim-negros que rompe protecoes!
-PROC_HANDLERS.SukunaClivar = {
+PROC_HANDLERS.SukunaSantuario = {
 	Charge = function(ctx)
-		local lp = leftHandPos(ctx.attacker)
-		local rp = handPos(ctx.attacker)
-		genSound(ctx.fx, SFX.Charge, 0.38, 0.86)
-		for _, p in ipairs({ lp, rp }) do
-			genBurst(ctx.fx, p, TEX.SoftGlow, SUKUNA_BLOOD, SUKUNA_CRIMSON, 18, 3, 10, 0.44, 0.04, 0.34, 180, 0, nil, 1.15)
-			genBurst(ctx.fx, p, TEX.Smoke, SUKUNA_OBSIDIAN, SUKUNA_CRIMSON, 14, 2, 7, 0.8, 2.0, 0.38, 180, 120)
-		end
-		genLight(ctx.fx, (lp + rp) * 0.5, SUKUNA_CRIMSON, 3.0, 15)
+		SukunaVFX.PlaySantuario(ctx.attacker, ctx.target, ctxTargets(ctx), ctx.timing)
 	end,
-	Release = function(ctx)
-		local fromPos = (leftHandPos(ctx.attacker) + handPos(ctx.attacker)) * 0.5
-		local toPos = targetCenter(ctx.target)
-		local travel = math.max(0.20, (ctx.timing.Impact or 1.06) - (ctx.timing.Release or 0.64))
-		genSound(ctx.fx, SFX.ReleaseHeavy, 0.48, 0.96)
-		springShake(0.32, 0.30, 42, 10, 1.0)
-		genFluidSwarm(ctx, fromPos, toPos, travel, SUKUNA_CRIMSON, SUKUNA_BLOOD, {
-			strands = 3, radius = 1.45, turns = 2.0, arcUp = 0.45, trailW = 0.72, flowTex = TEX.Fire, flowRate = 52, moteRate = 68, trailLife = 0.26,
-		})
-		genFluidSwarm(ctx, fromPos, toPos, travel, SUKUNA_OBSIDIAN, SUKUNA_CRIMSON, {
-			strands = 2, radius = 1.75, turns = -1.5, arcUp = 0.25, trailW = 0.55, flowTex = TEX.Smoke, flowRate = 40, moteRate = 48, trailLife = 0.24,
-		})
-	end,
-	Impact = function(ctx)
-		local hitPos = targetCenter(ctx.target)
-		local aPos = rootOf(ctx.attacker).Position
-		local hitLook = CFrame.lookAt(hitPos, Vector3.new(aPos.X, hitPos.Y, aPos.Z))
-		genSound(ctx.fx, SFX.ImpactHeavy, 0.54, 0.95)
-		CombatAnimator.Hitstop(ctx.attacker, 0.065)
-		animeImpactFrame(Color3.fromRGB(255, 168, 184), 0.045, 0.22, false)
-		fovPunch(-5.6, 0.055, 0.28)
-		springShake(0.64, 0.42, 46, 9.5, 2.0)
-		genLight(ctx.fx, hitPos, SUKUNA_CRIMSON, 3.6, 24)
-
-		-- Teia de 6 cortes Clivar retalhando o alvo em sequencia relampago!
-		local cleaveAngles = { 48, -48, 18, -20, 74, -72 }
-		for i, ang in ipairs(cleaveAngles) do
-			task.delay((i - 1) * 0.038, function()
-				if not ctx.alive then return end
-				local ox = ((i % 2 == 0) and 0.65 or -0.65)
-				local oy = ((i % 3) - 1) * 0.65
-				local c1 = if i % 2 == 1 then SUKUNA_CRIMSON else SUKUNA_OBSIDIAN
-				local c2 = if i % 2 == 1 then Color3.new(1, 1, 1) else SUKUNA_BLOOD
-				genSlashMark(ctx.fx, hitLook, Vector3.new(ox, oy, -0.5), ang, 8.6, 0.34, c1, c2)
-			end)
-		end
-		genFluidVortex(ctx, hitPos - Vector3.new(0, 1.4, 0), SUKUNA_CRIMSON, SUKUNA_BLOOD, {
-			count = 2, radius = 2.6, height = 4.8, dur = 0.52, turns = 2.2, flowTex = TEX.Fire, trailW = 0.56,
-		})
-		genFluidRing(ctx.fx, CFrame.new(hitPos), SUKUNA_CRIMSON, SUKUNA_BLOOD, 9.2, 0.44, true)
-		genBurst(ctx.fx, hitPos, TEX.Smoke, SUKUNA_OBSIDIAN, SUKUNA_CRIMSON, 28, 6, 18, 1.4, 3.8, 0.52, 180, 120)
-	end,
+	Release = function() end,
+	Impact = function() end,
 	Duration = 1.45,
 }
 
--- 4. SANTUARIO MALEVOLENTE (Assinatura Secreta Nv. 50): Expansao de Dominio 100% fluida em particulas e tempestade de cortes!
-PROC_HANDLERS.SukunaSantuario = {
+PROC_HANDLERS.SukunaFuga = {
 	Charge = function(ctx)
-		local aRoot = rootOf(ctx.attacker)
-		local gy = groundY(ctx.attacker) + 0.25
-		local floorPos = Vector3.new(aRoot.Position.X, gy, aRoot.Position.Z)
-		genSound(ctx.fx, SFX.Charge, 0.46, 0.68)
-		springShake(0.28, 0.45, 34, 9, 0.9)
-		genLight(ctx.fx, aRoot.Position + Vector3.new(0, 1.2, 0), SUKUNA_CRIMSON, 3.4, 22)
-
-		-- Vortice sombrio de Expansao de Dominio erguendo ao redor do selo Enmaten
-		genFluidVortex(ctx, floorPos, SUKUNA_OBSIDIAN, SUKUNA_CRIMSON, {
-			count = 3, radius = 4.6, height = 6.8, dur = 0.78, turns = 2.4, flowTex = TEX.Smoke, trailW = 0.78, taper = 0.28,
-		})
-		genFluidVortex(ctx, floorPos, SUKUNA_CRIMSON, SUKUNA_BLOOD, {
-			count = 3, radius = 3.4, height = 6.0, dur = 0.78, turns = -2.6, flowTex = TEX.Fire, trailW = 0.62, taper = 0.15,
-		})
-		genBurst(ctx.fx, aRoot.Position, TEX.Smoke, SUKUNA_OBSIDIAN, SUKUNA_CRIMSON, 32, 6, 16, 1.5, 4.2, 0.72, 180, 100, Vector3.new(0, 3, 0))
-		genBurst(ctx.fx, aRoot.Position, TEX.SoftGlow, SUKUNA_BLOOD, SUKUNA_CRIMSON, 28, 4, 14, 0.55, 0.05, 0.62, 180, 0, Vector3.new(0, 6, 0), 1.2)
+		SukunaVFX.PlayFuga(ctx.attacker, ctx.target, ctxTargets(ctx), ctx.timing)
 	end,
-	Release = function(ctx)
-		local aRoot = rootOf(ctx.attacker)
-		local fromPos = aRoot.CFrame:PointToWorldSpace(Vector3.new(0, 1.4, -1.6))
-		local targets = ctxTargets(ctx)
-		local travel = math.max(0.28, (ctx.timing.Impact or 1.62) - (ctx.timing.Release or 1.08))
-		genSound(ctx.fx, SFX.ReleaseHeavy, 0.54, 0.78)
-		springShake(0.42, 0.48, 40, 9, 1.4)
-
-		for idx, tgt in ipairs(targets) do
-			if not alive(tgt) then continue end
-			local toPos = targetCenter(tgt)
-			genFluidSwarm(ctx, fromPos, toPos, travel, SUKUNA_CRIMSON, Color3.new(1, 1, 1), {
-				strands = if idx == 1 then 4 else 2, radius = 2.2, turns = 2.6, arcUp = 1.2, trailW = 0.78, flowTex = TEX.Fire, flowRate = 56, moteRate = 70, trailLife = 0.30,
-			})
-			genFluidSwarm(ctx, fromPos, toPos, travel, SUKUNA_OBSIDIAN, SUKUNA_CRIMSON, {
-				strands = 2, radius = 2.6, turns = -2.0, arcUp = 0.6, trailW = 0.66, flowTex = TEX.Smoke, flowRate = 44, moteRate = 52, trailLife = 0.28,
-			})
-		end
-	end,
-	Impact = function(ctx)
-		local targets = ctxTargets(ctx)
-		local primaryPos = targetCenter(ctx.target)
-		local aPos = rootOf(ctx.attacker).Position
-
-		genSound(ctx.fx, SFX.ImpactHeavy, 0.60, 0.80)
-		CombatAnimator.Hitstop(ctx.attacker, 0.075)
-		animeImpactFrame(Color3.fromRGB(255, 130, 152), 0.06, 0.28, true)
-		fovPunch(-6.8, 0.065, 0.36)
-		springShake(0.76, 0.52, 48, 9, 2.6)
-		genLight(ctx.fx, primaryPos, SUKUNA_CRIMSON, 3.6, 30)
-
-		-- Chuva incessante de 12 cortes do Santuario Malevolente sobre TODOS os inimigos!
-		local shrineAngles = { 42, -46, 12, -16, 72, -68, 28, -32, 84, -80, 56, -54 }
-		for idx, tgt in ipairs(targets) do
-			if not alive(tgt) then continue end
-			local tp = targetCenter(tgt)
-			local floorPos = Vector3.new(tp.X, groundY(tgt) + 0.25, tp.Z)
-			local hitLook = CFrame.lookAt(tp, Vector3.new(aPos.X, tp.Y, aPos.Z))
-
-			genFluidRing(ctx.fx, CFrame.new(tp), SUKUNA_CRIMSON, SUKUNA_BLOOD, 11.5, 0.56, true)
-			genBurst(ctx.fx, tp, TEX.Smoke, SUKUNA_OBSIDIAN, SUKUNA_CRIMSON, 36, 8, 22, 1.6, 4.6, 0.68, 180, 120)
-			genBurst(ctx.fx, tp, TEX.SoftGlow, Color3.new(1, 1, 1), SUKUNA_CRIMSON, 44, 10, 28, 0.62, 0.05, 0.54, 180, 0, nil, 1.35)
-
-			genFluidVortex(ctx, floorPos, SUKUNA_CRIMSON, SUKUNA_BLOOD, {
-				count = if idx == 1 then 3 else 2, radius = 4.2, height = 7.4, dur = 0.72, turns = 3.0, flowTex = TEX.Fire, trailW = 0.70, taper = -0.18,
-			})
-			genFluidVortex(ctx, floorPos, SUKUNA_OBSIDIAN, SUKUNA_CRIMSON, {
-				count = 2, radius = 5.0, height = 6.2, dur = 0.70, turns = -2.2, flowTex = TEX.Smoke, trailW = 0.64, taper = -0.10,
-			})
-
-			local slashCount = if idx == 1 then #shrineAngles else 6
-			for i = 1, slashCount do
-				local ang = shrineAngles[i]
-				task.delay((i - 1) * 0.036, function()
-					if not ctx.alive then return end
-					local ox = ((i % 3) - 1) * 1.15
-					local oy = (((i + 1) % 3) - 1) * 1.05
-					local c1 = if i % 3 == 0 then SUKUNA_OBSIDIAN else SUKUNA_CRIMSON
-					local c2 = if i % 3 == 0 then SUKUNA_BLOOD else Color3.new(1, 1, 1)
-					genSlashMark(ctx.fx, hitLook, Vector3.new(ox, oy, -0.6), ang, 10.2, 0.36, c1, c2)
-				end)
-			end
-		end
-
-		-- Residuo sombrio de brasas e cortes apos o cataclismo
-		task.delay(0.42, function()
-			if not ctx.alive then return end
-			genSound(ctx.fx, SFX.Impact, 0.36, 0.92)
-			genBurst(ctx.fx, primaryPos + Vector3.new(0, 1.2, 0), TEX.SoftGlow, SUKUNA_BLOOD, SUKUNA_CRIMSON, 30, 5, 16, 0.48, 0.04, 0.62, 180, 0, Vector3.new(0, -4, 0), 1.0)
-		end)
-	end,
-	Duration = 1.95,
+	Release = function() end,
+	Impact = function() end,
+	Duration = 1.65,
 }
 
 local function fallbackGenericStyle(moveId: string?)
@@ -4322,7 +4147,7 @@ function VfxController.PlayMove(moveId: string, attacker: Model, target: Model?,
 	local track: AnimationTrack? = nil
 	local usedProcedural = false
 	if move.Anim and CombatAnimator.Has(move.Anim) then
-		usedProcedural = CombatAnimator.Play(attacker, move.Anim, move.Timing)
+		usedProcedural = CombatAnimator.Play(attacker, move.Anim, move.Timing, target)
 	end
 	if not usedProcedural then
 		track = move.Anim and loadTrack(attacker, move.Anim)
@@ -4352,8 +4177,17 @@ function VfxController.CritFlash()
 	end)
 end
 
+function VfxController.PlayDomainSlash(targets: { Model })
+	SukunaVFX.OnDomainSlashEvent(targets)
+end
+
+function VfxController.CloseDomain()
+	SukunaVFX.OnDomainEnd()
+end
+
 -- Limpa tudo no fim da batalha
 function VfxController.Cleanup()
+	SukunaVFX.Cleanup()
 	CombatAnimator.Cleanup()
 	clearCutIn()
 	for m, ctx in procActive do

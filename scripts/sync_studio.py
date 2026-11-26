@@ -736,7 +736,72 @@ for _, pl in ipairs(plotsFolder:GetChildren()) do
 end
 assert(mapAltar:FindFirstChild("MountainSecretPassage"), "Missing MountainSecretPassage inside SecretAwakeningAltar")
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + JujutsuBanner + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, totalMoves)
+-- Test 17: Sukuna Domain Expansion Rules (1 PP, 2 Active Rounds, 15% MaxHP Bleed/Slash, Exclusive Fuga Moveset & AAA Modules)
+local sukFolder = rs:FindFirstChild("Sukuna")
+assert(sukFolder, "Missing ReplicatedStorage.Sukuna folder")
+local sukClone = sukFolder:Clone()
+sukClone.Parent = sandbox
+for _, modName in ipairs({ "Config", "Janitor", "CinematicCamera", "SoundManager", "AnimatorModule", "MalevolentShrineEnv", "SukunaVFX" }) do
+    local modInst = sukClone:FindFirstChild(modName)
+    assert(modInst and modInst:IsA("ModuleScript"), "Missing Sukuna module: " .. modName)
+    local reqMod = require(modInst)
+    assert(typeof(reqMod) == "table", "Failed to require Sukuna." .. modName)
+    local srcTxt = modInst.Source
+    assert(not srcTxt:find("Enum.PartType.Ball", 1, true) and not srcTxt:find("Enum.PartType.Cylinder", 1, true) and not srcTxt:find("Enum.PartType.Wedge", 1, true),
+        "Forbidden primitive shape found in Sukuna." .. modName)
+end
+local sukOrder50 = Characters.DefaultActive("Sukuna", 50)
+assert(sukOrder50[1] == "Desmantelar" and sukOrder50[2] == "Clivar" and sukOrder50[3] == "Fortificacao" and sukOrder50[4] == "SantuarioMalevolente",
+    "Expected Sukuna DefaultActive(50) exact order: Desmantelar, Clivar, Fortificacao, SantuarioMalevolente")
+local santMove = Moves.Get("SantuarioMalevolente")
+local fugaMove = Moves.Get("Fuga")
+assert(santMove and santMove.PP == 1 and santMove.OncePerBattle == true, "Expected SantuarioMalevolente PP=1 and OncePerBattle=true")
+assert(fugaMove and fugaMove.DomainExclusive == true and fugaMove.Hidden == true, "Expected Fuga DomainExclusive+Hidden move")
+
+local bDom = BattleEngine.New({
+    Player = { Team = { { CharacterId = "Sukuna", Level = 50 } } },
+    Enemy = { Team = { { CharacterId = "BarbaBranca", Level = 50, StatMultiplier = 8, Moves = { "Proteger", "MuralhaDeFerro" } } }, AI = "Facil" },
+    Bag = { Eter = 2 },
+    Mode = "Tower", EnemyHuman = true, Seed = 101,
+})
+local foeDom = bDom:Active("Enemy")
+local expectedBleed = math.max(1, math.floor(foeDom.MaxHp * 0.15))
+local hp0 = foeDom.Hp
+-- Turn 1: Cast SantuarioMalevolente (Slot 4) -> breaks Protect, opens Domain (2 rounds), deals 15% MaxHP on invocation, swaps moves to ONLY Fuga
+bDom:ResolveTurn({ Kind = "Move", Index = 4 }, { Kind = "Move", Index = 1 })
+assert(foeDom.Hp == hp0 - expectedBleed, "Expected 15% MaxHP slash damage immediately upon Santuario invocation")
+assert(bDom.Sides.Player.SideEffects.MalevolentShrine == 2, "Expected MalevolentShrine = 2 full active rounds remaining after invocation turn")
+local snapDom1 = bDom:Snapshot("Player")
+local sukSnapMoves1 = snapDom1.Player.Team[1].Moves
+assert(#sukSnapMoves1 == 1 and sukSnapMoves1[1].Id == "Fuga", "Expected ONLY Fuga in Sukuna moveset during Domain Round 1")
+local okInvalidSlot = bDom:ValidateAction("Player", { Kind = "Move", Index = 2 })
+assert(not okInvalidSlot, "Standard moves 2..4 must be locked while Malevolent Shrine is active")
+
+-- Active Round 1: Sukuna uses Fuga (Index 1) + end-of-round 15% bleed tick -> MalevolentShrine becomes 1
+local hpBeforeR1 = foeDom.Hp
+bDom:ResolveTurn({ Kind = "Move", Index = 1 }, { Kind = "Move", Index = 2 })
+assert(foeDom.Hp < hpBeforeR1 - expectedBleed, "Expected Fuga damage + 15% Domain bleed on Active Round 1")
+assert(bDom.Sides.Player.SideEffects.MalevolentShrine == 1, "Expected MalevolentShrine = 1 after Active Round 1")
+assert(#bDom:Snapshot("Player").Player.Team[1].Moves == 1, "Expected ONLY Fuga during Domain Round 2")
+
+-- Active Round 2: Sukuna uses Fuga (Index 1) + end-of-round 15% bleed tick -> Domain ends (0) and standard moveset restores with Santuario at 0/1 PP!
+local evR2 = bDom:ResolveTurn({ Kind = "Move", Index = 1 }, { Kind = "Move", Index = 2 })
+assert(bDom.Sides.Player.SideEffects.MalevolentShrine == 0, "Expected MalevolentShrine = 0 after 2 active rounds")
+local sawDomainEnd = false
+for _, ev in ipairs(evR2) do
+    if ev.Kind == "DomainEnd" then sawDomainEnd = true end
+end
+assert(sawDomainEnd, "Expected DomainEnd event at end of Round 2")
+local snapPost = bDom:Snapshot("Player")
+local postMoves = snapPost.Player.Team[1].Moves
+assert(#postMoves == 4 and postMoves[4].Id == "SantuarioMalevolente" and postMoves[4].Pp == 0 and postMoves[4].MaxPp == 1,
+    "Expected standard 4 moves restored with SantuarioMalevolente locked at 0/1 PP")
+local okCastAgain = bDom:ValidateAction("Player", { Kind = "Move", Index = 4 })
+assert(not okCastAgain, "SantuarioMalevolente must remain locked at 0/1 PP after single use")
+local okRestoreOnce = bDom:ValidateAction("Player", { Kind = "Item", ItemId = "Eter", TargetIndex = 1 })
+assert(not okRestoreOnce, "RestorePP item must NOT refill OncePerBattle SantuarioMalevolente")
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + Domain/Fuga + JujutsuBanner + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, totalMoves)
 end)
 sandbox:Destroy()
 assert(ok, res)

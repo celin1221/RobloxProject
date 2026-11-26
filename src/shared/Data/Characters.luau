@@ -207,6 +207,7 @@ Characters.List = {
 			{ Level = 45, Move = "Clivar" },
 			{ Level = 50, Move = "SantuarioMalevolente" },
 		},
+		DefaultOrder = { "Desmantelar", "Clivar", "Fortificacao", "SantuarioMalevolente" },
 		Animations = {
 			Idle = 95978454415689, Walk = 81539047602340, Hit = 103416185331712, Faint = 79648116867663,
 			Victory = 107803042519026, Mine = 88262424470805,
@@ -1128,7 +1129,20 @@ end
 
 -- 4 golpes ativos padrao: os 4 ultimos aprendidos ate o nivel (garante ao menos 1 golpe de dano)
 function Characters.DefaultActive(id: string, level: number): { string }
+	local def = Characters.List[id]
 	local learned = Characters.LearnedAt(id, level)
+	if def and def.DefaultOrder then
+		local allLearned = true
+		for _, mid in ipairs(def.DefaultOrder) do
+			if not table.find(learned, mid) then
+				allLearned = false
+				break
+			end
+		end
+		if allLearned then
+			return table.clone(def.DefaultOrder)
+		end
+	end
 	local active = {}
 	for i = math.max(1, #learned - 3), #learned do
 		table.insert(active, learned[i])

@@ -262,6 +262,51 @@ function ArenaManager.ConfigureAltars(arena: Model?, isDouble: boolean)
 	end
 end
 
+local sanitizedArenas: { [Model]: boolean } = {}
+
+-- Garante que Decals grandes de piso (ex.: InfiniteAbyssVignette / WaterSurfaceReflection) fiquem em BaseParts OPACAS (Transparency = 0),
+-- evitando o bug de Z-sorting do motor do Roblox onde Decals em partes Transparency = 1 cortam particulas/VFX na linha do horizonte.
+local function sanitizeArenaFloorDecals(arena: Model)
+	if sanitizedArenas[arena] then
+		return
+	end
+	sanitizedArenas[arena] = true
+	local mirror = arena:FindFirstChild("InfiniteMirrorWater", true)
+	local vigPart = arena:FindFirstChild("InfiniteAbyssVignette", true)
+	if mirror and mirror:IsA("BasePart") then
+		mirror.Transparency = 0
+		local ripples = mirror:FindFirstChild("PinkWaterRipples")
+		if ripples and ripples:IsA("Texture") then
+			ripples.ZIndex = 1
+		end
+		if vigPart and vigPart:IsA("BasePart") then
+			local vigDecal = vigPart:FindFirstChild("AbyssVignetteDecal") or vigPart:FindFirstChildOfClass("Decal")
+			if vigDecal then
+				local onMirror = mirror:FindFirstChild("AbyssVignetteDecal")
+				if not onMirror then
+					onMirror = vigDecal:Clone()
+					onMirror.Name = "AbyssVignetteDecal"
+					onMirror.Parent = mirror
+				end
+				onMirror.ZIndex = 2
+				vigDecal.Transparency = 1
+			end
+			mirror.Size = Vector3.new(math.max(mirror.Size.X, vigPart.Size.X), mirror.Size.Y, math.max(mirror.Size.Z, vigPart.Size.Z))
+		end
+	end
+	for _, d in ipairs(arena:GetDescendants()) do
+		if d:IsA("BasePart") and d.Name == "WaterSurfaceReflection" and d.Transparency >= 0.99 then
+			d.Transparency = 0
+			d.Material = Enum.Material.SmoothPlastic
+			d.Color = if mirror and mirror:IsA("BasePart") then mirror.Color else Color3.fromRGB(68, 10, 16)
+			d.Size = Vector3.new(d.Size.X, 0.05, d.Size.Z)
+			if mirror and mirror:IsA("BasePart") then
+				d.Position = Vector3.new(d.Position.X, mirror.Position.Y + mirror.Size.Y * 0.5 - 0.02, d.Position.Z)
+			end
+		end
+	end
+end
+
 function ArenaManager.FindFreeArena(): Model?
 	local folder = workspace:FindFirstChild("Arenas")
 	if not folder then
@@ -270,6 +315,7 @@ function ArenaManager.FindFreeArena(): Model?
 	for _, arena in ipairs(folder:GetChildren()) do
 		if arena:IsA("Model") and not arena:GetAttribute("InUse")
 			and arena:FindFirstChild("PlayerPoint") and arena:FindFirstChild("EnemyPoint") then
+			sanitizeArenaFloorDecals(arena)
 			return arena
 		end
 	end

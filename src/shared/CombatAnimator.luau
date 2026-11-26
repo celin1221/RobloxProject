@@ -13,8 +13,11 @@
 	  - Sem dependencia de permissao de AnimationId entre contas (100% versionado no repositorio)
 ]]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+
+local SukunaAnimator = require(ReplicatedStorage:WaitForChild("Sukuna"):WaitForChild("AnimatorModule"))
 
 local CombatAnimator = {}
 
@@ -2300,6 +2303,15 @@ local ANIMATIONS: { [string]: any } = {
 			kf(2.30, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
 		},
 	},
+
+	-- 46. SUKUNA FUGA (Flecha de Fogo exclusiva do Dominio — delegada ao Sukuna/AnimatorModule)
+	SukunaFuga = {
+		Duration = 3.15,
+		Keyframes = {
+			kf(0.00, "Linear", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+			kf(3.15, "SineInOut", { RightUpperArm = degCF(6, 0, 5), LeftUpperArm = degCF(6, 0, -5) }),
+		},
+	},
 }
 
 --------------------------------------------------------------------
@@ -2526,6 +2538,9 @@ end
 -- API Publica
 --------------------------------------------------------------------
 function CombatAnimator.Has(animName: string?): boolean
+	if SukunaAnimator.Has(animName) then
+		return true
+	end
 	return animName ~= nil and ANIMATIONS[animName] ~= nil
 end
 
@@ -2533,6 +2548,7 @@ function CombatAnimator.Hitstop(model: Model?, duration: number?)
 	if not model then
 		return
 	end
+	SukunaAnimator.Hitstop(model, duration)
 	local st = activeStates[model]
 	if st then
 		st.hitstopUntil = math.max(st.hitstopUntil or 0, os.clock() + (duration or 0.055))
@@ -2541,11 +2557,16 @@ end
 
 function CombatAnimator.Stop(model: Model?)
 	if model then
+		SukunaAnimator.Stop(model)
 		cleanupState(model)
 	end
 end
 
-function CombatAnimator.Play(model: Model, animName: string, timing: { [string]: number }?): boolean
+function CombatAnimator.Play(model: Model, animName: string, timing: { [string]: number }?, targetModel: Model?): boolean
+	if SukunaAnimator.Has(animName) then
+		cleanupState(model)
+		return SukunaAnimator.Play(model, animName, timing, targetModel)
+	end
 	local def = ANIMATIONS[animName]
 	if not def or not model or not model.Parent then
 		return false
@@ -2702,6 +2723,7 @@ function CombatAnimator.Play(model: Model, animName: string, timing: { [string]:
 end
 
 function CombatAnimator.Cleanup()
+	SukunaAnimator.Cleanup()
 	for model in pairs(activeStates) do
 		cleanupState(model)
 	end

@@ -306,8 +306,10 @@ function ProgressionService.WriteBack(player: Player, battle)
 			m.Status = b.Status
 			m.StatusTurns = if b.Status == "Sleep" then b.StatusTurns else nil
 			local pp = nil
-			for _, slot in ipairs(b.Moves) do
-				if slot.Pp < slot.MaxPp then
+			local moveSlots = b._StandardMoves or b.Moves
+			for _, slot in ipairs(moveSlots) do
+				local mvDef = Moves.Get(slot.Id)
+				if mvDef and not mvDef.OncePerBattle and slot.Pp < slot.MaxPp then
 					pp = pp or {}
 					pp[slot.Id] = slot.Pp
 				end

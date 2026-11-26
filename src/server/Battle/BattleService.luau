@@ -164,6 +164,9 @@ local function mirrorEvent(ev)
 	if ev.Side then
 		m.Side = otherSide(ev.Side)
 	end
+	if ev.SourceSide then
+		m.SourceSide = otherSide(ev.SourceSide)
+	end
 	if ev.TargetSide then
 		m.TargetSide = otherSide(ev.TargetSide)
 	end
@@ -241,6 +244,9 @@ local function present(session, events)
 				end
 				payload.TargetModels = tModels
 			end
+		elseif ev.Kind == "DomainStart" or ev.Kind == "DomainSlash" then
+			payload = table.clone(ev)
+			payload.Model = modelFor(session, ev.Side, ev.FieldSlot)
 		end
 		fireViewers(session, BattleUpdateRE, function(side)
 			if side == "Enemy" then
@@ -278,6 +284,8 @@ local function present(session, events)
 		elseif ev.Kind == "StatusDamage" and model then
 			CharacterLibrary.Play(model, "Hit")
 			ArenaManager.ImpactBurst(model, if ev.Status == "Burn" then Color3.fromRGB(255, 110, 40) else Color3.fromRGB(160, 70, 200))
+		elseif ev.Kind == "DomainSlash" and model then
+			CharacterLibrary.Play(model, "Hit")
 		elseif ev.Kind == "Protected" and model then
 			ArenaManager.ImpactBurst(model, Color3.fromRGB(64, 214, 230))
 		elseif ev.Kind == "Faint" and model then

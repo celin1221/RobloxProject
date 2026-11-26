@@ -11,9 +11,9 @@
 * **Open Cloud Creator UserId (conta logada no MCP):** `12009032821` *(usar `userId: "12009032821"` ao fazer upload via `open_cloud_invoke` e inserir via `insert_asset`)*.
 * **Blender:** `D:\Blender\blender.exe` (versão **5.3.0**, usado em modo `--background --python ...`).
 * **Sincronizador Disk-First (`src/` <-> Studio):**
-  * `python scripts/sync_studio.py status` — valida se os 106 scripts em `src/` estão 100% em sync.
+  * `python scripts/sync_studio.py status` — valida se os 113 scripts em `src/` estão 100% em sync.
   * `python scripts/sync_studio.py push` — envia alterações de `src/` para o Studio.
-  * `python scripts/sync_studio.py test` — roda validação do GDD (`DamageCalc`, `BattleEngine` 1x1/2x2, Classes, Ginásios, Treino, Progressão e `AccountLevel`).
+  * `python scripts/sync_studio.py test` — roda validação do GDD (`Test 1..17`: `DamageCalc`, `BattleEngine` 1x1/2x2, Classes, Ginásios, Treino, Progressão, `AccountLevel`, `HollowPurple`, `Secreto/Sukuna`, `Domain/Fuga` e `JujutsuBanner`).
 
 ---
 
@@ -94,6 +94,10 @@ Consulte o detalhamento completo em [`Blender/PROGRESSO.md`](./Blender/PROGRESSO
   * 5 novos personagens Tripo R6-on-R15 (`Nobara` & `Itadori` Comum; `Fushiguro` & `Todo` Raro; `Nanami` Épico) + **substituição completa do modelo de `Gojo`** (`Setero`, Lendário, Asset `84694141738157`) com nova aura Limitless 100% partículas puras e correção de `VfxController.HANDLERS.Atracao.Impact`.
   * Novo Banner `JujutsuKaisen` (`banner_jujutsu` `140680943806077`) + 4º Ginásio (`Ginásio Jujutsu de Tóquio`, `insignia_jujutsu` `82094936324685`) + códigos Dev (`NOBARA`, `ITADORI`, `FUSHIGURO`, `TODO`, `NANAMI`, `GOJO`/`GOJO50`, `JUJUTSU`/`DEVJUJUTSU`).
   * `SecretAwakeningAltar` removido da invasão da `Plot01` e relocado para uma **passagem secreta esculpida nos montes Noroeste** (`X=-172, Z=-148..-196`, atrás do Pavilhão, `78,8` studs da base mais próxima, `PlotOverlaps=0`).
+* **Sistema Completo de Expansão de Domínio, `Fuga`, Camada Audiovisual AAA do `Sukuna` & Correção de Z-Sorting nas Arenas (25/11/2026):**
+  * **Regras Autoritativas do Sukuna (`BattleEngine`, `Moves`, `Characters`, `ProgressionService`, `BattleClient`):** Moveset padrão Nv. 50 ordenado em `1. Desmantelar`, `2. Clivar`, `3. Fortificacao`, `4. SantuarioMalevolente` (`PP = 1`, `OncePerBattle = true`, imune a recarga por `RestorePP`). Ao ativar o *Santuário Malevolente*, o Domínio permanece ativo por **2 rodadas completas**, aplica **15% do MaxHP** em cortes/sangramento na invocação e a cada rodada, e troca exclusivamente o moveset do Sukuna para **`Fuga`** (`DomainExclusive = true`, Poder `98`, `AllEnemies`, `BreaksProtect = true`), restaurando o cenário e os 4 golpes padrão (`0/1 PP` no Santuário) ao final da 2ª rodada (`Test 17` PASS).
+  * **Suíte Modular AAA (`src/shared/Sukuna/{Config,Janitor,CinematicCamera,SoundManager,AnimatorModule,MalevolentShrineEnv,SukunaVFX}.luau`):** 7 módulos `--!strict` com zero cones/esferas/cilindros de Neon, abafamento low-pass (`EqualizerSoundEffect`), slots de voz e legendas cinematográficas (*"Ryōiki Tenkai..."*, *"Fukuma Mizushi"*, *"Fuga"*), Santuário Malevolente 3D monumental emergindo atrás do Sukuna e Flecha de Fogo Termobárica volumétrica. Códigos Nv. 50 extras adicionados em `Codes.luau` (`BYAKUYA50`, `SAN50`/`GOKU50`, `BARBABRANCA50`).
+  * **Correção Definitiva do Corte Horizontal de VFX nas Arenas (`Workspace.Arenas.Arena01..Arena10`, `_ConstrutorArenasSukuna.luau`, `ArenaManager.luau`):** `AbyssVignetteDecal` movido de `InfiniteAbyssVignette` (`Transparency = 1`) para `InfiniteMirrorWater` opaco (`Transparency = 0`, `ZIndex = 2`) e `WaterSurfaceReflection` tornado opaco no G-buffer, eliminando 100% o recorte de partículas/auras na linha do horizonte. **113 scripts** sincronizados (`PASS`).
 
 ---
 

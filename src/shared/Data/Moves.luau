@@ -823,12 +823,14 @@ Moves.List = {
 			},
 			Target = "Self",
 		},
+		CustomCinematicCamera = true,
 		Anim = "SukunaFortificacao", Vfx = "SukunaFortificacao",
 		Timing = { Charge = 0.16, Release = 0.56, Impact = 0.72, Length = 1.28 },
 	},
 	Desmantelar = {
 		Name = "Desmantelar", Type = "Mago", Category = "Damage", Power = 58, Accuracy = 100, PP = 20,
 		CritChance = 0.18,
+		CustomCinematicCamera = true,
 		CutIn = true, CutInFocusY = 1.65, CutInFov = 44, Anim = "SukunaDesmantelar", Vfx = "SukunaDesmantelar",
 		CutInColors = {
 			Bg = Color3.fromRGB(14, 10, 16),
@@ -844,6 +846,7 @@ Moves.List = {
 		Name = "Clivar", Type = "Mago", Category = "Damage", Power = 68, Accuracy = 95, PP = 15,
 		BreaksProtect = true,
 		Effect = { Kind = "StatStage", Stat = "Defense", Stages = -1, Chance = 45, Target = "Target" },
+		CustomCinematicCamera = true,
 		CutIn = true, CutInFocusY = 1.65, CutInFov = 44, Anim = "SukunaClivar", Vfx = "SukunaClivar",
 		CutInColors = {
 			Bg = Color3.fromRGB(18, 6, 12),
@@ -856,8 +859,16 @@ Moves.List = {
 		Timing = { Charge = 0.22, Release = 0.64, Impact = 1.06, Length = 1.62 },
 	},
 	SantuarioMalevolente = {
-		Name = "Santu\u{e1}rio Malevolente", Type = "Mago", Category = "Damage", Power = 82, Accuracy = 95, PP = 10,
+		Name = "Santu\u{e1}rio Malevolente", Type = "Mago", Category = "Status", Accuracy = nil, PP = 1,
+		OncePerBattle = true,
 		Target = "AllEnemies", BreaksProtect = true,
+		Effect = {
+			Kind = "DomainExpansion",
+			Domain = "MalevolentShrine",
+			Turns = 2,
+			SlashFraction = 0.15,
+		},
+		CustomCinematicCamera = true,
 		Signature = true, CutIn = true, Anim = "SukunaSantuario", Vfx = "SukunaSantuario",
 		CutInFocusY = 1.85, CutInFov = 45, CutInBannerY = 0.16,
 		CutInColors = {
@@ -868,7 +879,24 @@ Moves.List = {
 			Text = Color3.fromRGB(255, 244, 246),
 			TextStroke = Color3.fromRGB(8, 4, 8),
 		},
-		Timing = { Charge = 0.28, Release = 1.08, Impact = 1.62, Length = 2.30 },
+		Timing = { Charge = 0.28, Release = 1.18, Impact = 1.86, Length = 2.85 },
+	},
+	Fuga = {
+		Name = "Fuga", Type = "Mago", Category = "Damage", Power = 98, Accuracy = 100, PP = 2,
+		Target = "AllEnemies", BreaksProtect = true, CritChance = 0.22,
+		Hidden = true, DomainExclusive = true, Signature = true,
+		CustomCinematicCamera = true,
+		CutIn = true, Anim = "SukunaFuga", Vfx = "SukunaFuga",
+		CutInFocusY = 1.80, CutInFov = 44, CutInBannerY = 0.16,
+		CutInColors = {
+			Bg = Color3.fromRGB(16, 8, 6),
+			Grad1 = Color3.fromRGB(255, 116, 26),
+			Grad2 = Color3.fromRGB(48, 10, 8),
+			Stroke = Color3.fromRGB(255, 232, 168),
+			Text = Color3.fromRGB(255, 250, 236),
+			TextStroke = Color3.fromRGB(20, 6, 4),
+		},
+		Timing = { Charge = 0.24, Release = 1.48, Impact = 2.08, Length = 3.15 },
 	},
 
 	-- Golpe reserva usado so quando todos os golpes estao sem PP
