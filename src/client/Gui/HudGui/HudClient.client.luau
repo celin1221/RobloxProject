@@ -216,21 +216,44 @@ for i, e in ipairs(MENU) do
 		end,
 	})
 end
--- Configuracoes: engrenagem no canto de cima a direita
+-- Configuracoes: engrenagem no canto de cima a direita + botao discreto da Arena PvP ao lado
 local settingsButton = UI.button(hud, { Name = "SettingsButton", Icon = "gear", Color = "grey", Layout = "icon", Size = UDim2.fromScale(0.12, 0.15), Position = UDim2.fromScale(0.985, 0.03), AnchorPoint = Vector2.new(1, 0), Aspect = 1, AspectAxis = Enum.DominantAxis.Height, MaxSize = Vector2.new(62, 62), Corner = 0.3,
 	OnClick = function()
 		UI.open("Settings")
 	end,
 })
+local pvpButton = UI.button(hud, {
+	Name = "PvPButton",
+	Icon = "sword",
+	Text = "PVP",
+	Color = "red",
+	Layout = "row",
+	Role = "Small",
+	Size = UDim2.fromOffset(102, 52),
+	Position = UDim2.new(0.985, -72, 0.03, 0),
+	AnchorPoint = Vector2.new(1, 0),
+	Corner = 0.3,
+	MaxSize = Vector2.new(118, 62),
+	OnClick = function()
+		if not profile or not profile.StarterChosen then
+			return
+		end
+		UI.open("PvP")
+	end,
+})
 
--- Posiciona a Trilha Inicial exatamente abaixo da engrenagem sem colisoes
+-- Posiciona o botao PVP ao lado da engrenagem e a Trilha Inicial abaixo sem colisoes
 local function layoutRightStack()
 	local h = hud.AbsoluteSize.Y
 	if h < 40 then
 		return
 	end
 	local topY = math.floor(h * 0.03)
+	local gearW = math.max(T.TouchMin, math.floor(settingsButton.AbsoluteSize.X))
 	local gearH = math.max(T.TouchMin, math.floor(settingsButton.AbsoluteSize.Y))
+	local pvpW = math.clamp(math.floor(gearH * 1.9), 86, 114)
+	pvpButton.Size = UDim2.fromOffset(pvpW, gearH)
+	pvpButton.Position = UDim2.new(0.985, -(gearW + 10), 0, topY)
 	trackBtn.Position = UDim2.new(0.985, 0, 0, topY + gearH + 16)
 end
 hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutRightStack)

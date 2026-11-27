@@ -1615,3 +1615,31 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - `python scripts/sync_studio.py status` (`100% in sync` nos **118 scripts**) e `python scripts/sync_studio.py test` (`PASS`).
 - Validado ao vivo no Play Mode (com backup e restauração limpa do perfil): abertura `6★ Sukuna` no Monólito (`RAID 6 ESTRELAS: SUKUNA`), batalha completa `3★ Freeza` 4×1 vencida em `5` turnos (`29,9s`, `MovesAccepted = 5`, MVP `+1.875 Gold | +75 XP Conta | +225 XP Lutador | +4 Minérios de cada`, `0` Gemas adicionadas), proteção de capacidade de coleção no fluxo de captura, liberação limpa da `RaidArena01` (`InUse = false`, `InBattle = false`) e **`0` erros/avisos no Console**.
 - Place salvo no Roblox Studio na **versão 368** (`TeamCreate`).
+
+
+## Filas PvP Competitiva & Casual (1x1/2x2), Matchmaking Global Híbrido, Revisão de BSTs Estilo Pokémon & Quadro 3D de Ranking (26/11/2026)
+
+**Feito**
+- **1. Revisão Completa dos BSTs (34 Personagens) + Crescimento Proporcional + Escala de Coleções (`src/shared/Data/Characters.luau`, `Progression.luau`, `BattleEngine.luau`):**
+  - Substituído o crescimento plano por crescimento proporcional (`levelFactor = 0.55 + 0.045 * level`: Nv. 1 = `0.595×`, Nv. 10 = `1.000×`, Nv. 50 = `2.800×`), preservando 100% os arquétipos extremos até o Nv. 50.
+  - Revisados os 4 atributos base dos **34 personagens ativos** na régua `Comum = 125`, `Raro = 138`, `Épico = 152`, `Lendário = 170`, `Secreto = 190` com contrastes reais estilo Pokémon (`Kuririn` Comum VEL `38` supera `Setero` `37`; `Chad` Comum DEF `35` supera `Setero` `25`; `Vegeta` Raro ATQ `40` empata/supera Lendários; `BarbaBranca` lidera HP `80`).
+  - Aplicada escala progressiva de **`+5%` por coleção/geração** no PvE e no Casual (`Generico/Naruto 1.00×`, `OnePiece 1.05×`, `Bleach 1.10×`, `JujutsuKaisen 1.15×`, `DragonBall 1.20×`), enquanto na **Ranqueada (`Ranked = true`)** todas as coleções são normalizadas para **`1.00×`** e `Secreto` é nivelado ao teto de `Lendário` (`170`).
+  - Planilhas `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` regeneradas via `python scripts/update_characters_sheet.py`.
+- **2. Regras VGC, ELO Separado 1x1/2x2, Matchmaking Global Híbrido & Temporada Mensal (`src/shared/Data/PvPRank.luau`, `Net.luau`, `PlayerDataService.luau`, `BattleService.luau`, `PvPService.luau`, `TowerService.luau`, `DataMain.server.luau`):**
+  - Remotes criados e documentados: `PvPQueue` (`RemoteFunction`) e `PvPQueueState` (`RemoteEvent`).
+  - **Competitivo (`Ranked2x2`, `Ranked1x1`):** Nv. 50, BST normalizado (`1.00×`), Estrelas/Variantes/`+10%` do Despertar puramente cosméticos, **Genética (IVs), Treino da Cápsula (EVs) e Passiva Secreta (se Desperto) mantidos ativos**, Species Clause (sem repetidos) e Limite de Elite (máx. `1 Secreto` e `2 Lendários`).
+  - **Casual (`Casual2x2`, `Casual1x1`) e Duelo Amistoso por proximidade:** poder real não normalizado ("vale tudo"), sem alteração de ELO.
+  - **Matchmaking Híbrido:** pareamento instantâneo local no mesmo servidor (zero tela de carregamento) combinado com matchmaking global entre servidores via `MemoryStoreService` (`SortedMap`) + `TeleportService:ReserveServer` (janelas de ELO expansivas `±100 -> ±250 -> ±500 -> Global`, nunca pareando com bots na Ranqueada).
+  - **ELO & Placares Separados + `leaderstats` Nativo:** `Mode1x1` (`PvPRank1x1_v1`) e `Mode2x2` (`PvPRank2x2_v1`) independentes; `player.leaderstats` criado com `ELO` (`IntValue` como 1º filho → PlayerList nativa do Roblox ordena automaticamente por ELO!) e `Patente` (`StringValue`).
+  - **Temporada Mensal Competitiva:** premia Gemas enxutas pela melhor Patente (`Prata 15`, `Ouro 30`, `Platina 50`, `Diamante 75`, `Lenda 110`) + títulos exclusivos `[Lenda PvP]` / `[Top 100 PvP]` em `VipTagClient.client.luau`.
+- **3. Monumento 3D de Ranking na Praça + Hub Arena PvP & Botão no HUD (`Workspace.Map.PvPBoardMonument`, `PvPClient.client.luau`, `HudClient.client.luau`, `TowerClient.client.luau`):**
+  - Construído `Workspace.Map.PvPBoardMonument` em `(-38, 8.32, 33)` (espelho simétrico do `LevelRewardsShrine`, voltado para o Spawn) com `SurfaceGui` de alta resolução (`Top 10 Global 2x2` e `Top 10 Global 1x1` atualizados automaticamente pelo servidor) e `PvPBoardPrompt` (`E`).
+  - Adicionado botão discreto `PVP` no canto superior direito do `HudClient` (ao lado da engrenagem, preservando `AccountLevelBar` embaixo da `TeamBar` e o selo minimalista do Bônus de Fim de Semana).
+  - Reformulado `PvPClient.client.luau` (tema `Midnight-Blue Anime`, zero emojis, 100% `UI.Icons`) com **Hub Arena PvP** (abas `FILAS PVP` e `RANKING GLOBAL`), barra flutuante de busca de partida no topo e modal de Duelo Amistoso.
+- **4. Suíte Automatizada (`scripts/sync_studio.py` — `Test 20`):**
+  - Adicionado **Test 20 (`PvPQueues/PokemonBSTs`)** validando BSTs exatos dos 34 personagens, preservação de extremos no Nv. 50 (`Kuririn`, `Chad`, `Vegeta`, `BarbaBranca`), escala `+5%`/coleção vs igualdade `1.00×` Ranqueada (`Freeza` vs `Naruto`, `Sukuna` vs `San`), `Progression.RankedMemberStats`, validação VGC (`PvPRank.ValidateRankedTeam`), stores separados `1x1`/`2x2`, janelas de ELO, remotes e `Workspace.Map.PvPBoardMonument`.
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos **118 scripts**) e `python scripts/sync_studio.py test` (`PASS`, `Test 1..20`).
+- Validado ao vivo no Play Mode (com backup e restauração do perfil): `leaderstats` (`1:ELO`, `2:Patente`) atualizando dinamicamente com ELO separado `2x2` (`1480 Platina`) vs `1x1` (`1000 Bronze`), Quadro 3D `PvPBoardMonument` exibindo ambas as colunas ao vivo, entrada/saída nas filas (`PvPQueueBanner` sem sobreposições em Desktop e `667x375`), `PvPButton` sem sobreposições e **`0` erros de jogo no Console**.
+- Place salvo no Roblox Studio na **versão 374** (`TeamCreate`).

@@ -181,6 +181,8 @@ if RunService:IsStudio() then
 			return AwakeningService.Awaken(player, ...)
 		elseif action == "raid" then
 			return RaidService.Dev(player, ...)
+		elseif action == "pvp" then
+			return require(ServerScriptService.Battle.PvPService).Dev(player, ...)
 		elseif action == "timescale" then
 			require(ServerScriptService.Battle.BattleConfig).TimeScale = (...)
 			return true

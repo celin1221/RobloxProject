@@ -807,12 +807,22 @@ function BattleService.StartPvP(playerA: Player, playerB: Player, teamA, teamB, 
 	})
 
 	task.spawn(function()
-		local modeTitle = if battle:IsDouble() then "PvP 2x2 (Em Dupla)" else "PvP 1x1"
+		local modeTitle, ruleDesc
+		if opts.Mode == "Ranked" then
+			modeTitle = if battle:IsDouble() then "Competitivo 2x2" else "Competitivo 1x1"
+			ruleDesc = "N\u{ed}vel 50, BST normalizado, valendo ELO!"
+		elseif opts.Mode == "Casual" then
+			modeTitle = if battle:IsDouble() then "Casual 2x2" else "Casual 1x1"
+			ruleDesc = "Poder real liberado, sem normaliza\u{e7}\u{e3}o!"
+		else
+			modeTitle = if battle:IsDouble() then "Amistoso 2x2" else "Amistoso 1x1"
+			ruleDesc = "Duelo amistoso com poder real (sem ELO)."
+		end
 		local intro = {
 			{
 				Kind = "Message",
-				Text = modeTitle .. " contra " .. playerB.DisplayName .. "! N\u{ed}veis igualados em 50, sem itens.",
-				TextEnemy = modeTitle .. " contra " .. playerA.DisplayName .. "! N\u{ed}veis igualados em 50, sem itens.",
+				Text = modeTitle .. " contra " .. playerB.DisplayName .. "! " .. ruleDesc,
+				TextEnemy = modeTitle .. " contra " .. playerA.DisplayName .. "! " .. ruleDesc,
 			},
 			{
 				Kind = "Message",

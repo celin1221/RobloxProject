@@ -832,9 +832,10 @@ function TowerService.Init()
 		end
 	end
 	Remotes.TowerBoard.OnServerInvoke = function(player, format)
-		if format == "PvP" then
+		if format == "PvP" or format == "PvP2x2" or format == "PvP1x1" then
 			local PvPService = require(ServerScriptService:WaitForChild("Battle"):WaitForChild("PvPService"))
-			return PvPService.GetLeaderboard(player)
+			local pvpFmt = if format == "PvP1x1" then "1x1" else "2x2"
+			return PvPService.GetLeaderboard(player, pvpFmt)
 		end
 		local fmt = normFormat(format)
 		return { Format = fmt, Server = serverBoard(fmt), Global = getGlobalBoard(fmt), Info = TowerService.MenuInfo(player, fmt) }

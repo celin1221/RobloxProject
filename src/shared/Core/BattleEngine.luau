@@ -86,8 +86,8 @@ local SPIKES_FRACTION = { 1 / 8, 1 / 6, 1 / 4 }
 -- Cria um lutador a partir dos dados (Characters + Moves)
 local function newBattler(characterId: string, level: number, moveIds: { string }?, uid: string?, extra)
 	local def = assert(Characters.Get(characterId), "Personagem desconhecido: " .. tostring(characterId))
-	local stats = Characters.StatsAt(characterId, level)
 	extra = extra or {}
+	local stats = Characters.StatsAt(characterId, level, if extra.RankedNormalized == true then { Ranked = true } else nil)
 	local scalarMult = if typeof(extra.StatMultiplier) == "number" then extra.StatMultiplier else 1
 	local perStat = if typeof(extra.StatMultipliers) == "table" then extra.StatMultipliers else nil
 	if not perStat and (extra.Genetics or extra.Training) then

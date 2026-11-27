@@ -81,7 +81,7 @@ DEV_META: dict[str, dict[str, str]] = {
         "Anim": "Sim (AnimatorModule 60 FPS + 5 golpes incl. Fuga)",
         "VfxCutIn": "Sim / Sim (Sukuna AAA + Santuário 3D + Fuga)",
         "Shiny": "Sim (Paleta + Aura)",
-        "Notes": "Raridade SECRETO (0,001% Nv. 15+); BST 162; Desmantelar, Clivar, Fortificação, Santuário Malevolente (1 PP / 2 rodadas / 15% sangramento) e Fuga exclusivo no Domínio",
+        "Notes": "Raridade SECRETO (0,001% Nv. 15+); BST 190 (170 Ranqueada / 1,15x Jujutsu PvE); Desmantelar, Clivar, Fortificação, Santuário Malevolente (1 PP / 2 rodadas / 15% sangramento) e Fuga exclusivo no Domínio",
     },
     "San": {
         "Stage": "Concluído (100%)",

@@ -357,12 +357,39 @@ local function sanitize(data)
 		data.PvP = PvPRank.DefaultState()
 	else
 		local p = data.PvP
-		p.Rating = math.clamp(cleanNumber(if typeof(p.Rating) == "number" then p.Rating else PvPRank.StartRating, PvPRank.MaxRating), PvPRank.MinRating, PvPRank.MaxRating)
-		p.BestRating = math.max(p.Rating, math.clamp(cleanNumber(if typeof(p.BestRating) == "number" then p.BestRating else p.Rating, PvPRank.MaxRating), PvPRank.MinRating, PvPRank.MaxRating))
-		p.Wins = cleanNumber(p.Wins, 1e6)
-		p.Losses = cleanNumber(p.Losses, 1e6)
-		p.Wins2x2 = cleanNumber(p.Wins2x2, 1e6)
-		p.Losses2x2 = cleanNumber(p.Losses2x2, 1e6)
+		local legacyRating = math.clamp(cleanNumber(if typeof(p.Rating) == "number" then p.Rating else PvPRank.StartRating, PvPRank.MaxRating), PvPRank.MinRating, PvPRank.MaxRating)
+		local legacyBest = math.max(legacyRating, math.clamp(cleanNumber(if typeof(p.BestRating) == "number" then p.BestRating else legacyRating, PvPRank.MaxRating), PvPRank.MinRating, PvPRank.MaxRating))
+		local function sanitizeMode(slot, fallbackRating: number, fallbackBest: number, fallbackWins: number, fallbackLosses: number)
+			if typeof(slot) ~= "table" then
+				return {
+					Rating = fallbackRating,
+					BestRating = fallbackBest,
+					Wins = fallbackWins,
+					Losses = fallbackLosses,
+				}
+			end
+			local r = math.clamp(cleanNumber(if typeof(slot.Rating) == "number" then slot.Rating else fallbackRating, PvPRank.MaxRating), PvPRank.MinRating, PvPRank.MaxRating)
+			local b = math.max(r, math.clamp(cleanNumber(if typeof(slot.BestRating) == "number" then slot.BestRating else r, PvPRank.MaxRating), PvPRank.MinRating, PvPRank.MaxRating))
+			return {
+				Rating = r,
+				BestRating = b,
+				Wins = cleanNumber(slot.Wins, 1e6),
+				Losses = cleanNumber(slot.Losses, 1e6),
+			}
+		end
+		local legacyWins = cleanNumber(p.Wins, 1e6)
+		local legacyLosses = cleanNumber(p.Losses, 1e6)
+		local legacyWins2x2 = cleanNumber(p.Wins2x2, 1e6)
+		local legacyLosses2x2 = cleanNumber(p.Losses2x2, 1e6)
+		p.Mode2x2 = sanitizeMode(p.Mode2x2, legacyRating, legacyBest, legacyWins2x2, legacyLosses2x2)
+		p.Mode1x1 = sanitizeMode(p.Mode1x1, legacyRating, legacyBest, math.max(0, legacyWins - legacyWins2x2), math.max(0, legacyLosses - legacyLosses2x2))
+		p.Rating = PvPRank.BestRatingOf(p)
+		p.BestRating = math.max(legacyBest, p.Rating, p.Mode1x1.BestRating, p.Mode2x2.BestRating)
+		p.Wins = p.Mode1x1.Wins + p.Mode2x2.Wins
+		p.Losses = p.Mode1x1.Losses + p.Mode2x2.Losses
+		p.Wins2x2 = p.Mode2x2.Wins
+		p.Losses2x2 = p.Mode2x2.Losses
+		p.SeasonId = if typeof(p.SeasonId) == "string" then p.SeasonId else ""
 		p.DailyDay = cleanNumber(p.DailyDay, 1e6)
 		p.DailyRewards = cleanNumber(p.DailyRewards, PvPRank.DailyRewardCap)
 		if typeof(p.OpponentsToday) ~= "table" then

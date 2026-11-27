@@ -622,7 +622,7 @@ local bWB = BattleEngine.New({
         { CharacterId = "Yomogi", Level = 50, Moves = { "CascaDeCarvalho" } },
         { CharacterId = "Chad", Level = 50, Moves = { "PosturaDeCombate" } },
     } },
-    Format = "2x2", Mode = "PvP", EnemyHuman = true, Seed = 13,
+    Format = "2x2", Mode = "PvP", EnemyHuman = true, Seed = 15,
 })
 local evWB = bWB:ResolveTurn(
     { Kind = "Double", Actions = { { FieldSlot = 1, Kind = "Move", Index = 1 }, { FieldSlot = 2, Kind = "Move", Index = 1 } } },
@@ -928,7 +928,68 @@ end
 assert(sg:FindFirstChild("RaidGui") and sg.RaidGui:IsA("ScreenGui"), "Missing StarterGui.RaidGui ScreenGui")
 assert(rs.Remotes:FindFirstChild("RaidState") and rs.Remotes:FindFirstChild("RaidAction"), "Missing RaidState/RaidAction remotes")
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + Domain/Fuga + Jujutsu/DragonBall + GlobalRaid4x1 + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, totalMoves)
+-- Test 20: Competitive/Casual PvP Queues (1x1/2x2), Pokemon-Style High-Contrast BSTs, Collection Scaling vs Ranked Normalization, VGC Rules & 3D Ranking Monument
+local expectedBaseBst = { Comum = 125, Raro = 138, Epico = 152, Lendario = 170, Secreto = 190 }
+local activeCharCount = 0
+for cid, def in pairs(Characters.List) do
+    if not def.Prototype then
+        activeCharCount += 1
+        local bsum = Characters.BstOf(def.BaseStats)
+        assert(bsum == expectedBaseBst[def.Rarity], string.format("Expected %s (%s) Base BST=%d, got %d", cid, def.Rarity, expectedBaseBst[def.Rarity], bsum))
+    end
+end
+assert(activeCharCount >= 34, "Expected >= 34 active characters, got " .. tostring(activeCharCount))
+-- Pokemon high-contrast archetypes preserved at Lv 50 Ranked
+local kurR50 = Characters.StatsAt("Kuririn", 50, { Ranked = true })
+local gojoR50 = Characters.StatsAt("Setero", 50, { Ranked = true })
+local chadR50 = Characters.StatsAt("Chad", 50, { Ranked = true })
+local vegR50 = Characters.StatsAt("Vegeta", 50, { Ranked = true })
+local byaR50 = Characters.StatsAt("Byakuya", 50, { Ranked = true })
+local wbR50 = Characters.StatsAt("BarbaBranca", 50, { Ranked = true })
+assert(kurR50.Speed > gojoR50.Speed, "Expected Comum Kuririn Ranked Lv50 Speed > Lendario Setero")
+assert(chadR50.Defense > gojoR50.Defense, "Expected Comum Chad Ranked Lv50 Defense > Lendario Setero")
+assert(vegR50.Attack >= byaR50.Attack, "Expected Raro Vegeta Ranked Lv50 Attack >= Lendario Byakuya")
+assert(wbR50.HP > gojoR50.HP and wbR50.HP > Characters.StatsAt("Sukuna", 50, { Ranked = true }).HP, "Expected BarbaBranca highest Ranked Lv50 HP")
+-- Collection +5%/tier scaling in PvE/Casual vs 1.00x Ranked equality
+local narPvE = Characters.BstOf(Characters.StatsAt("Naruto", 50))
+local frePvE = Characters.BstOf(Characters.StatsAt("Freeza", 50))
+local narRnk = Characters.BstOf(Characters.StatsAt("Naruto", 50, { Ranked = true }))
+local freRnk = Characters.BstOf(Characters.StatsAt("Freeza", 50, { Ranked = true }))
+assert(frePvE > narPvE * 1.18, "Expected DragonBall Freeza PvE Lv50 BST (~1.20x) > Naruto (~1.00x)")
+assert(math.abs(freRnk - narRnk) <= 2, "Expected Freeza & Naruto Ranked Lv50 BST equalized (1.00x)")
+-- Secreto Sukuna: 190 * 1.15 PvE vs 170 (Lendario tier) in Ranked
+local sukRnk = Characters.BstOf(Characters.StatsAt("Sukuna", 50, { Ranked = true }))
+local sanRnk = Characters.BstOf(Characters.StatsAt("San", 50, { Ranked = true }))
+assert(math.abs(sukRnk - sanRnk) <= 3, string.format("Expected Ranked Sukuna (%d) normalized to Lendario San (%d)", sukRnk, sanRnk))
+-- Progression.RankedMemberStats ignores Stars/Variant/+10% Awakening, preserves Genetics & Training
+local mStar = { CharacterId = "Luffy", Level = 12, Stars = 5, Variant = "Brilhante", Awakened = true, Genetics = { HP = 100, Attack = 100, Defense = 0, Speed = 0 }, Training = { HP = 0, Attack = 100, Defense = 0, Speed = 0 } }
+local mPlain = { CharacterId = "Luffy", Level = 50, Stars = 0, Awakened = false, Genetics = { HP = 100, Attack = 100, Defense = 0, Speed = 0 }, Training = { HP = 0, Attack = 100, Defense = 0, Speed = 0 } }
+local rStA = Progression.RankedMemberStats(mStar)
+local rStB = Progression.RankedMemberStats(mPlain)
+assert(rStA.HP == rStB.HP and rStA.Attack == rStB.Attack and rStA.Defense == rStB.Defense and rStA.Speed == rStB.Speed,
+    "Expected RankedMemberStats to equalize Stars/Variant/Awakening +10% while keeping Genetics/Training")
+local bRanked = BattleEngine.New({
+    Player = { Team = { { CharacterId = "Sukuna", Level = 50, RankedNormalized = true } } },
+    Enemy = { Team = { { CharacterId = "San", Level = 50, RankedNormalized = true } } },
+    Mode = "PvP", EnemyHuman = true, Seed = 202,
+})
+assert(bRanked:Active("Player").MaxHp < Characters.StatsAt("Sukuna", 50).HP, "Expected BattleEngine RankedNormalized Sukuna HP to use normalized Ranked stats")
+-- VGC team validation, separated stores, expanding ELO windows & seasonal gems
+local okDup = PvPRank.ValidateRankedTeam({ "Setero", "Setero" }, "2x2")
+local ok3Leg = PvPRank.ValidateRankedTeam({ "Setero", "San", "BarbaBranca" }, "2x2")
+local okValid = PvPRank.ValidateRankedTeam({ "Sukuna", "Setero", "San", "Naruto", "Kuririn", "Chad" }, "2x2")
+assert((not okDup) and (not ok3Leg) and okValid, "Expected VGC team rules: reject duplicates & >2 Legendaries, accept 1 Secreto + 2 Lendarios + 3 others")
+assert(PvPRank.StoreNames["1x1"] == "PvPRank1x1_v1" and PvPRank.StoreNames["2x2"] == "PvPRank2x2_v1", "Expected separated 1x1 & 2x2 OrderedDataStore names")
+assert(PvPRank.AllowedEloGap(0) == 100 and PvPRank.AllowedEloGap(15) == 250 and PvPRank.AllowedEloGap(30) == 500 and PvPRank.AllowedEloGap(55) >= 9999,
+    "Expected expanding ELO search windows")
+assert(rs.Remotes:FindFirstChild("PvPQueue") and rs.Remotes:FindFirstChild("PvPQueueState"), "Missing PvPQueue / PvPQueueState remotes")
+local pvpMon = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("PvPBoardMonument")
+assert(pvpMon and pvpMon:FindFirstChild("PvPBoardPrompt", true) and pvpMon:FindFirstChild("BoardGui", true),
+    "Missing Workspace.Map.PvPBoardMonument with BoardGui and PvPBoardPrompt")
+assert(sg.HudGui.HudClient.Source:find("PvPButton", 1, true) and sg.PvPGui.PvPClient.Source:find("PvPWindow", 1, true),
+    "Missing PvPButton in HudClient or PvPWindow in PvPClient")
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + Domain/Fuga + Jujutsu/DragonBall + GlobalRaid4x1 + PvPQueues/PokemonBSTs (%d chars) + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, activeCharCount, totalMoves)
 end)
 sandbox:Destroy()
 assert(ok, res)

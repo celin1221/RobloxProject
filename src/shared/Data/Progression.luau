@@ -66,10 +66,23 @@ function Progression.MemberMultipliers(m)
 	return statMults
 end
 
--- Atributos finais de um membro salvo (mesma conta da batalha)
+-- Atributos finais de um membro salvo (mesma conta da batalha PvE/Casual)
 function Progression.MemberStats(m)
 	local stats = Characters.StatsAt(m.CharacterId, m.Level)
 	local mults = Progression.MemberMultipliers(m)
+	for k, v in pairs(stats) do
+		local mult = mults[k] or 1
+		if mult ~= 1 then
+			stats[k] = math.max(1, math.floor(v * mult + 0.5))
+		end
+	end
+	return stats
+end
+
+-- Atributos normalizados da Ranqueada (Nv. 50, colecao 1.00x, Secreto = Lendario, sem Estrelas/Variante/+10% Despertar; Genetica e Treino ativos)
+function Progression.RankedMemberStats(m)
+	local stats = Characters.StatsAt(m.CharacterId, Progression.MaxLevel, { Ranked = true })
+	local mults = Genetics.MultipliersFor(m and m.Genetics, m and m.Training)
 	for k, v in pairs(stats) do
 		local mult = mults[k] or 1
 		if mult ~= 1 then

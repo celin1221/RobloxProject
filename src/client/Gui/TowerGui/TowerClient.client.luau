@@ -49,7 +49,7 @@ local towerFormat = "1x1"
 local gymFormat = "1x1"
 local boardScope = "Server" -- "Server" | "Global"
 local latestInfo = nil
-local boardByFormat = { ["1x1"] = nil, ["2x2"] = nil, ["PvP"] = nil }
+local boardByFormat = { ["1x1"] = nil, ["2x2"] = nil, PvP1x1 = nil, PvP2x2 = nil }
 
 local practiceFormat = "1x1"
 local practiceAI = "Medio"
@@ -128,7 +128,7 @@ local selectTowerFormat = UI.tabs(leftCol, {
 		refreshTowerView()
 	end
 	if fetchBoard then
-		fetchBoard(id)
+		fetchBoard(if boardScope == "PvP" then ("PvP" .. id) else id)
 	end
 end)
 local towerFmtBar = leftCol:FindFirstChild("Tabs")
@@ -252,13 +252,14 @@ local listBox = UI.scroll(boardFace, { Name = "List", Size = UDim2.fromScale(0.9
 local function renderBoard()
 	UI.clear(listBox)
 	if boardScope == "PvP" then
-		local pvpData = boardByFormat.PvP
+		local pvpKey = "PvP" .. towerFormat
+		local pvpData = boardByFormat[pvpKey]
 		local me = pvpData and pvpData.MyPvP
 		if me then
-			boardTitle.Text = string.format("Ranking PvP \u{b7} %s (%d ELO)", me.Tier or "Bronze", me.Rating or 1000)
-			bestLabel.Text = string.format("Vit\u{f3}rias: %d (2x2: %d) \u{b7} B\u{f4}nus hoje: %d/%d", me.Wins or 0, me.Wins2x2 or 0, me.DailyRewards or 0, me.DailyCap or 3)
+			boardTitle.Text = string.format("Ranking PvP %s · %s (%d ELO)", towerFormat, me.Tier or "Bronze", me.Rating or 1000)
+			bestLabel.Text = string.format("Vit\u{f3}rias %s: %d · B\u{f4}nus hoje: %d/%d", towerFormat, me.Wins or 0, me.DailyRewards or 0, me.DailyCap or 3)
 		else
-			boardTitle.Text = "Ranking PvP (2x2 & 1x1)"
+			boardTitle.Text = "Ranking PvP " .. towerFormat
 			bestLabel.Text = "Carregando patentes..."
 		end
 		local list = pvpData and (if #(pvpData.Global or {}) > 0 then pvpData.Global else pvpData.Server) or {}
@@ -324,7 +325,7 @@ local selectBoardScope = UI.tabs(boardFace, {
 }, { Size = UDim2.fromScale(0.92, 0.16), Position = UDim2.fromScale(0.04, 0.295), MaxHeight = 44, MaxWidth = 0.315, ActiveColor = "purple" }, function(id)
 	boardScope = id
 	if id == "PvP" and fetchBoard then
-		fetchBoard("PvP")
+		fetchBoard("PvP" .. towerFormat)
 	end
 	if refreshTowerView then
 		refreshTowerView()
@@ -385,7 +386,7 @@ fetchBoard = function(format: string)
 			if data.Info then
 				latestInfo = data.Info
 			end
-			if format == "PvP" and boardScope == "PvP" then
+			if (format == "PvP" or format == "PvP1x1" or format == "PvP2x2") and boardScope == "PvP" then
 				renderBoard()
 			elseif towerFormat == format then
 				refreshTowerView()

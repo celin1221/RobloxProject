@@ -18,6 +18,7 @@ export type RemoteEventName =
 	| "Announce"      -- Server -> All Clients: anuncio global (Lendario/Brilhante invocado)
 	| "Notify"        -- Server -> Client: toast / notificacao na tela
 	| "PvPInvite"     -- Server -> Client: convite de desafio PvP (inclui Format: "1x1" | "2x2")
+	| "PvPQueueState" -- Server -> Client: estado da fila global PvP (buscando, partida encontrada, cancelada)
 	| "TrainingOpen"  -- Server -> Client: abre tela da Maquina de Treinamento pela capsula 3D
 	| "AwakeningOpen" -- Server -> Client: abre tela do Altar Secreto do Despertar
 	| "AccountXpGain" -- Server -> Client: ganho de XP / subida de nivel da conta
@@ -46,9 +47,10 @@ export type RemoteFunctionName =
 	| "TrainingUpgrade" -- Client -> Server: melhora eficiencia da Maquina de Treinamento com gold
 	| "SellOre"       -- Client -> Server: converte minerio em gemas (respeitando teto diario de 50)
 	| "BaseTeleport"  -- Client -> Server: teleporta jogador para sua base ou praca
-	| "PvPChallenge"  -- Client -> Server: envia convite de PvP para outro jogador (targetUserId, format: "1x1" | "2x2")
+	| "PvPChallenge"  -- Client -> Server: envia convite de PvP amistoso para outro jogador (targetUserId, format: "1x1" | "2x2")
 	| "PvPRespond"    -- Client -> Server: aceita ou recusa convite de PvP
 	| "PvPCancel"     -- Client -> Server: cancela convite de PvP
+	| "PvPQueue"      -- Client -> Server: entrar/sair da fila PvP (Competitivo/Casual 1x1/2x2), status e rankings globais
 	| "Rewards"       -- Client -> Server: coleta login diario, bau de tempo, missoes ou codigos
 	| "ClaimLevelReward" -- Client -> Server: resgata recompensa de nivel da conta (level ou "All")
 	| "AwakenCharacter" -- Client -> Server: desperta um personagem Epico Nv. 35+ no Altar Secreto
