@@ -50,11 +50,11 @@ Characters.RankedBst = {
 -- Categorizacao por anime (tag de codigo usada em Mochila, Equipe, Torre, Ginasios e Banners)
 Characters.AnimeOrder = { "OnePiece", "Naruto", "Bleach", "DragonBall", "JujutsuKaisen", "Generico" }
 Characters.Animes = {
-	Naruto = { Id = "Naruto", Name = "Naruto", Short = "NARUTO", Tier = 1, CollectionScale = 1.00 },
-	OnePiece = { Id = "OnePiece", Name = "One Piece", Short = "ONE PIECE", Tier = 2, CollectionScale = 1.05 },
-	Bleach = { Id = "Bleach", Name = "Bleach", Short = "BLEACH", Tier = 3, CollectionScale = 1.10 },
-	JujutsuKaisen = { Id = "JujutsuKaisen", Name = "Jujutsu Kaisen", Short = "JUJUTSU", Tier = 4, CollectionScale = 1.15 },
-	DragonBall = { Id = "DragonBall", Name = "Dragon Ball", Short = "DRAGON BALL", Tier = 5, CollectionScale = 1.20 },
+	Naruto = { Id = "Naruto", Name = "Vila da Folha", Short = "FOLHA", Tier = 1, CollectionScale = 1.00 },
+	OnePiece = { Id = "OnePiece", Name = "Mares Livres", Short = "MARES", Tier = 2, CollectionScale = 1.05 },
+	Bleach = { Id = "Bleach", Name = "Reino das Almas", Short = "ALMAS", Tier = 3, CollectionScale = 1.10 },
+	JujutsuKaisen = { Id = "JujutsuKaisen", Name = "Ordem Maldita", Short = "MALDITOS", Tier = 4, CollectionScale = 1.15 },
+	DragonBall = { Id = "DragonBall", Name = "Esfera Suprema", Short = "SUPREMA", Tier = 5, CollectionScale = 1.20 },
 	Generico = { Id = "Generico", Name = "Gen\u{e9}rico", Short = "GEN\u{c9}RICO", Generic = true, Tier = 0, CollectionScale = 1.00 },
 }
 
@@ -170,13 +170,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "LeftHand", "RightHand" },
 	},
 	Setero = {
-		Name = "Gojo",
+		Name = "Setero",
 		ModelName = "Setero",
 		Anime = "JujutsuKaisen",
 		Type = "Mago",
 		Rarity = "Lendario",
 		Passive = "InfinitoAbsoluto",
-		Concept = "Feiticeiro lend\u{e1}rio dos Seis Olhos e do Infinito, mestre de Atra\u{e7}\u{e3}o e Vazio Roxo",
+		Concept = "Feiticeiro lend\u{e1}rio da barreira absoluta, mestre de Atra\u{e7}\u{e3}o e Colapso P\u{fa}rpura",
 		BaseLevel = 10,
 		BaseStats = { HP = 64, Attack = 38, Defense = 32, Speed = 36 }, -- BST 170 (Feiticeiro Supremo Agil & Intocavel)
 		Learnset = {
@@ -206,13 +206,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Sukuna = {
-		Name = "Sukuna",
+		Name = "Sukuno",
 		ModelName = "Sukuna",
 		Anime = "JujutsuKaisen",
 		Type = "Mago",
 		Rarity = "Secreto",
 		Passive = "ReiDasMaldicoes",
-		Concept = "Rei das Maldi\u{e7}\u{f5}es da era Heian, soberano dos cortes amaldi\u{e7}oados e do Santu\u{e1}rio Malevolente",
+		Concept = "Soberano maldito ancestral, mestre dos cortes invis\u{ed}veis e do Templo Carmesim",
 		BaseLevel = 10,
 		BaseStats = { HP = 82, Attack = 44, Defense = 30, Speed = 34 }, -- BST 190 PvE/Casual (normalizado 170 na Ranqueada)
 		Learnset = {
@@ -247,7 +247,7 @@ Characters.List = {
 		Type = "Lutador",
 		Rarity = "Lendario",
 		Passive = "InstintoZenkai",
-		Concept = "Artista marcial lend\u{e1}rio que canaliza o Ki e a energia vital celeste",
+		Concept = "Artista marcial lend\u{e1}rio que canaliza aura celeste e energia espiritual",
 		BaseLevel = 10,
 		BaseStats = { HP = 80, Attack = 38, Defense = 24, Speed = 28 }, -- BST 170 (Guerreiro Marcial de Resistencia & Explosao)
 		Learnset = {
@@ -279,13 +279,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	BarbaBranca = {
-		Name = "Barba Branca",
+		Name = "Barba Alva",
 		ModelName = "BarbaBranca",
 		Anime = "OnePiece",
 		Type = "Espadachim",
 		Rarity = "Lendario",
 		Passive = "TremorDosMares",
-		Concept = "Colosso lend\u{e1}rio dos mares capaz de rachar o pr\u{f3}prio ar com sua bisento",
+		Concept = "Colosso lend\u{e1}rio dos mares capaz de rachar o pr\u{f3}prio ar com sua alabarda",
 		BaseLevel = 10,
 		BaseStats = { HP = 92, Attack = 41, Defense = 26, Speed = 11 }, -- BST 170 (Colosso Juggernaut Lento)
 		Learnset = {
@@ -316,7 +316,7 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh", "Coat_Acc" },
 	},
 	Luffy = {
-		Name = "Luffy",
+		Name = "Luffen",
 		ModelName = "Luffy",
 		Anime = "OnePiece",
 		Type = "Lutador",
@@ -324,7 +324,7 @@ Characters.List = {
 		Starter = true,
 		Passive = "EspiritoGuerreiro",
 		SecretPassive = "VontadeDeD",
-		Concept = "Capit\u{e3}o pirata de borracha com combos velozes e golpes de impacto",
+		Concept = "Capit\u{e3}o pirata el\u{e1}stico com combos velozes e golpes de impacto",
 		BaseLevel = 10,
 		BaseStats = { HP = 68, Attack = 34, Defense = 22, Speed = 28 }, -- BST 152 (Brawler Relampago de Virada)
 		Learnset = {
@@ -353,7 +353,7 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Nami = {
-		Name = "Nami",
+		Name = "Nari",
 		ModelName = "Nami",
 		Anime = "OnePiece",
 		Type = "Mago",
@@ -385,7 +385,7 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Usopp = {
-		Name = "Usopp",
+		Name = "Yusop",
 		ModelName = "Usopp",
 		Anime = "OnePiece",
 		Type = "Atirador",
@@ -418,13 +418,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Zoro = {
-		Name = "Zoro",
+		Name = "Zoren",
 		ModelName = "Zoro",
 		Anime = "OnePiece",
 		Type = "Espadachim",
 		Rarity = "Raro",
 		Passive = "Intimidacao",
-		Concept = "Espadachim implac\u{e1}vel do estilo tr\u{ea}s espadas",
+		Concept = "Espadachim implac\u{e1}vel do estilo tr\u{ea}s l\u{e2}minas",
 		BaseLevel = 10,
 		BaseStats = { HP = 66, Attack = 37, Defense = 21, Speed = 14 }, -- BST 138 (Colosso Cortante)
 		Learnset = {
@@ -452,13 +452,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Sanji = {
-		Name = "Sanji",
+		Name = "Sanzu",
 		ModelName = "Sanji",
 		Anime = "OnePiece",
 		Type = "Lutador",
 		Rarity = "Raro",
 		Passive = "PassosVelozes",
-		Concept = "Cozinheiro combatente especialista em chutes r\u{e1}pidos e precisos",
+		Concept = "Cozinheiro combatente especialista em chutes flamejantes r\u{e1}pidos e precisos",
 		BaseLevel = 10,
 		BaseStats = { HP = 54, Attack = 30, Defense = 17, Speed = 37 }, -- BST 138 (Pivot / Velocista de Chutes)
 		Learnset = {
@@ -487,13 +487,13 @@ Characters.List = {
 
 	-- Anime: Naruto
 	Sakura = {
-		Name = "Sakura",
+		Name = "Sakira",
 		ModelName = "Sakura",
 		Anime = "Naruto",
 		Type = "Lutador",
 		Rarity = "Comum",
 		Passive = "Regeneracao",
-		Concept = "Kunoichi \u{e1}gil de golpes f\u{ed}sicos diretos e quebra-guarda",
+		Concept = "Lutadora \u{e1}gil de golpes f\u{ed}sicos diretos e quebra-guarda",
 		BaseLevel = 10,
 		BaseStats = { HP = 70, Attack = 25, Defense = 18, Speed = 12 }, -- BST 125 (Curandeira de HP Alto & Impacto)
 		Learnset = {
@@ -520,7 +520,7 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Shikamaru = {
-		Name = "Shikamaru",
+		Name = "Shikaro",
 		ModelName = "Shikamaru",
 		Anime = "Naruto",
 		Type = "Mago",
@@ -552,13 +552,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Kakashi = {
-		Name = "Kakashi",
+		Name = "Kashi",
 		ModelName = "Kakashi",
 		Anime = "Naruto",
 		Type = "Mago",
 		Rarity = "Raro",
 		Passive = "GolpeCerteiro",
-		Concept = "Jounin veterano de reflexos r\u{e1}pidos e jutsus em \u{e1}rea",
+		Concept = "Veterano mascarado de reflexos r\u{e1}pidos e t\u{e9}cnicas em \u{e1}rea",
 		BaseLevel = 10,
 		BaseStats = { HP = 52, Attack = 34, Defense = 17, Speed = 35 }, -- BST 138 (Assassino Arcano Veloz)
 		Learnset = {
@@ -584,13 +584,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Sasuke = {
-		Name = "Sasuke",
+		Name = "Sazuro",
 		ModelName = "Sasuke",
 		Anime = "Naruto",
 		Type = "Espadachim",
 		Rarity = "Raro",
 		Passive = "SedeDeVitoria",
-		Concept = "Espadachim disciplinado especialista em cortes r\u{e1}pidos e precisos",
+		Concept = "Espadachim disciplinado especialista em cortes el\u{e9}tricos r\u{e1}pidos e precisos",
 		BaseLevel = 10,
 		BaseStats = { HP = 48, Attack = 38, Defense = 16, Speed = 36 }, -- BST 138 (Sweeper Canhao de Vidro)
 		Learnset = {
@@ -616,7 +616,7 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Naruto = {
-		Name = "Naruto",
+		Name = "Narito",
 		ModelName = "Naruto",
 		Anime = "Naruto",
 		Type = "Lutador",
@@ -624,7 +624,7 @@ Characters.List = {
 		Starter = true,
 		Passive = "ChamaInterior",
 		SecretPassive = "MantoDaRaposa",
-		Concept = "Shinobi determinado com vigor elevado e combos diretos intensos",
+		Concept = "Guerreiro determinado da Folha com vigor elevado e combos intensos",
 		BaseLevel = 10,
 		BaseStats = { HP = 78, Attack = 31, Defense = 21, Speed = 22 }, -- BST 152 (Tanque-Lutador de Vigor Infinito)
 		Learnset = {
@@ -653,13 +653,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Sarutobi = {
-		Name = "Sarutobi",
+		Name = "Hiruzo",
 		ModelName = "Sarutobi",
 		Anime = "Naruto",
 		Type = "Mago",
 		Rarity = "Lendario",
 		Passive = "MestreDosElementos",
-		Concept = "Mestre lend\u{e1}rio de todos os jutsus elementais de Konoha",
+		Concept = "Mestre lend\u{e1}rio de todos os elementos da Vila da Folha",
 		BaseLevel = 10,
 		BaseStats = { HP = 76, Attack = 33, Defense = 37, Speed = 24 }, -- BST 170 (Mestre Elemental Defensivo)
 		Learnset = {
@@ -689,7 +689,7 @@ Characters.List = {
 
 	-- Anime: Bleach
 	Chad = {
-		Name = "Chad",
+		Name = "Brado",
 		ModelName = "Chad",
 		Anime = "Bleach",
 		Type = "Lutador",
@@ -721,13 +721,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Uryu = {
-		Name = "Uryu",
+		Name = "Uryen",
 		ModelName = "Uryu",
 		Anime = "Bleach",
 		Type = "Atirador",
 		Rarity = "Comum",
 		Passive = "OlhoDeAguia",
-		Concept = "Arqueiro Quincy de flechas espirituais certeiras e r\u{e1}pidas",
+		Concept = "Arqueiro espiritual de flechas luminosas certeiras e r\u{e1}pidas",
 		BaseLevel = 10,
 		BaseStats = { HP = 44, Attack = 34, Defense = 12, Speed = 35 }, -- BST 125 (Sniper Canhao de Vidro)
 		Learnset = {
@@ -753,13 +753,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Rukia = {
-		Name = "Rukia",
+		Name = "Yukia",
 		ModelName = "Rukia",
 		Anime = "Bleach",
 		Type = "Mago",
 		Rarity = "Raro",
 		Passive = "EscudoNatural",
-		Concept = "Shinigami especialista em Kido glacial e controle de campo",
+		Concept = "Ceifadora especialista em artes glaciais e controle de campo",
 		BaseLevel = 10,
 		BaseStats = { HP = 56, Attack = 28, Defense = 31, Speed = 23 }, -- BST 138 (Maga de Controle Defensivo)
 		Learnset = {
@@ -785,7 +785,7 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Renji = {
-		Name = "Renji",
+		Name = "Renzo",
 		ModelName = "Renji",
 		Anime = "Bleach",
 		Type = "Espadachim",
@@ -817,7 +817,7 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Ichigo = {
-		Name = "Ichigo",
+		Name = "Ichiro",
 		ModelName = "Ichigo",
 		Anime = "Bleach",
 		Type = "Espadachim",
@@ -825,7 +825,7 @@ Characters.List = {
 		Starter = true,
 		Passive = "SedeDeVitoria",
 		SecretPassive = "DespertarHollow",
-		Concept = "Shinigami substituto veloz com cortes espirituais devastadores",
+		Concept = "Ceifador substituto veloz com cortes espirituais devastadores",
 		BaseLevel = 10,
 		BaseStats = { HP = 56, Attack = 39, Defense = 20, Speed = 37 }, -- BST 152 (Hyper-Sweeper Veloz)
 		Learnset = {
@@ -851,13 +851,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Byakuya = {
-		Name = "Byakuya",
+		Name = "Byakuren",
 		ModelName = "Byakuya",
 		Anime = "Bleach",
 		Type = "Espadachim",
 		Rarity = "Lendario",
 		Passive = "PetalasInfinitas",
-		Concept = "Capit\u{e3}o nobre da Soul Society mestre em tempestades de l\u{e2}minas",
+		Concept = "Capit\u{e3}o nobre do Reino das Almas mestre em tempestades de p\u{e9}talas",
 		BaseLevel = 10,
 		BaseStats = { HP = 66, Attack = 38, Defense = 31, Speed = 35 }, -- BST 170 (Duelista Preciso Anti-Tanque)
 		Learnset = {
@@ -887,13 +887,13 @@ Characters.List = {
 
 	-- Anime: Jujutsu Kaisen (Nobara, Itadori, Fushiguro, Todo, Nanami + Gojo/Setero + Sukuna)
 	Nobara = {
-		Name = "Nobara",
+		Name = "Nobari",
 		ModelName = "Nobara",
 		Anime = "JujutsuKaisen",
 		Type = "Atirador",
 		Rarity = "Comum",
 		Passive = "GolpeCerteiro",
-		Concept = "Feiticeira impetuosa especialista em disparos certeiros de energia amaldi\u{e7}oada",
+		Concept = "Feiticeira impetuosa especialista em disparos certeiros de energia maldita",
 		BaseLevel = 10,
 		BaseStats = { HP = 45, Attack = 36, Defense = 14, Speed = 30 }, -- BST 125 (Canhao de Vidro)
 		Learnset = {
@@ -919,13 +919,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Itadori = {
-		Name = "Itadori",
+		Name = "Itaro",
 		ModelName = "Itadori",
 		Anime = "JujutsuKaisen",
 		Type = "Lutador",
 		Rarity = "Comum",
 		Passive = "EspiritoGuerreiro",
-		Concept = "Lutador veloz e destemido que canaliza energia amaldi\u{e7}oada em combos diretos",
+		Concept = "Lutador veloz e destemido que canaliza energia maldita em combos diretos",
 		BaseLevel = 10,
 		BaseStats = { HP = 58, Attack = 32, Defense = 13, Speed = 22 }, -- BST 125 (Berserker Explosivo)
 		Learnset = {
@@ -951,13 +951,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Fushiguro = {
-		Name = "Fushiguro",
+		Name = "Fushiro",
 		ModelName = "Fushiguro",
 		Anime = "JujutsuKaisen",
 		Type = "Mago",
 		Rarity = "Raro",
 		Passive = "MenteTatica",
-		Concept = "Feiticeiro t\u{e1}tico das Dez Sombras que domina controle de campo e golpes arcanos",
+		Concept = "Feiticeiro t\u{e1}tico das sombras que domina controle de campo e golpes arcanos",
 		BaseLevel = 10,
 		BaseStats = { HP = 62, Attack = 32, Defense = 30, Speed = 14 }, -- BST 138 (Mago Tanque)
 		Learnset = {
@@ -983,13 +983,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Todo = {
-		Name = "Todo",
+		Name = "Todor",
 		ModelName = "Todo",
 		Anime = "JujutsuKaisen",
 		Type = "Lutador",
 		Rarity = "Raro",
 		Passive = "ContraEspinhos",
-		Concept = "Colosso de Quioto de for\u{e7}a brutal, reflexos geniais e contra-ataques devastadores",
+		Concept = "Colosso de for\u{e7}a brutal, reflexos geniais e contra-ataques devastadores",
 		BaseLevel = 10,
 		BaseStats = { HP = 74, Attack = 24, Defense = 29, Speed = 11 }, -- BST 138 (Colosso Counter)
 		Learnset = {
@@ -1015,13 +1015,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Nanami = {
-		Name = "Nanami",
+		Name = "Kentar",
 		ModelName = "Nanami",
 		Anime = "JujutsuKaisen",
 		Type = "Espadachim",
 		Rarity = "Epico",
 		Passive = "GolpeCerteiro",
-		Concept = "Feiticeiro Grau 1 met\u{f3}dico que acerta pontos cr\u{ed}ticos na propor\u{e7}\u{e3}o 7:3 com precis\u{e3}o cir\u{fa}rgica",
+		Concept = "Feiticeiro met\u{f3}dico que acerta pontos cr\u{ed}ticos com precis\u{e3}o cir\u{fa}rgica",
 		BaseLevel = 10,
 		BaseStats = { HP = 68, Attack = 36, Defense = 30, Speed = 18 }, -- BST 152 (Executor 7:3)
 		Learnset = {
@@ -1049,13 +1049,13 @@ Characters.List = {
 
 	-- Anime: Dragon Ball (Piccolo, Kuririn, Vegeta, Gohan, Freeza + San)
 	Piccolo = {
-		Name = "Piccolo",
+		Name = "Pikor",
 		ModelName = "Piccolo",
 		Anime = "DragonBall",
 		Type = "Mago",
 		Rarity = "Comum",
 		Passive = "Regeneracao",
-		Concept = "Guerreiro Namekuseijin estrategista de regenera\u{e7}\u{e3}o constante e feixes de energia",
+		Concept = "Guerreiro estrategista de regenera\u{e7}\u{e3}o constante e feixes de energia",
 		BaseLevel = 10,
 		BaseStats = { HP = 66, Attack = 19, Defense = 29, Speed = 11 }, -- BST 125 (Parede Regenerativa)
 		Learnset = {
@@ -1081,13 +1081,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Kuririn = {
-		Name = "Kuririn",
+		Name = "Kurin",
 		ModelName = "Kuririn",
 		Anime = "DragonBall",
 		Type = "Atirador",
 		Rarity = "Comum",
 		Passive = "OlhoDeAguia",
-		Concept = "Artista marcial terr\u{e1}queo \u{e1}gil especializado em discos cortantes de Ki",
+		Concept = "Artista marcial \u{e1}gil especializado em discos cortantes de energia",
 		BaseLevel = 10,
 		BaseStats = { HP = 43, Attack = 30, Defense = 14, Speed = 38 }, -- BST 125 (Batedor Supersonico — VEL 38 supera Gojo!)
 		Learnset = {
@@ -1113,13 +1113,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Vegeta = {
-		Name = "Vegeta",
+		Name = "Vegor",
 		ModelName = "Vegeta",
 		Anime = "DragonBall",
 		Type = "Lutador",
 		Rarity = "Raro",
 		Passive = "SedeDeVitoria",
-		Concept = "Pr\u{ed}ncipe orgulhoso dos Saiyajins com ofensiva implac\u{e1}vel e explos\u{f5}es de Ki",
+		Concept = "Pr\u{ed}ncipe guerreiro orgulhoso com ofensiva implac\u{e1}vel e explos\u{f5}es de aura",
 		BaseLevel = 10,
 		BaseStats = { HP = 52, Attack = 40, Defense = 16, Speed = 30 }, -- BST 138 (Sweeper Saiyajin — ATK 40 empata com Lendarios!)
 		Learnset = {
@@ -1145,13 +1145,13 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Gohan = {
-		Name = "Gohan",
+		Name = "Gohran",
 		ModelName = "Gohan",
 		Anime = "DragonBall",
 		Type = "Lutador",
 		Rarity = "Raro",
 		Passive = "ChamaInterior",
-		Concept = "Prod\u{ed}gio Saiyajin cujo potencial oculto explode nos momentos cr\u{ed}ticos da luta",
+		Concept = "Jovem prod\u{ed}gio cujo potencial oculto explode nos momentos cr\u{ed}ticos da luta",
 		BaseLevel = 10,
 		BaseStats = { HP = 64, Attack = 34, Defense = 22, Speed = 18 }, -- BST 138 (Bruiser de Climax)
 		Learnset = {
@@ -1177,7 +1177,7 @@ Characters.List = {
 		KeepTextureParts = { "Head", "Head_Mesh" },
 	},
 	Freeza = {
-		Name = "Freeza",
+		Name = "Frizor",
 		ModelName = "Freeza",
 		Anime = "DragonBall",
 		Type = "Mago",

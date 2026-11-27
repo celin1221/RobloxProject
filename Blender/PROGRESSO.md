@@ -1644,3 +1644,27 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - Validado ao vivo no Play Mode (com backup e restauração do perfil): `leaderstats` (`1:ELO`, `2:Patente`) atualizando dinamicamente com ELO separado `2x2` (`1480 Platina`) vs `1x1` (`1000 Bronze`), Quadro 3D `PvPBoardMonument` exibindo ambas as colunas ao vivo, entrada/saída nas filas (`PvPQueueBanner` sem sobreposições em Desktop e `667x375`), `PvPButton` sem sobreposições e **`0` erros de jogo no Console**.
 - **Polimento Visual da Janela `ARENA PVP` e Topo do HUD (`PvPClient`, `HudClient`, `RaidClient`):** removidos chips redundantes e rodapé longo nos cards de fila (trocado por botão discreto `REGRAS` com modal próprio na faixa de resumo de 1 linha), separação estrita em 2 colunas nos 4 cards (texto `0.055..0.615` / botão `ENTRAR` `0.64..0.96`), e realinhamento de `Top`, `RaidHudBanner`, `PvPButton` e `SettingsButton` com `HUD_OVERLAPS=NONE`, `SUMMARY_OVERLAPS=NONE` e `CARD_OVERLAPS=NONE` em Desktop (`1350x576`) e Mobile (`667x375`).
 - Place salvo no Roblox Studio na **versão 375** (`TeamCreate`).
+
+
+## Mock de Nomes Contra Direitos Autorais (Personagens, Mundos/Banners, Ginásios, Passivas e Ataques) + Colunas Duplas na Planilha (27/11/2026)
+
+**Feito**
+- **1. Personagens, Mundos/Banners, Ginásios & Materiais (`Characters.luau`, `Summon.luau`, `Gyms.luau`, `Awakening.luau`, `AwakeningClient.client.luau`):**
+  - Mantidos **100% dos IDs internos intactos** (zero quebra de DataStore, rigs 3D, códigos Dev ou referências de código) e mockados todos os nomes de exibição in-game (`Name`, `Concept`, `Subtitle`, `LeaderName` e nomes de Ginásios/Mundos):
+    - **Mares Livres (`OnePiece`):** `Nari`, `Yusop`, `Sanzu`, `Zoren`, `Luffen`, `Barba Alva` (`Ginásio dos Mares`).
+    - **Vila da Folha (`Naruto`):** `Sakira`, `Shikaro`, `Kashi`, `Sazuro`, `Narito`, `Hiruzo` (`Ginásio da Folha`).
+    - **Reino das Almas (`Bleach`):** `Brado`, `Uryen`, `Yukia`, `Renzo`, `Ichiro`, `Byakuren` (`Ginásio das Almas`).
+    - **Ordem Maldita (`JujutsuKaisen`):** `Nobari`, `Itaro`, `Fushiro`, `Todor`, `Kentar`, `Setero`, `Sukuno` (`Ginásio das Maldições`).
+    - **Esfera Suprema (`DragonBall`):** `Pikor`, `Kurin`, `Vegor`, `Gohran`, `Frizor`, `San` (`Ginásio da Esfera`).
+- **2. Passivas, Ataques & Legendas Cinematográficas (`Passives.luau`, `Moves.luau`, `SoundManager.luau`, `BattleEngine.luau`, `BattleClient.client.luau`):**
+  - **5 Passivas mockadas:** `Instinto Primordial`, `Barreira Infinita`, `Soberano Maldito`, `Vontade do Rei`, `Máscara Abissal` (mantidas todas as passivas genéricas e neutras).
+  - **16 Ataques especiais mockados:** `Colapso Púrpura`, `Onda Celeste`, `Esfera Espiritual`, `Carga de Aura`, `Corte da Alabarda`, `Pressão do Conquistador`, `Mil Pétalas`, `Jardim das Mil Lâminas`, `Estilo Terra/Fogo/Água/Vento`, `Fenda Invisível`, `Talho Adaptativo`, `Templo Carmesim` e `Chama do Altar` (incluindo descrições `SPECIAL_DESCRIPTIONS`, chip `TEMPLO Xt`, logs do `BattleEngine` e legendas cinematográficas do `SoundManager`).
+- **3. Planilhas Excel com Colunas Duplas (`scripts/update_characters_sheet.py`):**
+  - Regeneradas `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` exibindo **`Nome (In-Game)`** lado a lado com **`Nome (Anime)`** na aba `Personagens` e `Kit por Personagem`, e **`Nome (In-Game)`** + **`Ref. Anime / Original`** nas abas `Ataques` e `Passivas` (com todas as fórmulas da aba `Resumo` atualizadas).
+- **4. Guardrail Automatizado (`scripts/sync_studio.py` — `Test 21`):**
+  - Adicionado **Test 21 (`DMCA-Safe Names`)** impedindo regressão de nomes protegidos por direitos autorais em personagens, mundos/banners, ginásios, ataques e passivas.
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos **118 scripts**) e `python scripts/sync_studio.py test` (`PASS`, `Test 1..21`).
+- Validado ao vivo no Play Mode: 36/36 previews carregados, todos os nomes in-game mockados exibidos corretamente em `Characters`/`Moves`/`Passives`/`Summon`/`Gyms` e **`0` erros/avisos no Console**.
+- Place salvo no Roblox Studio na **versão 377** (`TeamCreate`).

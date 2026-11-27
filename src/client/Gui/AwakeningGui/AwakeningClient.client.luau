@@ -202,7 +202,7 @@ local function refreshRight()
 	if not m or not def or not recipe then
 		previewPortrait.Clear()
 		previewName.Text = "Nenhum personagem selecionado"
-		previewBonus.Text = "Consiga um \u{c9}pico despert\u{e1}vel (Luffy, Naruto ou Ichigo)."
+		previewBonus.Text = "Consiga um \u{c9}pico despert\u{e1}vel (Luffen, Narito ou Ichiro)."
 		curPassLabel.Text = ""
 		secPassTitle.Text = ""
 		secPassDesc.Text = ""

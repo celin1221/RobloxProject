@@ -372,6 +372,73 @@ ANIME_DISPLAY = {
     "JujutsuKaisen": "Jujutsu Kaisen",
     "Generico": "Genérico",
 }
+# Nome direto do personagem no anime (usado apenas na planilha interna fora do jogo;
+# o nome in-game mockado contra direitos autorais vem automaticamente de Characters.luau).
+ANIME_REAL_NAME = {
+    "Setero": "Gojo",
+    "Sukuna": "Sukuna",
+    "San": "Goku",
+    "BarbaBranca": "Barba Branca",
+    "Luffy": "Luffy",
+    "Nami": "Nami",
+    "Usopp": "Usopp",
+    "Zoro": "Zoro",
+    "Sanji": "Sanji",
+    "Sakura": "Sakura",
+    "Shikamaru": "Shikamaru",
+    "Kakashi": "Kakashi",
+    "Sasuke": "Sasuke",
+    "Naruto": "Naruto",
+    "Sarutobi": "Sarutobi",
+    "Chad": "Chad",
+    "Uryu": "Uryu",
+    "Rukia": "Rukia",
+    "Renji": "Renji",
+    "Ichigo": "Ichigo",
+    "Byakuya": "Byakuya",
+    "Nobara": "Nobara",
+    "Itadori": "Itadori",
+    "Fushiguro": "Fushiguro",
+    "Todo": "Todo",
+    "Nanami": "Nanami",
+    "Piccolo": "Piccolo",
+    "Kuririn": "Kuririn",
+    "Vegeta": "Vegeta",
+    "Gohan": "Gohan",
+    "Freeza": "Freeza",
+    "Kaen": "Kaen (Original)",
+    "Raiko": "Raiko (Original)",
+    "Yomogi": "Yomogi (Original)",
+    "ProtoRaro": "Protótipo",
+    "ProtoEpico": "Protótipo",
+}
+# Referencia original no anime dos ataques mockados contra direitos autorais
+MOVE_ANIME_REF = {
+    "TudoRoxo": "Vazio Roxo (Hollow Purple)",
+    "Kamehameha": "Kamehameha",
+    "GenkiDama": "Genki Dama",
+    "CargaDeKi": "Carga de Ki",
+    "CorteMurakumo": "Corte Murakumo",
+    "HakiDoConquistador": "Haki do Conquistador",
+    "Senbonzakura": "Senbonzakura",
+    "SenbonzakuraKageyoshi": "Senbonzakura Kageyoshi",
+    "DotonMuralhaTerrestre": "Doton: Dragão de Terra",
+    "KatonDragaoDeFogo": "Katon: Dragão de Fogo",
+    "SuitonDragaoDeAgua": "Suiton: Dragão de Água",
+    "FutonTempestadeCeleste": "Futon: Tempestade Celeste",
+    "Desmantelar": "Desmantelar (Dismantle)",
+    "Clivar": "Clivar (Cleave)",
+    "SantuarioMalevolente": "Santuário Malevolente",
+    "Fuga": "Fuga",
+}
+# Referencia original das passivas mockadas contra direitos autorais
+PASSIVE_ANIME_REF = {
+    "InstintoZenkai": "Instinto Zenkai",
+    "InfinitoAbsoluto": "Infinito Absoluto",
+    "ReiDasMaldicoes": "Rei das Maldições",
+    "VontadeDeD": "Vontade de D",
+    "DespertarHollow": "Despertar Hollow",
+}
 ANIME_ORDER = {
     "OnePiece": 1,
     "Naruto": 2,
@@ -948,11 +1015,12 @@ def build_workbook(
     # -----------------------------------------------------------------
     ws = wb.active
     ws.title = "Personagens"
-    ws.freeze_panes = "D2"
+    ws.freeze_panes = "E2"
 
     headers = [
         "ID",
-        "Nome",
+        "Nome (In-Game)",
+        "Nome (Anime)",
         "Tag (Anime)",
         "Estágio de Dev",
         "Raridade",
@@ -1025,6 +1093,7 @@ def build_workbook(
         code_str = " / ".join(codes) if codes else "-"
 
         anime_name = ANIME_DISPLAY.get(ch["Anime"], ch["Anime"])
+        anime_char_name = ANIME_REAL_NAME.get(cid, ch["Name"])
         rarity_name = RARITY_DISPLAY.get(ch["Rarity"], ch["Rarity"])
 
         p_def = passives.get(ch["Passive"])
@@ -1038,6 +1107,7 @@ def build_workbook(
         row_vals = [
             cid,
             ch["Name"],
+            anime_char_name,
             anime_name,
             stage,
             rarity_name,
@@ -1049,7 +1119,7 @@ def build_workbook(
             ch["ATK"],
             ch["DEF"],
             ch["SPD"],
-            f"=SUM(J{r_idx}:M{r_idx})",
+            f"=SUM(K{r_idx}:N{r_idx})",
             sig_name,
             sig_power,
             anim,
@@ -1068,70 +1138,72 @@ def build_workbook(
         for c_idx in range(1, len(headers) + 1):
             cell = ws.cell(r_idx, c_idx)
             cell.border = CELL_BORDER
-            cell.font = BOLD_FONT if c_idx in (1, 2, 14, 21) else BASE_FONT
-            if c_idx in (1, 2, 9, 15, 20, 21, 23, 24, 25):
-                cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=(c_idx in (24, 25)))
+            cell.font = BOLD_FONT if c_idx in (1, 2, 3, 15, 22) else BASE_FONT
+            if c_idx in (1, 2, 3, 10, 16, 21, 22, 24, 25, 26):
+                cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=(c_idx in (25, 26)))
             else:
                 cell.alignment = Alignment(horizontal="center", vertical="center")
 
         # Color badges
         if anime_name in ANIME_FILL:
-            ws.cell(r_idx, 3).fill = ANIME_FILL[anime_name]
+            ws.cell(r_idx, 4).fill = ANIME_FILL[anime_name]
         if stage in STAGE_FILL:
-            ws.cell(r_idx, 4).fill = STAGE_FILL[stage]
+            ws.cell(r_idx, 5).fill = STAGE_FILL[stage]
         if rarity_name in RARITY_FILL:
-            ws.cell(r_idx, 5).fill = RARITY_FILL[rarity_name]
+            ws.cell(r_idx, 6).fill = RARITY_FILL[rarity_name]
             if rarity_name == "Secreto":
-                ws.cell(r_idx, 5).font = WHITE_BOLD_FONT
+                ws.cell(r_idx, 6).font = WHITE_BOLD_FONT
         if ch["Class"] in CLASS_FILL:
-            ws.cell(r_idx, 6).fill = CLASS_FILL[ch["Class"]]
+            ws.cell(r_idx, 7).fill = CLASS_FILL[ch["Class"]]
         if ch["Starter"]:
-            ws.cell(r_idx, 7).fill = GREEN
-            ws.cell(r_idx, 7).font = BOLD_FONT
-        ws.cell(r_idx, 8).fill = GREEN if has_model == "Sim" else YELLOW
-        ws.cell(r_idx, 17).fill = GREEN if anim.startswith("Sim") else RED
+            ws.cell(r_idx, 8).fill = GREEN
+            ws.cell(r_idx, 8).font = BOLD_FONT
+        ws.cell(r_idx, 9).fill = GREEN if has_model == "Sim" else YELLOW
+        ws.cell(r_idx, 18).fill = GREEN if anim.startswith("Sim") else RED
         if vfx_cutin.startswith("Sim"):
-            ws.cell(r_idx, 18).fill = GREEN
-        elif "VFX Sim" in vfx_cutin or "Aura Sim" in vfx_cutin:
-            ws.cell(r_idx, 18).fill = YELLOW
-        else:
-            ws.cell(r_idx, 18).fill = RED
-        if shiny.startswith("Sim"):
             ws.cell(r_idx, 19).fill = GREEN
-        elif shiny.startswith("Parcial"):
+        elif "VFX Sim" in vfx_cutin or "Aura Sim" in vfx_cutin:
             ws.cell(r_idx, 19).fill = YELLOW
         else:
             ws.cell(r_idx, 19).fill = RED
+        if shiny.startswith("Sim"):
+            ws.cell(r_idx, 20).fill = GREEN
+        elif shiny.startswith("Parcial"):
+            ws.cell(r_idx, 20).fill = YELLOW
+        else:
+            ws.cell(r_idx, 20).fill = RED
         if p_def:
-            ws.cell(r_idx, 22).fill = GOLD if p_def["Tier"] == "Unique" else BLUE
+            ws.cell(r_idx, 23).fill = GOLD if p_def["Tier"] == "Unique" else BLUE
         if sp_def:
-            ws.cell(r_idx, 23).fill = PURPLE
-            ws.cell(r_idx, 23).font = BOLD_FONT
             ws.cell(r_idx, 24).fill = PURPLE
+            ws.cell(r_idx, 24).font = BOLD_FONT
+            ws.cell(r_idx, 25).fill = PURPLE
 
     col_widths_p = {
-        "A": 14, "B": 16, "C": 16, "D": 19, "E": 12, "F": 13, "G": 9,
-        "H": 12, "I": 34, "J": 7, "K": 7, "L": 7, "M": 7, "N": 12,
-        "O": 25, "P": 16, "Q": 22, "R": 22, "S": 20, "T": 24,
-        "U": 22, "V": 19, "W": 22, "X": 46, "Y": 52,
+        "A": 14, "B": 16, "C": 16, "D": 16, "E": 19, "F": 12, "G": 13, "H": 9,
+        "I": 12, "J": 34, "K": 7, "L": 7, "M": 7, "N": 7, "O": 12,
+        "P": 26, "Q": 16, "R": 22, "S": 22, "T": 20, "U": 24,
+        "V": 22, "W": 19, "X": 22, "Y": 46, "Z": 52,
     }
     for col, w in col_widths_p.items():
         ws.column_dimensions[col].width = w
-    ws.auto_filter.ref = f"A1:Y{len(chars) + 1}"
+    ws.auto_filter.ref = f"A1:Z{len(chars) + 1}"
 
     # -----------------------------------------------------------------
     # ABA 2: Ataques (Catálogo completo e único de todos os ataques do jogo)
     # -----------------------------------------------------------------
     ws_a = wb.create_sheet("Ataques")
-    ws_a.freeze_panes = "C2"
+    ws_a.freeze_panes = "D2"
 
     # Mapeia quais personagens ativos usam cada ataque
     users_by_move: dict[str, list[str]] = {}
     for ch in chars:
         if ch["Prototype"]:
             continue
+        real_nm = ANIME_REAL_NAME.get(ch["Id"], ch["Name"])
+        disp_user = f"{ch['Name']} ({real_nm})" if real_nm != ch["Name"] and not real_nm.endswith("(Original)") else ch["Name"]
         for mid in ch["MoveIds"]:
-            users_by_move.setdefault(mid, []).append(ch["Name"])
+            users_by_move.setdefault(mid, []).append(disp_user)
 
     sorted_moves = sorted(
         moves.values(),
@@ -1145,7 +1217,8 @@ def build_workbook(
 
     a_headers = [
         "ID",
-        "Nome do Ataque",
+        "Nome (In-Game)",
+        "Ref. Anime / Original",
         "Origem",
         "Classe",
         "Nível Sugerido",
@@ -1206,11 +1279,13 @@ def build_workbook(
         prio_display = f"+{prio_val}" if prio_val > 0 else str(prio_val)
         anim_display = f"Sim ({mv['AnimName']})" if mv["HasAnim"] else ("Não (Fallback)" if mv["Hidden"] else "Não (Padrão Classe)")
         vfx_display = f"Sim ({mv['VfxName']})" if mv["HasVfx"] else "Não"
+        move_ref = MOVE_ANIME_REF.get(mv["Id"], "-")
 
         ws_a.append(
             [
                 mv["Id"],
                 mv["Name"],
+                move_ref,
                 mv["Origin"],
                 mv["Type"],
                 lvl_display,
@@ -1238,65 +1313,66 @@ def build_workbook(
             cell.border = CELL_BORDER
             cell.font = BOLD_FONT if c_idx in (1, 2) else BASE_FONT
             cell.alignment = Alignment(
-                horizontal="left" if c_idx in (1, 2, 13, 16, 17, 21) else "center",
+                horizontal="left" if c_idx in (1, 2, 3, 14, 17, 18, 22) else "center",
                 vertical="center",
-                wrap_text=(c_idx in (13, 21)),
+                wrap_text=(c_idx in (14, 22)),
             )
 
-        ws_a.cell(r_idx, 11).number_format = "0.00%"
+        ws_a.cell(r_idx, 12).number_format = "0.00%"
         if prio_val > 0:
-            ws_a.cell(r_idx, 10).fill = TEAL
-            ws_a.cell(r_idx, 10).font = BOLD_FONT
-        if mv["CritChance"] > 0.0625:
-            ws_a.cell(r_idx, 11).fill = GOLD
+            ws_a.cell(r_idx, 11).fill = TEAL
             ws_a.cell(r_idx, 11).font = BOLD_FONT
+        if mv["CritChance"] > 0.0625:
+            ws_a.cell(r_idx, 12).fill = GOLD
+            ws_a.cell(r_idx, 12).font = BOLD_FONT
         if mv["Origin"] in ORIGIN_FILL:
-            ws_a.cell(r_idx, 3).fill = ORIGIN_FILL[mv["Origin"]]
+            ws_a.cell(r_idx, 4).fill = ORIGIN_FILL[mv["Origin"]]
         if mv["Type"] in CLASS_FILL:
-            ws_a.cell(r_idx, 4).fill = CLASS_FILL[mv["Type"]]
-        ws_a.cell(r_idx, 6).fill = RED if cat_pt == "Dano" else BLUE
+            ws_a.cell(r_idx, 5).fill = CLASS_FILL[mv["Type"]]
+        ws_a.cell(r_idx, 7).fill = RED if cat_pt == "Dano" else BLUE
         eff = mv["EffectDesc"]
         if eff.startswith("Buff:") or eff.startswith("Cura:") or eff.startswith("Purificação:"):
-            ws_a.cell(r_idx, 13).fill = GREEN
+            ws_a.cell(r_idx, 14).fill = GREEN
         elif eff.startswith("Debuff:") or eff.startswith("Recuo:"):
-            ws_a.cell(r_idx, 13).fill = RED
+            ws_a.cell(r_idx, 14).fill = RED
         elif eff.startswith("Status:") or eff.startswith("Hazard:"):
-            ws_a.cell(r_idx, 13).fill = PURPLE
+            ws_a.cell(r_idx, 14).fill = PURPLE
         elif eff.startswith("Proteção:") or eff.startswith("Campo") or eff.startswith("Limpeza:"):
-            ws_a.cell(r_idx, 13).fill = TEAL
+            ws_a.cell(r_idx, 14).fill = TEAL
         elif eff.startswith("Dreno:") or eff.startswith("Rompe"):
-            ws_a.cell(r_idx, 13).fill = GOLD
-        if mv["Signature"]:
             ws_a.cell(r_idx, 14).fill = GOLD
-            ws_a.cell(r_idx, 14).font = BOLD_FONT
-        if mv["CutIn"]:
-            ws_a.cell(r_idx, 15).fill = PURPLE
+        if mv["Signature"]:
+            ws_a.cell(r_idx, 15).fill = GOLD
             ws_a.cell(r_idx, 15).font = BOLD_FONT
-        ws_a.cell(r_idx, 16).fill = GREEN if mv["HasAnim"] else (SLATE if mv["Hidden"] else RED)
-        ws_a.cell(r_idx, 17).fill = GREEN if mv["HasVfx"] else (SLATE if mv["Hidden"] else RED)
+        if mv["CutIn"]:
+            ws_a.cell(r_idx, 16).fill = PURPLE
+            ws_a.cell(r_idx, 16).font = BOLD_FONT
+        ws_a.cell(r_idx, 17).fill = GREEN if mv["HasAnim"] else (SLATE if mv["Hidden"] else RED)
+        ws_a.cell(r_idx, 18).fill = GREEN if mv["HasVfx"] else (SLATE if mv["Hidden"] else RED)
         if mv["DevStatus"] in DEV_MOVE_FILL:
-            ws_a.cell(r_idx, 18).fill = DEV_MOVE_FILL[mv["DevStatus"]]
+            ws_a.cell(r_idx, 19).fill = DEV_MOVE_FILL[mv["DevStatus"]]
 
     col_widths_a = {
-        "A": 23, "B": 26, "C": 21, "D": 13, "E": 14, "F": 11, "G": 9, "H": 13, "I": 7,
-        "J": 11, "K": 11, "L": 16, "M": 46, "N": 12, "O": 10, "P": 24, "Q": 24, "R": 21,
-        "S": 26, "T": 14, "U": 44,
+        "A": 23, "B": 28, "C": 26, "D": 21, "E": 13, "F": 14, "G": 11, "H": 9, "I": 13, "J": 7,
+        "K": 11, "L": 11, "M": 16, "N": 46, "O": 12, "P": 10, "Q": 24, "R": 24, "S": 21,
+        "T": 26, "U": 14, "V": 46,
     }
     for col, w in col_widths_a.items():
         ws_a.column_dimensions[col].width = w
-    ws_a.auto_filter.ref = f"A1:U{len(sorted_moves) + 1}"
+    ws_a.auto_filter.ref = f"A1:V{len(sorted_moves) + 1}"
 
     # -----------------------------------------------------------------
     # ABA 3: Kit por Personagem (progressao Nv. 1 -> 50 de todos os personagens ativos)
     # -----------------------------------------------------------------
     ws_m = wb.create_sheet("Kit por Personagem")
-    ws_m.freeze_panes = "E2"
+    ws_m.freeze_panes = "F2"
     m_headers = [
-        "Personagem",
+        "Personagem (In-Game)",
+        "Nome (Anime)",
         "Tag (Anime)",
         "Nível",
         "ID do Golpe",
-        "Nome",
+        "Nome (In-Game)",
         "Classe",
         "Categoria",
         "Alvo (2x2)",
@@ -1326,6 +1402,7 @@ def build_workbook(
         if ch["Prototype"]:
             continue
         anime_name = ANIME_DISPLAY.get(ch["Anime"], ch["Anime"])
+        anime_char_name = ANIME_REAL_NAME.get(ch["Id"], ch["Name"])
         for unlock_lv, mid in ch["Learnset"]:
             mv = moves.get(mid)
             if not mv:
@@ -1336,6 +1413,7 @@ def build_workbook(
             ws_m.append(
                 [
                     ch["Name"],
+                    anime_char_name,
                     anime_name,
                     f"Nv. {unlock_lv}",
                     mv["Id"],
@@ -1360,58 +1438,60 @@ def build_workbook(
             for c_idx in range(1, len(m_headers) + 1):
                 cell = ws_m.cell(m_row, c_idx)
                 cell.border = CELL_BORDER
-                cell.font = BOLD_FONT if c_idx in (1, 3, 5) else BASE_FONT
+                cell.font = BOLD_FONT if c_idx in (1, 2, 4, 6) else BASE_FONT
                 cell.alignment = Alignment(
-                    horizontal="left" if c_idx in (1, 4, 5, 14) else "center",
+                    horizontal="left" if c_idx in (1, 2, 5, 6, 15) else "center",
                     vertical="center",
                 )
-            ws_m.cell(m_row, 13).number_format = "0.00%"
+            ws_m.cell(m_row, 14).number_format = "0.00%"
             if anime_name in ANIME_FILL:
-                ws_m.cell(m_row, 2).fill = ANIME_FILL[anime_name]
+                ws_m.cell(m_row, 3).fill = ANIME_FILL[anime_name]
             if unlock_lv >= 42:
-                ws_m.cell(m_row, 3).fill = GOLD
+                ws_m.cell(m_row, 4).fill = GOLD
             elif unlock_lv >= 28:
-                ws_m.cell(m_row, 3).fill = PURPLE
+                ws_m.cell(m_row, 4).fill = PURPLE
             elif unlock_lv >= 12:
-                ws_m.cell(m_row, 3).fill = BLUE
+                ws_m.cell(m_row, 4).fill = BLUE
             else:
-                ws_m.cell(m_row, 3).fill = SLATE
+                ws_m.cell(m_row, 4).fill = SLATE
             if mv["Type"] in CLASS_FILL:
-                ws_m.cell(m_row, 6).fill = CLASS_FILL[mv["Type"]]
+                ws_m.cell(m_row, 7).fill = CLASS_FILL[mv["Type"]]
             if prio_val > 0:
-                ws_m.cell(m_row, 12).fill = TEAL
-                ws_m.cell(m_row, 12).font = BOLD_FONT
+                ws_m.cell(m_row, 13).fill = TEAL
+                ws_m.cell(m_row, 13).font = BOLD_FONT
             if mv["Signature"]:
-                ws_m.cell(m_row, 16).fill = GOLD
-                ws_m.cell(m_row, 16).font = BOLD_FONT
-            if mv["CutIn"]:
-                ws_m.cell(m_row, 17).fill = PURPLE
+                ws_m.cell(m_row, 17).fill = GOLD
                 ws_m.cell(m_row, 17).font = BOLD_FONT
-            ws_m.cell(m_row, 18).fill = GREEN if mv["HasAnim"] else RED
-            ws_m.cell(m_row, 19).fill = GREEN if mv["HasVfx"] else RED
+            if mv["CutIn"]:
+                ws_m.cell(m_row, 18).fill = PURPLE
+                ws_m.cell(m_row, 18).font = BOLD_FONT
+            ws_m.cell(m_row, 19).fill = GREEN if mv["HasAnim"] else RED
+            ws_m.cell(m_row, 20).fill = GREEN if mv["HasVfx"] else RED
 
     col_widths_m = {
-        "A": 15, "B": 16, "C": 10, "D": 21, "E": 26, "F": 13, "G": 11, "H": 15,
-        "I": 9, "J": 12, "K": 7, "L": 11, "M": 11, "N": 42, "O": 13, "P": 13, "Q": 10, "R": 11, "S": 11,
+        "A": 17, "B": 16, "C": 16, "D": 10, "E": 21, "F": 28, "G": 13, "H": 11, "I": 15,
+        "J": 9, "K": 12, "L": 7, "M": 11, "N": 11, "O": 42, "P": 13, "Q": 13, "R": 10, "S": 11, "T": 11,
     }
     for col, w in col_widths_m.items():
         ws_m.column_dimensions[col].width = w
-    ws_m.auto_filter.ref = f"A1:S{m_row}"
+    ws_m.auto_filter.ref = f"A1:T{m_row}"
 
     # -----------------------------------------------------------------
     # ABA 4: Passivas (Catalogo completo de Passivas + Receitas de Despertar)
     # -----------------------------------------------------------------
     ws_ps = wb.create_sheet("Passivas")
-    ws_ps.freeze_panes = "C2"
+    ws_ps.freeze_panes = "D2"
 
     users_by_passive: dict[str, list[str]] = {}
     for ch in chars:
         if ch["Prototype"]:
             continue
+        real_nm = ANIME_REAL_NAME.get(ch["Id"], ch["Name"])
+        disp_u = f"{ch['Name']} ({real_nm})" if real_nm != ch["Name"] and not real_nm.endswith("(Original)") else ch["Name"]
         if ch["Passive"]:
-            users_by_passive.setdefault(ch["Passive"], []).append(ch["Name"])
+            users_by_passive.setdefault(ch["Passive"], []).append(disp_u)
         if ch["SecretPassive"]:
-            users_by_passive.setdefault(ch["SecretPassive"], []).append(f"{ch['Name']} (Desperto)")
+            users_by_passive.setdefault(ch["SecretPassive"], []).append(f"{disp_u} [Desperto]")
 
     sorted_passives = sorted(
         passives.values(),
@@ -1420,7 +1500,8 @@ def build_workbook(
 
     ps_headers = [
         "ID",
-        "Nome da Passiva",
+        "Nome (In-Game)",
+        "Ref. Anime / Original",
         "Categoria",
         "Resumo do Efeito",
         "Descrição Completa em Batalha",
@@ -1447,17 +1528,19 @@ def build_workbook(
         users = users_by_passive.get(p["Id"], [])
         if p["Tier"] == "Secret":
             rec = awakening_recipes.get(p["Owner"])
-            how = f"Altar Secreto (Gruta NO): {rec['Summary']}" if rec else "Altar Secreto do Despertar (Nv. 35+)"
+            how = f"Altar Secreto (Passagem nos Montes): {rec['Summary']}" if rec else "Altar Secreto do Despertar (Nv. 35+)"
         elif p["Tier"] == "Unique":
-            how = "Inata do Lendário"
+            how = "Inata do Lendário / Secreto"
         else:
             how = "Inata (Pool Genérico)"
         users_str = ", ".join(users) if users else "Disponível no Pool p/ futuros personagens"
         tier_label = PASSIVE_TIER_DISPLAY.get(p["Tier"], p["Tier"])
+        p_ref = PASSIVE_ANIME_REF.get(p["Id"], "-")
         ws_ps.append(
             [
                 p["Id"],
                 p["Name"],
+                p_ref,
                 tier_label,
                 p["Short"],
                 p["Description"],
@@ -1472,21 +1555,21 @@ def build_workbook(
             cell.border = CELL_BORDER
             cell.font = BOLD_FONT if c_idx in (1, 2) else BASE_FONT
             cell.alignment = Alignment(
-                horizontal="center" if c_idx in (3, 6) else "left",
+                horizontal="center" if c_idx in (4, 7) else "left",
                 vertical="center",
-                wrap_text=(c_idx in (4, 5, 7, 8)),
+                wrap_text=(c_idx in (5, 6, 8, 9)),
             )
         if p["Tier"] in TIER_PASSIVE_FILL:
-            ws_ps.cell(r_idx, 3).fill = TIER_PASSIVE_FILL[p["Tier"]]
+            ws_ps.cell(r_idx, 4).fill = TIER_PASSIVE_FILL[p["Tier"]]
             if p["Tier"] in ("Unique", "Secret"):
-                ws_ps.cell(r_idx, 3).font = BOLD_FONT
+                ws_ps.cell(r_idx, 4).font = BOLD_FONT
 
     col_widths_ps = {
-        "A": 22, "B": 24, "C": 21, "D": 40, "E": 56, "F": 13, "G": 34, "H": 50,
+        "A": 22, "B": 24, "C": 22, "D": 21, "E": 40, "F": 56, "G": 13, "H": 42, "I": 50,
     }
     for col, w in col_widths_ps.items():
         ws_ps.column_dimensions[col].width = w
-    ws_ps.auto_filter.ref = f"A1:H{len(sorted_passives) + 1}"
+    ws_ps.auto_filter.ref = f"A1:I{len(sorted_passives) + 1}"
 
     # -----------------------------------------------------------------
     # ABA 5: Resumo (formulas dinamicas sobre Personagens, Ataques e Passivas)
@@ -1494,16 +1577,16 @@ def build_workbook(
     ws_r = wb.create_sheet("Resumo")
     last_p = len(chars) + 1
     last_a = len(sorted_moves) + 1
-    p_anime = f"Personagens!$C$2:$C${last_p}"
-    p_stage = f"Personagens!$D$2:$D${last_p}"
-    p_rar = f"Personagens!$E$2:$E${last_p}"
-    p_cls = f"Personagens!$F$2:$F${last_p}"
-    a_origin = f"Ataques!$C$2:$C${last_a}"
-    a_cls = f"Ataques!$D$2:$D${last_a}"
-    a_cat = f"Ataques!$F$2:$F${last_a}"
-    a_sig = f"Ataques!$N$2:$N${last_a}"
-    a_cutin = f"Ataques!$O$2:$O${last_a}"
-    a_dev = f"Ataques!$R$2:$R${last_a}"
+    p_anime = f"Personagens!$D$2:$D${last_p}"
+    p_stage = f"Personagens!$E$2:$E${last_p}"
+    p_rar = f"Personagens!$F$2:$F${last_p}"
+    p_cls = f"Personagens!$G$2:$G${last_p}"
+    a_origin = f"Ataques!$D$2:$D${last_a}"
+    a_cls = f"Ataques!$E$2:$E${last_a}"
+    a_cat = f"Ataques!$G$2:$G${last_a}"
+    a_sig = f"Ataques!$O$2:$O${last_a}"
+    a_cutin = f"Ataques!$P$2:$P${last_a}"
+    a_dev = f"Ataques!$S$2:$S${last_a}"
 
     def add_summary_table(start_row: int, title: str, col_label: str, items: list[str], col_ref: str, exclude_test: bool = True) -> int:
         ws_r.merge_cells(start_row=start_row, start_column=1, end_row=start_row, end_column=3)
@@ -1576,8 +1659,8 @@ def build_workbook(
         ("Protótipos de Teste", f'=COUNTIF({p_stage},"Teste (Remover)")', "Remover antes da publicação"),
         ("Total de Linhas na Planilha", f"=COUNTA(Personagens!$A$2:$A${last_p})", "Ativos + Protótipos"),
         ("Personagens Concluídos (100%)", f'=COUNTIF({p_stage},"Concluído (100%)")', "Modelo 3D + Animações + VFX completos"),
-        ("Com Modelo 3D Real no Jogo", f'=COUNTIFS(Personagens!$H$2:$H${last_p},"Sim",{p_stage},"<>Teste (Remover)")', "Prontos em ServerStorage/Characters"),
-        ("Aguardando Modelo 3D (Provisório)", f'=COUNTIF(Personagens!$H$2:$H${last_p},"Provisório")', "Usando PlaceholderColors temporário"),
+        ("Com Modelo 3D Real no Jogo", f'=COUNTIFS(Personagens!$I$2:$I${last_p},"Sim",{p_stage},"<>Teste (Remover)")', "Prontos em ServerStorage/Characters"),
+        ("Aguardando Modelo 3D (Provisório)", f'=COUNTIF(Personagens!$I$2:$I${last_p},"Provisório")', "Usando PlaceholderColors temporário"),
     ]
     for idx, (label, formula, obs) in enumerate(kpis, start=3):
         ws_r.cell(idx, 1, label)
@@ -1719,7 +1802,7 @@ def build_workbook(
     )
 
     last_ps = len(sorted_passives) + 1
-    ps_cat = f"Passivas!$C$2:$C${last_ps}"
+    ps_cat = f"Passivas!$D$2:$D${last_ps}"
     ws_r.merge_cells(start_row=a_row, start_column=5, end_row=a_row, end_column=7)
     t_ps = ws_r.cell(a_row, 5, "RESUMO DE PASSIVAS E DESPERTAR")
     t_ps.fill = TITLE_FILL

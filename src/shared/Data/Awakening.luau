@@ -92,8 +92,8 @@ Awakening.Materials = {
 		Rarity = "Epico",
 		Color = Color3.fromRGB(255, 138, 43),
 		Icon = "insignia_naruto",
-		Source = "Ginásio de Konoha (Naruto)",
-		Description = "Relíquia espiritual obtida ao vencer o Ginásio de Konoha.",
+		Source = "Ginásio da Folha",
+		Description = "Relíquia espiritual obtida ao vencer o Ginásio da Folha.",
 	},
 	FragmentoMares = {
 		Id = "FragmentoMares",
@@ -103,8 +103,8 @@ Awakening.Materials = {
 		Rarity = "Epico",
 		Color = Color3.fromRGB(56, 178, 255),
 		Icon = "insignia_onepiece",
-		Source = "Ginásio da Grand Line (One Piece)",
-		Description = "Relíquia espiritual obtida ao vencer o Ginásio da Grand Line.",
+		Source = "Ginásio dos Mares",
+		Description = "Relíquia espiritual obtida ao vencer o Ginásio dos Mares.",
 	},
 	FragmentoAlmas = {
 		Id = "FragmentoAlmas",
@@ -114,8 +114,8 @@ Awakening.Materials = {
 		Rarity = "Epico",
 		Color = Color3.fromRGB(56, 224, 238),
 		Icon = "insignia_bleach",
-		Source = "Ginásio da Soul Society (Bleach)",
-		Description = "Relíquia espiritual obtida ao vencer o Ginásio da Soul Society.",
+		Source = "Ginásio das Almas",
+		Description = "Relíquia espiritual obtida ao vencer o Ginásio das Almas.",
 	},
 	NucleoDespertar = {
 		Id = "NucleoDespertar",

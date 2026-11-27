@@ -989,7 +989,45 @@ assert(pvpMon and pvpMon:FindFirstChild("PvPBoardPrompt", true) and pvpMon:FindF
 assert(sg.HudGui.HudClient.Source:find("PvPButton", 1, true) and sg.PvPGui.PvPClient.Source:find("PvPWindow", 1, true),
     "Missing PvPButton in HudClient or PvPWindow in PvPClient")
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + Domain/Fuga + Jujutsu/DragonBall + GlobalRaid4x1 + PvPQueues/PokemonBSTs (%d chars) + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, activeCharCount, totalMoves)
+-- Test 21: Copyright-Safe In-Game Display Names Guardrail (Characters, Worlds/Banners, Gyms, Passives & Moves)
+local forbiddenCharNames = {
+    Naruto = true, Luffy = true, Ichigo = true, Gojo = true, Sukuna = true, Byakuya = true,
+    Sarutobi = true, ["Barba Branca"] = true, Freeza = true, Vegeta = true, Gohan = true,
+    Piccolo = true, Kuririn = true, Zoro = true, Sanji = true, Nami = true, Usopp = true,
+    Sakura = true, Shikamaru = true, Kakashi = true, Sasuke = true, Rukia = true, Renji = true,
+    Chad = true, Uryu = true, Nobara = true, Itadori = true, Fushiguro = true, Todo = true, Nanami = true,
+}
+for cid, def in pairs(Characters.List) do
+    assert(not forbiddenCharNames[def.Name], "Copyrighted in-game character Name found on " .. cid .. ": " .. tostring(def.Name))
+end
+local forbiddenFranchise = { ["One Piece"] = true, Naruto = true, Bleach = true, ["Dragon Ball"] = true, ["Jujutsu Kaisen"] = true }
+for aid, ainfo in pairs(Characters.Animes) do
+    assert(not forbiddenFranchise[ainfo.Name], "Copyrighted in-game Anime display Name on " .. aid .. ": " .. tostring(ainfo.Name))
+end
+for bid, binfo in pairs(Summon.Banners) do
+    assert(not forbiddenFranchise[binfo.Name], "Copyrighted in-game Banner display Name on " .. bid .. ": " .. tostring(binfo.Name))
+end
+for gid, ginfo in pairs(Gyms.List) do
+    assert(not forbiddenFranchise[ginfo.AnimeName], "Copyrighted Gym AnimeName on " .. gid .. ": " .. tostring(ginfo.AnimeName))
+    assert(not ginfo.Name:find("Konoha", 1, true) and not ginfo.Name:find("Grand Line", 1, true) and not ginfo.Name:find("Soul Society", 1, true) and not ginfo.Name:find("Jujutsu", 1, true),
+        "Copyrighted Gym Name on " .. gid .. ": " .. tostring(ginfo.Name))
+end
+local forbiddenMoveNames = {
+    Kamehameha = true, ["Genki Dama"] = true, Senbonzakura = true, ["Senbonzakura Kageyoshi"] = true,
+    ["Vazio Roxo"] = true, ["Santuário Malevolente"] = true, Fuga = true, ["Haki do Conquistador"] = true,
+    ["Corte Murakumo"] = true, Desmantelar = true, Clivar = true,
+}
+for mid, mv in pairs(Moves.List) do
+    assert(not forbiddenMoveNames[mv.Name], "Copyrighted Move display Name on " .. mid .. ": " .. tostring(mv.Name))
+end
+local forbiddenPassiveNames = {
+    ["Instinto Zenkai"] = true, ["Vontade de D"] = true, ["Despertar Hollow"] = true, ["Rei das Maldições"] = true,
+}
+for pid, pdef in pairs(Passives.List) do
+    assert(not forbiddenPassiveNames[pdef.Name], "Copyrighted Passive display Name on " .. pid .. ": " .. tostring(pdef.Name))
+end
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + Domain/Fuga + Jujutsu/DragonBall + GlobalRaid4x1 + PvPQueues/PokemonBSTs (%d chars) + DMCA-Safe Names + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, activeCharCount, totalMoves)
 end)
 sandbox:Destroy()
 assert(ok, res)

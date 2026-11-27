@@ -1538,8 +1538,8 @@ function BattleEngine:_CollapseDomain(side: string, push, silent: boolean?)
 	se.MalevolentShrineJustCast = false
 	self:_SetSukunaDomainMoves(side, false)
 	if wasActive and push and not silent then
-		local ownTxt = "O Santu\u{e1}rio Malevolente se dissipou."
-		local foeTxt = "O Santu\u{e1}rio Malevolente do advers\u{e1}rio se dissipou."
+		local ownTxt = "O Templo Carmesim se dissipou."
+		local foeTxt = "O Templo Carmesim do advers\u{e1}rio se dissipou."
 		push({
 			Kind = "DomainEnd",
 			Side = side,
@@ -1574,8 +1574,8 @@ function BattleEngine:_ApplyDomainSlash(ownerSide: string, fraction: number, isI
 			end
 			foe.Hp = math.max(0, foe.Hp - finalDmg)
 			local slashTxt = if isInvocation
-				then ("Os cortes incessantes do Santu\u{e1}rio rasgaram " .. foe.Name .. " (-" .. finalDmg .. " HP)!")
-				else (foe.Name .. " sangrou com os cortes do Santu\u{e1}rio Malevolente (-" .. finalDmg .. " HP)!")
+				then ("Os cortes incessantes do Templo rasgaram " .. foe.Name .. " (-" .. finalDmg .. " HP)!")
+				else (foe.Name .. " sangrou com os cortes do Templo Carmesim (-" .. finalDmg .. " HP)!")
 			push({
 				Kind = "DomainSlash",
 				Side = foeSide,
@@ -1779,8 +1779,8 @@ function BattleEngine:_ApplyEffect(actorSide: string, actorSlot: number, hitSide
 		se.MalevolentShrine = turns
 		se.MalevolentShrineJustCast = true
 		self:_SetSukunaDomainMoves(actorSide, true)
-		local ownTxt = "Expans\u{e3}o de Dom\u{ed}nio: Santu\u{e1}rio Malevolente! O campo foi tomado por " .. turns .. " rodadas!"
-		local foeTxt = actor.Name .. " abriu o Santu\u{e1}rio Malevolente por " .. turns .. " rodadas!"
+		local ownTxt = "Dom\u{ed}nio Absoluto: Templo Carmesim! O campo foi tomado por " .. turns .. " rodadas!"
+		local foeTxt = actor.Name .. " abriu o Templo Carmesim por " .. turns .. " rodadas!"
 		push({
 			Kind = "DomainStart",
 			Side = actorSide,

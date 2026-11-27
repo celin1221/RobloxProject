@@ -178,7 +178,7 @@ Passives.List = {
 		},
 	},
 	InstintoZenkai = {
-		Name = "Instinto Zenkai",
+		Name = "Instinto Primordial",
 		Tier = "Unique",
 		Owner = "San",
 		Short = "Abaixo de 50% HP: cura 20%, +1 ATQ e +1 VEL",
@@ -196,18 +196,18 @@ Passives.List = {
 		},
 	},
 	InfinitoAbsoluto = {
-		Name = "Infinito Absoluto",
+		Name = "Barreira Infinita",
 		Tier = "Unique",
 		Owner = "Setero",
 		Short = "-50% dano com HP cheio · Imune a debuffs",
-		Description = "A barreira do Infinito reduz em 50% o dano recebido enquanto estiver com 100% de HP e impede que inimigos reduzam seus atributos.",
+		Description = "A barreira espacial reduz em 50% o dano recebido enquanto estiver com 100% de HP e impede que inimigos reduzam seus atributos.",
 		Effect = {
 			FullHpDamageTakenMult = 0.50,
 			BlockAllEnemyStatDrops = true,
 		},
 	},
 	ReiDasMaldicoes = {
-		Name = "Rei das Maldições",
+		Name = "Soberano Maldito",
 		Tier = "Unique",
 		Owner = "Sukuna",
 		Short = "+18% dano Mago · +10% Crítico · Ignora buffs de Defesa",
@@ -223,11 +223,11 @@ Passives.List = {
 	-- 3 PASSIVAS SECRETAS UNICAS (Epicos Iniciais — Despertar Nv. 35+)
 	--------------------------------------------------------------------
 	VontadeDeD = {
-		Name = "Vontade de D",
+		Name = "Vontade do Rei",
 		Tier = "Secret",
 		Owner = "Luffy",
 		Short = "Imune a Paralisia · <40% HP: +1 ATQ/VEL e +20% Lutador",
-		Description = "Corpo de borracha imune a Paralisia. Ao cair abaixo de 40% de HP (1x por batalha), desperta ganhando +1 Ataque, +1 Velocidade e +20% de dano em golpes de Lutador.",
+		Description = "Corpo elástico imune a Paralisia. Ao cair abaixo de 40% de HP (1x por batalha), desperta ganhando +1 Ataque, +1 Velocidade e +20% de dano em golpes de Lutador.",
 		Effect = {
 			StatusImmune = { Paralysis = true },
 			ThresholdTrigger = {
@@ -255,7 +255,7 @@ Passives.List = {
 		},
 	},
 	DespertarHollow = {
-		Name = "Despertar Hollow",
+		Name = "Máscara Abissal",
 		Tier = "Secret",
 		Owner = "Ichigo",
 		Short = "+20% VEL · +10% Crítico · Nocaute: +1 ATQ e cura 15%",

@@ -633,7 +633,7 @@ Moves.List = {
 		Timing = { Charge = 0.20, Release = 0.55, Impact = 0.90, Length = 1.25 },
 	},
 	TudoRoxo = {
-		Name = "Vazio Roxo", Type = "Mago", Category = "Damage", Power = 65, Accuracy = 95, PP = 10,
+		Name = "Colapso P\u{fa}rpura", Type = "Mago", Category = "Damage", Power = 65, Accuracy = 95, PP = 10,
 		Target = "AllEnemies",
 		Signature = true, CutIn = true, Anim = "TudoRoxo", Vfx = "TudoRoxo",
 		CutInColors = {
@@ -647,7 +647,7 @@ Moves.List = {
 
 	-- San (Lutador, Lendario)
 	Kamehameha = {
-		Name = "Kamehameha", Type = "Lutador", Category = "Damage", Power = 55, Accuracy = 100, PP = 15,
+		Name = "Onda Celeste", Type = "Lutador", Category = "Damage", Power = 55, Accuracy = 100, PP = 15,
 		CutIn = true, Anim = "Kamehameha", Vfx = "Kamehameha", AnimSpeed = 3.0,
 		CutInColors = {
 			Bg = Color3.fromRGB(8, 32, 76),
@@ -660,7 +660,7 @@ Moves.List = {
 		Timing = { Charge = 0.32, Release = 1.08, Impact = 1.52, Length = 1.99 },
 	},
 	GenkiDama = {
-		Name = "Genki Dama", Type = "Lutador", Category = "Damage", Power = 70, Accuracy = 95, PP = 10,
+		Name = "Esfera Espiritual", Type = "Lutador", Category = "Damage", Power = 70, Accuracy = 95, PP = 10,
 		Target = "AllEnemies",
 		Signature = true, CutIn = true, Anim = "GenkiDama", Vfx = "GenkiDama", AnimSpeed = 1.35,
 		CutInFocusY = 3.8, CutInFov = 48, CutInBannerY = 0.84,
@@ -675,7 +675,7 @@ Moves.List = {
 		Timing = { Charge = 0.35, Release = 1.38, Impact = 1.88, Length = 2.20 },
 	},
 	CargaDeKi = {
-		Name = "Carga de Ki", Type = "Lutador", Category = "Status", Accuracy = nil, PP = 15,
+		Name = "Carga de Aura", Type = "Lutador", Category = "Status", Accuracy = nil, PP = 15,
 		Effect = { Kind = "StatStage", Stat = "Attack", Stages = 1, Target = "Self" },
 		Anim = "CargaDeKi", Vfx = "CargaDeKi", AnimSpeed = 2.6,
 		Timing = { Charge = 0.12, Release = 0.90, Impact = 1.00, Length = 1.52 },
@@ -711,20 +711,20 @@ Moves.List = {
 		Timing = { Charge = 0.28, Release = 1.38, Impact = 1.72, Length = 2.05 },
 	},
 	CorteMurakumo = {
-		Name = "Corte Murakumo", Type = "Espadachim", Category = "Damage", Power = 45, Accuracy = 100, PP = 25,
+		Name = "Corte da Alabarda", Type = "Espadachim", Category = "Damage", Power = 45, Accuracy = 100, PP = 25,
 		Anim = "CorteMurakumo", Vfx = "CorteMurakumo", AnimSpeed = 1.35,
 		Timing = { Charge = 0.22, Release = 0.85, Impact = 1.15, Length = 1.46 },
 	},
 	HakiDoConquistador = {
-		Name = "Haki do Conquistador", Type = "Espadachim", Category = "Status", Accuracy = nil, PP = 15,
+		Name = "Press\u{e3}o do Conquistador", Type = "Espadachim", Category = "Status", Accuracy = nil, PP = 15,
 		Effect = { Kind = "StatStage", Stat = "Attack", Stages = 1, Target = "Self" },
 		Anim = "HakiDoConquistador", Vfx = "HakiDoConquistador", AnimSpeed = 1.35,
 		Timing = { Charge = 0.12, Release = 0.45, Impact = 0.55, Length = 1.46 },
 	},
 
-	-- Byakuya Kuchiki (Bleach, Espadachim, Lendario)
+	-- Byakuren (Reino das Almas, Espadachim, Lendario)
 	Senbonzakura = {
-		Name = "Senbonzakura", Type = "Espadachim", Category = "Damage", Power = 58, Accuracy = 100, PP = 15,
+		Name = "Mil P\u{e9}talas", Type = "Espadachim", Category = "Damage", Power = 58, Accuracy = 100, PP = 15,
 		CutIn = true, CutInFocusY = 1.65, CutInFov = 44, Anim = "Senbonzakura", Vfx = "Senbonzakura",
 		CutInColors = {
 			Bg = Color3.fromRGB(36, 14, 34),
@@ -737,7 +737,7 @@ Moves.List = {
 		Timing = { Charge = 0.20, Release = 0.68, Impact = 1.08, Length = 1.60 },
 	},
 	SenbonzakuraKageyoshi = {
-		Name = "Senbonzakura Kageyoshi", Type = "Espadachim", Category = "Damage", Power = 72, Accuracy = 95, PP = 10,
+		Name = "Jardim das Mil L\u{e2}minas", Type = "Espadachim", Category = "Damage", Power = 72, Accuracy = 95, PP = 10,
 		Target = "AllEnemies",
 		Signature = true, CutIn = true, Anim = "SenbonzakuraKageyoshi", Vfx = "SenbonzakuraKageyoshi",
 		CutInFocusY = 1.9, CutInFov = 45, CutInBannerY = 0.16,
@@ -752,9 +752,9 @@ Moves.List = {
 		Timing = { Charge = 0.26, Release = 1.16, Impact = 1.66, Length = 2.25 },
 	},
 
-	-- Sarutobi Hiruzen (Naruto, Mago, Lendario — 4 Elementos: Terra, Fogo, Agua e Vento)
+	-- Hiruzo (Vila da Folha, Mago, Lendario — 4 Elementos: Terra, Fogo, Agua e Vento)
 	DotonMuralhaTerrestre = {
-		Name = "Doton: Drag\u{e3}o de Terra", Type = "Mago", Category = "Damage", Power = 56, Accuracy = 100, PP = 15,
+		Name = "Estilo Terra: Drag\u{e3}o de Pedra", Type = "Mago", Category = "Damage", Power = 56, Accuracy = 100, PP = 15,
 		Effect = { Kind = "StatStage", Stat = "Defense", Stages = -1, Chance = 30, Target = "Target" },
 		CutIn = true, CutInFocusY = 1.6, CutInFov = 45, Anim = "SarutobiDoton", Vfx = "DotonMuralhaTerrestre",
 		CutInColors = {
@@ -768,7 +768,7 @@ Moves.List = {
 		Timing = { Charge = 0.22, Release = 0.68, Impact = 1.12, Length = 1.65 },
 	},
 	KatonDragaoDeFogo = {
-		Name = "Katon: Drag\u{e3}o de Fogo", Type = "Mago", Category = "Damage", Power = 62, Accuracy = 95, PP = 15,
+		Name = "Estilo Fogo: Drag\u{e3}o Flamejante", Type = "Mago", Category = "Damage", Power = 62, Accuracy = 95, PP = 15,
 		Effect = { Kind = "Status", Status = "Burn", Chance = 35, Target = "Target" },
 		CutIn = true, CutInFocusY = 1.65, CutInFov = 44, Anim = "SarutobiKaton", Vfx = "KatonDragaoDeFogo",
 		CutInColors = {
@@ -782,7 +782,7 @@ Moves.List = {
 		Timing = { Charge = 0.24, Release = 0.72, Impact = 1.18, Length = 1.72 },
 	},
 	SuitonDragaoDeAgua = {
-		Name = "Suiton: Drag\u{e3}o de \u{c1}gua", Type = "Mago", Category = "Damage", Power = 60, Accuracy = 100, PP = 15,
+		Name = "Estilo \u{c1}gua: Drag\u{e3}o das Mar\u{e9}s", Type = "Mago", Category = "Damage", Power = 60, Accuracy = 100, PP = 15,
 		Target = "AllEnemies",
 		CutIn = true, CutInFocusY = 1.65, CutInFov = 44, Anim = "SarutobiSuiton", Vfx = "SuitonDragaoDeAgua",
 		CutInColors = {
@@ -796,7 +796,7 @@ Moves.List = {
 		Timing = { Charge = 0.24, Release = 0.74, Impact = 1.22, Length = 1.78 },
 	},
 	FutonTempestadeCeleste = {
-		Name = "Futon: Tempestade Celeste", Type = "Mago", Category = "Damage", Power = 74, Accuracy = 95, PP = 10,
+		Name = "Estilo Vento: Tempestade Celeste", Type = "Mago", Category = "Damage", Power = 74, Accuracy = 95, PP = 10,
 		Target = "AllEnemies",
 		Signature = true, CutIn = true, Anim = "SarutobiFuton", Vfx = "FutonTempestadeCeleste",
 		CutInFocusY = 1.85, CutInFov = 45, CutInBannerY = 0.16,
@@ -811,7 +811,7 @@ Moves.List = {
 		Timing = { Charge = 0.26, Release = 0.92, Impact = 1.48, Length = 2.15 },
 	},
 
-	-- Sukuna (Jujutsu Kaisen, Mago, Secreto — Rei das Maldicoes)
+	-- Sukuno (Ordem Maldita, Mago, Secreto — Soberano Maldito)
 	Fortificacao = {
 		Name = "Fortifica\u{e7}\u{e3}o", Type = "Mago", Category = "Status", Accuracy = nil, PP = 15,
 		Target = "Self",
@@ -828,7 +828,7 @@ Moves.List = {
 		Timing = { Charge = 0.16, Release = 0.56, Impact = 0.72, Length = 1.28 },
 	},
 	Desmantelar = {
-		Name = "Desmantelar", Type = "Mago", Category = "Damage", Power = 58, Accuracy = 100, PP = 20,
+		Name = "Fenda Invis\u{ed}vel", Type = "Mago", Category = "Damage", Power = 58, Accuracy = 100, PP = 20,
 		CritChance = 0.18,
 		CustomCinematicCamera = true,
 		CutIn = true, CutInFocusY = 1.65, CutInFov = 44, Anim = "SukunaDesmantelar", Vfx = "SukunaDesmantelar",
@@ -843,7 +843,7 @@ Moves.List = {
 		Timing = { Charge = 0.18, Release = 0.56, Impact = 0.92, Length = 1.44 },
 	},
 	Clivar = {
-		Name = "Clivar", Type = "Mago", Category = "Damage", Power = 68, Accuracy = 95, PP = 15,
+		Name = "Talho Adaptativo", Type = "Mago", Category = "Damage", Power = 68, Accuracy = 95, PP = 15,
 		BreaksProtect = true,
 		Effect = { Kind = "StatStage", Stat = "Defense", Stages = -1, Chance = 45, Target = "Target" },
 		CustomCinematicCamera = true,
@@ -859,7 +859,7 @@ Moves.List = {
 		Timing = { Charge = 0.22, Release = 0.64, Impact = 1.06, Length = 1.62 },
 	},
 	SantuarioMalevolente = {
-		Name = "Santu\u{e1}rio Malevolente", Type = "Mago", Category = "Status", Accuracy = nil, PP = 1,
+		Name = "Templo Carmesim", Type = "Mago", Category = "Status", Accuracy = nil, PP = 1,
 		OncePerBattle = true,
 		Target = "AllEnemies", BreaksProtect = true,
 		Effect = {
@@ -882,7 +882,7 @@ Moves.List = {
 		Timing = { Charge = 0.28, Release = 1.18, Impact = 1.86, Length = 2.85 },
 	},
 	Fuga = {
-		Name = "Fuga", Type = "Mago", Category = "Damage", Power = 98, Accuracy = 100, PP = 2,
+		Name = "Chama do Altar", Type = "Mago", Category = "Damage", Power = 98, Accuracy = 100, PP = 2,
 		Target = "AllEnemies", BreaksProtect = true, CritChance = 0.22,
 		Hidden = true, DomainExclusive = true, Signature = true,
 		CustomCinematicCamera = true,
@@ -1070,25 +1070,26 @@ local STATUS_LABELS = {
 
 local SPECIAL_DESCRIPTIONS = {
 	Senbonzakura = "Dispersa a l\u{e2}mina em mil p\u{e9}talas cortantes contra o alvo (Ataque Especial com Cut-In).",
-	SenbonzakuraKageyoshi = "Libera o Bankai em uma tempestade devastadora de p\u{e9}talas sobre todos os inimigos (Assinatura).",
+	SenbonzakuraKageyoshi = "Libera a forma suprema em uma tempestade devastadora de p\u{e9}talas sobre todos os inimigos (Assinatura).",
 	SocoSismico = "Concentra ondas de tremor no punho e estilha\u{e7}a o ar contra o alvo (Ataque Especial com Cut-In).",
 	CeuETerra = "Inclina os mares e o c\u{e9}u em um abalo catacl\u{ed}smico sobre todos os inimigos (Assinatura).",
-	Kamehameha = "Dispara um feixe concentrado de energia Ki de alto impacto no alvo (Ataque Especial com Cut-In).",
+	Kamehameha = "Dispara um feixe concentrado de energia celeste de alto impacto no alvo (Ataque Especial com Cut-In).",
 	GenkiDama = "Re\u{fa}ne energia vital celeste em uma esfera colossal que atinge todos os inimigos (Assinatura).",
 	Atracao = "Cria um ponto de atra\u{e7}\u{e3}o gravitacional intensa que esmaga o alvo (Ataque Especial).",
-	TudoRoxo = "Funde atra\u{e7}\u{e3}o e repuls\u{e3}o em massa imagin\u{e1}ria que varre todos os inimigos (Assinatura).",
+	TudoRoxo = "Funde atra\u{e7}\u{e3}o e repuls\u{e3}o em massa p\u{fa}rpura que varre todos os inimigos (Assinatura).",
 	GaiolaDeEspinhos = "Invoca uma pris\u{e3}o de ra\u{ed}zes e espinhos que atinge todos os inimigos (Assinatura).",
-	CorteMurakumo = "Golpe largo e poderoso desferido com a l\u{e2}mina gigante Murakumogiri.",
+	CorteMurakumo = "Golpe largo e poderoso desferido com a alabarda gigante.",
 	HakiDoConquistador = "Libera press\u{e3}o espiritual avassaladora, aumentando o Ataque (+50%) do usu\u{e1}rio.",
-	CargaDeKi = "Eleva o Ki interior ao m\u{e1}ximo, aumentando o Ataque (+50%) do usu\u{e1}rio.",
-	DotonMuralhaTerrestre = "Canaliza chakra de Terra com as palmas no ch\u{e3}o e libera uma onda s\u{ed}smica com 30% de chance de reduzir a Defesa do alvo (Especial Elemental com Cut-In).",
+	CargaDeKi = "Eleva a aura interior ao m\u{e1}ximo, aumentando o Ataque (+50%) do usu\u{e1}rio.",
+	DotonMuralhaTerrestre = "Canaliza energia de Terra com as palmas no ch\u{e3}o e libera uma onda s\u{ed}smica com 30% de chance de reduzir a Defesa do alvo (Especial Elemental com Cut-In).",
 	KatonDragaoDeFogo = "Exala um drag\u{e3}o de chamas intensas com 35% de chance de causar Queimadura no alvo (Especial Elemental com Cut-In).",
 	SuitonDragaoDeAgua = "Invoca uma torrente espiral de \u{e1}gua que varre todos os inimigos em campo (Especial Elemental com Cut-In).",
 	FutonTempestadeCeleste = "Libera um ciclone cortante de ventos celestes que devasta todos os inimigos (Assinatura Elemental).",
-	Fortificacao = "Condensa energia amaldi\u{e7}oada ao redor do corpo, aumentando Ataque (+50%) e Defesa (+50%) do Rei das Maldi\u{e7}\u{f5}es.",
-	Desmantelar = "Dispara cortes invis\u{ed}veis de energia amaldi\u{e7}oada em alta velocidade com 18% de chance cr\u{ed}tica (Especial com Cut-In).",
+	Fortificacao = "Condensa energia maldita ao redor do corpo, aumentando Ataque (+50%) e Defesa (+50%) do Soberano Maldito.",
+	Desmantelar = "Dispara cortes invis\u{ed}veis de energia maldita em alta velocidade com 18% de chance cr\u{ed}tica (Especial com Cut-In).",
 	Clivar = "Retalha o alvo de perto rompendo Proteger/Guarda Ampla com 45% de chance de reduzir a Defesa (-1) (Especial com Cut-In).",
-	SantuarioMalevolente = "Expans\u{e3}o de Dom\u{ed}nio suprema: chuva implac\u{e1}vel de cortes que rompe prote\u{e7}\u{f5}es e devasta todos os inimigos (Assinatura Secreta).",
+	SantuarioMalevolente = "Dom\u{ed}nio absoluto supremo: chuva implac\u{e1}vel de cortes por 2 rodadas que rompe prote\u{e7}\u{f5}es e libera Chama do Altar (Assinatura Secreta).",
+	Fuga = "Forja um arco termob\u{e1}rico colossal durante o Templo Carmesim, disparando uma flecha solar que devasta todos os inimigos.",
 }
 
 function Moves.TargetDisplay(move): string

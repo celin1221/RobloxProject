@@ -737,7 +737,7 @@ local function setFieldBadges(side: string, sideState)
 	local se = sideState.SideEffects
 	if se then
 		if (se.MalevolentShrine or 0) > 0 then
-			table.insert(items, { Text = "SANTU\u{c1}RIO " .. se.MalevolentShrine .. "t", Color = "red" })
+			table.insert(items, { Text = "TEMPLO " .. se.MalevolentShrine .. "t", Color = "red" })
 		end
 		if (se.Barrier or 0) > 0 then
 			table.insert(items, { Text = "BARREIRA " .. se.Barrier .. "t", Color = "blue" })

@@ -337,8 +337,8 @@ function SoundManager.PlaySantuarioPartA(emitterPart: Instance, jan: Janitor.Jan
 	SoundManager.PlayVoiceCue(
 		emitterPart,
 		Config.Assets.RyoikiTenkaiVoiceId,
-		"Ry\u{014d}iki Tenkai...",
-		"Expans\u{e3}o de Dom\u{ed}nio",
+		"Dom\u{ed}nio Absoluto...",
+		"Abertura de Campo",
 		0.92,
 		Config.Colors.CrimsonBright,
 		jan
@@ -350,8 +350,8 @@ function SoundManager.PlaySantuarioPartB(emitterPart: Instance, jan: Janitor.Jan
 	SoundManager.PlayVoiceCue(
 		emitterPart,
 		Config.Assets.FukumaMizushiVoiceId,
-		"Fukuma Mizushi",
-		"Santu\u{e1}rio Malevolente",
+		"Templo Carmesim",
+		"Dom\u{ed}nio de L\u{e2}minas",
 		1.45,
 		Config.Colors.SlashWhite,
 		jan
@@ -470,7 +470,7 @@ function SoundManager.ShowFugaSubtitle(holdDuration: number)
 	ghostLbl.Size = UDim2.fromScale(0.92, 0.52)
 	ghostLbl.BackgroundTransparency = 1
 	ghostLbl.Font = Enum.Font.GothamBlack
-	ghostLbl.Text = "\u{300c} \u{7ac8}  \u{b7}  FUGA \u{300d}"
+	ghostLbl.Text = "\u{300c} CHAMA DO ALTAR \u{300d}"
 	ghostLbl.TextColor3 = Config.Colors.ThermalFlameStart
 	ghostLbl.TextScaled = true
 	ghostLbl.TextTransparency = 0.62
@@ -483,7 +483,7 @@ function SoundManager.ShowFugaSubtitle(holdDuration: number)
 	mainLbl.Size = UDim2.fromScale(0.92, 0.52)
 	mainLbl.BackgroundTransparency = 1
 	mainLbl.Font = Enum.Font.GothamBlack
-	mainLbl.Text = "\u{300c} \u{7ac8}  \u{b7}  FUGA \u{300d}"
+	mainLbl.Text = "\u{300c} CHAMA DO ALTAR \u{300d}"
 	mainLbl.TextColor3 = Config.Colors.ThermalCoreStart
 	mainLbl.TextScaled = true
 	mainLbl.TextTransparency = 1
