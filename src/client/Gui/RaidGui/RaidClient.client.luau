@@ -97,11 +97,11 @@ end
 local hudBannerBtn, hudBannerFace = UI.button(canvas, {
 	Name = "RaidHudBanner",
 	Color = "panel",
-	Size = UDim2.fromScale(0.24, 0.068),
-	Position = UDim2.fromScale(0.56, 0.025),
+	Size = UDim2.fromScale(0.22, 0.072),
+	Position = UDim2.fromScale(0.61, 0.028),
 	AnchorPoint = Vector2.new(0.5, 0),
 	Corner = T.Corner.Pill,
-	MaxSize = Vector2.new(310, 44),
+	MaxSize = Vector2.new(270, 44),
 	Visible = false,
 	ZIndex = 6,
 })

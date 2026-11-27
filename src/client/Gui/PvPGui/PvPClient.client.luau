@@ -121,21 +121,21 @@ if leaveMin then
 end
 
 --------------------------------------------------------------------
--- 2. JANELA PRINCIPAL: HUB ARENA PVP (Abas FILAS e RANKING)
+-- 2. JANELA PRINCIPAL: HUB ARENA PVP (Abas FILAS e RANKING - layout limpo)
 --------------------------------------------------------------------
 local hubWin = UI.window(canvas, {
 	Name = "PvPWindow",
 	Title = "ARENA PVP",
 	Icon = "sword",
 	HeaderColor = "red",
-	Size = UDim2.fromScale(0.94, 0.88),
-	Aspect = 1.9,
+	Size = UDim2.fromScale(0.86, 0.80),
+	Aspect = 1.82,
 })
 local hubBody = hubWin.Body
 local hubMsg = UI.text(hubBody, "", {
 	Name = "Message",
-	Size = UDim2.fromScale(1, 0.06),
-	Position = UDim2.fromScale(0, 0.94),
+	Size = UDim2.fromScale(1, 0.055),
+	Position = UDim2.fromScale(0, 0.945),
 	Role = "Small",
 	Color = "hpLow",
 	AlignX = Enum.TextXAlignment.Left,
@@ -143,7 +143,7 @@ local hubMsg = UI.text(hubBody, "", {
 local hubContent = UI.frame(hubBody, {
 	Name = "Content",
 	Size = UDim2.fromScale(1, 0.79),
-	Position = UDim2.fromScale(0, 0.135),
+	Position = UDim2.fromScale(0, 0.14),
 })
 
 local filasPage = UI.frame(hubContent, { Name = "Page_Filas", Size = UDim2.fromScale(1, 1), Visible = true })
@@ -157,7 +157,7 @@ local fetchStatus
 local selectHubTab = UI.tabs(hubBody, {
 	{ Id = "Filas", Text = "FILAS PVP", Icon = "sword" },
 	{ Id = "Ranking", Text = "RANKING GLOBAL", Icon = "trophy" },
-}, { Size = UDim2.fromScale(1, 0.115), MaxHeight = 46, MaxWidth = 0.49, ActiveColor = "red" }, function(id)
+}, { Size = UDim2.fromScale(1, 0.115), MaxHeight = 44, MaxWidth = 0.49, ActiveColor = "red" }, function(id)
 	currentHubTab = id
 	filasPage.Visible = id == "Filas"
 	rankingPage.Visible = id == "Ranking"
@@ -170,55 +170,135 @@ local selectHubTab = UI.tabs(hubBody, {
 end)
 
 --------------------------------------------------------------------
--- 2A. ABA FILAS: Resumo ELO + Grid 2x2 das 4 Filas Oficiais
+-- 2A. ABA FILAS: Barra Compacta (1 linha) + Grid 2x2 Limpo + Modal Regras
 --------------------------------------------------------------------
 local summaryBar, summaryFace = UI.panel(filasPage, {
 	Name = "SummaryBar",
-	Size = UDim2.fromScale(1, 0.145),
+	Size = UDim2.fromScale(1, 0.13),
 	Position = UDim2.fromScale(0, 0),
 	Color = "slot",
-	Corner = 0.24,
+	Corner = 0.28,
 	Shadow = false,
 })
 UI.icon(summaryFace, "trophy", {
 	Name = "TrophyIcon",
-	Size = UDim2.fromScale(0.055, 0.72),
-	Position = UDim2.fromScale(0.018, 0.5),
+	Size = UDim2.fromScale(0.05, 0.68),
+	Position = UDim2.fromScale(0.015, 0.5),
 	AnchorPoint = Vector2.new(0, 0.5),
 	AspectAxis = Enum.DominantAxis.Height,
 })
-local summaryMain = UI.text(summaryFace, "ELO 2x2: 1000 (Bronze)  |  ELO 1x1: 1000 (Bronze)", {
+local summaryMain = UI.text(summaryFace, "2x2: 1000 (Bronze)  |  1x1: 1000 (Bronze)", {
 	Name = "SummaryMain",
-	Size = UDim2.fromScale(0.62, 0.54),
-	Position = UDim2.fromScale(0.08, 0.08),
-	Role = "Body",
+	Size = UDim2.fromScale(0.55, 0.72),
+	Position = UDim2.fromScale(0.068, 0.14),
+	Role = "Small",
 	Color = "gold",
 	AlignX = Enum.TextXAlignment.Left,
 })
-local summarySub = UI.text(summaryFace, "B\u{f4}nus di\u{e1}rio: 0/3 vit\u{f3}rias  |  Ranqueada: Nv. 50 e BST normalizado", {
-	Name = "SummarySub",
-	Size = UDim2.fromScale(0.62, 0.36),
-	Position = UDim2.fromScale(0.08, 0.58),
-	Role = "Small",
-	Color = "inkSoft",
-	AlignX = Enum.TextXAlignment.Left,
-	StrokeMult = 0.4,
-})
-local summarySeason = UI.text(summaryFace, "TEMPORADA", {
-	Name = "SummarySeason",
-	Size = UDim2.fromScale(0.28, 0.72),
-	Position = UDim2.fromScale(0.98, 0.14),
+summaryMain.TextWrapped = false
+local summaryDaily = UI.text(summaryFace, "B\u{f4}nus: 0/3", {
+	Name = "SummaryDaily",
+	Size = UDim2.fromScale(0.17, 0.72),
+	Position = UDim2.fromScale(0.805, 0.14),
 	AnchorPoint = Vector2.new(1, 0),
 	Role = "Small",
-	Color = "onDark",
+	Color = "inkSoft",
 	AlignX = Enum.TextXAlignment.Right,
-	StrokeMult = 0.45,
+	StrokeMult = 0.4,
 })
+summaryDaily.TextWrapped = false
+
+-- Modal discreto de Regras (evita poluir a tela principal com parede de texto)
+local rulesOverlay = Instance.new("TextButton")
+rulesOverlay.Name = "RulesOverlay"
+rulesOverlay.Size = UDim2.fromScale(1, 1)
+rulesOverlay.BackgroundColor3 = Color3.fromRGB(6, 8, 20)
+rulesOverlay.BackgroundTransparency = 0.35
+rulesOverlay.Text = ""
+rulesOverlay.AutoButtonColor = false
+rulesOverlay.Visible = false
+rulesOverlay.ZIndex = 30
+rulesOverlay.Parent = filasPage
+UI.corner(rulesOverlay, 0.04)
+
+local rulesCard, rulesFace = UI.panel(rulesOverlay, {
+	Name = "RulesCard",
+	Size = UDim2.fromScale(0.84, 0.86),
+	Position = UDim2.fromScale(0.5, 0.5),
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Color = "panel",
+	Corner = 0.08,
+	ZIndex = 31,
+})
+UI.stroke(rulesFace, T.Palette.blue, 1.3)
+UI.text(rulesFace, "REGRAS DA ARENA PVP", {
+	Name = "RulesTitle",
+	Size = UDim2.fromScale(0.75, 0.16),
+	Position = UDim2.fromScale(0.04, 0.05),
+	Role = "Heading",
+	Color = "gold",
+	AlignX = Enum.TextXAlignment.Left,
+	ZIndex = 32,
+})
+local rulesClose = UI.button(rulesFace, {
+	Name = "CloseRules",
+	Icon = "close",
+	Color = "grey",
+	Size = UDim2.fromScale(0.10, 0.17),
+	Position = UDim2.fromScale(0.96, 0.05),
+	AnchorPoint = Vector2.new(1, 0),
+	Corner = 0.3,
+	ZIndex = 33,
+})
+UI.text(rulesFace,
+	"COMPETITIVO (2x2 e 1x1 - ELO separado):\n"
+		.. "- Todos no Nv. 50 com BST das cole\u{e7}\u{f5}es normalizado (1.0x) e Secreto nivelado a Lend\u{e1}rio.\n"
+		.. "- Gen\u{e9}tica, Treino da C\u{e1}psula e Passiva Secreta (se Desperto) CONTAM.\n"
+		.. "- Estrelas, Variantes e +10% do Despertar s\u{e3}o apenas visuais.\n"
+		.. "- Time: sem personagens repetidos, m\u{e1}x. 1 Secreto e at\u{e9} 2 Lend\u{e1}rios.\n\n"
+		.. "CASUAL E AMISTOSO:\n"
+		.. "- Poder real liberado (n\u{ed}vel, escala da cole\u{e7}\u{e3}o, Estrelas, Variantes e Despertar), sem ELO.",
+	{
+		Name = "RulesBody",
+		Size = UDim2.fromScale(0.92, 0.72),
+		Position = UDim2.fromScale(0.04, 0.23),
+		Role = "Small",
+		Color = "onDark",
+		AlignX = Enum.TextXAlignment.Left,
+		AlignY = Enum.TextYAlignment.Top,
+		StrokeMult = 0.35,
+		ZIndex = 32,
+	}
+)
+rulesClose.Activated:Connect(function()
+	rulesOverlay.Visible = false
+end)
+rulesOverlay.Activated:Connect(function()
+	rulesOverlay.Visible = false
+end)
+
+local rulesBtn = UI.button(summaryFace, {
+	Name = "RulesButton",
+	Text = "REGRAS",
+	Color = "blue",
+	Size = UDim2.fromScale(0.16, 0.76),
+	Position = UDim2.fromScale(0.985, 0.5),
+	AnchorPoint = Vector2.new(1, 0.5),
+	Corner = 0.28,
+	Role = "Small",
+	OnClick = function()
+		rulesOverlay.Visible = not rulesOverlay.Visible
+	end,
+})
+local rulesBtnMin = rulesBtn:FindFirstChildOfClass("UISizeConstraint")
+if rulesBtnMin then
+	rulesBtnMin.MinSize = Vector2.new(66, 28)
+end
 
 local gridWrap = UI.frame(filasPage, {
 	Name = "QueueGrid",
-	Size = UDim2.fromScale(1, 0.755),
-	Position = UDim2.fromScale(0, 0.165),
+	Size = UDim2.fromScale(1, 0.83),
+	Position = UDim2.fromScale(0, 0.16),
 })
 
 local queueCards = {}
@@ -264,6 +344,13 @@ local function toggleQueue(queueId: string)
 	end
 end
 
+local SHORT_DESC = {
+	Ranked2x2 = "Nv. 50 · BST igualado · +1.500g",
+	Ranked1x1 = "Nv. 50 · BST igualado · +1.100g",
+	Casual2x2 = "Poder real · Sem ELO · +600g",
+	Casual1x1 = "Poder real · Sem ELO · +450g",
+}
+
 for idx, qid in ipairs(PvPRank.QueueOrder) do
 	local q = PvPRank.Queues[qid]
 	local col = (idx - 1) % 2
@@ -271,17 +358,17 @@ for idx, qid in ipairs(PvPRank.QueueOrder) do
 	local accentColor = select(2, UI.pair(q.Color))
 	local card, face = UI.panel(gridWrap, {
 		Name = "Card_" .. qid,
-		Size = UDim2.fromScale(0.49, 0.48),
-		Position = UDim2.fromScale(col * 0.51, row * 0.52),
+		Size = UDim2.fromScale(0.488, 0.475),
+		Position = UDim2.fromScale(col * 0.512, row * 0.525),
 		Color = "panelAlt",
-		Corner = 0.12,
+		Corner = 0.14,
 		Shadow = false,
 		StrokeColor = accentColor,
 		StrokeMult = 0.9,
 	})
 	local bar = Instance.new("Frame")
 	bar.Name = "Accent"
-	bar.Size = UDim2.new(0, 6, 0.78, 0)
+	bar.Size = UDim2.new(0, 6, 0.74, 0)
 	bar.Position = UDim2.new(0, 8, 0.5, 0)
 	bar.AnchorPoint = Vector2.new(0, 0.5)
 	bar.BackgroundColor3 = accentColor
@@ -289,56 +376,44 @@ for idx, qid in ipairs(PvPRank.QueueOrder) do
 	bar.Parent = face
 	UI.corner(bar, 0.5)
 
+	-- Coluna esquerda estrita (0.055..0.615): 100% isolada do botao na coluna direita (0.64..0.96)
 	UI.text(face, q.Title, {
 		Name = "Title",
-		Size = UDim2.fromScale(0.62, 0.24),
-		Position = UDim2.fromScale(0.055, 0.06),
+		Size = UDim2.fromScale(0.56, 0.28),
+		Position = UDim2.fromScale(0.055, 0.10),
 		Role = "Heading",
 		Color = accentColor,
 		AlignX = Enum.TextXAlignment.Left,
 	})
-	local chipText = if q.IsRanked then ("ELO " .. q.Format) else "VALE TUDO"
-	local modeChip = UI.chip(face, chipText, q.Color, {
-		Name = "Chip",
-		Size = UDim2.fromScale(0.28, 0.21),
-		Position = UDim2.fromScale(0.965, 0.07),
-		AnchorPoint = Vector2.new(1, 0),
-	})
-	local descLbl = UI.text(face, q.Desc, {
+	local descLbl = UI.text(face, SHORT_DESC[qid] or q.Desc, {
 		Name = "Desc",
-		Size = UDim2.fromScale(0.90, 0.18),
-		Position = UDim2.fromScale(0.055, 0.31),
+		Size = UDim2.fromScale(0.56, 0.22),
+		Position = UDim2.fromScale(0.055, 0.40),
 		Role = "Small",
 		Color = "onDark",
 		AlignX = Enum.TextXAlignment.Left,
 		StrokeMult = 0.4,
 	})
-	local rewardLbl = UI.text(face, q.RewardText, {
-		Name = "Reward",
-		Size = UDim2.fromScale(0.56, 0.17),
-		Position = UDim2.fromScale(0.055, 0.51),
-		Role = "Small",
-		Color = "gold",
-		AlignX = Enum.TextXAlignment.Left,
-		StrokeMult = 0.45,
-	})
+	descLbl.TextWrapped = false
 	local checkLbl = UI.text(face, "", {
 		Name = "Check",
 		Size = UDim2.fromScale(0.56, 0.24),
-		Position = UDim2.fromScale(0.055, 0.71),
+		Position = UDim2.fromScale(0.055, 0.66),
 		Role = "Small",
 		Color = "inkSoft",
 		AlignX = Enum.TextXAlignment.Left,
 		StrokeMult = 0.35,
 	})
+
+	-- Coluna direita dedicada exclusivamente ao botao ENTRAR / CANCELAR
 	local btn = UI.button(face, {
 		Name = "Join_" .. qid,
 		Text = "ENTRAR",
 		Color = q.Color,
-		Size = UDim2.fromScale(0.35, 0.36),
-		Position = UDim2.fromScale(0.965, 0.89),
-		AnchorPoint = Vector2.new(1, 1),
-		Corner = 0.22,
+		Size = UDim2.fromScale(0.32, 0.46),
+		Position = UDim2.fromScale(0.96, 0.5),
+		AnchorPoint = Vector2.new(1, 0.5),
+		Corner = 0.24,
 		Role = "Small",
 		OnClick = function()
 			toggleQueue(qid)
@@ -347,23 +422,11 @@ for idx, qid in ipairs(PvPRank.QueueOrder) do
 	queueCards[qid] = {
 		Config = q,
 		Card = card,
-		Chip = modeChip,
 		Desc = descLbl,
-		Reward = rewardLbl,
 		Check = checkLbl,
 		Button = btn,
 	}
 end
-
-UI.text(filasPage, "Regras Ranqueada: Sem repetidos · M\u{e1}x. 1 Secreto e 2 Lend\u{e1}rios · Estrelas/Variantes apenas visuais · Gen\u{e9}tica, Treino e Passiva Secreta contam", {
-	Name = "RulesFooter",
-	Size = UDim2.fromScale(1, 0.07),
-	Position = UDim2.fromScale(0, 0.93),
-	Role = "Small",
-	Color = "inkSoft",
-	AlignX = Enum.TextXAlignment.Center,
-	StrokeMult = 0.35,
-})
 
 --------------------------------------------------------------------
 -- 2B. ABA RANKING: Top 10 Global/Servidor (2x2 e 1x1) + Temporada
@@ -580,9 +643,8 @@ refreshHubView = function()
 	local dailyCap = (myPvP and myPvP.DailyCap) or PvPRank.DailyRewardCap
 	local seasonId = (myPvP and myPvP.SeasonId) or PvPRank.SeasonId(os.time())
 
-	summaryMain.Text = string.format("2x2: %d ELO (%s)  |  1x1: %d ELO (%s)", r2, t2, r1, t1)
-	summarySub.Text = string.format("B\u{f4}nus di\u{e1}rio: %d/%d vit\u{f3}rias  |  Matchmaking Global + Local", dailyDone, dailyCap)
-	summarySeason.Text = "TEMP. " .. tostring(seasonId)
+	summaryMain.Text = string.format("2x2: %d (%s)  |  1x1: %d (%s)", r2, t2, r1, t1)
+	summaryDaily.Text = string.format("B\u{f4}nus: %d/%d", dailyDone, dailyCap)
 
 	local members = myTeamMembers()
 	for _, qid in ipairs(PvPRank.QueueOrder) do
@@ -594,13 +656,13 @@ refreshHubView = function()
 		if q.IsRanked then
 			local okR, errR = PvPRank.ValidateRankedTeam(members, q.Format)
 			eligible = okR
-			checkText = if okR then ("Time v\u{e1}lido (" .. #members .. " no time)") else (errR or "Time inv\u{e1}lido")
+			checkText = if okR then "Time pronto" else (errR or "Time inv\u{e1}lido")
 		else
 			if #members < q.MinTeam then
 				eligible = false
-				checkText = string.format("Precisa de %d+ personagens no time", q.MinTeam)
+				checkText = string.format("M\u{ed}n. %d no time", q.MinTeam)
 			else
-				checkText = string.format("Pronto (%d no time · poder real)", #members)
+				checkText = "Time pronto"
 			end
 		end
 		c.Check.Text = checkText
@@ -655,6 +717,7 @@ local function openHub(tab: string?)
 		return
 	end
 	hubMsg.Text = ""
+	rulesOverlay.Visible = false
 	if tab == "Ranking" then
 		selectHubTab("Ranking")
 	else

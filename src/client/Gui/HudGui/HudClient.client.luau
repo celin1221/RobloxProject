@@ -41,16 +41,16 @@ end
 -- Topo: moedas
 --------------------------------------------------------------------
 local hud = UI.frame(canvas, { Name = "Hud" })
-local top = UI.frame(hud, { Name = "Top", Size = UDim2.fromScale(0.50, 0.11), Position = UDim2.fromScale(0.02, 0.03), MaxSize = Vector2.new(600, 56) })
+local top = UI.frame(hud, { Name = "Top", Size = UDim2.fromScale(0.42, 0.095), Position = UDim2.fromScale(0.02, 0.028), MaxSize = Vector2.new(470, 50) })
 local topLayout = Instance.new("UIListLayout")
 topLayout.FillDirection = Enum.FillDirection.Horizontal
-topLayout.Padding = UDim.new(0.045, 0)
+topLayout.Padding = UDim.new(0.04, 0)
 topLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 topLayout.SortOrder = Enum.SortOrder.LayoutOrder
 topLayout.Parent = top
-local _, goldLabel = UI.pill(top, "coin", "gold", { Name = "Gold", Size = UDim2.fromScale(0.33, 1), Aspect = 3.2, LayoutOrder = 1 })
-local _, gemsLabel = UI.pill(top, "gem", "gems", { Name = "Gems", Size = UDim2.fromScale(0.27, 1), Aspect = 2.5, LayoutOrder = 2 })
-local _, oreLabel = UI.pill(top, "ore", "ore", { Name = "Ore", Size = UDim2.fromScale(0.29, 1), Aspect = 2.8, LayoutOrder = 3 })
+local _, goldLabel = UI.pill(top, "coin", "gold", { Name = "Gold", Size = UDim2.fromScale(0.34, 1), Aspect = 3.1, LayoutOrder = 1 })
+local _, gemsLabel = UI.pill(top, "gem", "gems", { Name = "Gems", Size = UDim2.fromScale(0.27, 1), Aspect = 2.4, LayoutOrder = 2 })
+local _, oreLabel = UI.pill(top, "ore", "ore", { Name = "Ore", Size = UDim2.fromScale(0.29, 1), Aspect = 2.7, LayoutOrder = 3 })
 -- um pequeno respiro a esquerda para o icone que sai da pilula
 local topPad = Instance.new("UIPadding")
 topPad.PaddingLeft = UDim.new(0.02, 0)
@@ -59,8 +59,8 @@ topPad.Parent = top
 -- Taxa de gold ao vivo da Base (+X/s logo abaixo da pilula de gold)
 local liveRateLabel = UI.text(hud, "", {
 	Name = "LiveGoldRate",
-	Size = UDim2.fromScale(0.20, 0.042),
-	Position = UDim2.fromScale(0.032, 0.145),
+	Size = UDim2.fromScale(0.18, 0.038),
+	Position = UDim2.fromScale(0.032, 0.128),
 	Role = "Small",
 	Color = "gold",
 	AlignX = Enum.TextXAlignment.Left,
@@ -217,7 +217,7 @@ for i, e in ipairs(MENU) do
 	})
 end
 -- Configuracoes: engrenagem no canto de cima a direita + botao discreto da Arena PvP ao lado
-local settingsButton = UI.button(hud, { Name = "SettingsButton", Icon = "gear", Color = "grey", Layout = "icon", Size = UDim2.fromScale(0.12, 0.15), Position = UDim2.fromScale(0.985, 0.03), AnchorPoint = Vector2.new(1, 0), Aspect = 1, AspectAxis = Enum.DominantAxis.Height, MaxSize = Vector2.new(62, 62), Corner = 0.3,
+local settingsButton = UI.button(hud, { Name = "SettingsButton", Icon = "gear", Color = "grey", Layout = "icon", Size = UDim2.fromScale(0.10, 0.12), Position = UDim2.fromScale(0.985, 0.028), AnchorPoint = Vector2.new(1, 0), Aspect = 1, AspectAxis = Enum.DominantAxis.Height, MaxSize = Vector2.new(52, 52), Corner = 0.3,
 	OnClick = function()
 		UI.open("Settings")
 	end,
@@ -229,11 +229,11 @@ local pvpButton = UI.button(hud, {
 	Color = "red",
 	Layout = "row",
 	Role = "Small",
-	Size = UDim2.fromOffset(102, 52),
-	Position = UDim2.new(0.985, -72, 0.03, 0),
+	Size = UDim2.fromOffset(92, 50),
+	Position = UDim2.new(0.985, -62, 0.028, 0),
 	AnchorPoint = Vector2.new(1, 0),
 	Corner = 0.3,
-	MaxSize = Vector2.new(118, 62),
+	MaxSize = Vector2.new(100, 52),
 	OnClick = function()
 		if not profile or not profile.StarterChosen then
 			return
@@ -248,13 +248,13 @@ local function layoutRightStack()
 	if h < 40 then
 		return
 	end
-	local topY = math.floor(h * 0.03)
+	local topY = math.floor(h * 0.028)
 	local gearW = math.max(T.TouchMin, math.floor(settingsButton.AbsoluteSize.X))
 	local gearH = math.max(T.TouchMin, math.floor(settingsButton.AbsoluteSize.Y))
-	local pvpW = math.clamp(math.floor(gearH * 1.9), 86, 114)
+	local pvpW = math.clamp(math.floor(gearH * 1.8), 80, 100)
 	pvpButton.Size = UDim2.fromOffset(pvpW, gearH)
 	pvpButton.Position = UDim2.new(0.985, -(gearW + 10), 0, topY)
-	trackBtn.Position = UDim2.new(0.985, 0, 0, topY + gearH + 16)
+	trackBtn.Position = UDim2.new(0.985, 0, 0, topY + gearH + 14)
 end
 hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutRightStack)
 settingsButton:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutRightStack)

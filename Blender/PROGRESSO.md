@@ -1642,4 +1642,5 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 **Testado (Play Mode ao vivo + Suíte GDD)**
 - `python scripts/sync_studio.py status` (`100% in sync` nos **118 scripts**) e `python scripts/sync_studio.py test` (`PASS`, `Test 1..20`).
 - Validado ao vivo no Play Mode (com backup e restauração do perfil): `leaderstats` (`1:ELO`, `2:Patente`) atualizando dinamicamente com ELO separado `2x2` (`1480 Platina`) vs `1x1` (`1000 Bronze`), Quadro 3D `PvPBoardMonument` exibindo ambas as colunas ao vivo, entrada/saída nas filas (`PvPQueueBanner` sem sobreposições em Desktop e `667x375`), `PvPButton` sem sobreposições e **`0` erros de jogo no Console**.
-- Place salvo no Roblox Studio na **versão 374** (`TeamCreate`).
+- **Polimento Visual da Janela `ARENA PVP` e Topo do HUD (`PvPClient`, `HudClient`, `RaidClient`):** removidos chips redundantes e rodapé longo nos cards de fila (trocado por botão discreto `REGRAS` com modal próprio na faixa de resumo de 1 linha), separação estrita em 2 colunas nos 4 cards (texto `0.055..0.615` / botão `ENTRAR` `0.64..0.96`), e realinhamento de `Top`, `RaidHudBanner`, `PvPButton` e `SettingsButton` com `HUD_OVERLAPS=NONE`, `SUMMARY_OVERLAPS=NONE` e `CARD_OVERLAPS=NONE` em Desktop (`1350x576`) e Mobile (`667x375`).
+- Place salvo no Roblox Studio na **versão 375** (`TeamCreate`).
