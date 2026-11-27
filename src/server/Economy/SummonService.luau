@@ -150,6 +150,9 @@ function SummonService.Summon(player: Player, portalId: string, count: number, b
 	if not bannerCfg then
 		return false, "Estrela/Anime inv\u{e1}lido."
 	end
+	if not Summon.BannerAllowedOnPortal(bannerCfg.Id, portalId) then
+		return false, "Este banner est\u{e1} dispon\u{ed}vel apenas no Portal Comum."
+	end
 	local animeFilter = bannerCfg.Anime
 	local data = PlayerDataService.Get(player)
 	if not data then
@@ -177,12 +180,13 @@ function SummonService.Summon(player: Player, portalId: string, count: number, b
 	if BattleService.IsInBattle(player) then
 		return false, "N\u{e3}o d\u{e1} para invocar durante a batalha."
 	end
-	-- invocacao gratis (login, missoes semanais, codigos): usada primeiro no "Invocar 1"
+	-- invocacao gratis (login, missoes semanais, codigos): usada primeiro no "Invocar 1" (exceto em banners NoTickets como Recrutas)
+	local cost1, cost10 = Summon.CostsFor(portalId, bannerCfg.Id)
 	local tickets = data.Tickets or {}
-	if count == 1 and (tickets[portal.PityKey] or 0) > 0 then
+	if count == 1 and not bannerCfg.NoTickets and (tickets[portal.PityKey] or 0) > 0 then
 		tickets[portal.PityKey] -= 1
 	else
-		local cost = if count == 10 then portal.Cost10 else portal.Cost * count
+		local cost = if count == 10 then cost10 else cost1 * count
 		local field = if portal.Currency == "Gems" then "Gems" else "Gold"
 		if data[field] < cost then
 			return false, (if field == "Gems" then "Gemas" else "Gold") .. " insuficiente (precisa de " .. cost .. ")."
@@ -193,11 +197,11 @@ function SummonService.Summon(player: Player, portalId: string, count: number, b
 	local results = {}
 	local pity = data.SummonPity[portal.PityKey] or 0
 	local accountLevel = (data.Account and data.Account.Level) or 1
-	local rates = Summon.RatesFor(portalId, data.Benefits, accountLevel)
+	local rates = Summon.RatesFor(portalId, data.Benefits, accountLevel, bannerCfg.Id)
 	local allowedAnimes = if not animeFilter then unlockedAnimeSet(data) else nil
-	local banner = SummonService.BannerOf(portalId, bannerCfg.Id, allowedAnimes)
+	local banner = if bannerCfg.CommonOnly then nil else SummonService.BannerOf(portalId, bannerCfg.Id, allowedAnimes)
 	for i = 1, count do
-		local rarity, forced, newPity, shiny = Summon.Roll(portalId, rng, pity, rates, accountLevel)
+		local rarity, forced, newPity, shiny = Summon.Roll(portalId, rng, pity, rates, accountLevel, bannerCfg.Id)
 		pity = newPity
 		local charId = pickCharacter(rarity, banner, portal.Banner and portal.Banner.Share, animeFilter, allowedAnimes)
 		local def = Characters.Get(charId)
@@ -224,9 +228,13 @@ function SummonService.Summon(player: Player, portalId: string, count: number, b
 			Album = albumLines,
 		})
 	end
-	data.SummonPity[portal.PityKey] = pity
+	if not bannerCfg.NoPity then
+		data.SummonPity[portal.PityKey] = pity
+	end
 	RetentionService.Track(player, "Summon", count)
-	local perSummon = if portalId == "Premium" then AccountLevel.XpSources.SummonPremium else AccountLevel.XpSources.SummonComum
+	local basePerSummon = if portalId == "Premium" then AccountLevel.XpSources.SummonPremium else AccountLevel.XpSources.SummonComum
+	local xpRatio = if portal.Cost > 0 then math.clamp(cost1 / portal.Cost, 0.25, 1) else 1
+	local perSummon = math.max(1, math.floor(basePerSummon * xpRatio + 0.5))
 	AccountLevelService.AddXp(player, count * perSummon, "Invoca\u{e7}\u{e3}o", false)
 	PlayerDataService.MarkChanged(player)
 	task.spawn(PlayerDataService.SaveNow, player) -- compra: salva ja

@@ -453,7 +453,12 @@ local function lockedBannerReason(bannerId: string): string?
 end
 
 local function updateBannerSelection()
+	if not Summon.BannerAllowedOnPortal(selectedBannerId, PORTAL) then
+		selectedBannerId = "Todos"
+	end
 	for id, entry in pairs(bannerButtons) do
+		local allowed = Summon.BannerAllowedOnPortal(id, PORTAL)
+		entry.Button.Visible = allowed
 		local isSel = id == selectedBannerId
 		local unlocked = isBannerUnlocked(id)
 		local accent = entry.Config.Accent or T.Palette.gold
@@ -860,7 +865,10 @@ refreshSlotNameplates = function()
 			sc.MetaLabel.Text = rInfo.Label .. " \u{b7} " .. UI.upper(typeName(tKey))
 			sc.MetaLabel.TextColor3 = rInfo.Glow
 			if sc.CrownText then
-				if portal.Banner and bannerName and (pick.Def.Name == bannerName or pick.Id == weeklyCharId) then
+				local bCfgCur = Summon.GetBanner(selectedBannerId)
+				if bCfgCur and bCfgCur.CommonOnly then
+					sc.CrownText.Text = "RECRUTA EM DESTAQUE"
+				elseif portal.Banner and bannerName and (pick.Def.Name == bannerName or pick.Id == weeklyCharId) then
 					sc.CrownText.Text = "DESTAQUE SEMANAL"
 				else
 					sc.CrownText.Text = "LEND\u{c1}RIO DO BANNER"
@@ -1091,12 +1099,14 @@ refreshMain = function()
 
 	-- Chances
 	local accLevel = (profile.Account and profile.Account.Level) or 1
-	local ratesNow = Summon.RatesFor(PORTAL, profile.Benefits, accLevel)
-	local lucky = PORTAL == "Comum" and Benefits.Has(profile, "SorteEmDobro")
+	local ratesNow = Summon.RatesFor(PORTAL, profile.Benefits, accLevel, selectedBannerId)
+	local lucky = PORTAL == "Comum" and not bCfg.CommonOnly and Benefits.Has(profile, "SorteEmDobro")
 	for _, r in ipairs(Summon.RarityOrder) do
 		local text
 		if r == "Secreto" then
-			if accLevel >= (Summon.SecretMinAccountLevel or 15) then
+			if bCfg.NoSecret or bCfg.CommonOnly then
+				text = "0%"
+			elseif accLevel >= (Summon.SecretMinAccountLevel or 15) then
 				text = pct(ratesNow.Secreto or Summon.SecretChance or 0.00001)
 			else
 				text = "Nv." .. tostring(Summon.SecretMinAccountLevel or 15) .. "+"
@@ -1109,7 +1119,7 @@ refreshMain = function()
 		end
 		rateRows[r].Value.Text = text
 	end
-	if portal.Banner then
+	if portal.Banner and not bCfg.CommonOnly then
 		bannerLabel.Text = if bannerName
 			then string.format("%s (%s)", bannerName, pct((ratesNow.Lendario or 0) * portal.Banner.Share))
 			else "Banner " .. (bCfg.Short or bCfg.Name)
@@ -1119,13 +1129,20 @@ refreshMain = function()
 
 	-- Pity & Tickets
 	local pity = (profile.SummonPity and profile.SummonPity[portal.PityKey]) or 0
-	pityValue.Text = string.format("%d/%d", pity, portal.PityAt)
-	UI.setBar(pityBar, pity / portal.PityAt, "lendario")
+	if bCfg.NoPity then
+		pityValue.Text = "100% COMUM \u{b7} SEM PITY"
+		UI.setBar(pityBar, 0, "comum")
+	else
+		pityValue.Text = string.format("%d/%d", pity, portal.PityAt)
+		UI.setBar(pityBar, pity / portal.PityAt, "lendario")
+	end
 	local free = (profile.Tickets and profile.Tickets[portal.PityKey]) or 0
-	freeHolder.Visible = free > 0
+	local allowTicket = free > 0 and not bCfg.NoTickets
+	freeHolder.Visible = allowTicket
 	freeLabel.Text = free .. " gr\u{e1}tis"
 
 	-- Botoes de invocacao (ou aviso de banner trancado pelo Ginasio)
+	local cost1, cost10 = Summon.CostsFor(PORTAL, selectedBannerId)
 	local lockReason = lockedBannerReason(selectedBannerId)
 	local quick = Benefits.Has(profile, "InvocacaoRapida")
 	if lockReason then
@@ -1152,9 +1169,9 @@ refreshMain = function()
 			ten.Size = UDim2.fromScale(0.485, 1)
 			ten.Position = UDim2.fromScale(0.515, 0)
 		end
-		setSummonButton(one, "INVOCAR 1", portal.Cost, icon, free > 0)
-		setSummonButton(three, "INVOCAR " .. Benefits.QuickSummonCount, portal.Cost * Benefits.QuickSummonCount, icon, false)
-		setSummonButton(ten, "INVOCAR 10", portal.Cost10, icon, false)
+		setSummonButton(one, "INVOCAR 1", cost1, icon, allowTicket)
+		setSummonButton(three, "INVOCAR " .. Benefits.QuickSummonCount, cost1 * Benefits.QuickSummonCount, icon, false)
+		setSummonButton(ten, "INVOCAR 10", cost10, icon, false)
 	end
 	updateBannerSelection()
 

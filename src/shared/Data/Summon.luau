@@ -61,7 +61,7 @@ Summon.Portals = {
 Summon.CurrencyName = { Gold = "gold", Gems = "gemas" }
 
 -- Paineis selecionaveis na estrela de invocacao (Anime filter + arte de painel)
-Summon.BannerOrder = { "Todos", "OnePiece", "Naruto", "Bleach", "JujutsuKaisen", "DragonBall" }
+Summon.BannerOrder = { "Todos", "Recrutas", "OnePiece", "Naruto", "Bleach", "JujutsuKaisen", "DragonBall" }
 Summon.Banners = {
 	Todos = {
 		Id = "Todos",
@@ -72,6 +72,22 @@ Summon.Banners = {
 		ImageId = 80124787437807,
 		Accent = Color3.fromRGB(168, 85, 247),
 		Icon = "star",
+	},
+	Recrutas = {
+		Id = "Recrutas",
+		Anime = "Generico",
+		Name = "Recrutas da Academia",
+		Short = "RECRUTAS",
+		Subtitle = "Kaen \u{b7} Tora \u{b7} Raiko \u{b7} Goro \u{b7} Hera \u{b7} Lina \u{b7} Sora \u{b7} Bram",
+		ImageId = 101527404037740,
+		Accent = Color3.fromRGB(52, 218, 168),
+		Icon = "team",
+		CommonOnly = true,
+		PortalOnly = "Comum",
+		CostOverride = { Cost = 100, Cost10 = 900 },
+		NoSecret = true,
+		NoPity = true,
+		NoTickets = true,
 	},
 	OnePiece = {
 		Id = "OnePiece",
@@ -132,6 +148,23 @@ function Summon.GetBanner(bannerId: string?)
 	return Summon.Banners.Todos
 end
 
+function Summon.BannerAllowedOnPortal(bannerId: string?, portalId: string?): boolean
+	local cfg = Summon.GetBanner(bannerId)
+	if cfg and cfg.PortalOnly and portalId and cfg.PortalOnly ~= portalId then
+		return false
+	end
+	return true
+end
+
+function Summon.CostsFor(portalId: string, bannerId: string?): (number, number)
+	local portal = assert(Summon.Portals[portalId], "Portal desconhecido")
+	local cfg = Summon.GetBanner(bannerId)
+	if cfg and cfg.CostOverride then
+		return cfg.CostOverride.Cost or portal.Cost, cfg.CostOverride.Cost10 or portal.Cost10
+	end
+	return portal.Cost, portal.Cost10
+end
+
 -- Semana para o banner: muda toda segunda 00:00 UTC (o dia 0 do Unix foi uma quinta)
 function Summon.Week(t: number): number
 	return (t - 4 * 86400) // 604800
@@ -151,9 +184,13 @@ function Summon.BannerOf(portalId: string, t: number, legendaries: { string }): 
 end
 
 -- Chances do portal para o jogador. Sorte em Dobro (Portal Comum): Epico e Lendario em dobro, o extra sai do Comum.
--- Secreto: 0,001% em qualquer banner quando o jogador esta no Nivel da Conta >= 15.
-function Summon.RatesFor(portalId: string, benefits, accountLevel: number?): { [string]: number }
+-- Secreto: 0,001% em qualquer banner padrao quando o jogador esta no Nivel da Conta >= 15 (bloqueado em banners CommonOnly/NoSecret).
+function Summon.RatesFor(portalId: string, benefits, accountLevel: number?, bannerId: string?): { [string]: number }
 	local portal = Summon.Portals[portalId]
+	local cfg = if bannerId then Summon.GetBanner(bannerId) else nil
+	if cfg and cfg.CommonOnly then
+		return { Comum = 1, Raro = 0, Epico = 0, Lendario = 0, Secreto = 0 }
+	end
 	local rates = table.clone(portal.Rates)
 	if portalId == "Comum" and benefits and benefits.SorteEmDobro then
 		local extra = rates.Epico + rates.Lendario
@@ -162,7 +199,9 @@ function Summon.RatesFor(portalId: string, benefits, accountLevel: number?): { [
 		rates.Comum -= extra
 	end
 	if accountLevel ~= nil then
-		rates.Secreto = if accountLevel >= Summon.SecretMinAccountLevel then Summon.SecretChance else 0
+		rates.Secreto = if (not (cfg and cfg.NoSecret)) and accountLevel >= Summon.SecretMinAccountLevel
+			then Summon.SecretChance
+			else 0
 	end
 	return rates
 end
@@ -175,18 +214,24 @@ Summon.AlbumReward = { Gold = 1000, Gems = 10 }
 
 -- Sorteio puro. pity = invocacoes seguidas sem Lendario antes desta.
 -- Retorna raridade, se foi pela garantia, novo valor de pity e se saiu Brilhante.
-function Summon.Roll(portalId: string, rng: Random, pity: number, rates: { [string]: number }?, accountLevel: number?)
+function Summon.Roll(portalId: string, rng: Random, pity: number, rates: { [string]: number }?, accountLevel: number?, bannerId: string?)
 	local portal = assert(Summon.Portals[portalId], "Portal desconhecido")
+	local cfg = if bannerId then Summon.GetBanner(bannerId) else nil
+	if cfg and cfg.CommonOnly then
+		local shiny = rng:NextNumber() < Summon.ShinyChance
+		return "Comum", false, pity, shiny
+	end
 	rates = rates or portal.Rates
 	local rarity
 	local forced = false
-	local secretChance = if rates.Secreto ~= nil
-		then rates.Secreto
+	local secretChance = if cfg and cfg.NoSecret
+		then 0
+		elseif rates.Secreto ~= nil then rates.Secreto
 		elseif accountLevel ~= nil and accountLevel >= Summon.SecretMinAccountLevel then Summon.SecretChance
 		else 0
 	if secretChance > 0 and rng:NextNumber() < secretChance then
 		rarity = "Secreto"
-	elseif pity + 1 >= portal.PityAt then
+	elseif not (cfg and cfg.NoPity) and pity + 1 >= portal.PityAt then
 		rarity = "Lendario"
 		forced = true
 	else
@@ -204,8 +249,9 @@ function Summon.Roll(portalId: string, rng: Random, pity: number, rates: { [stri
 		end
 		rarity = rarity or "Lendario" -- arredondamento no fim da soma
 	end
-	local newPity = if rarity == "Lendario"
-		then 0
+	local newPity = if cfg and cfg.NoPity
+		then pity
+		elseif rarity == "Lendario" then 0
 		elseif rarity == "Secreto" then math.min(pity, math.max(0, portal.PityAt - 1))
 		else pity + 1
 	local shiny = rng:NextNumber() < Summon.ShinyChance

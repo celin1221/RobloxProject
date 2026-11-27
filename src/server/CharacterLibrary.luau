@@ -65,6 +65,13 @@ end
 -- Cria um clone bruto do modelo (ou usa um rig provisorio colorido se o modelo ainda nao existe em ServerStorage/Characters)
 function Characters.CloneSource(name: string): Model
 	local source = FOLDER:FindFirstChild(name)
+	if not source then
+		local cdata = getCharactersData()
+		local def = cdata and cdata.Get(name)
+		if def and def.ModelName then
+			source = FOLDER:FindFirstChild(def.ModelName)
+		end
+	end
 	if source and source:IsA("Model") then
 		return source:Clone()
 	end
@@ -110,7 +117,11 @@ function Characters.Exists(name: string): boolean
 		return true
 	end
 	local cdata = getCharactersData()
-	return cdata ~= nil and cdata.Get(name) ~= nil and (FOLDER:FindFirstChild("ProtoRaro") ~= nil or FOLDER:FindFirstChild("Kaen") ~= nil)
+	local def = cdata and cdata.Get(name)
+	if def and def.ModelName and FOLDER:FindFirstChild(def.ModelName) ~= nil then
+		return true
+	end
+	return def ~= nil and (FOLDER:FindFirstChild("ProtoRaro") ~= nil or FOLDER:FindFirstChild("Kaen") ~= nil)
 end
 
 function Characters.List(): { string }

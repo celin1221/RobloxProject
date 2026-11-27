@@ -1668,3 +1668,33 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - `python scripts/sync_studio.py status` (`100% in sync` nos **118 scripts**) e `python scripts/sync_studio.py test` (`PASS`, `Test 1..21`).
 - Validado ao vivo no Play Mode: 36/36 previews carregados, todos os nomes in-game mockados exibidos corretamente em `Characters`/`Moves`/`Passives`/`Summon`/`Gyms` e **`0` erros/avisos no Console**.
 - Place salvo no Roblox Studio na **versão 377** (`TeamCreate`).
+
+
+## Banner dos Recrutas (8 Comuns Originais Tripo R6-on-R15 + Hera substituindo Yomogi) (27/11/2026)
+
+**Feito**
+- **1. Pipeline 3D Tripo → Blender 5.3.0 → Roblox Studio (8 Modelos R6-on-R15 `Tex=6/6`):**
+  - Processados via `scripts/auto_rig_tripo.py --max-tris 7500` + inspeção visual completa (frente, costas, 3/4 e explodidos frente/costas) e ajustes cirúrgicos `v2`/`v3` no Blender para `Tora` (pontas da ombreira no Torso), `Goro` (gola blindada no Torso) e `Hera` (cabelo cacheado completo na Head/Torso com mangas do jaleco 100% limpas).
+  - Subidos via Open Cloud (`userId=12009032821`) e montados em `ServerStorage/Characters` com esqueleto R6-on-R15, `Tex=6/6` e animações autorizadas do Place (`Idle=95978454415689`, `Walk=81539047602340`, `Hit=103416185331712`, `Faint=79648116867663`, `Victory=107803042519026`, `Mine=88262424470805`):
+    - **Refeitos / Substituídos:** `Kaen` (`96698620796011`), `Raiko` (`73201095047875`), **`Hera`** (`109700655211727` — substitui `Yomogi` visualmente mantendo o ID interno `Yomogi` para 100% de compatibilidade com saves e testes; antigos arquivados em `ServerStorage/_LegacyRecruitsBackup`).
+    - **5 Novos Recrutas:** `Tora` (`88036990880672`), `Goro` (`90277256781765`), `Lina` (`103010062491708`), `Sora` (`86320902557650`) e `Bram` (`88574774036402`).
+  - Atualizado `src/server/CharacterLibrary.luau` (`CloneSource` e `Exists`) para resolver `def.ModelName` quando o ID interno difere do nome do modelo (`Yomogi` → `Hera`).
+- **2. Elenco Balanceado (8 Comuns, 2 por Classe, BST = 125 estilo Pokémon, `Characters.luau` & `Codes.luau`):**
+  - **Espadachim:** `Kaen` (`53/24/18/30`, `ChamaInterior`) e `Tora` (`60/22/27/16`, `ContraEspinhos`).
+  - **Lutador:** `Raiko` (`63/24/20/18`, `EspiritoGuerreiro`) e `Goro` (`68/20/29/8`, `Intimidacao`).
+  - **Mago:** `Hera` (`Yomogi`, `72/16/25/12`, `Regeneracao`, 4 golpes naturais) e `Lina` (`54/25/22/24`, `EscudoNatural`, suporte/cura 2x2).
+  - **Atirador:** `Sora` (`48/25/15/37`, `PassosVelozes`, batedor veloz + `VentoAFavor`) e `Bram` (`52/32/17/24`, `GolpeCerteiro`, atirador crítico).
+  - Tag `Generico` exibida como **`Recrutas`**; novos códigos Dev: `TORA`, `GORO`, `HERA`, `LINA`, `SORA`, `BRAM`, `RECRUTAS` / `DEVRECRUTAS` e inclusão dos 5 novos em `DEVALL`.
+- **3. Banner Inicial `Recrutas` (`Summon.luau`, `SummonService.luau`, `SummonStageThemes.luau`, `SummonClient.client.luau`, `UI.luau`):**
+  - Arte exclusiva gerada em `Blender/UI/banners/banner_recrutas.png` e publicada (`rbxassetid://101527404037740`, `UI.Icons.banner_recrutas`).
+  - Sempre desbloqueado desde o Nv. 1, exclusivo do **Portal Comum** (oculto e bloqueado no servidor para o Portal Premium).
+  - Preço acessível de **`100` Gold (1x)** / **`900` Gold (10x)**, pool **100% Comum** (os 8 Recrutas), **0% Secreto**, **não incrementa nem aciona Pity de Lendário**, **não consome Tickets do Portal Comum** (`NoTickets = true`, preservando tickets de 300 Gold) e XP de conta proporcional ao custo.
+  - Palco 3D próprio (`SummonStageThemes.Presets.Recrutas`) com `Kaen` (centro), `Sora` (esquerda) e `Lina` (direita), coroa `"RECRUTA EM DESTAQUE"`, indicação `"100% COMUM · SEM PITY"` e limpeza final das taglines de palco contra direitos autorais.
+- **4. Planilha & Guardrail Automatizado (`update_characters_sheet.py`, `sync_studio.py` — `Test 22`):**
+  - Planilhas `Blender/Planilha_Personagens.xlsx` e `Planilha_Personagens.xlsx` atualizadas (`39` personagens ativos + `2` protótipos, `102` ataques, `21` passivas).
+  - Adicionado **Test 22 (`RecruitsBanner8x`)** validando preços `100/900`, bloqueio no Premium, `100% Comum` com `0%` Secreto/Pity mesmo em `pity=299` e Nv. 50, 8 Recrutas (2 por classe, BST 125), modelos R6-on-R15 montados, `Yomogi`→`Hera`, palco 3D e códigos Dev.
+
+**Testado (Play Mode ao vivo + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos **118 scripts**) e `python scripts/sync_studio.py test` (`PASS`, `Test 1..22`).
+- Validado ao vivo no Play Mode (com backup e restauração do perfil): `CharacterPreviews` (`8/8`, `Tex=6/6`), `SummonShowcaseModels` (`8/8` incl. `Yomogi`→`Hera`), invocação `1x` (`-100 Gold`) e `10x` (`-900 Gold`) retornando 100% Recrutas Comuns (incluindo `Hera`), `PityComum = 60` inalterado, `TicketsComum = 1` protegido, Portal Premium recusado no servidor e **`0` erros/avisos no Console**.
+- Place salvo no Roblox Studio na **versão 380** (`TeamCreate`).

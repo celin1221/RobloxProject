@@ -938,7 +938,7 @@ for cid, def in pairs(Characters.List) do
         assert(bsum == expectedBaseBst[def.Rarity], string.format("Expected %s (%s) Base BST=%d, got %d", cid, def.Rarity, expectedBaseBst[def.Rarity], bsum))
     end
 end
-assert(activeCharCount >= 34, "Expected >= 34 active characters, got " .. tostring(activeCharCount))
+assert(activeCharCount >= 39, "Expected >= 39 active characters, got " .. tostring(activeCharCount))
 -- Pokemon high-contrast archetypes preserved at Lv 50 Ranked
 local kurR50 = Characters.StatsAt("Kuririn", 50, { Ranked = true })
 local gojoR50 = Characters.StatsAt("Setero", 50, { Ranked = true })
@@ -1027,7 +1027,48 @@ for pid, pdef in pairs(Passives.List) do
     assert(not forbiddenPassiveNames[pdef.Name], "Copyrighted Passive display Name on " .. pid .. ": " .. tostring(pdef.Name))
 end
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + Domain/Fuga + Jujutsu/DragonBall + GlobalRaid4x1 + PvPQueues/PokemonBSTs (%d chars) + DMCA-Safe Names + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, activeCharCount, totalMoves)
+-- Test 22: Recruits Starter Banner (100/900 Gold, 100% Common, Portal Comum only, No Pity/Secret/Ticket leak) & 8 Tripo R6-on-R15 Recruits
+local recBanner = Summon.Banners.Recrutas
+assert(recBanner and table.find(Summon.BannerOrder, "Recrutas"), "Missing Recrutas banner in Summon.BannerOrder")
+assert(recBanner.Anime == "Generico" and recBanner.CommonOnly == true and recBanner.PortalOnly == "Comum", "Invalid Recrutas banner flags")
+assert(recBanner.NoSecret == true and recBanner.NoPity == true and recBanner.NoTickets == true, "Expected NoSecret/NoPity/NoTickets on Recrutas banner")
+local rCost1, rCost10 = Summon.CostsFor("Comum", "Recrutas")
+local sCost1, sCost10 = Summon.CostsFor("Comum", "Todos")
+assert(rCost1 == 100 and rCost10 == 900 and sCost1 == 300 and sCost10 == 2700, "Expected Recrutas cost 100/900 vs standard 300/2700")
+assert(Summon.BannerAllowedOnPortal("Recrutas", "Comum") and not Summon.BannerAllowedOnPortal("Recrutas", "Premium"),
+    "Recrutas banner must be allowed ONLY on Portal Comum")
+local recRates = Summon.RatesFor("Comum", { SorteEmDobro = true }, 50, "Recrutas")
+assert(recRates.Comum == 1 and recRates.Raro == 0 and recRates.Epico == 0 and recRates.Lendario == 0 and recRates.Secreto == 0,
+    "Recrutas banner rates must be strictly 100% Comum (0% Raro/Epico/Lendario/Secreto)")
+local recRng = Random.new(2026)
+for _ = 1, 50 do
+    local rr, rf, rp = Summon.Roll("Comum", recRng, 299, recRates, 50, "Recrutas")
+    assert(rr == "Comum" and rf == false and rp == 299, "Recrutas roll must ALWAYS be Comum and never trigger/increment Pity or roll Secreto")
+end
+local recIds = { "Kaen", "Tora", "Raiko", "Goro", "Yomogi", "Lina", "Sora", "Bram" }
+local recClassCounts = { Espadachim = 0, Lutador = 0, Mago = 0, Atirador = 0 }
+for _, cid in ipairs(recIds) do
+    local d = Characters.Get(cid)
+    assert(d and d.Anime == "Generico" and d.Rarity == "Comum", "Invalid Recruit entry " .. cid)
+    assert(Characters.BstOf(d.BaseStats) == 125, "Recruit " .. cid .. " must have Comum BST=125")
+    recClassCounts[d.Type] = (recClassCounts[d.Type] or 0) + 1
+    local mName = d.ModelName or cid
+    local cm = ssChars and ssChars:FindFirstChild(mName)
+    assert(cm and cm:FindFirstChild("Head_Mesh") and cm:FindFirstChild("Torso_Mesh"), "Missing Tripo R6-on-R15 model for Recruit " .. mName)
+end
+assert(recClassCounts.Espadachim == 2 and recClassCounts.Lutador == 2 and recClassCounts.Mago == 2 and recClassCounts.Atirador == 2,
+    "Expected exact 2 Recruits per class (8 total)")
+assert(Characters.Get("Yomogi").Name == "Hera" and Characters.Get("Yomogi").ModelName == "Hera",
+    "Expected Yomogi internal ID renamed to Hera (ModelName=Hera)")
+local StageThemes = require(dataClone:WaitForChild("SummonStageThemes"))
+local recTheme = StageThemes.GetTheme("Recrutas", "Comum")
+local recFeatured = StageThemes.ResolveFeatured("Recrutas", "Comum")
+assert(recTheme and recTheme.Id == "Recrutas" and #recFeatured == 3 and recFeatured[2].Id == "Kaen",
+    "Expected Recrutas 3D StageTheme and 3 featured recruits with Kaen in center")
+assert(codesMod.RECRUTAS and codesMod.DEVRECRUTAS and codesMod.HERA and codesMod.TORA and codesMod.GORO and codesMod.LINA and codesMod.SORA and codesMod.BRAM,
+    "Missing Recruits dev codes")
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + Domain/Fuga + Jujutsu/DragonBall + GlobalRaid4x1 + PvPQueues/PokemonBSTs (%d chars) + DMCA-Safe Names + RecruitsBanner8x + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, activeCharCount, totalMoves)
 end)
 sandbox:Destroy()
 assert(ok, res)

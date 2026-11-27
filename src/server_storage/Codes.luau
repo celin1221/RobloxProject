@@ -188,14 +188,43 @@ return {
 	SUKUNAMAX = { Character = "Sukuna", Level = 50, Repeatable = true },
 	DEVSUKUNA50 = { Character = "Sukuna", Level = 50, Repeatable = true },
 
+	-- Codigos de Dev — Tag: Recrutas (8 Comuns da Academia, Repeatable = true)
 	KAEN = { Character = "Kaen", Level = 10, Repeatable = true },
 	DEVKAEN = { Character = "Kaen", Level = 10, Repeatable = true },
+
+	TORA = { Character = "Tora", Level = 10, Repeatable = true },
+	DEVTORA = { Character = "Tora", Level = 10, Repeatable = true },
 
 	RAIKO = { Character = "Raiko", Level = 10, Repeatable = true },
 	DEVRAIKO = { Character = "Raiko", Level = 10, Repeatable = true },
 
+	GORO = { Character = "Goro", Level = 10, Repeatable = true },
+	DEVGORO = { Character = "Goro", Level = 10, Repeatable = true },
+
+	HERA = { Character = "Yomogi", Level = 10, Repeatable = true },
+	DEVHERA = { Character = "Yomogi", Level = 10, Repeatable = true },
 	YOMOGI = { Character = "Yomogi", Level = 10, Repeatable = true },
 	DEVYOMOGI = { Character = "Yomogi", Level = 10, Repeatable = true },
+
+	LINA = { Character = "Lina", Level = 10, Repeatable = true },
+	DEVLINA = { Character = "Lina", Level = 10, Repeatable = true },
+
+	SORA = { Character = "Sora", Level = 10, Repeatable = true },
+	DEVSORA = { Character = "Sora", Level = 10, Repeatable = true },
+
+	BRAM = { Character = "Bram", Level = 10, Repeatable = true },
+	DEVBRAM = { Character = "Bram", Level = 10, Repeatable = true },
+
+	RECRUTAS = {
+		Characters = { "Kaen", "Tora", "Raiko", "Goro", "Yomogi", "Lina", "Sora", "Bram" },
+		Level = 10,
+		Repeatable = true,
+	},
+	DEVRECRUTAS = {
+		Characters = { "Kaen", "Tora", "Raiko", "Goro", "Yomogi", "Lina", "Sora", "Bram" },
+		Level = 10,
+		Repeatable = true,
+	},
 
 	-- Codigo de Dev para testar o Altar Secreto do Despertar (materiais + 10.000 Gold + iniciais Nv. 35)
 	DESPERTAR = {
@@ -235,7 +264,7 @@ return {
 			"Chad", "Uryu", "Rukia", "Renji", "Ichigo", "Byakuya",
 			"Nobara", "Itadori", "Fushiguro", "Todo", "Nanami", "Setero",
 			"Piccolo", "Kuririn", "Vegeta", "Gohan", "Freeza", "San",
-			"Sukuna", "Kaen", "Raiko", "Yomogi",
+			"Sukuna", "Kaen", "Tora", "Raiko", "Goro", "Yomogi", "Lina", "Sora", "Bram",
 		},
 		Level = 10,
 		Repeatable = true,
