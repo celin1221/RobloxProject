@@ -340,8 +340,13 @@ local function layoutEventTip()
 	if bSz > 1 then
 		eventTip.Position = UDim2.new(1, -(math.floor(bSz + 0.5) + 10), 0.5, 0)
 	end
+	local hudW = hud.AbsoluteSize.X
+	if hudW > 40 then
+		eventWrap.Position = UDim2.fromScale(0.985, if isTouchOnly or hudW < 820 then 0.64 else 0.965)
+	end
 end
 eventBadge:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutEventTip)
+hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutEventTip)
 task.defer(layoutEventTip)
 
 local tipToken = 0
@@ -385,7 +390,7 @@ local EVENT_STYLE = {
 	Xp = { Icon = "sparkle", Text = "2x de XP", Color = "blue", Width = 0.58 },
 }
 
-local toastHolder, toastFace = UI.panel(canvas, { Name = "Toast", Size = UDim2.fromScale(0.5, 0.1), Position = UDim2.fromScale(0.5, 0.17), AnchorPoint = Vector2.new(0.5, 0), Color = "panel", Corner = T.Corner.Pill, Visible = false, ZIndex = 30, MaxSize = Vector2.new(560, 60) })
+local toastHolder, toastFace = UI.panel(canvas, { Name = "Toast", Size = UDim2.fromScale(0.5, 0.1), Position = UDim2.fromScale(0.5, 0.265), AnchorPoint = Vector2.new(0.5, 0), Color = "panel", Corner = T.Corner.Pill, Visible = false, ZIndex = 30, MaxSize = Vector2.new(560, 60) })
 local toastScale = Instance.new("UIScale")
 toastScale.Parent = toastHolder
 local toastLabel = UI.text(toastFace, "", { Name = "Text", Size = UDim2.fromScale(0.92, 0.72), Position = UDim2.fromScale(0.04, 0.14), Role = "Small", ZIndex = 31 })
@@ -394,8 +399,8 @@ local function showToast(text, kind)
 	toastId += 1
 	local id = toastId
 	toastLabel.Text = tostring(text)
-	-- na batalha fica abaixo do registro de mensagens
-	toastHolder.Position = UDim2.fromScale(0.5, if UI.inBattle() then 0.2 else 0.17)
+	-- na batalha fica abaixo do registro de mensagens; fora de batalha abaixo do banner de Raid e Fila PvP
+	toastHolder.Position = UDim2.fromScale(0.5, if UI.inBattle() then 0.20 else 0.265)
 	toastHolder.Visible = true
 	toastScale.Scale = 0.6
 	TweenService:Create(toastScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
@@ -625,7 +630,7 @@ local function drainAnnounceQueue()
 				bannerTagLabel.TextColor3 = Color3.fromRGB(115, 245, 255)
 			end
 
-			local targetY = if UI.inBattle() then 0.145 else 0.13
+			local targetY = if UI.inBattle() then 0.145 else 0.16
 			bannerHolder.Position = UDim2.fromScale(0.5, -0.15)
 			bannerScale.Scale = 0.82
 			bannerHolder.Visible = true

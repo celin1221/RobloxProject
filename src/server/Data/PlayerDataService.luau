@@ -284,6 +284,7 @@ local function sanitize(data)
 		m.Level = math.clamp(cleanNumber(m.Level), 1, 50)
 		m.Xp = cleanNumber(m.Xp)
 		m.Awakened = if m.Awakened == true then true else nil
+		m.Favorite = if m.Favorite == true then true else nil
 		syncMemberLearnset(m, false)
 		local def = Characters.Get(m.CharacterId)
 		if typeof(m.Genetics) ~= "table" then

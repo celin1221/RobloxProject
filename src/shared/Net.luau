@@ -33,6 +33,9 @@ export type RemoteFunctionName =
 	| "Summon"        -- Client -> Server: invoca 1, 3 ou 10 no Portal Comum/Premium com painel (bannerId)
 	| "SummonBanner"  -- Client -> Server: consulta destaque e elenco do painel (portalId, bannerId)
 	| "SellDuplicate" -- Client -> Server: vende personagem repetido por gold
+	| "ToggleFavorite" -- Client -> Server: marca ou desmarca personagem como favorito (protege contra venda/fusao)
+	| "SellCharacter" -- Client -> Server: vende um personagem especifico (por uid) para liberar espaco na colecao
+	| "SellUnfavorited" -- Client -> Server: vende todos os personagens nao-favoritos elegiveis de uma vez
 	| "Fuse"          -- Client -> Server: funde 3 repetidos em +1 estrela
 	| "UseItem"       -- Client -> Server: usa item fora de batalha (Pocao, Reviver)
 	| "BuyItem"       -- Client -> Server: compra item na loja com gold

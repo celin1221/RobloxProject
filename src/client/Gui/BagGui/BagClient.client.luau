@@ -13,6 +13,7 @@ local Data = ReplicatedStorage:WaitForChild("Data")
 local Items = require(Data:WaitForChild("Items"))
 local Benefits = require(Data:WaitForChild("Benefits"))
 local Characters = require(Data:WaitForChild("Characters"))
+local Summon = require(Data:WaitForChild("Summon"))
 local Progression = require(Data:WaitForChild("Progression"))
 local Genetics = require(Data:WaitForChild("Genetics"))
 local Awakening = require(Data:WaitForChild("Awakening"))
@@ -23,6 +24,9 @@ local T = UI.Theme
 local profile = nil
 local selected = nil -- item escolhido
 local activeTab = "Itens"
+local confirmSellUid: string? = nil
+local confirmSellToken = 0
+local sellBusy = false
 
 local ITEM_ICON = { Pocao = "potion", Superpocao = "potion", Hiperpocao = "potion", CuraStatus = "heal", Eter = "potion", Reviver = "heal", SeloContrato = "seal", SeloSuperior = "seal", DoceComum = "doce_comum", DoceRaro = "doce_raro", DoceEpico = "doce_epico" }
 local RARITY_COLOR = { Comum = "comum", Raro = "raro", Epico = "epico", Lendario = "lendario", Secreto = "secreto" }
@@ -44,7 +48,138 @@ local charsView = UI.frame(body, { Name = "CharsView", Visible = false })
 local charFilterRow = UI.frame(charsView, { Name = "Filters" })
 local filterState = CharacterFilter.CreateState()
 local charCount = UI.text(charFilterRow, "", { Name = "Count", Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Right, StrokeMult = 0.4 })
+
+local sellBar, sellBarFace = UI.panel(charsView, { Name = "SellBar", Color = "slot", Corner = 0.24, Shadow = false, StrokeMult = 0.75 })
+local capSummaryLbl = UI.text(sellBarFace, "", { Name = "CapSummary", Role = "Small", Color = "onDark", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45 })
+local sellHintLbl = UI.text(sellBarFace, "Protegidos: Time, Favoritos, Treino e Despertos", { Name = "SellHint", Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.35 })
+local sellAllBtn = UI.button(sellBarFace, {
+	Name = "SellAllUnfav",
+	Text = "VENDER N\u{c3}O-FAV (0)",
+	Icon = "coin",
+	Layout = "row",
+	Color = "red",
+	Role = "Small",
+	Corner = 0.26,
+	Sound = false,
+})
+local sellAllMin = sellAllBtn:FindFirstChildOfClass("UISizeConstraint")
+if sellAllMin then
+	sellAllMin.MinSize = Vector2.new(160, 36)
+end
+
 local charsList = UI.scroll(charsView, { Name = "Characters", Gap = 0.024, Flat = true })
+
+-- Modal de confirmacao para vender todos os nao-favoritos de uma vez
+local sellAllOverlay = Instance.new("TextButton")
+sellAllOverlay.Name = "SellAllModal"
+sellAllOverlay.Size = UDim2.fromScale(1, 1)
+sellAllOverlay.BackgroundColor3 = Color3.fromRGB(6, 8, 22)
+sellAllOverlay.BackgroundTransparency = 0.3
+sellAllOverlay.Text = ""
+sellAllOverlay.AutoButtonColor = false
+sellAllOverlay.Visible = false
+sellAllOverlay.ZIndex = 30
+sellAllOverlay.Parent = body
+UI.corner(sellAllOverlay, 0.04)
+
+local sellModalCard, sellModalFace = UI.panel(sellAllOverlay, {
+	Name = "Card",
+	Size = UDim2.fromScale(0.80, 0.84),
+	Position = UDim2.fromScale(0.5, 0.5),
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	MaxSize = Vector2.new(540, 310),
+	Color = "panel",
+	Corner = 0.09,
+	ZIndex = 31,
+})
+UI.stroke(sellModalFace, T.Palette.red, 1.35)
+UI.icon(sellModalFace, "coin", {
+	Name = "Icon",
+	Size = UDim2.fromScale(0.11, 0.14),
+	Position = UDim2.fromScale(0.04, 0.04),
+	AspectAxis = Enum.DominantAxis.Height,
+	ZIndex = 32,
+})
+UI.text(sellModalFace, "VENDER N\u{c3}O-FAVORITOS", {
+	Name = "Title",
+	Size = UDim2.fromScale(0.78, 0.14),
+	Position = UDim2.fromScale(0.16, 0.04),
+	Role = "Heading",
+	Color = "gold",
+	AlignX = Enum.TextXAlignment.Left,
+	ZIndex = 32,
+})
+local sellModalSummary = UI.text(sellModalFace, "", {
+	Name = "Summary",
+	Size = UDim2.fromScale(0.92, 0.14),
+	Position = UDim2.fromScale(0.04, 0.20),
+	Role = "Body",
+	Color = "onDark",
+	Rich = true,
+	AlignX = Enum.TextXAlignment.Left,
+	ZIndex = 32,
+})
+local sellModalBreakdown = UI.text(sellModalFace, "", {
+	Name = "Breakdown",
+	Size = UDim2.fromScale(0.92, 0.11),
+	Position = UDim2.fromScale(0.04, 0.35),
+	Role = "Small",
+	Color = "inkSoft",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.4,
+	ZIndex = 32,
+})
+local sellModalWarn = UI.text(sellModalFace, "", {
+	Name = "Warning",
+	Size = UDim2.fromScale(0.92, 0.10),
+	Position = UDim2.fromScale(0.04, 0.47),
+	Role = "Small",
+	Color = "hpLow",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.45,
+	ZIndex = 32,
+})
+local sellModalProtect = UI.text(sellModalFace, "Protegidos: Time, Favoritos, Treino e Despertos (sempre sobra ao menos 1).", {
+	Name = "ProtectNote",
+	Size = UDim2.fromScale(0.92, 0.10),
+	Position = UDim2.fromScale(0.04, 0.58),
+	Role = "Small",
+	Color = "inkSoft",
+	AlignX = Enum.TextXAlignment.Left,
+	StrokeMult = 0.35,
+	ZIndex = 32,
+})
+local sellModalCancelBtn = UI.button(sellModalFace, {
+	Name = "CancelSellAll",
+	Text = "CANCELAR",
+	Color = "grey",
+	Size = UDim2.fromScale(0.42, 0.17),
+	Position = UDim2.fromScale(0.04, 0.96),
+	AnchorPoint = Vector2.new(0, 1),
+	Corner = 0.24,
+	Role = "Small",
+	ZIndex = 33,
+})
+local sellModalConfirmBtn = UI.button(sellModalFace, {
+	Name = "ConfirmSellAll",
+	Text = "CONFIRMAR VENDA",
+	Icon = "coin",
+	Layout = "row",
+	Color = "red",
+	Size = UDim2.fromScale(0.48, 0.17),
+	Position = UDim2.fromScale(0.96, 0.96),
+	AnchorPoint = Vector2.new(1, 1),
+	Corner = 0.24,
+	Role = "Small",
+	Sound = false,
+	ZIndex = 33,
+})
+for _, mb in ipairs({ sellModalCancelBtn, sellModalConfirmBtn }) do
+	local mc = mb:FindFirstChildOfClass("UISizeConstraint")
+	if mc then
+		mc.MinSize = Vector2.new(100, 32)
+	end
+end
 
 local matsView = UI.frame(body, { Name = "MaterialsView", Visible = false })
 local matsHint = UI.text(matsView, "Materiais de Despertar n\u{e3}o ocupam espa\u{e7}o na mochila. Descubra onde us\u{e1}-los explorando a floresta!", {
@@ -144,24 +279,185 @@ local function layoutViews()
 		end
 	end
 
-	local ly = fh + tabClear
+	local barGap = 8
+	local barY = fh + barGap
+	local barH = math.max(44, math.min(52, math.floor(contentH * 0.15)))
+	sellBar.Position = UDim2.fromOffset(0, barY)
+	sellBar.Size = UDim2.fromOffset(W, barH)
+
+	local sBtnW = math.clamp(math.floor(W * 0.34), 172, 276)
+	local sBtnH = math.max(36, barH - 8)
+	sellAllBtn.AnchorPoint = Vector2.new(1, 0.5)
+	sellAllBtn.Size = UDim2.fromOffset(sBtnW, sBtnH)
+	sellAllBtn.Position = UDim2.new(1, -6, 0.5, 0)
+
+	local infoW = math.max(80, W - sBtnW - 20)
+	local halfH = math.floor((barH - 6) / 2)
+	capSummaryLbl.Position = UDim2.fromOffset(10, 3)
+	capSummaryLbl.Size = UDim2.fromOffset(infoW, halfH)
+	sellHintLbl.Position = UDim2.fromOffset(10, 3 + halfH)
+	sellHintLbl.Size = UDim2.fromOffset(infoW, barH - 6 - halfH)
+
+	local ly = barY + barH + barGap
 	charsList.Position = UDim2.fromOffset(0, ly)
 	charsList.Size = UDim2.fromOffset(W, math.max(T.TouchMin, contentH - ly))
 end
 body:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutViews)
 
+local function protectionReason(m, uid: string): string?
+	if not profile then
+		return nil
+	end
+	if table.find(profile.Team, uid) ~= nil then
+		return "TIME"
+	end
+	if profile.TrainingMachine and profile.TrainingMachine.Job and profile.TrainingMachine.Job.Uid == uid then
+		return "TREINO"
+	end
+	if m.Favorite == true then
+		return "FAV"
+	end
+	if m.Awakened == true then
+		return "DESPERTO"
+	end
+	return nil
+end
+
+local function computeSellAllSummary()
+	local totalCount = 0
+	local favCount = 0
+	local sellable = {}
+	if profile and typeof(profile.Collection) == "table" then
+		for uid, m in pairs(profile.Collection) do
+			totalCount += 1
+			if m.Favorite == true then
+				favCount += 1
+			end
+			if protectionReason(m, uid) == nil then
+				local def = Characters.Get(m.CharacterId)
+				if def then
+					table.insert(sellable, { Uid = uid, Member = m, Def = def })
+				end
+			end
+		end
+	end
+	if #sellable >= totalCount and #sellable > 0 then
+		table.remove(sellable)
+	end
+	local totalGold = 0
+	local byRarity = { Comum = 0, Raro = 0, Epico = 0, Lendario = 0, Secreto = 0 }
+	local highWarn = 0
+	for _, e in ipairs(sellable) do
+		local r = e.Def.Rarity or "Comum"
+		byRarity[r] = (byRarity[r] or 0) + 1
+		totalGold += Summon.SellPrice[r] or Summon.SellPrice.Comum or 50
+		if r == "Lendario" or r == "Secreto" or e.Member.Variant == "Brilhante" then
+			highWarn += 1
+		end
+	end
+	return {
+		TotalCount = totalCount,
+		MaxCap = if profile then Benefits.CollectionMax(profile) else Benefits.CollectionBase,
+		FavCount = favCount,
+		Count = #sellable,
+		Gold = totalGold,
+		ByRarity = byRarity,
+		HighWarn = highWarn,
+	}
+end
+
+local function openSellAllModal()
+	if not profile or sellBusy then
+		return
+	end
+	local sum = computeSellAllSummary()
+	if sum.Count <= 0 then
+		show(false, "Nenhum personagem eleg\u{ed}vel para vender.")
+		return
+	end
+	sellModalSummary.Text = string.format(
+		"Vender <b>%d %s</b> por <font color='#FFD154'><b>+%s Gold</b></font>?",
+		sum.Count,
+		if sum.Count == 1 then "personagem" else "personagens",
+		UI.fmt(sum.Gold)
+	)
+	local parts = {}
+	for _, r in ipairs(Summon.RarityOrder) do
+		local n = sum.ByRarity[r] or 0
+		if n > 0 then
+			table.insert(parts, string.format("%s: %d", Summon.RarityName[r] or r, n))
+		end
+	end
+	sellModalBreakdown.Text = table.concat(parts, "  \u{b7}  ")
+	if sum.HighWarn > 0 then
+		sellModalWarn.Visible = true
+		sellModalWarn.Text = string.format("ATEN\u{c7}\u{c3}O: inclui %d Lend\u{e1}rio/Secreto/Brilhante sem Favorito!", sum.HighWarn)
+	else
+		sellModalWarn.Visible = false
+		sellModalWarn.Text = ""
+	end
+	UI.setText(sellModalConfirmBtn, "VENDER (+" .. UI.fmt(sum.Gold) .. ")")
+	sellAllOverlay.Visible = true
+	UI.play("open")
+end
+
+sellAllBtn.Activated:Connect(openSellAllModal)
+sellModalCancelBtn.Activated:Connect(function()
+	sellAllOverlay.Visible = false
+end)
+sellAllOverlay.Activated:Connect(function()
+	if not sellBusy then
+		sellAllOverlay.Visible = false
+	end
+end)
+sellModalConfirmBtn.Activated:Connect(function()
+	if sellBusy then
+		return
+	end
+	sellBusy = true
+	UI.setDisabled(sellModalConfirmBtn, true, "red")
+	local rf = Remotes:FindFirstChild("SellUnfavorited")
+	local callOk, srvOk, srvMsg = false, false, "Servi\u{e7}o indispon\u{ed}vel."
+	if rf and rf:IsA("RemoteFunction") then
+		callOk, srvOk, srvMsg = pcall(function()
+			return rf:InvokeServer()
+		end)
+	end
+	sellBusy = false
+	UI.setDisabled(sellModalConfirmBtn, false, "red")
+	sellAllOverlay.Visible = false
+	confirmSellUid = nil
+	if not callOk then
+		show(false, "Erro de conex\u{e3}o ao vender.")
+		return
+	end
+	if srvOk then
+		UI.play("coin")
+		msg.TextColor3 = UI.P.gold
+		msg.Text = tostring(srvMsg or "Personagens vendidos!")
+	else
+		show(false, tostring(srvMsg or "N\u{e3}o foi poss\u{ed}vel vender."))
+	end
+end)
+
 local function refreshCharacters()
 	if not profile then
 		UI.clear(charsList)
 		charCount.Text = ""
+		capSummaryLbl.Text = ""
+		UI.setText(sellAllBtn, "VENDER N\u{c3}O-FAV (0)")
+		UI.setDisabled(sellAllBtn, true, "red")
 		return
 	end
 	local list, statsByUid = filterState.Apply(profile.Collection)
-	local totalCount = 0
-	for _ in pairs(profile.Collection) do
-		totalCount += 1
-	end
-	charCount.Text = string.format("%d/%d", #list, totalCount)
+	local sum = computeSellAllSummary()
+	charCount.Text = string.format("%d/%d", #list, sum.TotalCount)
+	capSummaryLbl.Text = string.format("Cole\u{e7}\u{e3}o: %d/%d  \u{b7}  Favoritos: %d", sum.TotalCount, sum.MaxCap, sum.FavCount)
+	local fillRatio = if sum.MaxCap > 0 then sum.TotalCount / sum.MaxCap else 0
+	capSummaryLbl.TextColor3 = if fillRatio >= 0.95 then T.Palette.hpLow elseif fillRatio >= 0.80 then T.Palette.gold else T.Palette.onDark
+	UI.setText(sellAllBtn, string.format("VENDER N\u{c3}O-FAV (%d)", sum.Count))
+	UI.setDisabled(sellAllBtn, sum.Count <= 0 or sellBusy, "red")
+
 	UI.keepScroll(charsList, function()
 		UI.clear(charsList)
 		if #list == 0 then
@@ -176,16 +472,28 @@ local function refreshCharacters()
 				local total = CharacterFilter.TotalStats(stats)
 				local curHp = Progression.CurrentHp(m)
 				local onTeam = table.find(profile.Team, uid) ~= nil
+				local isFav = m.Favorite == true
+				local prot = protectionReason(m, uid)
+				if not prot and sum.TotalCount <= 1 then
+					prot = "\u{da}LTIMO"
+				end
+				local price = Summon.SellPrice[def.Rarity] or Summon.SellPrice.Comum or 50
 				local genAvg = math.floor(Genetics.Average(m.Genetics) + 0.5)
-				local trnAvg = math.floor(Genetics.Average(m.Training) + 0.5)
-				local btn, face = UI.button(charsList, {
-					Name = "Char_" .. uid, Color = "panelAlt", Size = UDim2.fromScale(1, 0), Aspect = 10.5, RowMax = 64, LayoutOrder = i, Corner = 0.2, Shadow = false, StrokeMult = 0.8,
-					OnClick = function()
-						UI.open("CharacterDetail", uid)
-					end,
+
+				local _, face = UI.panel(charsList, {
+					Name = "Char_" .. uid,
+					Color = "panelAlt",
+					Size = UDim2.fromScale(1, 0),
+					Aspect = 9.8,
+					RowMax = 66,
+					LayoutOrder = i,
+					Corner = 0.2,
+					Shadow = false,
+					StrokeColor = if isFav then Color3.fromRGB(255, 92, 138) else nil,
+					StrokeMult = if isFav then 0.95 else 0.75,
 				})
 				UI.chip(face, RARITY_TEXT[def.Rarity] or def.Rarity, RARITY_COLOR[def.Rarity] or "comum", {
-					Name = "Rarity", Size = UDim2.fromScale(0.15, 0.56), Position = UDim2.fromScale(0.015, 0.22), Role = "Small",
+					Name = "Rarity", Size = UDim2.fromScale(0.122, 0.56), Position = UDim2.fromScale(0.012, 0.22), Role = "Small",
 				})
 				local titleParts = { def.Name }
 				if m.Variant and m.Variant ~= "" then
@@ -194,18 +502,159 @@ local function refreshCharacters()
 				table.insert(titleParts, "Nv." .. tostring(m.Level))
 				if onTeam then
 					table.insert(titleParts, "[TIME]")
+				elseif m.Awakened == true then
+					table.insert(titleParts, "[DESPERTO]")
 				end
 				UI.text(face, table.concat(titleParts, "  "), {
-					Name = "Title", Size = UDim2.fromScale(0.64, 0.42), Position = UDim2.fromScale(0.185, 0.08), Role = "Small", AlignX = Enum.TextXAlignment.Left,
+					Name = "Title", Size = UDim2.fromScale(0.425, 0.42), Position = UDim2.fromScale(0.144, 0.08), Role = "Small", AlignX = Enum.TextXAlignment.Left,
 				})
 				local hpColor = if curHp <= 0 then "hpLow" else "gold"
-				local statsText = string.format("GERAL %d  \u{b7}  HP %d/%d  \u{b7}  ATQ %d  \u{b7}  DEF %d  \u{b7}  VEL %d", total, curHp, stats.HP, stats.Attack, stats.Defense, stats.Speed)
+				local statsText = string.format("GERAL %d  \u{b7}  HP %d/%d  \u{b7}  GEN %d%%", total, curHp, stats.HP, genAvg)
 				UI.text(face, statsText, {
-					Name = "Stats", Size = UDim2.fromScale(0.64, 0.40), Position = UDim2.fromScale(0.185, 0.52), Role = "Small", Color = hpColor, AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45,
+					Name = "Stats", Size = UDim2.fromScale(0.425, 0.40), Position = UDim2.fromScale(0.144, 0.52), Role = "Small", Color = hpColor, AlignX = Enum.TextXAlignment.Left, StrokeMult = 0.45,
 				})
-				UI.text(face, string.format("GEN %d%% · TRN %d%%  >", genAvg, trnAvg), {
-					Name = "GenSummary", Size = UDim2.fromScale(0.16, 0.56), Position = UDim2.fromScale(0.985, 0.22), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "inkSoft", AlignX = Enum.TextXAlignment.Right, StrokeMult = 0.4,
+
+				-- Botao Favorito (coracao)
+				local favBtn = UI.button(face, {
+					Name = "FavBtn",
+					Icon = "heart",
+					Layout = "icon",
+					Color = if isFav then "red" else "slot",
+					Size = UDim2.fromScale(0.068, 0.78),
+					Position = UDim2.fromScale(0.578, 0.11),
+					Corner = 0.28,
+					Sound = false,
+					OnClick = function()
+						if sellBusy then
+							return
+						end
+						sellBusy = true
+						local rf = Remotes:FindFirstChild("ToggleFavorite")
+						local callOk, srvOk, srvVal = false, false, nil
+						if rf and rf:IsA("RemoteFunction") then
+							callOk, srvOk, srvVal = pcall(function()
+								return rf:InvokeServer(uid)
+							end)
+						end
+						sellBusy = false
+						if callOk and srvOk then
+							confirmSellUid = nil
+							UI.play("click")
+							msg.TextColor3 = UI.P.gold
+							msg.Text = if srvVal then (def.Name .. " marcado como Favorito.") else (def.Name .. " removido dos Favoritos.")
+						else
+							show(false, tostring(srvVal or "N\u{e3}o foi poss\u{ed}vel favoritar."))
+						end
+					end,
 				})
+				local favMin = favBtn:FindFirstChildOfClass("UISizeConstraint")
+				if favMin then
+					favMin.MinSize = Vector2.new(34, 34)
+				end
+
+				-- Botao Vender individual (confirmacao em 2 cliques) ou selo Protegido
+				if prot then
+					local pBox, pFace = UI.panel(face, {
+						Name = "ProtectedTag",
+						Color = "slot",
+						Size = UDim2.fromScale(0.198, 0.72),
+						Position = UDim2.fromScale(0.656, 0.14),
+						Corner = 0.28,
+						Shadow = false,
+					})
+					local _ = pBox
+					UI.icon(pFace, if prot == "FAV" then "heart" else "lock", {
+						Name = "Icon",
+						Size = UDim2.fromScale(0.22, 0.62),
+						Position = UDim2.fromScale(0.08, 0.5),
+						AnchorPoint = Vector2.new(0, 0.5),
+						AspectAxis = Enum.DominantAxis.Height,
+						Tint = if prot == "FAV" then Color3.fromRGB(255, 92, 138) else T.Palette.inkSoft,
+					})
+					UI.text(pFace, prot, {
+						Name = "Label",
+						Size = UDim2.fromScale(0.64, 0.78),
+						Position = UDim2.fromScale(0.32, 0.11),
+						Role = "Small",
+						Color = if prot == "FAV" then Color3.fromRGB(255, 138, 174) else "inkSoft",
+						AlignX = Enum.TextXAlignment.Left,
+						StrokeMult = 0.4,
+					})
+				else
+					local isArmed = confirmSellUid == uid
+					local sellBtn = UI.button(face, {
+						Name = "SellBtn",
+						Text = if isArmed then "CONFIRMAR?" else ("+" .. UI.fmt(price)),
+						Icon = "coin",
+						Layout = "row",
+						Color = if isArmed then "orange" else "red",
+						Size = UDim2.fromScale(0.198, 0.78),
+						Position = UDim2.fromScale(0.656, 0.11),
+						Corner = 0.28,
+						Role = "Small",
+						Sound = false,
+						OnClick = function()
+							if sellBusy then
+								return
+							end
+							if confirmSellUid ~= uid then
+								confirmSellUid = uid
+								confirmSellToken += 1
+								local tok = confirmSellToken
+								UI.play("click")
+								refreshCharacters()
+								task.delay(3, function()
+									if confirmSellToken == tok and confirmSellUid == uid then
+										confirmSellUid = nil
+										if win.IsOpen() and activeTab == "Personagens" then
+											refreshCharacters()
+										end
+									end
+								end)
+								return
+							end
+							confirmSellUid = nil
+							sellBusy = true
+							local rf = Remotes:FindFirstChild("SellCharacter")
+							local callOk, srvOk, srvMsg = false, false, "Servi\u{e7}o indispon\u{ed}vel."
+							if rf and rf:IsA("RemoteFunction") then
+								callOk, srvOk, srvMsg = pcall(function()
+									return rf:InvokeServer(uid)
+								end)
+							end
+							sellBusy = false
+							if callOk and srvOk then
+								UI.play("coin")
+								msg.TextColor3 = UI.P.gold
+								msg.Text = tostring(srvMsg or "Vendido!")
+							else
+								show(false, tostring(srvMsg or "N\u{e3}o foi poss\u{ed}vel vender."))
+							end
+						end,
+					})
+					local sellMin = sellBtn:FindFirstChildOfClass("UISizeConstraint")
+					if sellMin then
+						sellMin.MinSize = Vector2.new(72, 34)
+					end
+				end
+
+				-- Botao INFO (abre tela de detalhes do personagem)
+				local infoBtn = UI.button(face, {
+					Name = "InfoBtn",
+					Text = "INFO",
+					Color = "blue",
+					Size = UDim2.fromScale(0.124, 0.78),
+					Position = UDim2.fromScale(0.864, 0.11),
+					Corner = 0.28,
+					Role = "Small",
+					OnClick = function()
+						UI.open("CharacterDetail", uid)
+					end,
+				})
+				local infoMin = infoBtn:FindFirstChildOfClass("UISizeConstraint")
+				if infoMin then
+					infoMin.MinSize = Vector2.new(44, 34)
+				end
 			end
 		end
 	end)
@@ -281,6 +730,8 @@ local selectTab = UI.tabs(body, {
 	{ Id = "Personagens", Text = "PERSONAGENS", Icon = "team" },
 }, { ActiveColor = "green", MaxHeight = T.TouchMin, MaxWidth = 0.31 }, function(id)
 	activeTab = id
+	sellAllOverlay.Visible = false
+	confirmSellUid = nil
 	itemsView.Visible = id == "Itens"
 	matsView.Visible = id == "Materiais"
 	charsView.Visible = id == "Personagens"
@@ -555,13 +1006,25 @@ task.spawn(function()
 	end
 end)
 
-UI.onOpen("Bag", function()
-	if win.IsOpen() then
+UI.onOpen("Bag", function(requestedTab)
+	local wantTab = if typeof(requestedTab) == "string" and (requestedTab == "Itens" or requestedTab == "Materiais" or requestedTab == "Personagens")
+		then requestedTab
+		else nil
+	if win.IsOpen() and not wantTab then
+		sellAllOverlay.Visible = false
+		confirmSellUid = nil
 		win.Close()
 		return
 	end
+	if wantTab then
+		activeTab = wantTab
+	end
+	sellAllOverlay.Visible = false
+	confirmSellUid = nil
 	msg.Text = ""
-	win.Open()
+	if not win.IsOpen() then
+		win.Open()
+	end
 	layoutViews()
 	selectTab(activeTab)
 	task.defer(layoutViews)

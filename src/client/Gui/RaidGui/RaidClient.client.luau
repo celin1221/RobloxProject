@@ -97,27 +97,27 @@ end
 local hudBannerBtn, hudBannerFace = UI.button(canvas, {
 	Name = "RaidHudBanner",
 	Color = "panel",
-	Size = UDim2.fromScale(0.22, 0.072),
-	Position = UDim2.fromScale(0.61, 0.028),
+	Size = UDim2.fromScale(0.24, 0.074),
+	Position = UDim2.fromScale(0.605, 0.028),
 	AnchorPoint = Vector2.new(0.5, 0),
 	Corner = T.Corner.Pill,
-	MaxSize = Vector2.new(270, 44),
+	MaxSize = Vector2.new(280, 46),
 	Visible = false,
 	ZIndex = 6,
 })
 local hudBannerStroke = UI.stroke(hudBannerFace, T.Palette.gold, 1.35)
 local hudBannerIcon = UI.icon(hudBannerFace, "sword", {
 	Name = "Icon",
-	Size = UDim2.fromScale(0.16, 0.72),
-	Position = UDim2.fromScale(0.05, 0.5),
+	Size = UDim2.fromScale(0.14, 0.60),
+	Position = UDim2.fromScale(0.04, 0.5),
 	AnchorPoint = Vector2.new(0, 0.5),
 	AspectAxis = Enum.DominantAxis.Height,
 	ZIndex = 7,
 })
 local hudBannerTitle = UI.text(hudBannerFace, "RAID GLOBAL", {
 	Name = "Title",
-	Size = UDim2.fromScale(0.54, 0.50),
-	Position = UDim2.fromScale(0.20, 0.08),
+	Size = UDim2.fromScale(0.49, 0.48),
+	Position = UDim2.fromScale(0.23, 0.08),
 	Role = "Small",
 	Color = "gold",
 	AlignX = Enum.TextXAlignment.Left,
@@ -126,8 +126,8 @@ local hudBannerTitle = UI.text(hudBannerFace, "RAID GLOBAL", {
 })
 local hudBannerSub = UI.text(hudBannerFace, "", {
 	Name = "Sub",
-	Size = UDim2.fromScale(0.54, 0.40),
-	Position = UDim2.fromScale(0.20, 0.54),
+	Size = UDim2.fromScale(0.49, 0.38),
+	Position = UDim2.fromScale(0.23, 0.56),
 	Role = "Small",
 	Color = "onDark",
 	AlignX = Enum.TextXAlignment.Left,
@@ -137,7 +137,7 @@ local hudBannerSub = UI.text(hudBannerFace, "", {
 local hudBannerTimer = UI.text(hudBannerFace, "00:00", {
 	Name = "Timer",
 	Size = UDim2.fromScale(0.22, 0.68),
-	Position = UDim2.fromScale(0.95, 0.5),
+	Position = UDim2.fromScale(0.96, 0.5),
 	AnchorPoint = Vector2.new(1, 0.5),
 	Role = "Small",
 	Color = "gold",
@@ -184,6 +184,8 @@ local bossPortraitHolder = UI.frame(leftFace, {
 	Size = UDim2.fromScale(0.62, 0.34),
 	Position = UDim2.fromScale(0.5, 0.13),
 	AnchorPoint = Vector2.new(0.5, 0),
+	Aspect = 1,
+	AspectAxis = Enum.DominantAxis.Height,
 	Color = "slot",
 	Corner = T.Corner.Card,
 })
@@ -334,8 +336,8 @@ local lastPickerKey = ""
 
 local lobbyMsgLbl = UI.text(rightFace, "", {
 	Name = "Message",
-	Size = UDim2.fromScale(0.94, 0.055),
-	Position = UDim2.fromScale(0.03, 0.84),
+	Size = UDim2.fromScale(0.94, 0.052),
+	Position = UDim2.fromScale(0.03, 0.805),
 	Role = "Small",
 	Color = "gold",
 })
@@ -346,24 +348,27 @@ local joinBtn = UI.button(rightFace, {
 	Text = "ENTRAR NO GRUPO (1-4)",
 	Icon = "sword",
 	Color = "green",
-	Size = UDim2.fromScale(0.56, 0.095),
-	Position = UDim2.fromScale(0.03, 0.89),
+	Size = UDim2.fromScale(0.56, 0.105),
+	Position = UDim2.fromScale(0.03, 0.98),
+	AnchorPoint = Vector2.new(0, 1),
 })
 local teleportBtn = UI.button(rightFace, {
 	Name = "TeleportBtn",
 	Text = "IR A FENDA",
 	Icon = "portal",
 	Color = "blue",
-	Size = UDim2.fromScale(0.36, 0.095),
-	Position = UDim2.fromScale(0.61, 0.89),
+	Size = UDim2.fromScale(0.36, 0.105),
+	Position = UDim2.fromScale(0.61, 0.98),
+	AnchorPoint = Vector2.new(0, 1),
 })
 local startNowBtn = UI.button(rightFace, {
 	Name = "StartNowBtn",
 	Text = "INICIAR AGORA",
 	Icon = "sword",
 	Color = "gold",
-	Size = UDim2.fromScale(0.54, 0.095),
-	Position = UDim2.fromScale(0.03, 0.89),
+	Size = UDim2.fromScale(0.54, 0.105),
+	Position = UDim2.fromScale(0.03, 0.98),
+	AnchorPoint = Vector2.new(0, 1),
 	Visible = false,
 })
 local leaveLobbyBtn = UI.button(rightFace, {
@@ -371,10 +376,77 @@ local leaveLobbyBtn = UI.button(rightFace, {
 	Text = "SAIR",
 	Icon = "close",
 	Color = "red",
-	Size = UDim2.fromScale(0.38, 0.095),
-	Position = UDim2.fromScale(0.59, 0.89),
+	Size = UDim2.fromScale(0.38, 0.105),
+	Position = UDim2.fromScale(0.59, 0.98),
+	AnchorPoint = Vector2.new(0, 1),
 	Visible = false,
 })
+for _, b in ipairs({ joinBtn, teleportBtn, startNowBtn, leaveLobbyBtn }) do
+	local sc = b:FindFirstChildOfClass("UISizeConstraint")
+	if sc then
+		sc.MinSize = Vector2.new(88, 36)
+	end
+end
+
+-- Layout pixel-exato da coluna direita do Lobby (zero sobreposicao no Desktop e Mobile 667x375)
+local function layoutLobbyRight()
+	local rw, rh = UI.unscaledSize(rightFace)
+	local W, H = math.floor(rw + 0.5), math.floor(rh + 0.5)
+	if W < 40 or H < 40 then
+		return
+	end
+	local padX = math.max(8, math.floor(W * 0.03))
+	local innerW = W - padX * 2
+	local gap = math.clamp(math.floor(H * 0.014), 3, 7)
+
+	local btnH = math.clamp(math.floor(H * 0.115), 36, 46)
+	local btnY = H - math.max(6, gap)
+	local jW = math.floor(innerW * 0.58)
+	local tW = innerW - jW - 8
+	joinBtn.Size = UDim2.fromOffset(jW, btnH)
+	joinBtn.Position = UDim2.fromOffset(padX, btnY)
+	teleportBtn.Size = UDim2.fromOffset(tW, btnH)
+	teleportBtn.Position = UDim2.fromOffset(padX + jW + 8, btnY)
+	local sW = math.floor(innerW * 0.56)
+	local lW = innerW - sW - 8
+	startNowBtn.Size = UDim2.fromOffset(sW, btnH)
+	startNowBtn.Position = UDim2.fromOffset(padX, btnY)
+	leaveLobbyBtn.Size = UDim2.fromOffset(lW, btnH)
+	leaveLobbyBtn.Position = UDim2.fromOffset(padX + sW + 8, btnY)
+
+	local msgH = math.clamp(math.floor(H * 0.058), 16, 24)
+	local msgY = btnY - btnH - gap - msgH
+	lobbyMsgLbl.Position = UDim2.fromOffset(padX, msgY)
+	lobbyMsgLbl.Size = UDim2.fromOffset(innerW, msgH)
+
+	local y = math.max(6, gap)
+	local statusH = math.clamp(math.floor(H * 0.078), 20, 34)
+	lobbyStatusLbl.Position = UDim2.fromOffset(padX, y)
+	lobbyStatusLbl.Size = UDim2.fromOffset(innerW, statusH)
+	y += statusH + math.max(2, gap - 2)
+
+	local rulesH = math.clamp(math.floor(H * 0.052), 14, 22)
+	lobbyRuleLbl.Position = UDim2.fromOffset(padX, y)
+	lobbyRuleLbl.Size = UDim2.fromOffset(innerW, rulesH)
+	y += rulesH + gap
+
+	local availMid = math.max(80, msgY - y - gap)
+	local pTitleH = math.clamp(math.floor(H * 0.050), 14, 22)
+	local slotsH = math.floor(availMid * 0.57)
+	slotsHolder.Position = UDim2.fromOffset(padX, y)
+	slotsHolder.Size = UDim2.fromOffset(innerW, slotsH)
+	y += slotsH + gap
+
+	pickerTitle.Position = UDim2.fromOffset(padX, y)
+	pickerTitle.Size = UDim2.fromOffset(innerW, pTitleH)
+	y += pTitleH + 2
+
+	local pickH = math.max(36, msgY - y - gap)
+	pickerScroll.Position = UDim2.fromOffset(padX, y)
+	pickerScroll.Size = UDim2.fromOffset(innerW, pickH)
+end
+rightFace:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutLobbyRight)
+task.defer(layoutLobbyRight)
 
 --------------------------------------------------------------------
 -- 3. HUD DE COMBATE 4x1
@@ -468,7 +540,7 @@ end
 local logHolder, logFace = UI.panel(battleRoot, {
 	Name = "RaidLog",
 	Size = UDim2.fromScale(0.56, 0.068),
-	Position = UDim2.fromScale(0.5, 0.685),
+	Position = UDim2.fromScale(0.5, 0.635),
 	AnchorPoint = Vector2.new(0.5, 0),
 	Color = "panel",
 	Corner = T.Corner.Pill,
@@ -485,8 +557,10 @@ local logText = UI.text(logFace, "A Raid come\u{e7}ou! Escolha seu golpe.", {
 -- 4 Cards dos Aliados (canto inferior esquerdo, grade 2x2)
 local allyGridHolder = UI.frame(battleRoot, {
 	Name = "AllyGrid",
-	Size = UDim2.fromScale(0.46, 0.225),
-	Position = UDim2.fromScale(0.02, 0.76),
+	Size = UDim2.fromScale(0.46, 0.245),
+	Position = UDim2.fromScale(0.02, 0.98),
+	AnchorPoint = Vector2.new(0, 1),
+	MinSize = Vector2.new(250, 96),
 	MaxSize = Vector2.new(560, 160),
 })
 local allyCards = {}
@@ -495,15 +569,15 @@ for i = 1, 4 do
 	local col = (i - 1) % 2
 	local holder, face = UI.panel(allyGridHolder, {
 		Name = "Ally" .. i,
-		Size = UDim2.fromScale(0.488, 0.475),
-		Position = UDim2.fromScale(col * 0.512, row * 0.525),
+		Size = UDim2.fromScale(0.488, 0.47),
+		Position = UDim2.fromScale(col * 0.512, row * 0.53),
 		Color = "panel",
 		Corner = T.Corner.Card,
 	})
 	local stroke = face:FindFirstChildOfClass("UIStroke")
 	local nameLbl = UI.text(face, "Aliado", {
 		Name = "Name",
-		Size = UDim2.fromScale(0.62, 0.34),
+		Size = UDim2.fromScale(0.48, 0.34),
 		Position = UDim2.fromScale(0.04, 0.06),
 		Role = "Small",
 		Color = "onDark",
@@ -543,8 +617,8 @@ for i = 1, 4 do
 	})
 	local readyIcon = UI.icon(face, "tick", {
 		Name = "Ready",
-		Size = UDim2.fromScale(0.14, 0.36),
-		Position = UDim2.fromScale(0.66, 0.04),
+		Size = UDim2.fromScale(0.09, 0.30),
+		Position = UDim2.fromScale(0.535, 0.07),
 		AspectAxis = Enum.DominantAxis.Height,
 		Visible = false,
 	})
@@ -558,9 +632,10 @@ end
 -- Grade dos 4 Golpes (canto inferior direito — SOMENTE os 4 golpes, sem Mochila e sem Torcida!)
 local movesHolder = UI.frame(battleRoot, {
 	Name = "MovesGrid",
-	Size = UDim2.fromScale(0.47, 0.225),
-	Position = UDim2.fromScale(0.98, 0.76),
-	AnchorPoint = Vector2.new(1, 0),
+	Size = UDim2.fromScale(0.47, 0.245),
+	Position = UDim2.fromScale(0.98, 0.98),
+	AnchorPoint = Vector2.new(1, 1),
+	MinSize = Vector2.new(250, 96),
 	MaxSize = Vector2.new(580, 160),
 })
 local moveButtons = {}
@@ -570,13 +645,17 @@ for i = 1, 4 do
 	local btn, face = UI.button(movesHolder, {
 		Name = "Move" .. i,
 		Color = "panelAlt",
-		Size = UDim2.fromScale(0.488, 0.475),
-		Position = UDim2.fromScale(col * 0.512, row * 0.525),
+		Size = UDim2.fromScale(0.488, 0.46),
+		Position = UDim2.fromScale(col * 0.512, row * 0.54),
 		Corner = T.Corner.Card,
 	})
+	local mvMin = btn:FindFirstChildOfClass("UISizeConstraint")
+	if mvMin then
+		mvMin.MinSize = Vector2.new(100, 40)
+	end
 	local mName = UI.text(face, "Golpe " .. i, {
 		Name = "Name",
-		Size = UDim2.fromScale(0.72, 0.46),
+		Size = UDim2.fromScale(0.64, 0.46),
 		Position = UDim2.fromScale(0.05, 0.08),
 		Role = "Body",
 		Color = "onDark",
@@ -717,6 +796,48 @@ local capFeedbackLbl = UI.text(capFace, "", {
 	Role = "Body",
 	Color = "gold",
 })
+for _, cb in ipairs({ capContratoBtn, capSuperiorBtn }) do
+	local sc = cb:FindFirstChildOfClass("UISizeConstraint")
+	if sc then
+		sc.MinSize = Vector2.new(120, 32)
+	end
+end
+local function layoutCapturePanel()
+	local cw, ch = UI.unscaledSize(capFace)
+	local W, H = math.floor(cw + 0.5), math.floor(ch + 0.5)
+	if W < 40 or H < 40 then
+		return
+	end
+	local padX = math.max(8, math.floor(W * 0.04))
+	local innerW = W - padX * 2
+	local gap = math.clamp(math.floor(H * 0.025), 3, 8)
+	local titleH = math.clamp(math.floor(H * 0.12), 18, 30)
+	local btnH = math.clamp(math.floor(H * 0.185), 32, 46)
+	local fbH = math.clamp(math.floor(H * 0.14), 18, 32)
+
+	local y = math.max(6, gap)
+	capTitleLbl.Position = UDim2.fromOffset(padX, y)
+	capTitleLbl.Size = UDim2.fromOffset(innerW, titleH)
+	y += titleH + gap
+
+	local descH = math.max(20, H - y - btnH * 2 - fbH - gap * 4)
+	capDescLbl.Position = UDim2.fromOffset(padX, y)
+	capDescLbl.Size = UDim2.fromOffset(innerW, descH)
+	y += descH + gap
+
+	capContratoBtn.Position = UDim2.fromOffset(padX, y)
+	capContratoBtn.Size = UDim2.fromOffset(innerW, btnH)
+	y += btnH + gap
+
+	capSuperiorBtn.Position = UDim2.fromOffset(padX, y)
+	capSuperiorBtn.Size = UDim2.fromOffset(innerW, btnH)
+	y += btnH + gap
+
+	capFeedbackLbl.Position = UDim2.fromOffset(padX, y)
+	capFeedbackLbl.Size = UDim2.fromOffset(innerW, math.max(16, H - y - 4))
+end
+capFace:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutCapturePanel)
+task.defer(layoutCapturePanel)
 
 local exitRaidBtn = UI.button(rBody, {
 	Name = "ExitRaidBtn",
@@ -724,9 +845,13 @@ local exitRaidBtn = UI.button(rBody, {
 	Icon = "house",
 	Color = "green",
 	Size = UDim2.fromScale(0.42, 0.12),
-	Position = UDim2.fromScale(0.5, 0.85),
-	AnchorPoint = Vector2.new(0.5, 0),
+	Position = UDim2.fromScale(0.5, 0.985),
+	AnchorPoint = Vector2.new(0.5, 1),
 })
+local exitMin = exitRaidBtn:FindFirstChildOfClass("UISizeConstraint")
+if exitMin then
+	exitMin.MinSize = Vector2.new(120, 36)
+end
 
 --------------------------------------------------------------------
 -- RENDERIZACAO DO BANNER HUD E DO LOBBY
@@ -1263,6 +1388,7 @@ RaidStateRE.OnClientEvent:Connect(function(kind: string, payload: any)
 		lobbyMsgLbl.Text = ""
 		refreshLobbyWindow()
 		lobbyWin.Open()
+		task.defer(layoutLobbyRight)
 	elseif kind == "LobbyUpdate" then
 		if globalStatus then
 			globalStatus.Lobby = payload
@@ -1461,6 +1587,7 @@ RaidStateRE.OnClientEvent:Connect(function(kind: string, payload: any)
 		capPanel.Visible = true
 		updateCaptureButtons(payload)
 		resultWin.Open()
+		task.defer(layoutCapturePanel)
 		UI.play("reward")
 	elseif kind == "BattleDefeat" then
 		battleRoot.Visible = false

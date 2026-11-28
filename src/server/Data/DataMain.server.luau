@@ -183,6 +183,9 @@ if RunService:IsStudio() then
 			return RaidService.Dev(player, ...)
 		elseif action == "pvp" then
 			return require(ServerScriptService.Battle.PvPService).Dev(player, ...)
+		elseif action == "summon" then
+			local fn, a, b = ...
+			return require(ServerScriptService.Economy.SummonService)[fn](player, a, b)
 		elseif action == "timescale" then
 			require(ServerScriptService.Battle.BattleConfig).TimeScale = (...)
 			return true

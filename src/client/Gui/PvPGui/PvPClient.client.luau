@@ -75,19 +75,19 @@ gui.DisplayOrder = 12
 local queueBanner, queueBannerFace = UI.panel(canvas, {
 	Name = "PvPQueueBanner",
 	Color = "panel",
-	Size = UDim2.fromScale(0.38, 0.068),
-	Position = UDim2.fromScale(0.5, 0.148),
+	Size = UDim2.fromScale(0.36, 0.068),
+	Position = UDim2.fromScale(0.525, 0.155),
 	AnchorPoint = Vector2.new(0.5, 0),
 	Corner = T.Corner.Pill,
 	MaxSize = Vector2.new(420, 42),
-	MinSize = Vector2.new(260, 36),
+	MinSize = Vector2.new(236, 34),
 	Visible = false,
 	ZIndex = 18,
 })
 local queueBannerStroke = UI.stroke(queueBannerFace, T.Palette.gold, 1.3)
 UI.icon(queueBannerFace, "sword", {
 	Name = "Icon",
-	Size = UDim2.fromScale(0.09, 0.70),
+	Size = UDim2.fromScale(0.09, 0.66),
 	Position = UDim2.fromScale(0.035, 0.5),
 	AnchorPoint = Vector2.new(0, 0.5),
 	AspectAxis = Enum.DominantAxis.Height,
@@ -95,8 +95,8 @@ UI.icon(queueBannerFace, "sword", {
 })
 local queueBannerText = UI.text(queueBannerFace, "BUSCANDO PARTIDA...", {
 	Name = "Status",
-	Size = UDim2.fromScale(0.64, 0.78),
-	Position = UDim2.fromScale(0.13, 0.11),
+	Size = UDim2.fromScale(0.545, 0.78),
+	Position = UDim2.fromScale(0.155, 0.11),
 	Role = "Small",
 	Color = "onDark",
 	AlignX = Enum.TextXAlignment.Left,
@@ -108,7 +108,7 @@ local queueLeaveBtn = UI.button(queueBannerFace, {
 	Name = "CancelQueue",
 	Text = "SAIR",
 	Color = "red",
-	Size = UDim2.fromScale(0.20, 0.74),
+	Size = UDim2.fromScale(0.22, 0.74),
 	Position = UDim2.fromScale(0.975, 0.5),
 	AnchorPoint = Vector2.new(1, 0.5),
 	Corner = T.Corner.Pill,
@@ -117,7 +117,7 @@ local queueLeaveBtn = UI.button(queueBannerFace, {
 })
 local leaveMin = queueLeaveBtn:FindFirstChildOfClass("UISizeConstraint")
 if leaveMin then
-	leaveMin.MinSize = Vector2.new(64, 30)
+	leaveMin.MinSize = Vector2.new(56, 28)
 end
 
 --------------------------------------------------------------------
@@ -168,6 +168,7 @@ local selectHubTab = UI.tabs(hubBody, {
 		fetchStatus()
 	end
 end)
+UI.fillBetween(hubContent, hubBody:FindFirstChild("Tabs"), hubMsg, 6)
 
 --------------------------------------------------------------------
 -- 2A. ABA FILAS: Barra Compacta (1 linha) + Grid 2x2 Limpo + Modal Regras
@@ -180,6 +181,7 @@ local summaryBar, summaryFace = UI.panel(filasPage, {
 	Corner = 0.28,
 	Shadow = false,
 })
+UI.clampHeight(summaryBar, 34, 46)
 UI.icon(summaryFace, "trophy", {
 	Name = "TrophyIcon",
 	Size = UDim2.fromScale(0.05, 0.68),
@@ -223,7 +225,7 @@ UI.corner(rulesOverlay, 0.04)
 
 local rulesCard, rulesFace = UI.panel(rulesOverlay, {
 	Name = "RulesCard",
-	Size = UDim2.fromScale(0.84, 0.86),
+	Size = UDim2.fromScale(0.88, 0.92),
 	Position = UDim2.fromScale(0.5, 0.5),
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Color = "panel",
@@ -244,12 +246,16 @@ local rulesClose = UI.button(rulesFace, {
 	Name = "CloseRules",
 	Icon = "close",
 	Color = "grey",
-	Size = UDim2.fromScale(0.10, 0.17),
-	Position = UDim2.fromScale(0.96, 0.05),
+	Size = UDim2.fromScale(0.10, 0.16),
+	Position = UDim2.fromScale(0.96, 0.04),
 	AnchorPoint = Vector2.new(1, 0),
 	Corner = 0.3,
 	ZIndex = 33,
 })
+local rulesCloseMin = rulesClose:FindFirstChildOfClass("UISizeConstraint")
+if rulesCloseMin then
+	rulesCloseMin.MinSize = Vector2.new(28, 28)
+end
 UI.text(rulesFace,
 	"COMPETITIVO (2x2 e 1x1 - ELO separado):\n"
 		.. "- Todos no Nv. 50 com BST das cole\u{e7}\u{f5}es normalizado (1.0x) e Secreto nivelado a Lend\u{e1}rio.\n"
@@ -260,8 +266,8 @@ UI.text(rulesFace,
 		.. "- Poder real liberado (n\u{ed}vel, escala da cole\u{e7}\u{e3}o, Estrelas, Variantes e Despertar), sem ELO.",
 	{
 		Name = "RulesBody",
-		Size = UDim2.fromScale(0.92, 0.72),
-		Position = UDim2.fromScale(0.04, 0.23),
+		Size = UDim2.fromScale(0.92, 0.64),
+		Position = UDim2.fromScale(0.04, 0.32),
 		Role = "Small",
 		Color = "onDark",
 		AlignX = Enum.TextXAlignment.Left,
@@ -300,6 +306,7 @@ local gridWrap = UI.frame(filasPage, {
 	Size = UDim2.fromScale(1, 0.83),
 	Position = UDim2.fromScale(0, 0.16),
 })
+UI.fillBetween(gridWrap, summaryBar, nil, 8)
 
 local queueCards = {}
 

@@ -322,8 +322,10 @@ function TeamCards.new(parent: Instance, p)
 	corner(dim, 0.18)
 	dim.Parent = inner
 
-	-- brilhos (Brilhante e Lendario) e cadeado (Album nao obtido)
-	local sparkle = UI.icon(root, "sparkle", { Name = "Sparkle", Size = UDim2.fromScale(0.26, 0.26), Position = UDim2.fromScale(0.03, 0.29), ZIndex = z + 6, Visible = false })
+	-- brilhos (Brilhante e Lendario), favorito (coracao) e cadeado (Album nao obtido)
+	local sparkle = UI.icon(root, "sparkle", { Name = "Sparkle", Size = UDim2.fromScale(0.24, 0.24), Position = UDim2.fromScale(0.03, 0.29), ZIndex = z + 6, Visible = false })
+	local favIcon = UI.icon(root, "heart", { Name = "Favorite", Size = UDim2.fromScale(0.23, 0.23), Position = UDim2.fromScale(0.03, 0.29), ZIndex = z + 7, Visible = false })
+	favIcon.ImageColor3 = Color3.fromRGB(255, 92, 138)
 	local lockIcon = UI.icon(root, "lock", { Name = "Lock", Size = UDim2.fromScale(0.24, 0.24), Position = UDim2.fromScale(0.05, 0.05), ZIndex = z + 6, Visible = false })
 
 	local select = Instance.new("UIStroke")
@@ -366,6 +368,7 @@ function TeamCards.new(parent: Instance, p)
 		badge.Visible = false
 		dim.Visible = false
 		sparkle.Visible = false
+		favIcon.Visible = false
 		lockIcon.Visible = false
 		lvlText.TextColor3 = T.Palette.onDark
 		typeIcon.ImageTransparency = 0
@@ -435,6 +438,9 @@ function TeamCards.new(parent: Instance, p)
 		local shiny = m.Variant == "Brilhante"
 		local awakened = m.Awakened == true
 		sparkle.Visible = shiny or awakened
+		local isFav = (not compactPortrait) and m.Favorite == true
+		favIcon.Visible = isFav
+		favIcon.Position = if sparkle.Visible then UDim2.fromScale(0.27, 0.29) else UDim2.fromScale(0.03, 0.29)
 		local wantShine = def.Rarity == "Lendario" or def.Rarity == "Secreto" or shiny or awakened
 		if wantShine and not shine then
 			local shineCol = if shiny
@@ -539,6 +545,7 @@ function TeamCards.new(parent: Instance, p)
 			typeIcon.ImageTransparency = 0
 			typeIcon.ImageColor3 = Color3.new(1, 1, 1)
 			sparkle.Visible = hasAnyVariant
+			favIcon.Visible = false
 			local wantShine = def.Rarity == "Lendario" or def.Rarity == "Secreto" or hasShiny
 			if wantShine and not shine then
 				local sCol = if hasShiny
@@ -565,6 +572,7 @@ function TeamCards.new(parent: Instance, p)
 			typeIcon.ImageTransparency = 0.45
 			typeIcon.ImageColor3 = Color3.fromRGB(210, 204, 242)
 			sparkle.Visible = false
+			favIcon.Visible = false
 			if shine then
 				shine:Destroy()
 				shine = nil

@@ -12,6 +12,7 @@ import argparse
 import base64
 import json
 import sys
+import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -1068,7 +1069,47 @@ assert(recTheme and recTheme.Id == "Recrutas" and #recFeatured == 3 and recFeatu
 assert(codesMod.RECRUTAS and codesMod.DEVRECRUTAS and codesMod.HERA and codesMod.TORA and codesMod.GORO and codesMod.LINA and codesMod.SORA and codesMod.BRAM,
     "Missing Recruits dev codes")
 
-return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + Domain/Fuga + Jujutsu/DragonBall + GlobalRaid4x1 + PvPQueues/PokemonBSTs (%d chars) + DMCA-Safe Names + RecruitsBanner8x + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, activeCharCount, totalMoves)
+-- Test 23: Favorite + Individual/Bulk Character Selling, 3-Board Ranking Plaza & HUD Anti-Overlap Guardrails
+local sss = game:GetService("ServerScriptService")
+local summonSrc = sss.Economy.SummonService.Source
+assert(summonSrc:find("SummonService.ToggleFavorite", 1, true) and summonSrc:find("SummonService.SellCharacter", 1, true) and summonSrc:find("SummonService.SellUnfavorited", 1, true),
+    "Missing ToggleFavorite / SellCharacter / SellUnfavorited in SummonService")
+assert(summonSrc:find("detachFromBase", 1, true) and summonSrc:find("m.Favorite == true", 1, true) and summonSrc:find("m.Awakened == true", 1, true),
+    "Missing Base detach or Favorite/Awakened protections in SummonService")
+assert(sss.Data.PlayerDataService.Source:find("m.Favorite", 1, true), "Missing Favorite sanitization in PlayerDataService")
+assert(rs.Net.Source:find("SellUnfavorited", 1, true) and rs.TeamCards.Source:find("Favorite", 1, true), "Missing SellUnfavorited in Net or Favorite icon in TeamCards")
+local bagSrc = sg.BagGui.BagClient.Source
+assert(bagSrc:find("SellAllModal", 1, true) and bagSrc:find("SellAllUnfav", 1, true) and bagSrc:find("FavBtn", 1, true) and bagSrc:find("SellBtn", 1, true),
+    "Missing Favorite/Sell UI elements in BagClient")
+local detSrc = sg.CharacterDetailGui.CharacterDetailClient.Source
+assert(detSrc:find("FavoriteButton", 1, true) and detSrc:find("SellButton", 1, true), "Missing FavoriteButton/SellButton in CharacterDetailClient")
+assert(sg.EquipeGui.EquipeClient.Source:find("SellBagButton", 1, true), "Missing SellBagButton shortcut in EquipeClient")
+assert(sg.RaidGui.RaidClient.Source:find("layoutLobbyRight", 1, true) and sg.RaidGui.RaidClient.Source:find("layoutCapturePanel", 1, true),
+    "Missing responsive anti-overlap layouts in RaidClient")
+assert(sg.PvPGui.PvPClient.Source:find("UI.fillBetween(hubContent", 1, true) and sg.PvPGui.PvPClient.Source:find("UI.fillBetween(gridWrap", 1, true),
+    "Missing responsive fillBetween anti-overlap layouts in PvPClient")
+-- 3-Board Ranking Plaza: PvPBoardMonument bigger in center, flanked by PlacarTorre and PlacarGold
+local lbs = workspace.Map:FindFirstChild("Leaderboards")
+local bTorre = lbs and lbs:FindFirstChild("PlacarTorre")
+local bGold = lbs and lbs:FindFirstChild("PlacarGold")
+assert(pvpMon and bTorre and bGold, "Missing PvPBoardMonument, PlacarTorre, or PlacarGold in Workspace.Map")
+assert(bTorre:FindFirstChild("Row1", true) and bTorre:FindFirstChild("Row10", true) and bGold:FindFirstChild("Row1", true) and bGold:FindFirstChild("Row10", true),
+    "PlacarTorre and PlacarGold must keep Screen.Board.Bg.List.Row1..Row10 for LeaderboardMain")
+local pvpCf, pvpSz = pvpMon:GetBoundingBox()
+local torCf, torSz = bTorre:GetBoundingBox()
+local gldCf, gldSz = bGold:GetBoundingBox()
+assert(pvpSz.Y > torSz.Y + 1.5 and pvpSz.Y > gldSz.Y + 1.5,
+    string.format("PvPBoardMonument height (%.1f) must be noticeably taller than Torre (%.1f) and Gold (%.1f)", pvpSz.Y, torSz.Y, gldSz.Y))
+local distTor = (Vector3.new(pvpCf.Position.X, 0, pvpCf.Position.Z) - Vector3.new(torCf.Position.X, 0, torCf.Position.Z)).Magnitude
+local distGld = (Vector3.new(pvpCf.Position.X, 0, pvpCf.Position.Z) - Vector3.new(gldCf.Position.X, 0, gldCf.Position.Z)).Magnitude
+assert(distTor <= 42 and distGld <= 42,
+    string.format("All 3 leaderboards must be grouped in the Ranking Plaza (distTor=%.1f, distGld=%.1f)", distTor, distGld))
+-- Center check: vector from PvP to Torre and PvP to Gold must point to opposite sides (dot < -0.3)
+local vTor = Vector3.new(torCf.Position.X - pvpCf.Position.X, 0, torCf.Position.Z - pvpCf.Position.Z).Unit
+local vGld = Vector3.new(gldCf.Position.X - pvpCf.Position.X, 0, gldCf.Position.Z - pvpCf.Position.Z).Unit
+assert(vTor:Dot(vGld) < -0.3, string.format("PvPBoardMonument must sit in the CENTER between PlacarTorre and PlacarGold (dot=%.2f)", vTor:Dot(vGld)))
+
+return string.format("PASS: 1x1 GDD [12..14] (%d turns), 2x2 Doubles (%d turns), %d Passives + Awakening + HollowPurple + Secreto/Sukuna + Domain/Fuga + Jujutsu/DragonBall + GlobalRaid4x1 + PvPQueues/PokemonBSTs (%d chars) + DMCA-Safe Names + RecruitsBanner8x + FavSellBulk + 3BoardPlaza + %d Animated Moves + UI Guardrails", b.Turn, simTurns, #Passives.Order, activeCharCount, totalMoves)
 end)
 sandbox:Destroy()
 assert(ok, res)
@@ -1085,7 +1126,15 @@ def main() -> int:
     args = ap.parse_args()
     c = studio_mcp.Client()
     try:
-        sid = studio_mcp.studio_id(c, None)
+        sid = None
+        for _ in range(10):
+            try:
+                sid = studio_mcp.studio_id(c, None)
+                break
+            except SystemExit:
+                time.sleep(0.5)
+        if not sid:
+            sid = studio_mcp.studio_id(c, None)
         if args.cmd == "push":
             return cmd_push(c, sid)
         if args.cmd == "status":

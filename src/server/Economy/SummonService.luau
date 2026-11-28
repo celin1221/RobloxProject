@@ -24,6 +24,7 @@ local Progression = require(Data.Progression)
 local AccountLevel = require(Data:WaitForChild("AccountLevel"))
 local Benefits = require(Data.Benefits)
 local Genetics = require(Data:WaitForChild("Genetics"))
+local CharacterFilter = require(ReplicatedStorage:WaitForChild("CharacterFilter"))
 
 local DataFolder = ServerScriptService:WaitForChild("Data")
 local PlayerDataService = require(DataFolder:WaitForChild("PlayerDataService"))
@@ -260,9 +261,142 @@ local function inTraining(data, uid: string): boolean
 	return data.TrainingMachine and data.TrainingMachine.Job and data.TrainingMachine.Job.Uid == uid or false
 end
 
-local function protectedFromConsume(data, uid: string): boolean
+local function protectedFromConsume(data, uid: string): (boolean, string?)
 	local m = data.Collection and data.Collection[uid]
-	return inTeam(data, uid) or inTraining(data, uid) or (m ~= nil and m.Awakened == true)
+	if inTeam(data, uid) then
+		return true, "Tire do time antes de vender."
+	end
+	if inTraining(data, uid) then
+		return true, "Est\u{e1} na M\u{e1}quina de Treinamento."
+	end
+	if m ~= nil and m.Favorite == true then
+		return true, "Personagem est\u{e1} marcado como Favorito."
+	end
+	if m ~= nil and m.Awakened == true then
+		return true, "Personagem Desperto n\u{e3}o pode ser vendido."
+	end
+	return false, nil
+end
+
+local function detachFromBase(player: Player, data, uid: string)
+	if data and data.Base and data.Base.Active and data.Base.Active[uid] then
+		local ok, BaseService = pcall(function()
+			return require(ServerScriptService.Economy:WaitForChild("BaseService"))
+		end)
+		if ok and BaseService and BaseService.SetState then
+			pcall(BaseService.SetState, player, uid, "None")
+		else
+			data.Base.Active[uid] = nil
+		end
+	end
+end
+
+local function collectionCount(data): number
+	local n = 0
+	for _ in pairs(data.Collection or {}) do
+		n += 1
+	end
+	return n
+end
+
+-- Alterna o selo Favorito de um personagem (protege contra venda individual, venda em lote e fusao)
+function SummonService.ToggleFavorite(player: Player, uid)
+	local data = PlayerDataService.Get(player)
+	if not data or typeof(uid) ~= "string" then
+		return false, "Personagem inv\u{e1}lido."
+	end
+	local m = data.Collection and data.Collection[uid]
+	if not m then
+		return false, "Personagem n\u{e3}o encontrado na cole\u{e7}\u{e3}o."
+	end
+	m.Favorite = if m.Favorite == true then nil else true
+	PlayerDataService.MarkChanged(player)
+	task.spawn(PlayerDataService.SaveNow, player)
+	return true, m.Favorite == true
+end
+
+-- Vende um personagem especifico (por uid) para liberar espaco na colecao
+function SummonService.SellCharacter(player: Player, uid)
+	local data = PlayerDataService.Get(player)
+	if not data or typeof(uid) ~= "string" then
+		return false, "Personagem inv\u{e1}lido."
+	end
+	if BattleService.IsInBattle(player) then
+		return false, "N\u{e3}o d\u{e1} para vender durante a batalha."
+	end
+	local m = data.Collection and data.Collection[uid]
+	if not m then
+		return false, "Personagem n\u{e3}o encontrado."
+	end
+	if collectionCount(data) <= 1 then
+		return false, "Voc\u{ea} precisa manter pelo menos 1 personagem."
+	end
+	local isProt, protReason = protectedFromConsume(data, uid)
+	if isProt then
+		return false, protReason or "Personagem protegido."
+	end
+	local def = Characters.Get(m.CharacterId)
+	local price = (def and Summon.SellPrice[def.Rarity]) or Summon.SellPrice.Comum or 50
+	detachFromBase(player, data, uid)
+	data.Collection[uid] = nil
+	data.Gold += price
+	PlayerDataService.MarkChanged(player)
+	task.spawn(PlayerDataService.SaveNow, player)
+	return true, string.format("%s vendido por +%d gold.", def and def.Name or m.CharacterId, price)
+end
+
+-- Vende todos os personagens nao-favoritos (protegendo Time, Favoritos, Treino e Despertos)
+function SummonService.SellUnfavorited(player: Player, opts)
+	local data = PlayerDataService.Get(player)
+	if not data then
+		return false, "Dados ainda carregando."
+	end
+	if BattleService.IsInBattle(player) then
+		return false, "N\u{e3}o d\u{e1} para vender durante a batalha."
+	end
+	local filterOpts = if typeof(opts) == "table"
+		then {
+			Anime = opts.Anime or "Todos",
+			Rarity = opts.Rarity or "Todas",
+			Type = opts.Type or "Todos",
+			_NormalizedSearch = CharacterFilter.Normalize(opts.Search),
+		}
+		else nil
+
+	local totalCount = collectionCount(data)
+	local eligible = {}
+	for uid, m in pairs(data.Collection or {}) do
+		local isProt = protectedFromConsume(data, uid)
+		if not isProt then
+			local def = Characters.Get(m.CharacterId)
+			if def and (not filterOpts or CharacterFilter.Matches(def, filterOpts)) then
+				table.insert(eligible, { Uid = uid, Def = def, Member = m })
+			end
+		end
+	end
+	if #eligible == 0 then
+		return false, "Nenhum personagem eleg\u{ed}vel para vender (Time, Favoritos, Treino e Despertos s\u{e3}o protegidos)."
+	end
+	-- Garante que nunca venda o ultimo personagem da colecao
+	if #eligible >= totalCount then
+		table.remove(eligible)
+	end
+	if #eligible == 0 then
+		return false, "Voc\u{ea} precisa manter pelo menos 1 personagem."
+	end
+
+	local totalGold = 0
+	for _, entry in ipairs(eligible) do
+		detachFromBase(player, data, entry.Uid)
+		data.Collection[entry.Uid] = nil
+		totalGold += Summon.SellPrice[entry.Def.Rarity] or Summon.SellPrice.Comum or 50
+	end
+	data.Gold += totalGold
+	PlayerDataService.MarkChanged(player)
+	task.spawn(PlayerDataService.SaveNow, player)
+	local count = #eligible
+	local msg = string.format("%d %s por +%d gold!", count, if count == 1 then "personagem vendido" else "personagens vendidos", totalGold)
+	return true, msg, { Count = count, Gold = totalGold }
 end
 
 -- 3 iguais viram +1 estrela: fica a melhor copia (sempre preservando Desperto!), 2 copias fora do time sao consumidas
@@ -304,6 +438,7 @@ function SummonService.Fuse(player: Player, characterId)
 		return false, "Tire do time ou da c\u{e1}psula as c\u{f3}pias extras para fundir."
 	end
 	for _, m in ipairs(fodder) do
+		detachFromBase(player, data, m.Uid)
 		data.Collection[m.Uid] = nil
 	end
 	target.Stars = (target.Stars or 0) + 1
@@ -346,6 +481,7 @@ function SummonService.SellDuplicate(player: Player, characterId)
 	end
 	local def = Characters.Get(characterId)
 	local price = Summon.SellPrice[def.Rarity] or 0
+	detachFromBase(player, data, sold.Uid)
 	data.Collection[sold.Uid] = nil
 	data.Gold += price
 	PlayerDataService.MarkChanged(player)
@@ -359,14 +495,24 @@ local function guarded(fn)
 			return false, "Aguarde."
 		end
 		busy[player] = true
-		local ok, a, b = pcall(fn, player, ...)
+		local ok, a, b, c = pcall(fn, player, ...)
 		busy[player] = nil
 		if not ok then
 			warn("[Summon] " .. tostring(a))
 			return false, "Erro no servidor."
 		end
-		return a, b
+		return a, b, c
 	end
+end
+
+local function ensureRF(name: string): RemoteFunction
+	local rf = Remotes:FindFirstChild(name)
+	if not rf then
+		rf = Instance.new("RemoteFunction")
+		rf.Name = name
+		rf.Parent = Remotes
+	end
+	return rf :: RemoteFunction
 end
 
 function SummonService.Init()
@@ -393,6 +539,9 @@ function SummonService.Init()
 	end
 	Remotes.Fuse.OnServerInvoke = guarded(SummonService.Fuse)
 	Remotes.SellDuplicate.OnServerInvoke = guarded(SummonService.SellDuplicate)
+	ensureRF("ToggleFavorite").OnServerInvoke = guarded(SummonService.ToggleFavorite)
+	ensureRF("SellCharacter").OnServerInvoke = guarded(SummonService.SellCharacter)
+	ensureRF("SellUnfavorited").OnServerInvoke = guarded(SummonService.SellUnfavorited)
 	Players.PlayerRemoving:Connect(function(player)
 		busy[player] = nil
 	end)

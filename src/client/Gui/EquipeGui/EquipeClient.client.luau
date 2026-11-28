@@ -104,7 +104,7 @@ local inspectSlotBtn = UI.button(slotsRow, { Name = "InspectSlot", Icon = "star"
 -- filtros (busca por nome, anime, raridade, tipo e ordenacao por status)
 local filterRow = UI.frame(body, { Name = "Filters" })
 local filterState = CharacterFilter.CreateState()
-local searchBox, animeBtn, rarityBtn, typeBtn, sortBtn, inspectBtn
+local searchBox, animeBtn, rarityBtn, typeBtn, sortBtn, inspectBtn, sellBagBtn
 local inspectMode = false
 local message = UI.text(filterRow, "", { Name = "Message", Size = UDim2.fromScale(0.38, 1), Position = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(1, 0), Role = "Small", Color = "gold", AlignX = Enum.TextXAlignment.Right })
 
@@ -189,16 +189,23 @@ local function layout(forceLayout)
 	filterRow.Size = UDim2.fromOffset(W, fh)
 	filterRow.Position = UDim2.fromOffset(0, fy)
 
-	if animeBtn and rarityBtn and typeBtn and sortBtn and searchBox and inspectBtn then
+	if animeBtn and rarityBtn and typeBtn and sortBtn and searchBox and inspectBtn and sellBagBtn then
+		sellBagBtn.Visible = not isPick
 		if twoRows then
-			local sw = math.floor(W * 0.42)
-			local iw = math.max(92, math.floor(W * 0.18))
+			local sw = math.floor(W * (if isPick then 0.42 else 0.34))
+			local iw = math.max(82, math.floor(W * 0.18))
+			local vw = if isPick then 0 else math.max(82, math.floor(W * 0.18))
 			searchBox.Root.Size = UDim2.fromOffset(sw, bh)
 			searchBox.Root.Position = UDim2.fromOffset(0, 0)
 			inspectBtn.Size = UDim2.fromOffset(iw, bh)
 			inspectBtn.Position = UDim2.fromOffset(sw + g, 0)
+			if not isPick then
+				sellBagBtn.Size = UDim2.fromOffset(vw, bh)
+				sellBagBtn.Position = UDim2.fromOffset(sw + iw + g * 2, 0)
+			end
+			local msgUsed = sw + iw + (if isPick then g * 2 else (vw + g * 3))
 			message.AnchorPoint = Vector2.new(1, 0)
-			message.Size = UDim2.fromOffset(math.max(40, W - sw - iw - g * 2), bh)
+			message.Size = UDim2.fromOffset(math.max(40, W - msgUsed), bh)
 			message.Position = UDim2.fromOffset(W, 0)
 
 			local bg = g
@@ -216,7 +223,7 @@ local function layout(forceLayout)
 			typeBtn.Position = UDim2.fromOffset(wA + wR + bg * 2, y2)
 			sortBtn.Size = UDim2.fromOffset(wS, bh)
 			sortBtn.Position = UDim2.fromOffset(wA + wR + wT + bg * 3, y2)
-		else
+		elseif isPick then
 			local bg = g
 			local avail = W - bg * 6
 			local wSearch = math.floor(avail * 0.18)
@@ -246,6 +253,41 @@ local function layout(forceLayout)
 			inspectBtn.Position = UDim2.fromOffset(x, 0)
 			message.AnchorPoint = Vector2.new(1, 0)
 			message.Size = UDim2.fromOffset(math.max(60, wMsg), bh)
+			message.Position = UDim2.fromOffset(W, 0)
+		else
+			local bg = g
+			local avail = W - bg * 7
+			local wSearch = math.floor(avail * 0.155)
+			local wA = math.floor(avail * 0.13)
+			local wR = math.floor(avail * 0.105)
+			local wT = math.floor(avail * 0.105)
+			local wS = math.floor(avail * 0.14)
+			local wI = math.max(88, math.floor(avail * 0.105))
+			local wV = math.max(88, math.floor(avail * 0.105))
+			local wMsg = avail - wSearch - wA - wR - wT - wS - wI - wV
+			local x = 0
+			searchBox.Root.Size = UDim2.fromOffset(wSearch, bh)
+			searchBox.Root.Position = UDim2.fromOffset(x, 0)
+			x += wSearch + bg
+			animeBtn.Size = UDim2.fromOffset(wA, bh)
+			animeBtn.Position = UDim2.fromOffset(x, 0)
+			x += wA + bg
+			rarityBtn.Size = UDim2.fromOffset(wR, bh)
+			rarityBtn.Position = UDim2.fromOffset(x, 0)
+			x += wR + bg
+			typeBtn.Size = UDim2.fromOffset(wT, bh)
+			typeBtn.Position = UDim2.fromOffset(x, 0)
+			x += wT + bg
+			sortBtn.Size = UDim2.fromOffset(wS, bh)
+			sortBtn.Position = UDim2.fromOffset(x, 0)
+			x += wS + bg
+			inspectBtn.Size = UDim2.fromOffset(wI, bh)
+			inspectBtn.Position = UDim2.fromOffset(x, 0)
+			x += wI + bg
+			sellBagBtn.Size = UDim2.fromOffset(wV, bh)
+			sellBagBtn.Position = UDim2.fromOffset(x, 0)
+			message.AnchorPoint = Vector2.new(1, 0)
+			message.Size = UDim2.fromOffset(math.max(48, wMsg), bh)
 			message.Position = UDim2.fromOffset(W, 0)
 		end
 	end
@@ -914,6 +956,14 @@ inspectBtn = UI.button(filterRow, { Name = "InspectMode", Text = "VER INFO", Ico
 		updateInspectBtn()
 		setMessage(if inspectMode then "Toque para ver atributos." else "")
 		updateGrid(false)
+	end,
+})
+sellBagBtn = UI.button(filterRow, { Name = "SellBagButton", Text = "VENDER", Icon = "coin", Layout = "row", Color = "red", Size = UDim2.fromOffset(96, T.TouchMin), Role = "Small",
+	OnClick = function()
+		win.Close(true)
+		task.defer(function()
+			UI.open("Bag", "Personagens")
+		end)
 	end,
 })
 do

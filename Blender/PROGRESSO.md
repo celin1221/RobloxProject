@@ -1698,3 +1698,34 @@ Atualizado a cada prompt concluído. Status: Pendente, Em andamento, Concluído.
 - `python scripts/sync_studio.py status` (`100% in sync` nos **118 scripts**) e `python scripts/sync_studio.py test` (`PASS`, `Test 1..22`).
 - Validado ao vivo no Play Mode (com backup e restauração do perfil): `CharacterPreviews` (`8/8`, `Tex=6/6`), `SummonShowcaseModels` (`8/8` incl. `Yomogi`→`Hera`), invocação `1x` (`-100 Gold`) e `10x` (`-900 Gold`) retornando 100% Recrutas Comuns (incluindo `Hera`), `PityComum = 60` inalterado, `TicketsComum = 1` protegido, Portal Premium recusado no servidor e **`0` erros/avisos no Console**.
 - Place salvo no Roblox Studio na **versão 380** (`TeamCreate`).
+
+
+## Sistema de Favoritos + Venda de Personagens (Individual & Em Massa), Praça dos 3 Placares e Auditoria de HUDs (28/11/2026)
+
+**Feito**
+- **1. Favoritar + Vender Personagens (Individual e Todos Não-Favoritos — 100% Autoritativo):**
+  - `src/shared/Net.luau`, `src/server/Data/PlayerDataService.luau`, `src/server/Economy/SummonService.luau`, `src/server/Data/DataMain.server.luau`:
+    - Campo persistente `Favorite: boolean?` sanitizado no perfil e 3 novos `RemoteFunction`s criados automaticamente: `ToggleFavorite`, `SellCharacter` e `SellUnfavorited`.
+    - Proteções estritas no servidor (`protectedFromConsume`): impede venda individual, venda em lote, fusão e venda de repetidos para personagens no **Time**, **Favoritos**, na **Máquina de Treinamento**, **Despertos** ou o **último personagem** da coleção.
+    - `detachFromBase`: remove automaticamente da Base (`BaseService.SetState(..., "None")`, coletando o Gold acumulado) antes de apagar qualquer personagem vendido/consumido.
+  - `src/shared/TeamCards.luau`: selo de coração (`heart`) nos cards 3D dos favoritos (sem colidir com nível, tipo, estrelas ou brilhante).
+  - `src/client/Gui/BagGui/BagClient.client.luau` (`Mochila > Personagens`): barra de capacidade (`Coleção: X/Y · Favoritos: F`), botão **`VENDER NÃO-FAV (N)`**, modal de confirmação **`SellAllModal`** (contagem, Gold total, detalhamento por raridade e alerta vermelho se incluir Lendário/Secreto/Brilhante sem Favorito), botão de Favorito, venda individual com confirmação em 2 cliques ou selo de proteção (`TIME`/`FAV`/`TREINO`/`DESPERTO`), e abertura direta via `UI.open("Bag", "Personagens")`.
+  - `src/client/Gui/CharacterDetailGui/CharacterDetailClient.client.luau`: botões **FAV** e **VENDER** integrados abaixo dos atributos do personagem.
+  - `src/client/Gui/EquipeGui/EquipeClient.client.luau`: atalho **`VENDER`** na barra de filtros (oculto no modo picker) abrindo direto `Mochila > Personagens`.
+- **2. Praça dos 3 Placares no Mapa (`Workspace.Map` — PvP Ranqueado em Destaque no Centro + Torre e Gold nas Laterais):**
+  - Construída a **`PracaPlacares`** (`Workspace.Map.Ground.PracaPlacares` + borda `Slate` + pódio escalonado Midnight-Blue & Ouro `PracaPlacaresDais1/2/Trim`) na alameda leste (`X=82..123, Z=17..90`) conectada diretamente a `PortalPremium` pela `CaminhoPlacarL` alargada e emoldurada por 2 `LanternaPedra` (`RankingPlazaLantern1/2`), removendo o antigo caminho sem saída `CaminhoPlacarO` e reposicionando 3 cerejeiras e arbustos para emoldurar sem obstruções.
+  - **`PvPBoardMonument`** (Centro, destaque maior): escala `1.24x` (`24.8` largura × `20.2` altura sobre o pódio `+1.5` studs -> topo em `Y=30.0`, título flutuante acima) voltado para o visitante (`dotViewer = 1.000`), com `PvPBoardPrompt` ajustado (`MaxActivationDistance = 18`).
+  - **`PlacarTorre`** (Flanco Norte/Esquerdo, escala `0.58x`, `19.5` × `14.5`, `+2.5` studs livre da Loja) e **`PlacarGold`** (Flanco Sul/Direito, escala `0.58x`, `19.5` × `14.5`, `+2.7` studs livre da Esteira), simetricamente angulados para o centro da praça (`dotViewer = 1.000`), mantendo integralmente `Screen.Board.Bg.List.Row1..Row10` e `BoardScreen.BoardGui`.
+- **3. Auditoria e Correção de Sobreposições em Todas as Novas HUDs (Desktop + Mobile `667x375`):**
+  - `RaidClient.client.luau`: corrigido `RaidHudBanner` (ícone/título/timer), adicionado `Aspect=1` no retrato do Boss, criado `layoutLobbyRight` (eliminando 3 colisões verticais no `RaidLobbyWindow`), corrigidos `Ready` vs `Lives` nos cards de aliados, `Name` vs `Eff` nos golpes, altura mobile de `AllyGrid`/`MovesGrid`/`RaidLog` e criado `layoutCapturePanel` no `RaidResultWindow`.
+  - `PvPClient.client.luau`: aplicados `UI.fillBetween` em `hubContent` e `QueueGrid`, reajustado `PvPQueueBanner` (sem colidir com `Menu` nem entre `Status` e `CancelQueue`) e reajustado `RulesCard` no mobile.
+  - `HudClient.client.luau` e `TeamBarClient.client.luau`: separadas as faixas verticais de `RaidHudBanner`, `PvPQueueBanner`, `Toast`, `LegendaryBanner` e `AccountLevelUpBanner`, e ajustada a altura responsiva do selo de Evento de Fim de Semana (`Y=0.64` abaixo de `820px` para não tocar na `TeamBar`/`AccountLevelBar` no mobile, mantendo canto inferior direito no Desktop).
+  - `SummonClient.client.luau`: corrigidos `TitleCard`/`HudWallet` no `TopBar`, espaçamento vertical de `RatesRail`/`FreeTickets` e altura mínima da `BottomDock` (`92px`).
+- **4. Guardrail Automatizado (`scripts/sync_studio.py` — `Test 23`):**
+  - Adicionado **Test 23 (`FavSellBulk + 3BoardPlaza`)** validando o sistema de Favoritos/Venda/Em Massa, a geometria da Praça dos 3 Placares (PvP maior e centralizado entre Torre e Gold) e os guardrails anti-sobreposição, além de retry automático na conexão `StudioMCP`.
+
+**Testado (Play Mode ao vivo + Auditoria Bounding-Box + Suíte GDD)**
+- `python scripts/sync_studio.py status` (`100% in sync` nos **118 scripts**) e `python scripts/sync_studio.py test` (`PASS`, `Test 1..23`).
+- Teste ponta-a-ponta ao vivo (`Client → Server` com backup/restauração do perfil): `ToggleFavorite` ON/OFF, bloqueio em Time/Favorito/Desperto, venda individual de personagem passeando na Base (`+50g` + coleta automática de Gold da Base + remoção limpa de `Base.Active`), venda em massa `SellUnfavorited` preservando todos os protegidos e **`0` erros/avisos no Console**.
+- Auditoria geométrica ao vivo de bounding-boxes em todas as HUDs: **`HUD_AUDIT_PASS: 0 overlaps` no Desktop e `0 overlaps` no Mobile (`667x375`)**.
+- Place salvo no Roblox Studio na **versão 383** (`TeamCreate`).

@@ -279,24 +279,24 @@ do
 end
 UI.icon(titleCard, "portal", {
 	Name = "PortalIcon",
-	Size = UDim2.fromScale(0.16, 0.76),
-	Position = UDim2.new(0, 18, 0.5, 0),
+	Size = UDim2.fromScale(0.16, 0.72),
+	Position = UDim2.new(0, 16, 0.5, 0),
 	AnchorPoint = Vector2.new(0, 0.5),
 	AspectAxis = Enum.DominantAxis.Height,
 	ZIndex = 27,
 })
 local hudTitleLabel = UI.text(titleCard, "PORTAL COMUM", {
 	Name = "Title",
-	Size = UDim2.new(0.76, -24, 0.52, 0),
-	Position = UDim2.new(0.20, 10, 0.06, 0),
+	Size = UDim2.new(1, -68, 0.52, 0),
+	Position = UDim2.new(0, 62, 0.06, 0),
 	Role = "Heading",
 	AlignX = Enum.TextXAlignment.Left,
 	ZIndex = 27,
 })
 local hudTaglineLabel = UI.text(titleCard, "TODOS OS ANIMES", {
 	Name = "Tagline",
-	Size = UDim2.new(0.76, -24, 0.36, 0),
-	Position = UDim2.new(0.20, 10, 0.58, 0),
+	Size = UDim2.new(1, -68, 0.36, 0),
+	Position = UDim2.new(0, 62, 0.58, 0),
 	Role = "Small",
 	Color = "gold",
 	AlignX = Enum.TextXAlignment.Left,
@@ -349,8 +349,8 @@ end
 local hudRightTop = UI.frame(topBar, { Name = "RightTop", Size = UDim2.fromScale(0.29, 1), Position = UDim2.fromScale(1, 0.5), AnchorPoint = Vector2.new(1, 0.5), ZIndex = 26 })
 local hudWalletHolder, hudWalletLabel = UI.pill(hudRightTop, "coin", "gold", {
 	Name = "HudWallet",
-	Size = UDim2.fromScale(0.70, 0.88),
-	Position = UDim2.fromScale(0.75, 0.5),
+	Size = UDim2.new(1, -60, 0.86, 0),
+	Position = UDim2.new(1, -54, 0.5, 0),
 	AnchorPoint = Vector2.new(1, 0.5),
 	Aspect = 3.2,
 	MaxSize = Vector2.new(230, 46),
@@ -669,9 +669,9 @@ UI.text(rightRail, "CHANCES", {
 })
 local rateRows = {}
 local rateCount = #Summon.RarityOrder
-local rowStep = if rateCount >= 5 then 0.114 else 0.142
-local rowHeight = if rateCount >= 5 then 0.104 else 0.125
-local rowStartY = if rateCount >= 5 then 0.118 else 0.125
+local rowStep = if rateCount >= 5 then 0.108 else 0.142
+local rowHeight = if rateCount >= 5 then 0.096 else 0.125
+local rowStartY = if rateCount >= 5 then 0.110 else 0.125
 for i, r in ipairs(Summon.RarityOrder) do
 	local row, rface = UI.panel(rightRail, {
 		Name = "Rate_" .. r,
@@ -690,10 +690,10 @@ for i, r in ipairs(Summon.RarityOrder) do
 	rateRows[r] = { Name = nameLbl, Value = valLbl }
 end
 
-local shinyRow = UI.frame(rightRail, { Name = "ShinyRow", Size = UDim2.fromScale(0.90, 0.075), Position = UDim2.fromScale(0.05, 0.705), ZIndex = 26 })
+local shinyRow = UI.frame(rightRail, { Name = "ShinyRow", Size = UDim2.fromScale(0.90, 0.072), Position = UDim2.fromScale(0.05, 0.660), ZIndex = 26 })
 UI.icon(shinyRow, "sparkle", {
 	Name = "Icon",
-	Size = UDim2.fromScale(0.16, 0.90),
+	Size = UDim2.fromScale(0.16, 0.88),
 	Position = UDim2.fromScale(0, 0.5),
 	AnchorPoint = Vector2.new(0, 0.5),
 	AspectAxis = Enum.DominantAxis.Height,
@@ -710,7 +710,7 @@ UI.text(shinyRow, "Brilhante: " .. pct(Summon.ShinyChance), {
 	ZIndex = 27,
 })
 
-local featuredRow = UI.frame(rightRail, { Name = "FeaturedRow", Size = UDim2.fromScale(0.90, 0.095), Position = UDim2.fromScale(0.05, 0.785), ZIndex = 26 })
+local featuredRow = UI.frame(rightRail, { Name = "FeaturedRow", Size = UDim2.fromScale(0.90, 0.095), Position = UDim2.fromScale(0.05, 0.745), ZIndex = 26 })
 UI.icon(featuredRow, "star", {
 	Name = "Icon",
 	Size = UDim2.fromScale(0.16, 0.84),
@@ -732,16 +732,16 @@ local bannerLabel = UI.text(featuredRow, "", {
 
 local freeHolder, freeFace = UI.panel(rightRail, {
 	Name = "FreeTickets",
-	Size = UDim2.fromScale(0.90, 0.105),
-	Position = UDim2.fromScale(0.05, 0.88),
+	Size = UDim2.fromScale(0.90, 0.110),
+	Position = UDim2.fromScale(0.05, 0.860),
 	Color = "green",
 	Corner = T.Corner.Pill,
 	Shadow = false,
 	Visible = false,
 	ZIndex = 26,
 })
-UI.icon(freeHolder, "ticket", { Size = UDim2.fromScale(0.20, 1.15), Position = UDim2.fromScale(0.04, 0.5), AnchorPoint = Vector2.new(0, 0.5), ZIndex = 28 })
-local freeLabel = UI.text(freeFace, "", { Name = "Text", Size = UDim2.fromScale(0.74, 0.8), Position = UDim2.fromScale(0.24, 0.1), Role = "Small", AlignX = Enum.TextXAlignment.Left, ZIndex = 28 })
+UI.icon(freeFace, "ticket", { Size = UDim2.fromScale(0.18, 0.84), Position = UDim2.fromScale(0.05, 0.5), AnchorPoint = Vector2.new(0, 0.5), AspectAxis = Enum.DominantAxis.Height, ZIndex = 28 })
+local freeLabel = UI.text(freeFace, "", { Name = "Text", Size = UDim2.fromScale(0.72, 0.8), Position = UDim2.fromScale(0.26, 0.1), Role = "Small", AlignX = Enum.TextXAlignment.Left, ZIndex = 28 })
 
 -- === 4. PLACAS DE NOME FLUTUANTES DOS 3 PERSONAGENS DO PALCO ===
 local nameplatesLayer = UI.frame(bannerHud, { Name = "Nameplates", Size = UDim2.fromScale(1, 1), ZIndex = 24 })
@@ -911,7 +911,7 @@ end
 
 -- === 5. DOCA INFERIOR: GARANTIA DE LENDARIO + BOTOES DE INVOCAR ===
 local bottomDock, bottomDockStroke = makeGlassCard(bannerHud, "BottomDock", UDim2.fromScale(0.58, 0.185), UDim2.fromScale(0.5, 0.982), Vector2.new(0.5, 1), 16, 26)
-UI.clampHeight(bottomDock, 82, 134)
+UI.clampHeight(bottomDock, 92, 134)
 local bannerMsg = UI.text(bannerHud, "", {
 	Name = "BannerMessage",
 	Size = UDim2.fromScale(0.56, 0.042),

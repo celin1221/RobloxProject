@@ -13,6 +13,7 @@ local gui = script.Parent
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Data = ReplicatedStorage:WaitForChild("Data")
 local Characters = require(Data:WaitForChild("Characters"))
+local Summon = require(Data:WaitForChild("Summon"))
 local Progression = require(Data:WaitForChild("Progression"))
 local Genetics = require(Data:WaitForChild("Genetics"))
 local TypeChart = require(Data:WaitForChild("TypeChart"))
@@ -27,6 +28,9 @@ local RARITY_COLOR = { Comum = "comum", Raro = "raro", Epico = "epico", Lendario
 
 local profile = nil
 local currentUid = nil
+local detailBusy = false
+local sellConfirmUid: string? = nil
+local sellConfirmToken = 0
 
 local canvas = UI.screen(gui)
 gui.DisplayOrder = 16 -- acima de Equipe (8) e Mochila (9)
@@ -58,6 +62,28 @@ local gradeLabel = UI.text(gradeFace, "", { Name = "Value", Role = "Small", ZInd
 local genAvgLabel = UI.text(idFace, "", { Name = "GenAvg", Role = "Small", ZIndex = 4, Rich = true, StrokeMult = 0.45 })
 local trnAvgLabel = UI.text(idFace, "", { Name = "TrnAvg", Role = "Small", ZIndex = 4, Rich = true, StrokeMult = 0.45 })
 local powerLabel = UI.text(idFace, "", { Name = "TotalPower", Role = "Small", Color = "gold", ZIndex = 4, StrokeMult = 0.5 })
+local favBtn = UI.button(idFace, {
+	Name = "FavoriteButton",
+	Text = "FAVORITO",
+	Icon = "heart",
+	Layout = "row",
+	Color = "panelAlt",
+	Role = "Small",
+	Corner = 0.26,
+	Sound = false,
+	ZIndex = 5,
+})
+local sellBtn = UI.button(idFace, {
+	Name = "SellButton",
+	Text = "VENDER",
+	Icon = "coin",
+	Layout = "row",
+	Color = "red",
+	Role = "Small",
+	Corner = 0.26,
+	Sound = false,
+	ZIndex = 5,
+})
 local movesBtn = UI.button(idFace, {
 	Name = "MovesButton",
 	Text = "GOLPES",
@@ -77,6 +103,12 @@ local movesBtn = UI.button(idFace, {
 		UI.open("Team", uid)
 	end,
 })
+for _, b in ipairs({ favBtn, sellBtn, movesBtn }) do
+	local sc = b:FindFirstChildOfClass("UISizeConstraint")
+	if sc then
+		sc.MinSize = Vector2.new(54, 32)
+	end
+end
 
 -- 2) Painel central: Seletor de camada + Radar + Legenda
 local modeRow = UI.frame(radarFace, { Name = "ModeButtons", ZIndex = 3 })
@@ -214,40 +246,51 @@ local function layout()
 	statsPanel.Position = UDim2.fromOffset(col1W + col2W + gap * 2, 0)
 	statsPanel.Size = UDim2.fromOffset(col3W, H)
 
-	-- 1) Layout esquerdo
+	-- 1) Layout esquerdo (retrato + info + linha Favorito/Vender + botao Golpes)
 	local idW, idH = col1W - 12, H - 12
-	local movesBtnH = math.max(T.TouchMin, math.min(48, math.floor(idH * 0.125)))
-	local movesBtnY = H - 6 - movesBtnH
-	movesBtn.Size = UDim2.fromOffset(idW, movesBtnH)
+	local btnGap = 4
+	local actionBtnH = math.clamp(math.floor(idH * 0.105), 32, 42)
+	local movesBtnY = H - 6 - actionBtnH
+	movesBtn.Size = UDim2.fromOffset(idW, actionBtnH)
 	movesBtn.Position = UDim2.fromOffset(6, movesBtnY)
 
-	local portMaxH = math.max(54, math.floor((movesBtnY - 10) * 0.43))
+	local subRowY = movesBtnY - btnGap - actionBtnH
+	local halfBtnW = math.floor((idW - btnGap) / 2)
+	favBtn.Size = UDim2.fromOffset(halfBtnW, actionBtnH)
+	favBtn.Position = UDim2.fromOffset(6, subRowY)
+	sellBtn.Size = UDim2.fromOffset(idW - halfBtnW - btnGap, actionBtnH)
+	sellBtn.Position = UDim2.fromOffset(6 + halfBtnW + btnGap, subRowY)
+
+	local portMaxH = math.max(48, math.floor((subRowY - 10) * 0.44))
 	local portS = math.min(idW - 8, portMaxH)
 	portrait.Root.AnchorPoint = Vector2.new(0.5, 0)
 	portrait.Root.Size = UDim2.fromOffset(portS, portS)
 	portrait.Root.Position = UDim2.fromOffset(math.floor(col1W / 2), 6)
 
-	local y = 6 + portS + 4
-	local rem = math.max(60, movesBtnY - y - 6)
-	local rowH = math.max(15, math.floor(rem / 5))
+	local y = 6 + portS + 3
+	local rem = math.max(55, subRowY - y - 4)
+	local rowH = math.max(11, math.floor(rem / 5))
 	metaTag.Size = UDim2.fromOffset(idW, rowH)
 	metaTag.Position = UDim2.fromOffset(6, y)
 	y += rowH
 
-	gradeBadge.Size = UDim2.fromOffset(math.min(idW, 140), math.max(18, rowH))
+	local gradeH = math.max(14, math.min(24, rowH + 2))
+	gradeBadge.Size = UDim2.fromOffset(math.min(idW, 140), gradeH)
 	gradeBadge.AnchorPoint = Vector2.new(0.5, 0)
 	gradeBadge.Position = UDim2.fromOffset(math.floor(col1W / 2), y)
-	y += gradeBadge.Size.Y.Offset + 2
+	y += gradeH + 2
 
-	genAvgLabel.Size = UDim2.fromOffset(idW, rowH)
+	local leftRem = math.max(30, subRowY - y - 3)
+	local statLineH = math.max(10, math.floor(leftRem / 3))
+	genAvgLabel.Size = UDim2.fromOffset(idW, statLineH)
 	genAvgLabel.Position = UDim2.fromOffset(6, y)
-	y += rowH
+	y += statLineH
 
-	trnAvgLabel.Size = UDim2.fromOffset(idW, rowH)
+	trnAvgLabel.Size = UDim2.fromOffset(idW, statLineH)
 	trnAvgLabel.Position = UDim2.fromOffset(6, y)
-	y += rowH
+	y += statLineH
 
-	powerLabel.Size = UDim2.fromOffset(idW, math.max(15, movesBtnY - y - 4))
+	powerLabel.Size = UDim2.fromOffset(idW, math.max(10, subRowY - y - 2))
 	powerLabel.Position = UDim2.fromOffset(6, y)
 
 	-- 2) Layout central (Radar)
@@ -341,7 +384,119 @@ local function layout()
 end
 body:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout)
 
-local function refresh()
+local function sellProtectTag(m, uid: string): string?
+	if not profile then
+		return "BLOQ."
+	end
+	if table.find(profile.Team, uid) ~= nil then
+		return "NO TIME"
+	end
+	if profile.TrainingMachine and profile.TrainingMachine.Job and profile.TrainingMachine.Job.Uid == uid then
+		return "TREINO"
+	end
+	if m.Favorite == true then
+		return "FAVORITO"
+	end
+	if m.Awakened == true then
+		return "DESPERTO"
+	end
+	local count = 0
+	for _ in pairs(profile.Collection or {}) do
+		count += 1
+	end
+	if count <= 1 then
+		return "\u{da}LTIMO"
+	end
+	return nil
+end
+
+local refresh
+
+favBtn.Activated:Connect(function()
+	if detailBusy or not currentUid then
+		return
+	end
+	detailBusy = true
+	local rf = Remotes:FindFirstChild("ToggleFavorite")
+	local callOk, srvOk, srvVal = false, false, nil
+	if rf and rf:IsA("RemoteFunction") then
+		callOk, srvOk, srvVal = pcall(function()
+			return rf:InvokeServer(currentUid)
+		end)
+	end
+	detailBusy = false
+	if callOk and srvOk then
+		sellConfirmUid = nil
+		UI.play("click")
+		UI.toast(if srvVal then "Marcado como Favorito!" else "Removido dos Favoritos.")
+		if profile and profile.Collection and profile.Collection[currentUid] then
+			profile.Collection[currentUid].Favorite = if srvVal then true else nil
+		end
+		if refresh then
+			refresh()
+		end
+	else
+		UI.play("error")
+		UI.toast(tostring(srvVal or "N\u{e3}o foi poss\u{ed}vel favoritar."))
+	end
+end)
+
+sellBtn.Activated:Connect(function()
+	if detailBusy or not currentUid or not profile then
+		return
+	end
+	local m = profile.Collection and profile.Collection[currentUid]
+	if not m then
+		return
+	end
+	local prot = sellProtectTag(m, currentUid)
+	if prot then
+		UI.play("error")
+		UI.toast("Protegido (" .. prot .. ").")
+		return
+	end
+	if sellConfirmUid ~= currentUid then
+		sellConfirmUid = currentUid
+		sellConfirmToken += 1
+		local tok = sellConfirmToken
+		local uidSnap = currentUid
+		UI.play("click")
+		if refresh then
+			refresh()
+		end
+		task.delay(3, function()
+			if sellConfirmToken == tok and sellConfirmUid == uidSnap then
+				sellConfirmUid = nil
+				if win.IsOpen() and refresh then
+					refresh()
+				end
+			end
+		end)
+		return
+	end
+	sellConfirmUid = nil
+	detailBusy = true
+	local rf = Remotes:FindFirstChild("SellCharacter")
+	local callOk, srvOk, srvMsg = false, false, "Servi\u{e7}o indispon\u{ed}vel."
+	if rf and rf:IsA("RemoteFunction") then
+		callOk, srvOk, srvMsg = pcall(function()
+			return rf:InvokeServer(currentUid)
+		end)
+	end
+	detailBusy = false
+	if callOk and srvOk then
+		UI.play("coin")
+		UI.toast(tostring(srvMsg or "Personagem vendido!"))
+		portrait.Clear()
+		currentUid = nil
+		win.Close(true)
+	else
+		UI.play("error")
+		UI.toast(tostring(srvMsg or "N\u{e3}o foi poss\u{ed}vel vender."))
+	end
+end)
+
+refresh = function()
 	local m = profile and currentUid and profile.Collection and profile.Collection[currentUid]
 	if not m then
 		return
@@ -349,6 +504,24 @@ local function refresh()
 	local def = Characters.Get(m.CharacterId)
 	if not def then
 		return
+	end
+
+	-- Atualiza botoes Favorito e Vender
+	local isFav = m.Favorite == true
+	local favCol = if isFav then "red" else "panelAlt"
+	UI.paint(favBtn, favCol)
+	favBtn:SetAttribute("BaseColor", favCol)
+	UI.setText(favBtn, if isFav then "FAV: ON" else "FAV")
+
+	local prot = sellProtectTag(m, currentUid)
+	local price = Summon.SellPrice[def.Rarity] or Summon.SellPrice.Comum or 50
+	if prot then
+		UI.setText(sellBtn, prot)
+		UI.setDisabled(sellBtn, true, "red")
+	else
+		local armed = sellConfirmUid == currentUid
+		UI.setText(sellBtn, if armed then "CONFIRMAR?" else ("+" .. UI.fmt(price)))
+		UI.setDisabled(sellBtn, false, if armed then "orange" else "red")
 	end
 
 	local bd = Progression.StatBreakdown(m)
@@ -431,6 +604,7 @@ UI.onOpen("CharacterDetail", function(uid)
 		return
 	end
 	currentUid = uid
+	sellConfirmUid = nil
 	if not win.IsOpen() then
 		win.Open()
 	end
